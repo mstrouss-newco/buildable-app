@@ -195,6 +195,31 @@
   // tunable is difficulty 1-5, which DERIVES how many slings the kid gets; the
   // floor keeps it at (targets + 2) so the sensible-aim bot always clears with a
   // sling to spare. Art (which backdrop scene) is declared per level in `parts`.
+  //
+  // Session SD1 — a block may name a MATERIAL with `m`:
+  //   "glass" shatters on almost any hit and vanishes
+  //   "wood"  cracks, then breaks after a few good hits
+  //   "stone" barely breaks at all — it has to be toppled instead
+  // `m` is OPTIONAL and there is no default: a block with no `m` is the old
+  // indestructible block, unchanged in weight, grip and look. That is why the
+  // six layouts levels 1-6 use (gate/post/tower/double/hut/keep) carry no
+  // materials at all — the on-ramp plays exactly as it did before.
+  //
+  // Session SD3 — a layout may also declare TERRAIN: the ground itself. Before
+  // this every level happened on one flat floor at the same height, so every
+  // shot was the same arc and a kid never had to think about aim. Terrain is
+  // scenery AND fixed physics — it never moves and never breaks:
+  //   { k:"hill",  x, w, h }  a mound. It blocks the straight line, so the only
+  //                           way at what is behind it is a high lob.
+  //   { k:"pit",   x, w, d }  a dip in the floor. A critter sitting down inside
+  //                           one cannot be reached along the flat — you have to
+  //                           drop something on it.
+  //   { k:"ledge", x, w, h }  a raised plinth. Two of them with a gap between
+  //                           make a floating deck: knock a leg out and the
+  //                           whole thing falls through the gap.
+  // `terrain` is OPTIONAL and there is no default. A layout that declares none
+  // builds the one flat slab it always did — which is what keeps levels 1-6
+  // playing exactly as they were.
   var SLING_LAYOUTS = {
     gate:   { blocks:[ {x:705,y:520,w:30,h:60},{x:775,y:520,w:30,h:60},{x:740,y:476,w:120,h:26} ],
               targets:[ {x:740,y:445} ] },
@@ -204,47 +229,167 @@
               targets:[ {x:620,y:444},{x:820,y:444} ] },
     keep:   { blocks:[ {x:660,y:520,w:30,h:60},{x:740,y:520,w:30,h:60},{x:700,y:476,w:130,h:26},{x:672,y:440,w:30,h:46},{x:728,y:440,w:30,h:46},{x:700,y:408,w:90,h:24} ],
               targets:[ {x:700,y:378},{x:560,y:530},{x:840,y:530} ] },
-    grand:  { blocks:[ {x:700,y:520,w:34,h:60},{x:780,y:520,w:34,h:60},{x:740,y:476,w:128,h:26},{x:712,y:440,w:30,h:46},{x:768,y:440,w:30,h:46},{x:740,y:408,w:96,h:24},{x:740,y:376,w:30,h:42} ],
-              targets:[ {x:740,y:337},{x:600,y:530},{x:860,y:530} ] },
+    // grand is level 9 (back half), so it carries materials; the five layouts
+    // above it are the levels 1-6 on-ramp and stay material-free on purpose.
+    grand:  { blocks:[ {x:700,y:520,w:34,h:60,m:"stone"},{x:780,y:520,w:34,h:60,m:"stone"},{x:740,y:476,w:128,h:26,m:"wood"},{x:712,y:440,w:30,h:46,m:"wood"},{x:768,y:440,w:30,h:46,m:"wood"},{x:740,y:408,w:96,h:24,m:"wood"},{x:740,y:376,w:30,h:42,m:"glass"} ],
+              targets:[ {x:740,y:337},{x:600,y:530},{x:845,y:531},{x:480,y:531} ] },
     // --- expansion layouts (Session: 20-level ramp). Each keeps at least one
     // clearly-reachable arc per target so the sensible-aim QA bot clears them all.
     post:   { blocks:[ {x:740,y:520,w:34,h:60},{x:740,y:470,w:34,h:44} ],
               targets:[ {x:740,y:432} ] },
     hut:    { blocks:[ {x:700,y:520,w:30,h:60},{x:780,y:520,w:30,h:60},{x:740,y:478,w:112,h:24} ],
               targets:[ {x:740,y:452},{x:560,y:530} ] },
-    ledge:  { blocks:[ {x:640,y:520,w:30,h:60},{x:700,y:520,w:30,h:60},{x:670,y:478,w:92,h:22},{x:626,y:452,w:16,h:34} ],
-              targets:[ {x:686,y:452},{x:820,y:530},{x:540,y:530} ] },
-    trio:   { blocks:[ {x:600,y:520,w:26,h:60},{x:740,y:520,w:26,h:60},{x:860,y:520,w:26,h:60} ],
+    // SD3 — ledge is now the FLOATING DECK, and the terrain is the point of it.
+    // Two stone plinths stand with 120px of open air between them; a wood leg on
+    // each plinth holds up a plank that bridges the gap, and a critter rides the
+    // plank. Break either leg and the deck — critter and all — drops through the
+    // gap to the floor far below. A stone screen on the near plinth kills the
+    // flat shot at the deck, so the choice is a real lob or a broken leg.
+    ledge:  { terrain:[ {k:"ledge",x:645,w:120,h:104},{k:"ledge",x:885,w:120,h:104} ],
+              blocks:[ {x:600,y:379,w:20,h:130,m:"stone"},
+                       {x:662,y:414,w:18,h:60,m:"wood"},{x:868,y:414,w:18,h:60,m:"wood"},
+                       {x:765,y:373,w:236,h:22,m:"wood"} ],
+              targets:[ {x:765,y:345},{x:420,y:531},{x:300,y:531} ] },
+    // trio is the teaching level: one post of each material, side by side.
+    trio:   { blocks:[ {x:600,y:520,w:26,h:60,m:"glass"},{x:740,y:520,w:26,h:60,m:"wood"},{x:860,y:520,w:26,h:60,m:"stone"} ],
               targets:[ {x:600,y:478},{x:740,y:478},{x:860,y:478} ] },
-    wall:   { blocks:[ {x:650,y:500,w:34,h:100},{x:650,y:436,w:34,h:34} ],
-              targets:[ {x:740,y:530},{x:800,y:530},{x:870,y:530} ] },
-    bunker: { blocks:[ {x:660,y:512,w:20,h:72},{x:840,y:512,w:20,h:72},{x:750,y:520,w:30,h:60} ],
-              targets:[ {x:705,y:530},{x:795,y:530},{x:750,y:470} ] },
-    twinkeep:{ blocks:[ {x:600,y:520,w:28,h:60},{x:660,y:520,w:28,h:60},{x:630,y:478,w:80,h:22},
-                        {x:800,y:520,w:28,h:60},{x:860,y:520,w:28,h:60},{x:830,y:478,w:80,h:22} ],
-              targets:[ {x:630,y:452},{x:830,y:452},{x:715,y:530},{x:540,y:530} ] },
-    spire:  { blocks:[ {x:740,y:520,w:40,h:60},{x:740,y:474,w:30,h:44},{x:740,y:436,w:22,h:44} ],
-              targets:[ {x:740,y:398},{x:600,y:530},{x:860,y:530} ] },
-    fort:   { blocks:[ {x:620,y:512,w:24,h:72},{x:860,y:512,w:24,h:72},{x:740,y:520,w:30,h:60},{x:690,y:478,w:120,h:20} ],
-              targets:[ {x:665,y:530},{x:815,y:530},{x:740,y:452},{x:560,y:530} ] },
-    hideout:{ blocks:[ {x:680,y:500,w:22,h:100},{x:800,y:500,w:22,h:100} ],
-              targets:[ {x:740,y:530},{x:600,y:530},{x:870,y:530} ] },
-    tallgrand:{ blocks:[ {x:710,y:520,w:34,h:60},{x:790,y:520,w:34,h:60},{x:750,y:476,w:120,h:24},
-                         {x:722,y:440,w:28,h:48},{x:778,y:440,w:28,h:48},{x:750,y:406,w:88,h:22},{x:750,y:372,w:24,h:46} ],
-              targets:[ {x:750,y:334},{x:600,y:530},{x:900,y:530},{x:540,y:530} ] },
-    gauntlet:{ blocks:[ {x:560,y:500,w:24,h:96},{x:720,y:500,w:24,h:96},{x:880,y:500,w:24,h:96} ],
-              targets:[ {x:640,y:534},{x:800,y:534},{x:900,y:534},{x:490,y:534} ] },
-    twintower:{ blocks:[ {x:640,y:520,w:36,h:60},{x:640,y:474,w:28,h:44},{x:640,y:436,w:20,h:44},
-                         {x:840,y:520,w:36,h:60},{x:840,y:474,w:28,h:44},{x:840,y:436,w:20,h:44} ],
-              targets:[ {x:640,y:398},{x:840,y:398},{x:740,y:530},{x:540,y:530} ] },
-    citadel:{ blocks:[ {x:600,y:512,w:24,h:72},{x:880,y:512,w:24,h:72},
-                       {x:700,y:520,w:28,h:60},{x:780,y:520,w:28,h:60},{x:740,y:476,w:120,h:22} ],
-              targets:[ {x:740,y:450},{x:640,y:534},{x:840,y:534},{x:520,y:534},{x:900,y:534} ] },
-    finale: { blocks:[ {x:560,y:508,w:24,h:80},{x:900,y:508,w:24,h:80},
-                       {x:730,y:520,w:36,h:60},{x:730,y:474,w:28,h:44},{x:730,y:436,w:20,h:44} ],
-              targets:[ {x:730,y:398},{x:640,y:534},{x:820,y:534},{x:500,y:534},{x:900,y:452} ] }
+    // SD3 — wall is the TEACHING LEVEL FOR TERRAIN. The old stone wall is now a
+    // grass hill, and a hill is not something you can smash: the flat shot dies
+    // in the slope every time, so the only way at the yard behind it is over the
+    // top. Everything worth hitting sits past the hill's far foot.
+    wall:   { terrain:[ {k:"hill",x:570,w:220,h:140} ],
+              blocks:[ {x:790,y:500,w:22,h:96,m:"wood"},{x:900,y:500,w:22,h:96,m:"wood"},
+                       {x:845,y:442,w:150,h:20,m:"stone"} ],
+              targets:[ {x:570,y:391},{x:740,y:531},{x:845,y:415} ] },
+    // ===================================================================
+    //  SD2 — SEALED LAYOUTS. A critter marked `s` sits inside a shell no
+    //  arc in the game can reach: the walls beside it and the roof over it
+    //  are wood or stone, and glass never covers it (a pal smashes straight
+    //  through glass, so glass is a weak point, never a wall). The way in is
+    //  always structural — break the leg and let the roof fall on it, or
+    //  smash the stalk and let the whole pen come down. qa-sling proves both
+    //  halves of that claim: it sweeps every arc the slingshot can make to
+    //  show the critter is untouchable, then shows the bot still clears it.
+    //
+    //  Two rules these shapes obey, learned the hard way:
+    //   - the crusher must be NARROWER than the pen it has to fall into, or
+    //     it just wedges on the wall tops and nothing happens;
+    //   - the roof must start clear of the critter's head, or it is already
+    //     crushing it before the kid has taken a shot.
+    // ===================================================================
+    // bunker — the teaching seal: break a wood leg, the stone roof drops in.
+    bunker: { blocks:[ {x:706,y:518,w:16,h:60,m:"wood"},{x:774,y:518,w:16,h:60,m:"wood"},
+                       {x:740,y:474,w:124,h:26,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:560,y:531},{x:880,y:531} ] },
+    // twinkeep — the pen is fine; the glass stalk holding it up is not.
+    twinkeep:{ blocks:[ {x:740,y:516,w:76,h:64,m:"stone"},{x:740,y:450,w:28,h:68,m:"glass"},
+                        {x:740,y:404,w:140,h:24,m:"wood"},
+                        {x:710,y:370,w:14,h:44,m:"wood"},{x:770,y:370,w:14,h:44,m:"wood"},
+                        {x:740,y:330,w:104,h:22,m:"stone"} ],
+              targets:[ {x:740,y:375,s:true},{x:600,y:531},{x:880,y:531},{x:500,y:531} ] },
+    // SD3 — spire is the TEACHING LEVEL FOR PITS. One critter sits down in a hole
+    // in the floor: below the rim, so no shot along the flat can see it, and the
+    // hole is too narrow to make a steep drop easy. The tall stack beside it is
+    // the answer — topple it and let it fall in.
+    spire:  { terrain:[ {k:"pit",x:790,w:120,d:32} ],
+              blocks:[ {x:690,y:520,w:40,h:56,m:"stone"},{x:690,y:470,w:30,h:44,m:"wood"},{x:690,y:426,w:22,h:44,m:"wood"} ],
+              targets:[ {x:690,y:387},{x:790,y:563},{x:910,y:531} ] },
+    // fort — the flat shot is dead: a tall stone screen covers the low line, so
+    // the only way at the wood column is a high lob dropping into the gap
+    // behind the screen. (Or bowl the screen over onto the tower and let that
+    // do it for you.)
+    fort:   { blocks:[ {x:600,y:490,w:24,h:116,m:"stone"},
+                       {x:700,y:512,w:18,h:72,m:"wood"},{x:782,y:512,w:18,h:72,m:"wood"},
+                       {x:740,y:462,w:134,h:28,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:500,y:531},{x:870,y:531},{x:920,y:531} ] },
+    // hideout — a stone box you cannot break. Snap the wood shelf across the
+    // top and the stone block resting on it drops INSIDE, onto the critter.
+    hideout:{ blocks:[ {x:704,y:516,w:14,h:64,m:"stone"},{x:776,y:516,w:14,h:64,m:"stone"},
+                       {x:740,y:474,w:104,h:12,m:"wood"},{x:740,y:455,w:50,h:26,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:590,y:531},{x:880,y:531} ] },
+    // SD3 — the whole keep now stands on a plinth, so the tower a kid already
+    // knows starts 86px higher than their eye line and the arc that used to clear
+    // it falls short. Same building, brand new aim.
+    tallgrand:{ terrain:[ {k:"ledge",x:690,w:110,h:86},{k:"ledge",x:880,w:110,h:86} ],
+                blocks:[ {x:700,y:435,w:18,h:54,m:"wood"},{x:870,y:435,w:18,h:54,m:"wood"},
+                         {x:785,y:396,w:220,h:24,m:"stone"},
+                         {x:750,y:357,w:28,h:54,m:"wood"},{x:820,y:357,w:28,h:54,m:"wood"},
+                         {x:785,y:318,w:110,h:24,m:"wood"},{x:785,y:286,w:24,h:40,m:"glass"} ],
+              targets:[ {x:785,y:249},{x:905,y:445},{x:560,y:531},{x:470,y:531} ] },
+    // SD3 — two mounds with a narrow valley between them. Nothing here is behind
+    // a wall you can break: the shots have to be threaded, one into the valley,
+    // one clean over the far mound, and the ground critters read completely
+    // differently depending on which side of a hill they stand on.
+    gauntlet:{ terrain:[ {k:"hill",x:540,w:170,h:124},{k:"hill",x:845,w:150,h:104} ],
+              blocks:[ {x:660,y:518,w:24,h:60,m:"wood"} ],
+              targets:[ {x:660,y:471},{x:735,y:531},{x:845,y:427},{x:390,y:531} ] },
+    // SD3 — the pit splits the yard in two. The critter in the hole is the
+    // problem: a tower stands either side of it, and the way in is to bring one
+    // of them down on top of it rather than to shoot into a slot.
+    twintower:{ terrain:[ {k:"pit",x:750,w:132,d:32} ],
+                blocks:[ {x:648,y:520,w:36,h:56,m:"stone"},{x:648,y:470,w:28,h:44,m:"wood"},{x:648,y:426,w:20,h:44,m:"glass"},
+                         {x:855,y:520,w:36,h:56,m:"stone"},{x:855,y:470,w:28,h:44,m:"wood"},{x:855,y:426,w:20,h:44,m:"glass"} ],
+              targets:[ {x:648,y:387},{x:855,y:387},{x:750,y:563},{x:450,y:531} ] },
+    // citadel — two sealed critters at once, and the same move does not open
+    // both: the left keep wants a leg broken, the right one wants its stalk gone.
+    citadel:{ blocks:[ {x:600,y:518,w:16,h:60,m:"wood"},{x:668,y:518,w:16,h:60,m:"wood"},
+                       {x:634,y:474,w:120,h:26,m:"stone"},
+                       {x:850,y:516,w:64,h:64,m:"stone"},{x:850,y:450,w:26,h:68,m:"glass"},
+                       {x:850,y:404,w:120,h:22,m:"wood"},
+                       {x:822,y:372,w:14,h:42,m:"wood"},{x:878,y:372,w:14,h:42,m:"wood"},
+                       {x:850,y:334,w:92,h:20,m:"stone"} ],
+              targets:[ {x:634,y:531,s:true},{x:850,y:377,s:true},{x:740,y:531},{x:500,y:531} ] },
+    // finale — every seal in the game in one yard: drop a block through a stone
+    // box, and take a pedestal out from under a pen, with three loose critters
+    // in between so there is no single shot that does it all.
+    finale: { blocks:[ {x:704,y:516,w:14,h:64,m:"stone"},{x:776,y:516,w:14,h:64,m:"stone"},
+                       {x:740,y:474,w:104,h:12,m:"wood"},{x:740,y:455,w:50,h:26,m:"stone"},
+                       {x:890,y:516,w:60,h:64,m:"stone"},{x:890,y:450,w:24,h:68,m:"glass"},
+                       {x:890,y:404,w:116,h:22,m:"wood"},
+                       {x:864,y:372,w:14,h:42,m:"wood"},{x:916,y:372,w:14,h:42,m:"wood"},
+                       {x:890,y:334,w:88,h:20,m:"stone"} ],
+              targets:[ {x:740,y:531,s:true},{x:890,y:377,s:true},{x:560,y:531},{x:640,y:531},{x:480,y:531} ] }
   };
-  function slingLaunches(d, tCount){ d=clamp(d,1,5); return Math.max(3+d, tCount+2); }
+  // SD3 — the SHAPE of a piece of terrain, defined once for everybody. The
+  // engine builds its physics body from these exact points and paints them; the
+  // level-card painter draws the same points. Nobody re-derives the maths, so a
+  // card can never quietly drift out of step with the level it advertises.
+  // SLING_GY is the sling engine's ground line (`GY` in sling-squad.html).
+  var SLING_GY = 548;
+  function slingTerrainPoly(t){
+    var half = t.w/2;
+    if(t.k === "hill"){
+      // a rounded mound with a flat crest wide enough to stand a critter on:
+      // elliptical shoulders either side, which keeps the shape convex so it
+      // builds as one clean physics body.
+      var flat = half*0.30, sh = half-flat, N = 6, pts = [], i, a;
+      pts.push({ x:t.x-half, y:SLING_GY });
+      for(i=1;i<=N;i++){ a=(Math.PI/2)*(i/N);
+        pts.push({ x:t.x-half+sh*(1-Math.cos(a)), y:SLING_GY-t.h*Math.sin(a) }); }
+      pts.push({ x:t.x+flat, y:SLING_GY-t.h });
+      for(i=N-1;i>=1;i--){ a=(Math.PI/2)*(i/N);
+        pts.push({ x:t.x+half-sh*(1-Math.cos(a)), y:SLING_GY-t.h*Math.sin(a) }); }
+      pts.push({ x:t.x+half, y:SLING_GY });
+      return pts;
+    }
+    if(t.k === "ledge"){                       // a plinth: straight sides, slight batter
+      var lt = SLING_GY-t.h;
+      return [ {x:t.x-half,y:SLING_GY}, {x:t.x-half+5,y:lt}, {x:t.x+half-5,y:lt}, {x:t.x+half,y:SLING_GY} ];
+    }
+    return null;                               // a pit is a hole in the floor, not a shape
+  }
+
+  // How many slings a level hands out. Still derived from difficulty 1-5 and the
+  // number of critters — never a raw number in a manifest.
+  // SD3 — the SPARE is what difficulty now buys. It used to be four to seven
+  // spare slings on the back half, which is why the whole game could be brute
+  // forced by flinging pals at everything. From difficulty 3 up there is exactly
+  // ONE spare, so a level has to be solved rather than out-shot; difficulty 1-2
+  // (the levels 1-6 on-ramp) still forgives two or three bad shots, which is what
+  // keeps the start of the game clearable by a six year old.
+  function slingLaunches(d, tCount){ d=clamp(d,1,5);
+    var spare = (d<=1) ? 3 : (d<=2) ? 2 : 1;
+    return tCount + spare; }
   var slingProfile = {
     validateLevel: function(lv, at, errors){
       if(!lv.layout || !SLING_LAYOUTS[lv.layout]) errors.push(at+" 'layout' must be one of "+Object.keys(SLING_LAYOUTS).join("/")+" (got "+lv.layout+")");
@@ -253,13 +398,22 @@
     toLevel: function(lv){
       var d = clamp(lv.difficulty,1,5);
       var geo = SLING_LAYOUTS[lv.layout] || SLING_LAYOUTS.gate;
-      var blocks  = geo.blocks.map(function(b){ return { x:b.x, y:b.y, w:b.w, h:b.h }; });
-      var targets = geo.targets.map(function(t){ return { x:t.x, y:t.y }; });
+      // `m` (SD1 material) rides along only when the layout sets one; a block with
+      // no material reaches the engine exactly as it always did.
+      var blocks  = geo.blocks.map(function(b){ var o={ x:b.x, y:b.y, w:b.w, h:b.h }; if(b.m) o.m=b.m; return o; });
+      // `s` (SD2 sealed) rides along the same way `m` does: it marks a critter
+      // the layout promises no arc can touch, so the engine and QA both know
+      // which ones have to be reached by collapsing the building instead.
+      var targets = geo.targets.map(function(t){ var o={ x:t.x, y:t.y }; if(t.s) o.s=true; return o; });
+      // SD3 terrain rides along the same way: only when the layout declares it,
+      // so a layout with no terrain reaches the engine exactly as it always did.
+      var terrain = (geo.terrain||[]).map(function(t){
+        var o={ k:t.k, x:t.x, w:t.w }; if(t.h!=null) o.h=t.h; if(t.d!=null) o.d=t.d; return o; });
       var parts = lv.parts || {};
       return {
         id: lv.id, name: lv.name, difficulty: d,
         launches: slingLaunches(d, targets.length),   // engine tuning derived from difficulty 1-5
-        blocks: blocks, targets: targets,
+        blocks: blocks, targets: targets, terrain: terrain,
         bg: (parts.scene || null),                    // which backdrop scene (engine falls back if art missing)
         world: (parts.world || null),                 // per-level art world (helpers/bad guys/background); null = whole-game set
         coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
@@ -588,7 +742,7 @@
       .catch(fromStatic);
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind };
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));

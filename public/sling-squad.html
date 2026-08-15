@@ -84,7 +84,9 @@ var BGART={};                              // painted parallax layers: hills/tre
 var SLING_DW=129, SLING_TOP=307;           // slingshot image draw box (centered on AX)
 var FORKLX=117, FORKLY=317, FORKRX=216, FORKRY=317;  // elastic-band attach points (fork tips)
 var MAXPULL = 132, MAXV = 27;              // very forgiving: big pull, strong launch
-var POP_MOVE = 24, POP_SPD = 5.4;          // generous pop thresholds (displaced OR knocked)
+// SD2 — a critter has to be THROWN off its spot, not nudged (was 24 / 5.4, which
+// is why a vague shove near a small tower cleared almost every level).
+var POP_MOVE = 52, POP_SPD = 9.0;          // shoved right off its spot OR really launched
 
 // ---- the SQUAD: 4 friendly ANIMALS you fling, each with a tap-to-trigger POWER.
 //  (Kenney "Animal Pack Remastered" art dresses these when served; drawn fallback
@@ -235,6 +237,163 @@ function ensureMusic(){ try{ if(SLING_DEMO) return; if(!BA||!BA.setMusic)return;
 var engine=null, world=null;
 function mat(opts){ return Object.assign({ friction:0.62, frictionStatic:0.9, restitution:0.06, density:0.0026 }, opts||{}); }
 
+// ============================================================================
+//  SD1 — BLOCK MATERIALS + HEALTH.  Before this, a block could only wobble, so
+//  every level was the same shove. Now a layout may give a block a material and
+//  it takes real damage from whatever hits it:
+//    glass — shatters on almost any hit and disappears
+//    wood  — cracks, then breaks after a few good hits
+//    stone — barely breaks at all; you have to topple it instead
+//  DAMAGE COMES FROM SPEED: how fast the thing that hit it was moving relative
+//  to the block, scaled by how heavy that thing was (a flung pal hurts far more
+//  than a tumbling plank; a heavy-power pal hurts most).
+//  A block with NO material is the OLD indestructible block, byte-for-byte the
+//  same weight, grip and look — which is what keeps levels 1-6 exactly as they
+//  were. There is deliberately no default material.
+// ============================================================================
+var BLOCK_MATS = {
+  glass: { hp:6,   minSpd:1.6, perSpd:5.0, density:0.0016, friction:0.30, frictionStatic:0.50, restitution:0.10,
+           fill:"#bfe9f7", edge:"#7fbfd6", crack:"rgba(255,255,255,.95)", fx:"#cdeffb", sound:"shatter", seeThrough:true },
+  wood:  { hp:100, minSpd:3.0, perSpd:2.4, density:0.0022, friction:0.62, frictionStatic:0.90, restitution:0.06,
+           fill:"#caa46a", edge:"#9b7741", crack:"rgba(60,36,12,.85)",   fx:"#c9964f", sound:"shatter" },
+  stone: { hp:420, minSpd:11,  perSpd:2.0, density:0.0034, friction:0.72, frictionStatic:0.95, restitution:0.04,
+           fill:"#b9bcc4", edge:"#71747d", crack:"rgba(40,44,54,.80)",   fx:"#aeb2bb", sound:"shatter" }
+};
+var AMMO_MASS_REF = 20;        // a plain flung pal weighs about this much
+var CRACKED_AT = 0.62;         // below this share of health the block LOOKS cracked
+function matOf(b){ return (b && b._mat) ? BLOCK_MATS[b._mat] : null; }
+// How much a body hurts what it lands on, relative to a plain flung pal.
+function hitWeight(o){ if(!o || o.isStatic) return 1; return Math.max(0.35, Math.min(2.2, (o.mass||0)/AMMO_MASS_REF)); }
+// One impact -> health off a breakable block. Returns true if this broke it.
+function damageBlock(blk, spd, hitter){
+  var M0 = matOf(blk); if(!M0 || blk._broken) return false;
+  if(spd <= M0.minSpd) return false;
+  blk._hp -= (spd - M0.minSpd) * M0.perSpd * hitWeight(hitter);
+  if(blk._hp <= 0){ blk._hp = 0; blk._broken = true; return true; }   // swept out after the physics step
+  if(!blk._cracked && blk._hp < blk._hp0 * CRACKED_AT){ blk._cracked = true; blk._crackAt = nowMs();
+    var t=nowMs(); if(t-(G._crackSfxAt||0)>110){ G._crackSfxAt=t; sfx("crack"); } }   // one crack sound per moment, not a pile-up
+  return false;
+}
+// Blocks marked _broken during collision callbacks are removed HERE, after
+// M.Engine.update has returned — never mid-step, which would corrupt the world.
+function sweepBrokenBlocks(){
+  if(!G || !G.blocks) return;
+  for(var i=G.blocks.length-1;i>=0;i--){ var b=G.blocks[i]; if(!b._broken) continue;
+    var M0 = matOf(b) || BLOCK_MATS.wood;
+    G.blocks.splice(i,1); G.smashed++;
+    try{ M.Composite.remove(world, b); }catch(e){}
+    G.shards.push({ x:b.position.x, y:b.position.y, w:b._w, h:b._h, a:b.angle, m:b._mat, t0:nowMs() });
+    if(G.shards.length>18) G.shards.shift();
+    if(fx&&BM) BM.explode(fx, b.position.x, b.position.y, M0.fx, { n:14, sfx:null });
+    sfx(M0.sound);
+  }
+}
+
+// ============================================================================
+//  SD2 — CRITTERS THAT DO NOT POP FROM A NUDGE.
+//  Before this a critter fell over if anything so much as leaned on it: 24px of
+//  drift or 5.4 of speed and it was gone. That is why every level died to the
+//  same vague shove. Now a critter carries a little squish health, and only
+//  three things empty it:
+//    a REAL HIT   — a pal (or a flying block) arrives hard. Damage comes from
+//                   the CLOSING speed, so a graze leaves it standing.
+//    a REAL CRUSH — something heavy comes to rest on top of it and presses down.
+//                   This is what makes a sealed critter beatable: knock the legs
+//                   out and the stone roof does the work.
+//    getting THROWN — shoved right off its spot, launched, or dropped off the
+//                   world (POP_MOVE / POP_SPD above).
+//  Every pop records WHY, which is what lets QA prove that a sealed critter is
+//  never reached by a direct hit — only by the collapse it was designed around.
+// ============================================================================
+var TGT_HP      = 100;    // squish health every critter starts with
+var TGT_MIN_SPD = 2.6;    // closing speed at or below this is a nudge, not a hit
+var TGT_PER_SPD = 26;     // squish per unit of closing speed above that floor
+var CRUSH_MIN_M = 1.8;    // resting mass under this is something leaning, not a crush
+var CRUSH_PER_M = 0.75;   // squish per frame per unit of resting mass
+var CRUSH_MAX_M = 24;     // cap, so a whole tower cannot squash one in a single frame
+
+// Take squish off a critter. Returns true if that finished it.
+function hurtTarget(t, dmg, why){
+  if(!t || !t._alive || !(dmg>0)) return false;
+  t._hp -= dmg; t._hitAt = nowMs();          // _hitAt drives the bad-guy BONKED pose
+  if(t._hp<=0){ t._hp=0; popTarget(t, why); return true; }
+  var n=nowMs(); if(n-(G._owSfxAt||0)>140){ G._owSfxAt=n; sfx("thud"); }   // one ow per moment
+  return false;
+}
+// How much block is resting ON this critter right now. Only bodies whose lowest
+// point is level with the critter's head count — something standing beside it,
+// or a roof still held up above it, presses on nothing.
+function crushLoad(t){
+  var load=0, tb=t.bounds;
+  for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i], bb=b.bounds;
+    if(bb.max.y > tb.min.y+6 || bb.max.y < tb.min.y-10) continue;   // must be touching its head
+    if(bb.max.x < tb.min.x+5 || bb.min.x > tb.max.x-5) continue;    // and genuinely overhead
+    load += (b.mass||0); }
+  return load;
+}
+
+// ============================================================================
+//  SD3 — TERRAIN.  Every level used to happen on the same flat floor at the same
+//  height, so every shot was the same arc and a kid never had to think about aim.
+//  A layout may now declare terrain, which is scenery AND real physics:
+//    hill  — a mound. It is not something you can smash: the flat shot dies in
+//            the slope, so the only way at what is behind it is a high lob.
+//    pit   — a dip in the floor. A critter sitting down in one is below the rim,
+//            so nothing along the flat can see it — you drop something on it.
+//    ledge — a raised plinth. Two of them with a gap between make a floating
+//            deck: knock a leg out and the whole thing falls through the gap.
+//  Terrain is STATIC: it never moves and never breaks. A layout that declares no
+//  terrain builds the ONE flat slab it always did, which is what keeps levels
+//  1-6 playing exactly as they were.
+//
+//  ONE polygon drives everything, and it is defined in ONE place — the shared
+//  loader's BuildableManifest.slingTerrainPoly. The physics body is built from
+//  those exact points (fromVertices placed at the polygon's own centroid leaves
+//  them untouched), the engine paints those points, and the level-card painter
+//  is handed the very same points rather than re-deriving them. So what a kid
+//  sees, what the card promises, and what the pal hits cannot drift apart.
+// ============================================================================
+function terrainPoly(t){
+  try{ if(window.BuildableManifest && window.BuildableManifest.slingTerrainPoly)
+    return window.BuildableManifest.slingTerrainPoly(t); }catch(e){}
+  return null;   // no loader = no manifest = no terrain to draw (built-in levels are flat)
+}
+function polyCentroid(p){
+  var a=0,cx=0,cy=0;
+  for(var i=0;i<p.length;i++){ var j=(i+1)%p.length, f=p[i].x*p[j].y-p[j].x*p[i].y;
+    a+=f; cx+=(p[i].x+p[j].x)*f; cy+=(p[i].y+p[j].y)*f; }
+  a*=0.5; return { x:cx/(6*a), y:cy/(6*a) };
+}
+function pointInPoly(x,y,p){
+  var inside=false;
+  for(var i=0,j=p.length-1;i<p.length;j=i++){
+    if((p[i].y>y)!==(p[j].y>y) && x < (p[j].x-p[i].x)*(y-p[i].y)/(p[j].y-p[i].y)+p[i].x) inside=!inside; }
+  return inside;
+}
+function distToPoly(x,y,p){
+  var best=1e9;
+  for(var i=0,j=p.length-1;i<p.length;j=i++){
+    var ax=p[j].x, ay=p[j].y, bx=p[i].x, by=p[i].y, dx=bx-ax, dy=by-ay;
+    var L=dx*dx+dy*dy, t=L?((x-ax)*dx+(y-ay)*dy)/L:0; t=t<0?0:(t>1?1:t);
+    var d=Math.hypot(x-(ax+dx*t), y-(ay+dy*t)); if(d<best) best=d; }
+  return best;
+}
+// The top of whatever ground is under x. Flat GY everywhere, unless a pit dips
+// it. With no pits this returns GY for every x, so nothing that reads the floor
+// behaves differently from the day it was one slab.
+function floorY(x){
+  if(G&&G.pits) for(var i=0;i<G.pits.length;i++){ var p=G.pits[i];
+    if(x>p.x-p.w/2 && x<p.x+p.w/2) return GY+p.d; }
+  return GY;
+}
+// The same floor as a BALL of radius R feels it: a pit only counts as open once
+// the whole pal fits inside its mouth, so an arc can never clip through the lip.
+function floorYFor(x,R){
+  if(G&&G.pits) for(var i=0;i<G.pits.length;i++){ var p=G.pits[i];
+    if(x>p.x-p.w/2+R && x<p.x+p.w/2-R) return GY+p.d; }
+  return GY;
+}
+
 // Auto-calibrate effective per-frame gravity so the aim predictor matches Matter.
 (function calibrate(){
   try{
@@ -251,27 +410,61 @@ function mat(opts){ return Object.assign({ friction:0.62, frictionStatic:0.9, re
 function buildWorld(idx){
   var L = GAME_CONFIG.levels[idx];
   engine = M.Engine.create(); engine.gravity.y = 1; world = engine.world;
+  var terr = L.terrain || [];
+  var pits = terr.filter(function(t){ return t.k==="pit"; });
   // ground + side walls (keep play roughly on-screen; off-screen = "fell" = pop)
-  var ground = M.Bodies.rectangle(W/2, GY+40, W+400, 80, { isStatic:true, friction:0.95 });
+  // SD3: with no pit this is the ONE slab it has always been. A pit splits it
+  // into a slab either side plus a lower floor between them — and the inner
+  // faces of those slabs become the pit's walls, for free.
+  var grounds = [];
+  function slab(x0,x1,top){ return M.Bodies.rectangle((x0+x1)/2, top+40, x1-x0, 80, { isStatic:true, friction:0.95 }); }
+  if(!pits.length) grounds.push(M.Bodies.rectangle(W/2, GY+40, W+400, 80, { isStatic:true, friction:0.95 }));
+  else { var cur=-200;
+    pits.slice().sort(function(a,b){ return a.x-b.x; }).forEach(function(p){
+      var x0=p.x-p.w/2, x1=p.x+p.w/2;
+      if(x0>cur) grounds.push(slab(cur,x0,GY));
+      grounds.push(slab(x0,x1,GY+p.d)); cur=x1; });
+    if(cur<W+200) grounds.push(slab(cur,W+200,GY)); }
   var lWall  = M.Bodies.rectangle(-60, H/2, 60, H*2, { isStatic:true });
   var rWall  = M.Bodies.rectangle(W+60, H/2, 60, H*2, { isStatic:true });
-  M.Composite.add(world, [ground, lWall, rWall]);
+  M.Composite.add(world, grounds.concat([lWall, rWall]));
+  // hills and plinths: static bodies built from the very polygon that gets drawn
+  var terrainBodies = [];
+  terr.forEach(function(t){
+    var poly = terrainPoly(t); if(!poly) return;
+    var c = polyCentroid(poly);
+    var body = M.Bodies.fromVertices(c.x, c.y, [poly], { isStatic:true, friction:0.9, restitution:0.02 });
+    if(!body) return;
+    body._kind="terrain"; body._t=t; body._poly=poly;
+    terrainBodies.push(body); M.Composite.add(world, body);
+  });
 
   var blocks = [];
   (L.blocks||[]).forEach(function(b){
-    var body = M.Bodies.rectangle(b.x, b.y, b.w, b.h, mat({ density:0.0022 }));
-    body._kind="block"; body._w=b.w; body._h=b.h; blocks.push(body); M.Composite.add(world, body);
+    var M0 = b.m ? BLOCK_MATS[b.m] : null;      // no material named = the old block, untouched
+    var body = M.Bodies.rectangle(b.x, b.y, b.w, b.h, M0
+      ? mat({ density:M0.density, friction:M0.friction, frictionStatic:M0.frictionStatic, restitution:M0.restitution })
+      : mat({ density:0.0022 }));
+    body._kind="block"; body._w=b.w; body._h=b.h;
+    if(M0){ var size=(b.w*b.h)/1800;            // a 30x60 post is the reference brick
+      body._mat=b.m; body._hp0=M0.hp*Math.max(0.55,Math.min(2.0,size)); body._hp=body._hp0;
+      body._cracked=false; body._broken=false; }
+    blocks.push(body); M.Composite.add(world, body);
   });
   var targets = [];
   (L.targets||[]).forEach(function(t,ti){
     var s=34; var body = M.Bodies.rectangle(t.x, t.y, s, s, mat({ density:0.0016, chamfer:{radius:9} }));
     body._kind="target"; body._w=s; body._h=s; body._alive=true; body._sx=t.x; body._sy=t.y; body._ti=ti;
+    // SD2: `s` marks a SEALED critter — one the layout promises no arc can touch.
+    body._sealed=!!t.s; body._hp0=TGT_HP; body._hp=TGT_HP; body._why=null;
     targets.push(body); M.Composite.add(world, body);
   });
 
-  G = { L:L, blocks:blocks, targets:targets, ammo:null, ammoBody:null, ammoBodies:[], slingIdx:0,
+  G = { L:L, blocks:blocks, targets:targets, terrain:terr, pits:pits, terrainBodies:terrainBodies,
+        ammo:null, ammoBody:null, ammoBodies:[], slingIdx:0,
         launchesLeft:L.launches, launchesUsed:0, restFrames:0, flyFrames:0, reload:0,
-        popped:0, totalTargets:targets.length, drag:null, armed:false, powerUsed:false, winDelay:0, poofs:[] };
+        popped:0, totalTargets:targets.length, drag:null, armed:false, powerUsed:false, winDelay:0,
+        poofs:[], shards:[], smashed:0 };
 
   // pop a target on a solid bonk from the flung ammo (direct hit always counts)
   M.Events.on(engine, "collisionStart", function(ev){
@@ -279,20 +472,34 @@ function buildWorld(idx){
     for(var i=0;i<ev.pairs.length;i++){ var p=ev.pairs[i], a=p.bodyA, b=p.bodyB;
       var t = a._kind==="target"?a:(b._kind==="target"?b:null);
       var o = (t===a)?b:a;
+      // SD2: a bonk no longer pops a critter on its own. What lands on it has to
+      // be CLOSING fast — so a pal that has all but stopped, or a plank the
+      // critter is already riding down, leaves it standing.
       if(t && t._alive && (o._kind==="ammo" || o._kind==="block")){
-        t._hitAt=nowMs();                         // drives the bad-guy BONKED pose
-        var spd = Math.hypot(o.velocity.x,o.velocity.y);
-        if(o._kind==="ammo" || spd>2.2) popTarget(t);
+        var closing = Math.hypot(t.velocity.x-o.velocity.x, t.velocity.y-o.velocity.y);
+        if(closing > TGT_MIN_SPD)
+          hurtTarget(t, (closing-TGT_MIN_SPD)*TGT_PER_SPD*hitWeight(o), o._kind==="ammo"?"hit":"crush");
+        else t._hitAt=nowMs();
       }
       // flag a flung raccoon that just bonked something (drives the IMPACT pose)
       var am = a._kind==="ammo"?a:(b._kind==="ammo"?b:null);
       if(am){ var asp=Math.hypot(am.velocity.x,am.velocity.y); if(asp>3) am._hitT=nowMs(); }
+      // SD1: breakable blocks take damage from how hard the OTHER thing was
+      // moving relative to them. Both sides of a block-on-block bonk get hurt,
+      // and a static hit (the ground, a wall) counts too — so knocking a leg out
+      // and letting a glass roof fall really does shatter it.
+      var rel = Math.hypot(a.velocity.x-b.velocity.x, a.velocity.y-b.velocity.y);
+      if(a._mat) damageBlock(a, rel, b.isStatic?a:b);
+      if(b._mat) damageBlock(b, rel, a.isStatic?b:a);
     }
   });
   // PRE-SETTLE: let blocks + targets find their rest pose with pops disabled,
   // then record each target's resting position as its displacement origin.
   for(var ps=0; ps<26; ps++) M.Engine.update(engine, 1000/60);
   G.targets.forEach(function(t){ t._sx=t.position.x; t._sy=t.position.y; M.Body.setVelocity(t,{x:0,y:0}); M.Body.setAngularVelocity(t,0); });
+  // and the blocks' settled pose, so layoutIntact() can tell "still the building
+  // the arc-sweep measured" from "the kid has already shoved it about".
+  G.blocks.forEach(function(b){ b._sx=b.position.x; b._sy=b.position.y; b._sa=b.angle; });
   G.armed = true;
   loadAmmo();
 }
@@ -304,8 +511,26 @@ function loadAmmo(){
   G.ammoBody = null; G.ammoBodies=[]; G.powerUsed=false; G.drag=null; state = "ready";
 }
 
-function popTarget(t){
-  if(!t._alive) return; t._alive=false; G.popped++;
+// Is the building still the building the SD2 arc-sweep measured? The sweep can
+// only ever prove a claim about the level AS IT STANDS: nothing broken, nothing
+// shoved out of place. The moment a kid topples a screen or smashes a leg, the
+// level is a different shape and a way in they opened themselves is the reward,
+// not a hole in the seal. So the seal's promise is scoped to this: intact.
+function layoutIntact(){
+  if(!G) return false;
+  if(G.smashed>0) return false;
+  for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i];
+    if(Math.hypot(b.position.x-b._sx, b.position.y-b._sy) > 6) return false;
+    if(Math.abs(b.angle-b._sa) > 0.08) return false; }
+  return true;
+}
+// `why` records how it went down — "hit" (something arrived hard), "crush"
+// (something heavy settled on it), "thrown" (shoved clean off its spot) or
+// "fell" (off the world), and `_intact` records whether the building was still
+// untouched at that moment. QA reads both to prove a sealed critter is never
+// reached by a pal in the level the sweep measured.
+function popTarget(t, why){
+  if(!t._alive) return; t._alive=false; t._why=why||"hit"; t._intact=layoutIntact(); G.popped++;
   if(TARGETS_ART.length){ var _ms=TARGETS_ART[(t._ti||0)%TARGETS_ART.length];
     if(_ms&&_ms.poof){ G.poofs.push({x:t.position.x,y:t.position.y,w:t._w,h:t._h,art:_ms.poof,t0:nowMs()});
       if(G.poofs.length>24) G.poofs.shift(); } }
@@ -320,6 +545,11 @@ function popTarget(t){
 // beat, then the "Level cleared!" banner shows. Fixes the abrupt hard-stop.
 function startWinRoll(){
   if(state==="win" || state==="lose" || state==="clearing") return;
+  // SD3: the sling that WON counts as spent. It used to be forgotten — the pal
+  // was still in the air when the last critter went, so it was never swept and
+  // never counted — which quietly flattered every level by one shot and made
+  // "how many spare slings does this level really give?" unanswerable.
+  if(G.ammoBodies && G.ammoBodies.length){ G.launchesUsed++; G.launchesLeft--; }
   state="clearing";
   G.winDelay = botMode ? 2 : 140;   // ~2.3s of "let it roll" before the banner
 }
@@ -412,49 +642,204 @@ function signal(kind){ if(SLING_DEMO) return; try{ if(window.parent){ window.par
 //  Aim predictor (shared by the kid's trajectory dots AND the QA bot).
 //  Matches Matter closely because the flung ammo has near-zero air friction.
 // ============================================================================
-function tracePath(vx,vy,tx,ty){
+// `goal`, when given, is a BODY to aim at instead of a bare point — that is how
+// SD2 lets the bot (and QA) aim at the leg holding a roof up, not just at a
+// critter. Arriving anywhere on the goal counts, and the goal never blocks itself.
+function tracePath(vx,vy,tx,ty,goal,pad){
   var x=AX,y=AY,ux=vx,uy=vy, minD=1e9, reach=false, blocked=false, hitGroundAt=null;
   for(var i=0;i<260;i++){
     x+=ux; y+=uy; uy+=EFF_G;
     var d=Math.hypot(x-tx,y-ty); if(d<minD)minD=d;
-    if(d<26){ reach=true; break; }
-    if(blocksHit(x,y)){ blocked=true; break; }
-    if(y>GY+8){ hitGroundAt=x; break; }
+    if(goal){ var gb=goal.bounds;
+      if(x>gb.min.x-14&&x<gb.max.x+14&&y>gb.min.y-14&&y<gb.max.y+14){ reach=true; break; } }
+    else if(d<26){ reach=true; break; }
+    if(blocksHit(x,y,goal,pad)){ blocked=true; break; }
+    // SD3: the floor dips inside a pit — but a pal is a BALL, so it only gets
+    // down there once its whole width is past the lip. Tracing a bare point
+    // would promise the kid (and the bot) a drop into a hole too narrow to take
+    // it, and they would spend every sling bouncing off the rim.
+    if(y>floorYFor(x,PAL_R)+8){ hitGroundAt=x; break; }
     if(x>W+40||x<-40) break;
   }
   return { reach:reach, blocked:blocked&&!reach, minDist:minD, groundX:hitGroundAt };
 }
-function blocksHit(x,y){
+// `pad` (SD3) grows every obstacle before the test, which is how the planner
+// asks for a shot with ROOM rather than one that grazes. Left out, the test is
+// exactly what it always was.
+function blocksHit(x,y,skip,pad){
   if(!G||!G.blocks) return false;
+  pad = pad||0;
+  // SD3: terrain is solid and unbreakable. The predictor has to say so, or the
+  // kid's dotted line (and the bot) would promise a flat shot straight through
+  // a hill. There is no `skip` for terrain — you never get to shoot the ground.
+  // A pal is a BALL, and terrain is the one obstacle it can never break, so the
+  // planner measures terrain at a pal's width. Planning it as a bare point is
+  // how you get an arc that "clears" a hill on paper and ploughs into the slope
+  // in the air — and a bot that spends five slings re-learning that.
+  if(G.terrainBodies) for(var t=0;t<G.terrainBodies.length;t++){ var tp=G.terrainBodies[t]._poly;
+    if(pointInPoly(x,y,tp)) return true;
+    if(distToPoly(x,y,tp)<=TERR_PAD+pad) return true; }
   for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i]; if(b.position.y>GY+160) continue;
-    var bd=b.bounds; if(x>bd.min.x-1&&x<bd.max.x+1&&y>bd.min.y-1&&y<bd.max.y+1) return true; }
+    if(b===skip) continue;
+    // SD1: glass is not cover. A flung pal smashes straight through it, so the
+    // aim predictor must not call a shot "blocked" just because glass is in the
+    // way — otherwise the bot (and the kid's dotted line) would lie.
+    if(b._mat==="glass") continue;
+    var bd=b.bounds; if(x>bd.min.x-1-pad&&x<bd.max.x+1+pad&&y>bd.min.y-1-pad&&y<bd.max.y+1+pad) return true; }
   return false;
 }
-function planShot(tx,ty){
+var TERR_PAD  = 14;               // terrain is measured at roughly a pal's width
+var CLEAR_PAD = 12;               // how much room a planned shot likes to leave
+function planShot(tx,ty,goal){
   var cands=[];
-  for(var T=22;T<=80;T+=2){
+  for(var T=18;T<=90;T+=2){
     var vx=(tx-AX)/T, vy=(ty-AY-0.5*EFF_G*T*T)/T; var sp=Math.hypot(vx,vy);
     if(sp>MAXV*0.99 || vy>=0) continue;
-    var r=tracePath(vx,vy,tx,ty);
+    var r=tracePath(vx,vy,tx,ty,goal);
     cands.push({ vx:vx, vy:vy, T:T, good:(r.reach&&!r.blocked), reach:r.reach, blocked:r.blocked, minDist:r.minDist });
   }
   var good=cands.filter(function(c){return c.good;});
-  if(good.length){ good.sort(function(a,b){return a.T-b.T;}); var g=good[0]; g.good=true; return g; }   // flattest clean shot = direct hit
+  // SD3 — prefer a shot with ROOM. The flattest clean arc over a hill is the one
+  // that shaves the top of it, and shaving the top is how you spend five slings
+  // learning nothing. So look first for the flattest arc that still clears when
+  // every obstacle is grown by CLEAR_PAD, which is how a person aims: over the
+  // hill, not along it. On a level with no terrain in the way the padded arc and
+  // the bare one are the same shot, so nothing about the old levels changes.
+  if(good.length){
+    var safe=good.filter(function(c){ return !tracePath(c.vx,c.vy,tx,ty,goal,CLEAR_PAD).blocked; });
+    var pick=safe.length?safe:good;
+    pick.sort(function(a,b){return a.T-b.T;}); var g=pick[0]; g.good=true; return g; }
   if(cands.length){ cands.sort(function(a,b){return a.minDist-b.minDist;}); return cands[0]; }
   var ang=Math.atan2(ty-AY,tx-AX); return { vx:Math.cos(ang)*MAXV*0.95, vy:Math.sin(ang)*MAXV*0.95-3, good:false, minDist:999 };
 }
 function firstAlive(){ for(var i=0;i<G.targets.length;i++) if(G.targets[i]._alive) return G.targets[i]; return null; }
 
+// ============================================================================
+//  SD2 — "can any shot in the game actually touch this critter?"
+//  This is the proof behind a SEALED layout. It sweeps the whole launch space
+//  the slingshot can produce (every angle, every strength) and flies each arc
+//  until something stops it. The pal is a ball of radius PAL_R, so obstacles are
+//  grown by that radius and so is the critter — the honest test for whether a
+//  ball this size can physically get in, rather than whether an infinitely thin
+//  point could squeeze through a seam. Glass is NOT cover: a pal smashes
+//  straight through it, so it never counts as a wall here either.
+// ============================================================================
+var PAL_R = 18;                                   // the flung pal's radius
+// The sweep below flies hundreds of thousands of arcs, so the "is a pal allowed
+// to be here" question is answered from a stamped grid of the grown obstacles
+// rather than by walking the block list every hop. Built once per sweep.
+var REACH_CELL=3, REACH_X0=-90, REACH_Y0=-420, REACH_W=0, REACH_H=0, REACH_GRID=null;
+function buildReachGrid(R){
+  REACH_W=Math.ceil((W+180-0)/REACH_CELL); REACH_H=Math.ceil((GY+60-REACH_Y0)/REACH_CELL);
+  REACH_GRID=new Uint8Array(REACH_W*REACH_H);
+  // SD3: hills and plinths are stamped in the same as blocks, grown by the pal's
+  // radius. They are polygons rather than boxes, so a cell counts as solid if it
+  // is inside the shape or within a pal's width of its slope — stamping the
+  // bounding box instead would call a shot impossible just because it passes
+  // over the corner of a mound it actually clears.
+  if(G.terrainBodies) for(var t=0;t<G.terrainBodies.length;t++){
+    var poly=G.terrainBodies[t]._poly, bd=G.terrainBodies[t].bounds;
+    var px0=Math.floor((bd.min.x-R-REACH_X0)/REACH_CELL), px1=Math.ceil((bd.max.x+R-REACH_X0)/REACH_CELL);
+    var py0=Math.floor((bd.min.y-R-REACH_Y0)/REACH_CELL), py1=Math.ceil((bd.max.y+R-REACH_Y0)/REACH_CELL);
+    if(px0<0)px0=0; if(py0<0)py0=0; if(px1>REACH_W)px1=REACH_W; if(py1>REACH_H)py1=REACH_H;
+    for(var ty=py0;ty<py1;ty++){ var trow=ty*REACH_W, wy=REACH_Y0+ty*REACH_CELL+REACH_CELL/2;
+      for(var tx=px0;tx<px1;tx++){ var wx=REACH_X0+tx*REACH_CELL+REACH_CELL/2;
+        if(pointInPoly(wx,wy,poly) || distToPoly(wx,wy,poly)<=R) REACH_GRID[trow+tx]=1; } } }
+  for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i];
+    if(b._mat==="glass") continue;                // glass is a weak point, never a wall
+    var bd=b.bounds;
+    var x0=Math.floor((bd.min.x-R-REACH_X0)/REACH_CELL), x1=Math.ceil((bd.max.x+R-REACH_X0)/REACH_CELL);
+    var y0=Math.floor((bd.min.y-R-REACH_Y0)/REACH_CELL), y1=Math.ceil((bd.max.y+R-REACH_Y0)/REACH_CELL);
+    if(x0<0)x0=0; if(y0<0)y0=0; if(x1>REACH_W)x1=REACH_W; if(y1>REACH_H)y1=REACH_H;
+    for(var gy=y0;gy<y1;gy++){ var row=gy*REACH_W; for(var gx=x0;gx<x1;gx++) REACH_GRID[row+gx]=1; } }
+}
+function solidInWay(x,y){
+  var gx=(x-REACH_X0)/REACH_CELL|0, gy=(y-REACH_Y0)/REACH_CELL|0;
+  if(gx<0||gy<0||gx>=REACH_W||gy>=REACH_H) return false;   // outside the yard = open sky
+  return REACH_GRID[gy*REACH_W+gx]===1;
+}
+function arcTouches(vx,vy,t,R){
+  var x=AX,y=AY,ux=vx,uy=vy, tb=t.bounds;
+  for(var i=0;i<300;i++){
+    // Walk the frame in short hops. A pal can move 27px in a frame, and sampling
+    // only at frame ends would let an arc skip straight through a leg (or, just
+    // as wrong, appear to teleport into a critter it is actually wedged beside).
+    var sp=Math.hypot(ux,uy), hops=Math.max(1, Math.ceil(sp/5)), hx=ux/hops, hy=uy/hops;
+    for(var k=0;k<hops;k++){
+      x+=hx; y+=hy;
+      // A pal is a ball: its centre can never sit inside a grown obstacle, so
+      // that position is checked FIRST and the arc dies there. Only somewhere it
+      // could genuinely be counts as touching the critter.
+      if(solidInWay(x,y)) return false;
+      if(x>tb.min.x-R&&x<tb.max.x+R&&y>tb.min.y-R&&y<tb.max.y+R) return true;
+      // ploughed into the ground. SD3: the floor a BALL feels, so an arc may
+      // drop into a pit only once the whole pal fits inside its mouth.
+      if(y>floorYFor(x,R)-R+2) return false;
+      if(x>W+80||x<-80||y<-1200) return false;
+    }
+    uy+=EFF_G;
+  }
+  return false;
+}
+function arcCanReach(t){
+  if(!G||!t) return false;
+  buildReachGrid(PAL_R);
+  for(var a=-Math.PI; a<Math.PI; a+=0.006){
+    var ca=Math.cos(a), sa=Math.sin(a);
+    for(var s=MAXV; s>2.5; s-=0.5){ if(arcTouches(ca*s, sa*s, t, PAL_R)) return true; }
+  }
+  return false;
+}
+
 // ---- the sensible-aim QA bot: pick the most reachable target, fire the best arc ----
+// SD2 — when nothing can be reached directly (a sealed critter), the bot does
+// what a kid does: it stops flinging at the cage and shoots the thing holding it
+// up. Rough hits-to-break decides which support is worth a pal, and how close
+// that support sits to a critter still standing decides whether it is the right
+// one. This is what makes "the bot clears every level" an honest proof that a
+// sealed layout has a real way in.
+function breakCost(b){
+  var M0=matOf(b); if(!M0) return 999;            // no material = unbreakable, never worth a pal
+  var hp=(b._hp!=null?b._hp:M0.hp);
+  return hp / Math.max(1, (MAXV*0.8-M0.minSpd)*M0.perSpd);
+}
+function planSupportShot(){
+  if(!G||!G.blocks) return null;
+  var standing=G.targets.filter(function(t){return t._alive;});
+  var out=null, bestScore=1e9;
+  for(var i=0;i<G.blocks.length;i++){ var b=G.blocks[i];
+    if(!b._mat) continue;                          // cannot be broken; leave it alone
+    var pl=planShot(b.position.x, b.position.y, b);
+    if(!pl.good) continue;                         // no clean arc to it either
+    var near=1e9;
+    for(var k=0;k<standing.length;k++){ var d=Math.hypot(b.position.x-standing[k].position.x, b.position.y-standing[k].position.y); if(d<near) near=d; }
+    var score=breakCost(b)*10 + near*0.12;
+    if(score<bestScore){ bestScore=score; pl.support=true; out=pl; } }
+  return out;
+}
+var botWait=0;
 function botThink(){
   if(state!=="ready" || !G) return;
   var alive=G.targets.filter(function(t){return t._alive;}); if(!alive.length) return;
+  // let a collapse finish before spending the next pal — a kid waits to see what
+  // the roof does, and firing into a falling tower just burns shots.
+  var settling=false;
+  for(var m=0;m<G.blocks.length && !settling;m++) if(Math.hypot(G.blocks[m].velocity.x,G.blocks[m].velocity.y)>1.2) settling=true;
+  for(var mt=0;mt<alive.length && !settling;mt++) if(Math.hypot(alive[mt].velocity.x,alive[mt].velocity.y)>1.2) settling=true;
+  if(settling && botWait<240){ botWait++; return; }
+  botWait=0;
   var best=null, bestScore=1e9;
   for(var i=0;i<alive.length;i++){ var pl=planShot(alive[i].position.x, alive[i].position.y);
     var score=(pl.good?0:1000) + (pl.minDist||0) + (pl.T||40)*0.05;
     if(score<bestScore){ bestScore=score; best=pl; } }
-  // tiny per-shot variation so repeated misses don't loop identically
-  var j=((G.launchesUsed%3)-1)*1.1; best.vy-=Math.abs(j); best.vx+=j*0.25;
+  if(bestScore>=1000){ var sup=planSupportShot(); if(sup) best=sup; }   // nothing to hit -> break the building
+  // tiny per-shot variation so repeated misses don't loop identically. A support
+  // shot gets a much smaller wobble: those arcs thread real gaps. SD3 adds the
+  // same care to a high LOB — a shot arcing over a hill or down into a pit is
+  // aimed at a small opening, and a whole unit of wobble misses it every time.
+  var amp = best.support ? 0.28 : ((best.T||0) > 44 ? 0.30 : 1.1);
+  var j=((G.launchesUsed%3)-1)*amp;
+  best.vy-=Math.abs(j); best.vx+=j*0.25;
   var sp=Math.hypot(best.vx,best.vy); if(sp>MAXV){ var k=MAXV/sp; best.vx*=k; best.vy*=k; }
   doLaunch(best.vx,best.vy);
 }
@@ -466,11 +851,17 @@ function update(){
   if(!G || state==="title") return;
   if(state==="win" || state==="lose"){ if(fx&&BM)BM.update(fx,1/60); return; }
   M.Engine.update(engine, 1000/60);
-  // pop checks (generous: displaced OR knocked OR fell off) — only once armed
+  sweepBrokenBlocks();          // SD1: remove blocks that died this step (never mid-step)
+  // SD2 pop checks — thrown off its spot, dropped off the world, or slowly
+  // squashed by whatever came to rest on its head. Only once armed.
   if(G.armed){ for(var i=0;i<G.targets.length;i++){ var t=G.targets[i]; if(!t._alive) continue;
     var dd=Math.hypot(t.position.x-t._sx, t.position.y-t._sy);
     var sp=Math.hypot(t.velocity.x,t.velocity.y);
-    if(dd>POP_MOVE || sp>POP_SPD || t.position.y>GY+24 || t.position.x<-30 || t.position.x>W+30) popTarget(t);
+    // SD3: "fell off the world" is measured against the floor UNDER it, so a
+    // critter sitting quietly down in a pit is not counted as having fallen.
+    if(t.position.y>floorY(t.position.x)+24 || t.position.x<-30 || t.position.x>W+30) popTarget(t,"fell");
+    else if(dd>POP_MOVE || sp>POP_SPD) popTarget(t,"thrown");
+    else { var load=crushLoad(t); if(load>CRUSH_MIN_M) hurtTarget(t, Math.min(load,CRUSH_MAX_M)*CRUSH_PER_M, "crush"); }
   } }
   // "clearing" = last target down; keep the physics rolling for a beat, then win.
   if(state==="clearing"){ if(fx&&BM) BM.update(fx,1/60); if(--G.winDelay<=0) winLevel(); return; }
@@ -579,6 +970,105 @@ function drawBg(){
   } else { drawBgDrawn(th); }
   drawClouds(P.px*0.10, P.t);
   drawGround(th);
+}
+// ---- SD3: the terrain, painted from the very polygons the pals collide with.
+// Drawn on top of the flat ground band, so a pit reads as a hole cut into it and
+// a hill as a mound sitting on it, whichever backdrop the level is using.
+// Painted to sit in the same world as the rest of the scene: an earth body, a
+// band of grass over the top, a soft shadow and a few tufts on the skyline. The
+// path is the collision polygon itself, so however it is dressed the silhouette
+// a kid reads is exactly the silhouette a pal hits.
+function terrainPath(poly){
+  ctx.beginPath(); ctx.moveTo(poly[0].x,poly[0].y);
+  for(var k=1;k<poly.length;k++) ctx.lineTo(poly[k].x,poly[k].y);
+  ctx.closePath();
+}
+// Measure the shape rather than assume its corners: a plinth is four points and
+// a mound is fourteen, so the crest and the footprint are read off the polygon.
+function polyExtent(poly){
+  var e={ lo:poly[0].y, hi:poly[0].y, xMin:poly[0].x, xMax:poly[0].x, crestL:poly[0].x, crestR:poly[0].x };
+  var i;
+  for(i=1;i<poly.length;i++){ var p=poly[i];
+    if(p.y<e.lo)e.lo=p.y; if(p.y>e.hi)e.hi=p.y;
+    if(p.x<e.xMin)e.xMin=p.x; if(p.x>e.xMax)e.xMax=p.x; }
+  e.crestL=e.xMax; e.crestR=e.xMin;
+  for(i=0;i<poly.length;i++){ if(poly[i].y<=e.lo+0.5){
+    if(poly[i].x<e.crestL)e.crestL=poly[i].x; if(poly[i].x>e.crestR)e.crestR=poly[i].x; } }
+  return e;
+}
+function drawTerrainShape(poly, th){
+  var e=polyExtent(poly), w=e.xMax-e.xMin, h=e.hi-e.lo;
+  var capH=Math.max(12, Math.min(28, h*0.26));
+  // earth body
+  ctx.save(); playShadowOn();
+  var earth=ctx.createLinearGradient(0,e.lo,0,e.hi);
+  earth.addColorStop(0,"#a0641c"); earth.addColorStop(0.55,"#8a5214"); earth.addColorStop(1,"#6d3f0d");
+  terrainPath(poly); ctx.fillStyle=earth; ctx.fill();
+  ctx.restore();
+  ctx.save(); terrainPath(poly); ctx.clip();
+  // grass over the top, clipped to the shape so it follows the slope down
+  var grass=ctx.createLinearGradient(0,e.lo-3,0,e.lo+capH+8);
+  grass.addColorStop(0,th.top); grass.addColorStop(0.7,th.g1); grass.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=grass; ctx.fillRect(e.xMin-8, e.lo-3, w+16, capH+8);
+  ctx.fillStyle="rgba(255,255,255,.16)"; ctx.fillRect(e.xMin-8, e.lo-3, w+16, 3);
+  // volume: light down the near slope, shadow gathering on the far one, so it
+  // reads as round earth rather than a flat cut-out
+  var lit=ctx.createLinearGradient(e.xMin,0,e.xMax,0);
+  lit.addColorStop(0,"rgba(255,214,150,.18)"); lit.addColorStop(0.42,"rgba(255,214,150,0)");
+  lit.addColorStop(0.70,"rgba(40,20,2,.12)"); lit.addColorStop(1,"rgba(40,20,2,.34)");
+  ctx.fillStyle=lit; ctx.fillRect(e.xMin-8, e.lo-3, w+16, h+10);
+  ctx.restore();
+  ctx.strokeStyle="rgba(58,34,8,.42)"; ctx.lineWidth=2; terrainPath(poly); ctx.stroke();
+  // tufts along the crest
+  ctx.fillStyle=th.top;
+  var n=Math.max(2, Math.round((e.crestR-e.crestL)/32));
+  for(var t=0;t<=n;t++){ var cx2=e.crestL+(e.crestR-e.crestL)*(t/n);
+    ctx.beginPath(); ctx.moveTo(cx2-5, e.lo+2); ctx.quadraticCurveTo(cx2, e.lo-9, cx2+5, e.lo+2); ctx.fill(); }
+}
+// Where the ground SURFACE is on screen. The painted backdrop lays its grass
+// strip about thirty pixels above the physics floor (blocks stand at GY with
+// their feet tucked into the fringe), so a hole cut from GY down would read as
+// a window in the dirt band rather than a hole in the ground. A pit is drawn
+// from whichever surface the level is actually showing.
+function groundVisualTop(){
+  var gd=BGART.ground;
+  return (gd && (gd.naturalWidth||gd.width)) ? 518 : GY;
+}
+function drawPit(p, th){
+  var x0=p.x-p.w/2, x1=p.x+p.w/2, fl=GY+p.d, mouth=groundVisualTop();
+  ctx.save();
+  // the hole: much darker than the dirt around it, or it reads as a box painted
+  // onto the ground rather than a hole dug into it
+  var g=ctx.createLinearGradient(0,mouth,0,fl);
+  g.addColorStop(0,"#1d0f03"); g.addColorStop(0.55,"#361f07"); g.addColorStop(1,"#54330f");
+  ctx.fillStyle=g; ctx.fillRect(x0, mouth, x1-x0, H-mouth);
+  // the floor it sits on, in earth rather than bright grass
+  ctx.fillStyle="#6d4512"; ctx.fillRect(x0, fl, x1-x0, H-fl);
+  ctx.fillStyle="#7d5218"; ctx.fillRect(x0, fl, x1-x0, 4);
+  // inner shadow down both walls, so the mouth has real depth
+  var lsh=ctx.createLinearGradient(x0,0,x0+18,0);
+  lsh.addColorStop(0,"rgba(0,0,0,.60)"); lsh.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=lsh; ctx.fillRect(x0, mouth, 18, H-mouth);
+  var rsh=ctx.createLinearGradient(x1,0,x1-18,0);
+  rsh.addColorStop(0,"rgba(0,0,0,.60)"); rsh.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=rsh; ctx.fillRect(x1-18, mouth, 18, H-mouth);
+  // and a shadow across the mouth, so the near rim overhangs it
+  var top=ctx.createLinearGradient(0,mouth,0,mouth+22);
+  top.addColorStop(0,"rgba(0,0,0,.55)"); top.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=top; ctx.fillRect(x0, mouth, x1-x0, 22);
+  // grassy lips overhanging each rim
+  ctx.fillStyle=th.top;
+  ctx.fillRect(x0-11, mouth-5, 16, 11); ctx.fillRect(x1-5, mouth-5, 16, 11);
+  ctx.fillStyle=th.g1;
+  ctx.fillRect(x0-11, mouth+6, 16, 5); ctx.fillRect(x1-5, mouth+6, 16, 5);
+  ctx.restore();
+}
+function drawTerrain(){
+  if(!G || !G.terrain || !G.terrain.length) return;
+  var th=themeFor(level);
+  for(var i=0;i<G.terrain.length;i++){ var t=G.terrain[i];
+    if(t.k==="pit"){ drawPit(t, th); continue; }
+    var poly=terrainPoly(t); if(poly) drawTerrainShape(poly, th); }
 }
 function drawSling(){
   // painted wooden slingshot (our art); the drawn Y below is the never-break fallback
@@ -718,21 +1208,76 @@ function drawTarget(b){
 }
 // pick a Kenney physics texture by shape: wide plank / tall pillar / square,
 // and material: tall-ish -> stone (castle pillars), else wood (beams).
-function blockImgFor(w,h){
-  var matl=(h>w*1.15)?"stone":"wood";
+// Pick a Kenney physics texture. A block that NAMES a material uses that
+// material's texture; a plain block still guesses from its shape exactly as
+// before (tall-ish -> stone pillar, else wood beam), so nothing about the
+// levels 1-6 look changes. Glass has no photo texture — it is drawn.
+function blockImgFor(w,h,matName){
+  var matl = matName || ((h>w*1.15)?"stone":"wood");
+  if(matl==="glass") return null;
   var shape=(w>h*1.35)?"W":(h>w*1.35?"T":"S");
   return BLK_IMGS[matl+shape];
 }
+// The middle state between whole and gone: a few crack lines whose count and
+// darkness grow as the block's health falls.
+function drawCracks(w,h,dmg,color){
+  var n = 2 + Math.round(dmg*4);
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.2,Math.min(w,h)*0.07); ctx.lineCap="round";
+  ctx.globalAlpha = 0.35 + 0.55*dmg;
+  for(var i=0;i<n;i++){
+    var f=(i+1)/(n+1), sx=-w/2+w*f, sy=-h/2, jx=w*0.16*((i%2)?1:-1);
+    ctx.beginPath(); ctx.moveTo(sx, sy);
+    ctx.lineTo(sx+jx, sy+h*0.38); ctx.lineTo(sx-jx*0.6, sy+h*0.72); ctx.lineTo(sx+jx*0.3, sy+h);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawBlock(b){
   ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle);
-  var w=b._w,h=b._h;
-  var bim=blockImgFor(w,h);
-  if(bim&&(bim.naturalWidth||bim.width)){ playShadowOn(); ctx.drawImage(bim,-w/2,-h/2,w,h); ctx.restore(); return; }
-  ctx.fillStyle="#caa46a"; BR? BR.rrect(ctx,-w/2,-h/2,w,h,5):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
-  ctx.strokeStyle="#9b7741"; ctx.lineWidth=3; ctx.stroke();
+  var w=b._w,h=b._h, M0=matOf(b);
+  var dmg = (M0 && b._hp0) ? Math.max(0,Math.min(1, 1-(b._hp/b._hp0))) : 0;
+  var bim=blockImgFor(w,h,b._mat);
+  if(bim&&(bim.naturalWidth||bim.width)){
+    playShadowOn(); ctx.drawImage(bim,-w/2,-h/2,w,h); ctx.shadowColor="transparent";
+    if(b._cracked) drawCracks(w,h,dmg,M0.crack);
+    ctx.restore(); return;
+  }
+  if(M0 && b._mat==="glass"){                       // a see-through pane with a shine
+    ctx.save(); playShadowOn(); ctx.globalAlpha=0.55;
+    ctx.fillStyle=M0.fill; BR? BR.rrect(ctx,-w/2,-h/2,w,h,4):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle=M0.edge; ctx.lineWidth=2.4; BR? BR.rrect(ctx,-w/2,-h/2,w,h,4):ctx.strokeRect(-w/2,-h/2,w,h); ctx.stroke();
+    ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle="#fff"; ctx.lineWidth=Math.max(1.5,w*0.10); ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-w*0.22,h*0.34); ctx.lineTo(w*0.24,-h*0.36); ctx.stroke(); ctx.restore();
+    if(b._cracked) drawCracks(w,h,dmg,M0.crack);
+    ctx.restore(); return;
+  }
+  var fillC=(M0?M0.fill:"#caa46a"), edgeC=(M0?M0.edge:"#9b7741");
+  ctx.fillStyle=fillC; BR? BR.rrect(ctx,-w/2,-h/2,w,h,5):ctx.fillRect(-w/2,-h/2,w,h); ctx.fill();
+  ctx.strokeStyle=edgeC; ctx.lineWidth=3; ctx.stroke();
   ctx.strokeStyle="rgba(155,119,65,.6)"; ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(-w/2+4,0); ctx.lineTo(w/2-4,0); ctx.stroke();
+  if(M0 && b._cracked) drawCracks(w,h,dmg,M0.crack);
   ctx.restore();
+}
+// The shatter poof: the block's own outline blows apart into four fading shards.
+function drawShards(){
+  if(!G.shards || !G.shards.length) return;
+  var t=nowMs();
+  for(var i=G.shards.length-1;i>=0;i--){ var s=G.shards[i], age=(t-s.t0)/460;
+    if(age>=1){ G.shards.splice(i,1); continue; }
+    var M0=BLOCK_MATS[s.m]||BLOCK_MATS.wood, spread=1+age*1.5;
+    ctx.save(); ctx.translate(s.x,s.y); ctx.rotate((s.a||0)+age*0.5);
+    ctx.globalAlpha=Math.max(0,1-age*age);
+    ctx.fillStyle=M0.fill; ctx.strokeStyle=M0.edge; ctx.lineWidth=1.6;
+    [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(q){
+      var qw=s.w*0.42, qh=s.h*0.42, cx=q[0]*s.w*0.26*spread, cy=q[1]*s.h*0.26*spread;
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(q[0]*q[1]*age*1.2);
+      ctx.beginPath(); ctx.moveTo(-qw/2,-qh/2); ctx.lineTo(qw/2,-qh*0.28); ctx.lineTo(qw*0.3,qh/2); ctx.lineTo(-qw/2,qh*0.34);
+      ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+    });
+    ctx.restore();
+  }
 }
 function hudIcon(x,y,sq){ drawSquadFace(x,y,11,sq,{icon:true}); }
 function draw(){
@@ -740,7 +1285,9 @@ function draw(){
   ctx.clearRect(0,0,W,H);
   ctx.save(); if(fx&&BM){ var sh=BM.shakeOffset(fx); ctx.translate(sh.x,sh.y); }
   drawBg();
+  drawTerrain();                                  // SD3: hills, pits and plinths
   for(var i=0;i<G.blocks.length;i++) drawBlock(G.blocks[i]);
+  drawShards();                                   // SD1 shatter poof
   for(var j=0;j<G.targets.length;j++){ if(G.targets[j]._alive) drawTarget(G.targets[j]); }
   if(G.poofs && G.poofs.length){ var _np=nowMs();
     for(var pi=G.poofs.length-1;pi>=0;pi--){ var pf=G.poofs[pi], age=(_np-pf.t0)/500;
@@ -821,9 +1368,13 @@ function buildStartCfg(){
     // LP1: the card shows THIS level's real tower, critters and slingshot.
     // Locked levels get the picture too — the start screen dims them itself.
     var p = palFor(i), img = "";
+    // SD3: the card is handed the terrain's real polygons, not its numbers, so
+    // it draws the shape the level actually has instead of guessing at one.
+    var terr = (l.terrain||[]).map(function(t){
+      var o={ k:t.k, x:t.x, w:t.w, d:t.d }; o.poly=terrainPoly(t); return o; });
     try{ if(BLT && BLT.make) img = BLT.make("towers",
-      { blocks:l.blocks, targets:l.targets, sky:p.sky, g0:p.g0, g1:p.g1, top:p.top, n:i+1 },
-      (l.id||l.name||i)+"|"+i+"|v1"); }catch(e){}
+      { blocks:l.blocks, targets:l.targets, terrain:terr, sky:p.sky, g0:p.g0, g1:p.g1, top:p.top, n:i+1 },
+      (l.id||l.name||i)+"|"+i+"|v3"); }catch(e){}   // v3: SD3 terrain repaints the cards
     return { n:i+1, name:l.name, color:"#3b6ea5", img:img||undefined, maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
   return { title:"Sling Squad", subtitle:"Fling your friends and topple every tower! Stars: "+totalStars()+" of "+maxStars(),
            coins:totalStars(), sound:!(BA&&BA.muted), showBack:false, hideSound:true, levels:levels };
@@ -840,7 +1391,7 @@ function showMenu(){ state="title"; G=null; show("help",false); showChrome(false
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
 }
 function hideMenu(){ var host=el("start"); if(host)host.style.display="none"; showChrome(true); }
-function startLevel(i){ level=i; buildWorld(i); started=true; hideMenu(); show("help",false); ensureMusic(); }
+function startLevel(i){ level=i; buildWorld(i); botWait=0; started=true; hideMenu(); show("help",false); ensureMusic(); }
 
 function wireMenus(){
   var hb=el("helpBtn"); if(hb)hb.onclick=function(){ show("help",true); };
@@ -863,6 +1414,7 @@ if(BN&&BN.register){ BN.register({ hide:["muteBtn","helpBtn","backBtn"],
 // created sounds (ElevenLabs via /api/sfx); BA synth stays a silent fallback only
 if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   stretch:"sling_stretch", launch:"sling_release", thud:"sling_thud", poof:"sling_poof",
+  crack:"sling_crack", shatter:"sling_shatter",     // SD1: a block cracking, and a block going to bits
   explode:"explode", win:"sling_win", lose:"tennis_lose" } }); }
 
 function frame(){ update(); if(SLING_DEMO) demoTick(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
@@ -988,7 +1540,57 @@ window.BUILDABLE_GAME = {
   state:function(){ return state; },
   effG:function(){ return EFF_G; },
   dbg:function(){ return { level:level, state:state, launchesLeft:G&&G.launchesLeft, used:G&&G.launchesUsed,
-    targets:G?G.totalTargets:0, popped:G?G.popped:0 }; },
+    targets:G?G.totalTargets:0, popped:G?G.popped:0, smashed:G?G.smashed:0 }; },
+  // SD1 hooks: what every standing block is made of and how healthy it is,
+  // plus a way to hit one block with a known speed so QA can prove the
+  // glass/wood/stone difference instead of trusting the numbers.
+  _mats:function(){ return BLOCK_MATS; },
+  _blocks:function(){ if(!G) return []; return G.blocks.map(function(b){
+    return { m:b._mat||null, hp:b._hp!=null?Math.round(b._hp*10)/10:null, hp0:b._hp0!=null?Math.round(b._hp0*10)/10:null,
+             cracked:!!b._cracked, w:b._w, h:b._h,
+             x:Math.round(b.position.x), y:Math.round(b.position.y) }; }); },
+  _smashed:function(){ return G?G.smashed:0; },
+  _hitBlock:function(i,spd,weight){ if(!G||!G.blocks[i]) return null;
+    var b=G.blocks[i]; damageBlock(b, spd, { mass:(weight||1)*AMMO_MASS_REF, isStatic:false });
+    var out={ m:b._mat||null, hp:b._hp!=null?Math.round(b._hp*10)/10:null, cracked:!!b._cracked, broken:!!b._broken };
+    sweepBrokenBlocks(); return out; },
+  // SD2 hooks: which critters the layout claims are sealed, whether ANY arc in
+  // the game can actually touch one, and how each one finally went down — so QA
+  // can prove "you cannot hit this directly" instead of taking the word for it.
+  _targets:function(){ if(!G) return []; return G.targets.map(function(t){
+    return { i:t._ti, sealed:!!t._sealed, alive:!!t._alive, why:t._why||null, intact:!!t._intact,
+             hp:t._hp!=null?Math.round(t._hp*10)/10:null, x:Math.round(t.position.x), y:Math.round(t.position.y) }; }); },
+  _reach:function(ti){ if(!G||!G.targets[ti]) return null; return arcCanReach(G.targets[ti]); },
+  // shove a critter by hand at a known speed — proves a nudge is survivable and
+  // a real hit is not, without having to land a lucky shot to find out.
+  _nudge:function(ti,spd,weight){ if(!G||!G.targets[ti]) return null; var t=G.targets[ti];
+    hurtTarget(t, Math.max(0,(spd-TGT_MIN_SPD))*TGT_PER_SPD*Math.max(0.35,Math.min(2.2,(weight==null?1:weight))), "hit");
+    return { alive:!!t._alive, hp:t._hp!=null?Math.round(t._hp*10)/10:null, why:t._why||null }; },
+  _popRule:function(){ return { POP_MOVE:POP_MOVE, POP_SPD:POP_SPD, TGT_HP:TGT_HP, TGT_MIN_SPD:TGT_MIN_SPD,
+                                TGT_PER_SPD:TGT_PER_SPD, CRUSH_MIN_M:CRUSH_MIN_M, CRUSH_PER_M:CRUSH_PER_M }; },
+  // SD3 hooks: what ground this level is built on, whether it stayed put, and —
+  // the one that matters — how much LOFT a critter demands. `_loft` is the
+  // flight time of the flattest shot that reaches a critter cleanly; on the old
+  // flat floor that was always a low number, and a hill or a plinth is only
+  // doing its job if the number goes up.
+  _terrain:function(){ if(!G) return []; return (G.terrain||[]).map(function(t){
+    return { k:t.k, x:t.x, w:t.w, h:t.h!=null?t.h:null, d:t.d!=null?t.d:null }; }); },
+  _terrainFixed:function(){ if(!G||!G.terrainBodies) return true;
+    for(var i=0;i<G.terrainBodies.length;i++){ var b=G.terrainBodies[i];
+      if(!b.isStatic) return false;
+      var c=polyCentroid(b._poly);
+      if(Math.abs(b.position.x-c.x)>0.01 || Math.abs(b.position.y-c.y)>0.01 || Math.abs(b.angle)>0.001) return false; }
+    return true; },
+  _floorY:function(x){ return floorY(x); },
+  // Pass ignoreTerrain to ask the same question of a level standing on a flat
+  // floor. The DIFFERENCE between the two answers is the whole phase in one
+  // number: how much steeper a kid has to throw because of the ground.
+  _loft:function(ti, ignoreTerrain){ if(!G||!G.targets[ti]) return null; var t=G.targets[ti];
+    var keep=null;
+    if(ignoreTerrain){ keep=G.terrainBodies; G.terrainBodies=[]; }
+    var pl; try{ pl=planShot(t.position.x, t.position.y); }
+    finally{ if(ignoreTerrain) G.terrainBodies=keep; }
+    return pl.good ? pl.T : null; },
   // one level with the bot; returns whether it cleared + launches used
   sim:function(idx,maxFrames){ botMode=true; startLevel(idx); state="ready"; started=true;
     var f=0, cap=maxFrames||20000; while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
