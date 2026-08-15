@@ -1,5 +1,40 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (later): the planner drives the runner
+
+Follow-on from the autopilot runner. Two problems with the first version, both found by
+Mike running it for real: it started on card `9A`, which sits in the phase literally titled
+**"Parked (triggers written down)"**, and it chose the phase itself rather than being told.
+
+### Parked phases are never auto-picked
+A phase whose title contains the word "parked" is now skipped when no phase was named, and
+the runner says which cards it skipped. `--phase 9` still reaches them on request. `later`
+cards were already skipped. There is also a 6-second countdown before each card so a wrong
+pick can be caught with ctrl-C (`--yes` skips it).
+
+### "Run this phase" — the planner is now the control
+New button on every unfinished phase in `public/planner.html`. It calls `op:'queue'`, which
+writes `autorun = {phase, max, status, requestedAt, note}` onto the meta row — deliberately
+OUTSIDE `data.roadmap`, so queueing can never touch the card blob. The runner reports back
+with `op:'queueStatus'`, and a banner above the board shows queued / running / finished /
+stopped with a Cancel button. The board refreshes itself when the run moves on.
+
+`scripts/autopilot.mjs --watch` sits waiting and picks a queued phase up inside ~20 seconds,
+works it, reports, and goes back to waiting. `--phase` / `--card` still override the queue
+entirely. `scripts/planner.mjs queue <phase> [max]` and `unqueue` do the same from the
+command line, which is how this was tested.
+
+### Verified
+Against the local fake planner: nothing-queued explains itself and exits 0; a CLI queue is
+picked up by a one-shot run; a queue made *after* a watcher started is picked up by it
+inside one poll, worked, reported `done`, and the watcher returned to waiting. All script
+blocks in `planner.html` still parse.
+
+**Mike's Mac:** his `buildable-app` clone had empty `.lock` files dated **July 9** from a git
+that crashed months ago, which made every later git command claim another git was running.
+The first launcher mis-blamed an expired sign-in; the sign-in was fine. Launcher now clears
+stale locks, stashes old edits, and prints the real git error.
+
 ## 2026-08-15: one card, one session — the autopilot runner
 
 **Tooling, no phase.** Mike asked whether a session could finish a card, verify it, and

@@ -11,6 +11,9 @@
 // POST { op:'note', id, text }     -> append one session note to a card
 // POST { op:'addCard', card }      -> add a card to a phase
 // POST { op:'flagReview', id, val } -> older alias for fields:{needsReview}
+// POST { op:'queue', phase, max }  -> "run this phase" (the planner page's button)
+// POST { op:'unqueue' }            -> cancel it
+// POST { op:'queueStatus', status } -> the runner reporting waiting/running/done/stopped
 // Tester adds pass source:'tester' + author; tester edit/delete pass author so
 // PostgREST filters restrict them to their OWN feedback rows (edit-your-own).
 // Uses the service key server-side (like log-game-event / play-creation), so no
@@ -58,6 +61,7 @@ export default async function handler(req, res) {
         const phases = (d.roadmap && Array.isArray(d.roadmap.phases)) ? d.roadmap.phases : [];
         return res.status(200).json({
           ok: true,
+          autorun: d.autorun || null,
           phases: phases.map((p) => ({ num: p.num, title: p.title || p.name || "" })),
           cards: cards.map((s) => ({
             id: s.id, name: s.name, phaseNum: s.phaseNum,
@@ -196,6 +200,45 @@ export default async function handler(req, res) {
         cards[i] = c;
         await writeMeta(d);
         return res.status(200).json({ ok: true, id, notes: c.notes.length });
+      }
+
+      // op:'queue' — "run this phase". The planner page writes it, scripts/autopilot.mjs
+      // reads it and starts working. Pass phase:null (or op:'unqueue') to cancel.
+      // Kept OUT of data.roadmap so a queue never touches the card blob.
+      if (op === "queue" || op === "unqueue") {
+        const d = await readMeta();
+        if (op === "unqueue" || b.phase == null || b.phase === "") {
+          d.autorun = null;
+          await writeMeta(d);
+          return res.status(200).json({ ok: true, autorun: null });
+        }
+        const phase = clip(b.phase, 12).trim();
+        const phases = (d.roadmap && Array.isArray(d.roadmap.phases)) ? d.roadmap.phases : [];
+        if (phases.length && !phases.some((p) => String(p.num) === phase)) {
+          return res.status(200).json({ ok: false, error: "no phase " + phase, phases: phases.map((p) => p.num) });
+        }
+        const open = ((d.roadmap && d.roadmap.sessions) || [])
+          .filter((s) => String(s.phaseNum) === phase && !s.done && !s.later).length;
+        d.autorun = {
+          phase,
+          max: Math.min(10, Math.max(1, parseInt(b.max, 10) || 4)),
+          status: "waiting",
+          requestedAt: new Date().toISOString(),
+          note: "",
+        };
+        await writeMeta(d);
+        return res.status(200).json({ ok: true, autorun: d.autorun, open });
+      }
+
+      // op:'queueStatus' — the runner reporting back, so the planner page can show
+      // what is happening without the runner having to touch the card blob.
+      if (op === "queueStatus") {
+        const d = await readMeta();
+        if (!d.autorun) return res.status(200).json({ ok: true, autorun: null });
+        const status = ["waiting", "running", "done", "stopped"].includes(b.status) ? b.status : "running";
+        d.autorun = { ...d.autorun, status, note: clip(b.note, 300), updatedAt: new Date().toISOString() };
+        await writeMeta(d);
+        return res.status(200).json({ ok: true, autorun: d.autorun });
       }
 
       // op:'addCard' — add a card to an existing phase. Refuses a duplicate id and

@@ -47,7 +47,10 @@ const MARK = { done: "[x]", review: "[?]", later: "[~]", open: "[ ]" };
 async function list(args) {
   const all = args.includes("--all");
   const phase = args.find((a) => !a.startsWith("--")) || null;
-  const { phases, cards } = await get("?scope=roadmap");
+  const { phases, cards, autorun } = await get("?scope=roadmap");
+  if (autorun && autorun.phase && !["done", "stopped"].includes(autorun.status)) {
+    console.log("queued: phase " + autorun.phase + " (" + autorun.status + (autorun.note ? " — " + autorun.note : "") + ")");
+  }
   const titles = Object.fromEntries(phases.map((p) => [String(p.num), p.title]));
   let show = cards;
   if (phase) show = show.filter((c) => String(c.phaseNum) === String(phase));
@@ -119,6 +122,18 @@ switch (cmd) {
     console.log("added " + r.id + " to phase " + r.phaseNum + " (" + r.cards + " cards now)");
     break;
   }
+  case "queue": {
+    // Same request the planner page's "Run this phase" button makes.
+    if (!id) die('usage: queue <phase> [max]');
+    const r = await post({ op: "queue", phase: id, max: args[1] });
+    console.log("phase " + r.autorun.phase + " queued (up to " + r.autorun.max + " cards, " + r.open + " open). A watching runner will pick it up.");
+    break;
+  }
+  case "unqueue":
+    await post({ op: "unqueue" });
+    console.log("queue cleared");
+    break;
+
   case "reword": {
     if (!id) die("which card?");
     const fields = {};

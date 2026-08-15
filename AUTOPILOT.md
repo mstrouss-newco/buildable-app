@@ -39,14 +39,25 @@ the next one. A session that runs ahead into card two breaks the chain's safety 
 `scripts/autopilot.mjs` works cards one at a time, each in a **brand new** Claude Code
 session (`claude -p`), and the planner is the handoff between them.
 
+**The planner drives it.** Mike taps **Run this phase** on a phase at `/planner`; that
+writes `autorun` into the meta row (`op:'queue'`). A runner left open with `--watch` picks
+it up inside ~20 seconds and works that phase. The runner reports back with
+`op:'queueStatus'`, so the planner banner shows queued / running / finished / stopped.
+Nothing is typed and no phase is chosen by the runner itself.
+
 ```
-runner: ask the planner for the next open card
+Mike taps "Run this phase" → planner records it
+runner (--watch): sees it → for each open card in that phase:
       → build the prompt from that card
       → start a FRESH session with it
       → session builds, QAs, pushes, ticks the card, exits
       → runner re-reads the planner: is that card actually done?
-          yes → next card        no → STOP and tell Mike
+          yes → next card        no → STOP, report it, go back to waiting
 ```
+
+A **parked** phase (title containing the word "parked") is never picked when no phase was
+named. Those are cards Mike shelved until something triggers them. `--phase 9` still works
+if he asks for one by name.
 
 Why fresh sessions rather than one long one: a session that has been going for hours
 carries everything it has ever read into every single reply, so card four costs several

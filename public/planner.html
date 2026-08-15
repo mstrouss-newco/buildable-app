@@ -252,6 +252,7 @@
         <button class="btn" onclick="importRoadmap()">Import roadmap</button>
       </div>
     </div>
+    <div id="rm-autorun"></div>
     <div id="rm-board"></div>
   </div>
 </div>
@@ -886,6 +887,7 @@ function rmPhaseHtml(ph){
     +'</span>Phase '+esc(ph.num)+' <span style="font-weight:600">'+esc(ph.title)+'</span>'
     +(canDel?'<span class="rm-manual">yours</span>':'')+'</h2>'
     +'<span class="status '+doneCls+'">'+pr.done+' of '+pr.total+' done</span>'
+    +((pr.total-pr.done)>0?'<button class="btn mini rm-runphase" title="Have Claude work through the open cards in this phase" onclick=\'event.stopPropagation();rmRunPhase('+JSON.stringify(ph.num)+')\'>Run this phase</button>':'')
     +(canDel?'<span class="x" title="Delete phase" onclick=\'event.stopPropagation();rmDeletePhase('+JSON.stringify(ph.num)+')\'>&#10005;</span>':'')
     +'</div>'
     +'<div class="body '+open+'">'
@@ -895,8 +897,67 @@ function rmPhaseHtml(ph){
     +'<div class="quickadd rm-addsess"><button class="btn mini" onclick=\'rmAddSession('+JSON.stringify(ph.num)+')\'>+ Add session</button></div>'
     +'</div></div>';
 }
+/* ---- "Run this phase" -------------------------------------------------------
+   The button does not start anything by itself. It writes a request into the
+   planner; a runner (scripts/autopilot.mjs --watch) on Mike's Mac picks it up
+   within about half a minute and works the phase card by card, in a fresh
+   Claude session each time. If no runner is open, the request simply waits. */
+let rmAutorun=null, rmAutorunTimer=null;
+
+async function rmRunPhase(num){
+  const btns=document.querySelectorAll(".rm-runphase"); btns.forEach(b=>b.disabled=true);
+  const r=await apiPost({op:"queue", phase:num, max:4});
+  btns.forEach(b=>b.disabled=false);
+  if(!r.ok){ alert("Could not queue that phase: "+(r.error||"unknown")); return; }
+  rmAutorun=r.autorun; renderAutorun(); rmAutorunPoll(true);
+}
+async function rmCancelRun(){
+  const r=await apiPost({op:"unqueue"});
+  if(r.ok){ rmAutorun=null; renderAutorun(); }
+}
+function renderAutorun(){
+  const el=document.getElementById("rm-autorun"); if(!el) return;
+  const a=rmAutorun;
+  if(!a||!a.phase||a.status==="done"||a.status==="stopped"){
+    /* A finished or stopped run still gets one line, so a chain that stopped
+       early is never silent. */
+    if(a&&a.note&&(a.status==="done"||a.status==="stopped")){
+      const good=a.status==="done";
+      el.innerHTML='<div style="margin:8px 0;padding:10px 12px;border-radius:10px;font-size:14px;'
+        +'background:'+(good?"#eaf7ef":"#fdeeee")+';border:1px solid '+(good?"#bde5cb":"#f3c9c9")+'">'
+        +'<b>Phase '+esc(a.phase)+' '+(good?"finished":"stopped")+'.</b> '+esc(a.note)
+        +' <span class="x" style="cursor:pointer;float:right" onclick="rmCancelRun()">&#10005;</span></div>';
+    } else el.innerHTML="";
+    return;
+  }
+  const waiting=a.status==="waiting";
+  el.innerHTML='<div style="margin:8px 0;padding:10px 12px;border-radius:10px;font-size:14px;'
+    +'background:#fff7e6;border:1px solid #f0d9a8">'
+    +'<b>Phase '+esc(a.phase)+' &mdash; '+(waiting?"queued":"running")+'.</b> '
+    +esc(waiting?"Waiting for a runner. Open “Work the roadmap” on your Mac and it will start.":(a.note||"working…"))
+    +' <button class="btn mini" style="float:right" onclick="rmCancelRun()">Cancel</button></div>';
+}
+async function rmAutorunPoll(once){
+  try{
+    const r=await fetch("/api/planner?scope=roadmap",{cache:"no-store"}).then(x=>x.json());
+    if(r&&r.ok){
+      const was=rmAutorun&&rmAutorun.status;
+      rmAutorun=r.autorun||null; renderAutorun();
+      /* A card finishing changes the board, so refresh it when the run moves on. */
+      if(was&&rmAutorun&&rmAutorun.status!==was) load(false);
+    }
+  }catch(e){}
+  if(once) return;
+}
+function rmAutorunStart(){
+  if(rmAutorunTimer) return;
+  rmAutorunTimer=setInterval(()=>{ if(!document.hidden) rmAutorunPoll(); }, 15000);
+  rmAutorunPoll();
+}
+
 function renderRoadmap(){
   const board=document.getElementById("rm-board"); if(!board) return;
+  rmAutorunStart(); renderAutorun();
   const rd=rmData();
   const ns=nextSession(); rmNextId=ns?ns.id:null;
   if(!rd.sessions.length && !rd.archived.length){

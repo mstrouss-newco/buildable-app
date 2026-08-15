@@ -6,6 +6,15 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## "Run this phase": the planner drives the runner (August 15 2026)
+`public/planner.html`, `api/planner.js`, `scripts/autopilot.mjs`, `scripts/planner.mjs`.
+Every unfinished phase gets a **Run this phase** button. It records the request on the meta
+row (`op:'queue'`, kept outside `data.roadmap` so it can never touch the cards), and a runner
+left open with `npm run cards -- --watch` picks it up within ~20s and works that phase card by
+card in fresh sessions. A banner shows queued / running / finished / stopped with Cancel.
+Also: phases titled "parked" are never auto-picked, and there is a 6-second countdown before
+each card so a wrong pick can be caught.
+
 ## One card, one session: the autopilot runner (August 15 2026)
 `scripts/autopilot.mjs`, `AUTOPILOT.md`, `AGENTS.md`, `package.json`.
 `npm run cards` works the roadmap by starting a BRAND NEW Claude Code session per card and

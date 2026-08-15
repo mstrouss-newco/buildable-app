@@ -236,9 +236,10 @@ no jargon.
   work invalidated the wording of a *later* card, reword it directly and list what you
   changed in your recap. Never post `op:'meta'` to rebuild the roadmap blob by hand:
   that is how 107 cards get wiped. The card ops exist so the server does it safely.
-- **One card, one session.** `npm run cards` (`scripts/autopilot.mjs`) works the roadmap by
-  starting a **brand new** session per card and reading the planner between them to decide
-  whether to carry on. If your session was started that way, **read `AUTOPILOT.md`** — it is
+- **One card, one session.** The owner taps **Run this phase** in `/planner`; a runner left
+  open with `npm run cards -- --watch` (`scripts/autopilot.mjs`) picks it up and works that
+  phase by starting a **brand new** session per card, reading the planner between them to
+  decide whether to carry on. If your session was started that way, **read `AUTOPILOT.md`** — it is
   what changes when nobody is watching (decide and log, never stall), and it explains why
   ticking a card you have not really finished is the one thing that breaks the chain. Do
   ONLY your card; the runner starts the next one.
