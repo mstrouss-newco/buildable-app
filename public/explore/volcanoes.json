@@ -204,11 +204,11 @@
           {
             "icon": "volcano",
             "label": "Mauna Loa, a wide shield volcano",
-            "value": 100,
-            "display": "about 100 miles across"
+            "value": 60,
+            "display": "about 60 miles across"
           }
         ],
-        "caption": "Both volcano widths come from the National Park Service. The hour of driving is an everyday distance, here only so you have something to measure against.",
+        "caption": "Both volcano widths come from the National Park Service. Mauna Loa's flanks stretch about 60 miles long, and one whole hour of driving would only just cross it. The hour of driving is an everyday distance, here only so you have something to measure against.",
         "source": "National Park Service (nps.gov)"
       }
     },

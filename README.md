@@ -6,6 +6,20 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## RP6 second-pass fact-check: Mauna Loa (August 15 2026)
+`public/explore/volcanoes.json`.
+Independent second-pass audit of every Wow chart number and US-unit conversion
+across the 20 Kidspedia books. Twenty of the twenty held up under a fresh
+reader; one didn't. The volcanoes "How wide is a volcano at the bottom?" chart
+called Mauna Loa "about 100 miles across." NPS's own Hawai'i Volcanoes page
+describes Mauna Loa as roughly 60 miles long and 30 miles wide, covering about
+half of Hawai'i Island (~2,035 sq mi). Fixed the row and the caption. The other
+fourteen already-approved books remain factually clean. The six still-in-review
+books (deep-ocean, planets, rockets, snakes-reptiles, volcanoes, wild-weather)
+now need Mike's manual flip to appear on the kids' shelf — that guardrail
+belongs to him, so the RP6 card is left in `review` after the fact-check work,
+not `done`.
+
 ## Lanes get their own tables, and the runners go background (August 15 2026)
 `api/planner.js`, `scripts/lane-run.sh`, db migration `planner_lanes_and_queue`.
 The queue and lanes were in the one planner_meta JSON blob, so overlapping writes silently

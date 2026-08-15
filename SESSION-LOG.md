@@ -1,5 +1,35 @@
 # Buildable Kids — Session Log
 
+## 2026-08-15 (RP6 second pass): Mauna Loa was too wide
+
+The first RP6 pass (commit 62d2929) fixed six factual errors across five books. A fresh
+independent second-pass audit of every Wow chart number and every US-unit conversion across
+all 20 books turned up one more: `public/explore/volcanoes.json` — the "How wide is a
+volcano at the bottom?" chart called Mauna Loa "about 100 miles across," which is roughly
+double the widely-cited NPS figure. NPS's own Hawai'i Volcanoes literature describes
+Mauna Loa as ~60 miles long × 30 miles wide, covering about half of Hawai'i Island
+(~2,035 sq mi). Fixed the chart row (value 100 → 60, display updated) and appended a line
+to the chart caption so a curious grown-up can see the number reconciles with the "hour of
+driving" reference row on the same chart.
+
+The other 19 books held up under the fresh reader — including the six still-in-review ones.
+The soft flags the audit surfaced (leafcutter ant trail length attributed to San Diego Zoo,
+Seabed 2030 percentage rounded up, "lunch" vs "dinner" phrasing) are matters of source
+precision and editorial voice rather than factual errors and were left alone.
+
+**Card left in `review`, not `done`.** The card is *Fact-check + flip live*. The fact-check
+side is finished and on `main`; the flip-live side is Mike's — six books
+(deep-ocean, planets, rockets, snakes-reptiles, volcanoes, wild-weather) are still
+`status: "in-review"` and only Mike can flip them to `approved`. Guardrails on kid-facing
+publishing say a session must not do that unilaterally. So the chain STOPS here, which is
+the correct outcome; RP7 (narration audio) is not gated on the six books being live.
+
+QA: `qa-kidspedia.mjs` ALL CHECKS PASS. `qa-topic.mjs` ALL CHECKS PASS (10 warnings, all
+pending-art or pending-exhibit for RP4/RP5 follow-through — not RP6 concerns).
+
+Files: `public/explore/volcanoes.json`, `README.md`, `SESSION-LOG.md`, `AUTOPILOT-REPORT.md`,
+`WORKING.md` (claim added and cleared).
+
 ## 2026-08-15 (eighth pass): --ff-only was the wrong pull, and five commits were stranded
 
 The background installer refused with *"Not possible to fast-forward, aborting."* His clone
