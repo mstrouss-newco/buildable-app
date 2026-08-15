@@ -36,32 +36,9 @@ cd "$LANEDIR" || { echo "Could not open $LANEDIR"; exit 1; }
 echo $$ > .autopilot-lane.lock
 trap 'rm -f "$LANEDIR/.autopilot-lane.lock"' EXIT INT TERM
 
-# A git that crashed leaves empty .lock files behind and every later git command
-# then refuses with "another git process seems to be running".
-LOCKS=$(find .git -name "*.lock" 2>/dev/null)
-if [ -n "$LOCKS" ]; then
-  echo "Clearing leftover git lock files..."
-  echo "$LOCKS" | while read -r f; do rm -f "$f"; done
-fi
-
-if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-  echo "Parking uncommitted changes (recoverable with 'git stash list'):"
-  git status --short | sed 's/^/    /'
-  git stash push -u -m "parked by the roadmap runner on $(date '+%Y-%m-%d %H:%M')" >/dev/null 2>&1
-fi
-
-echo "Getting the latest code..."
-git checkout main >/dev/null 2>&1
-# --rebase, not --ff-only: a session that committed but could not push leaves local
-# commits behind, and --ff-only just refuses. This replays them on top instead.
-PULL_OUT=$(git pull --rebase --autostash 2>&1)
-PULL_RC=$?
-if [ $PULL_RC -ne 0 ]; then git rebase --abort >/dev/null 2>&1; fi
-if [ $PULL_RC -ne 0 ]; then
-  echo "Could not download the latest code:"
-  echo "$PULL_OUT"
-  exit 1
-fi
-echo "$PULL_OUT"
+# One place decides how a folder gets onto the latest main. See repo-sync.sh for
+# the three things that go wrong and why local commits are pushed or parked rather
+# than rebased.
+bash "$LANEDIR/scripts/repo-sync.sh" "$LANEDIR" || exit 1
 
 exec node scripts/autopilot.mjs --watch --lane "$LANE"
