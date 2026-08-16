@@ -277,7 +277,24 @@
   #minimap .blip{position:absolute;transform:translate(-50%,-50%);cursor:pointer;
     width:18px;height:18px;display:flex;align-items:center;justify-content:center}
   #minimap .blip svg{display:block;pointer-events:none}
+  /* -- FL9: clear the shell's nav chrome on mobile ------------------------
+     When Sky Flyer runs inside the app shell (iframed), the shell draws its
+     own Home (top-left, ~14/14) and a Sound/Help stack (top-right, 38x38 at
+     14/14, then 58/14). Our top-right HUD stack starts at 12/14 (.pill) and
+     62/14 (#minimap), which lands directly UNDER those shell buttons on a
+     phone. Shift the whole top-right stack down by 48px whenever we are in
+     the shell, so the two never sit on top of each other. Standalone (opened
+     directly at /skyflyer-engine.html) is unchanged — no shell = no shift. */
+  html.bk-in-shell .pill{top:calc(60px + env(safe-area-inset-top))}
+  html.bk-in-shell #minimap{top:calc(110px + env(safe-area-inset-top))}
+  html.bk-in-shell #banked{top:calc(222px + env(safe-area-inset-top))}
 </style>
+<script>
+  // FL9: mark the document as running inside the shell iframe so the CSS above
+  // can shift the top-right HUD stack down. The check runs before the body is
+  // parsed, so the class is on <html> in time for first paint (no reflow on load).
+  try { if (window.parent && window.parent !== window) document.documentElement.classList.add('bk-in-shell'); } catch(e){}
+</script>
 </head>
 <body>
 <div id="hud">

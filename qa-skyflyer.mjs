@@ -2391,12 +2391,26 @@ chk('FM1: a QA handle (window.FARM) exposes patches, stack and seed picker so a 
   /patches:\s*function\(\)/.test(farm) &&
   /stack:\s*function\(\)/.test(farm) &&
   /openSeedPicker:\s*function/.test(farm));
-chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fm1)',
+chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fl9)',
   (function(){
     const jsx = read('src/BuildableKids.jsx');
-    const hits = jsx.match(/skyflyer-engine\.html\?v=fm1/g) || [];
-    return hits.length >= 2 && !/skyflyer-engine\.html\?v=fl13/.test(jsx);
+    const hits = jsx.match(/skyflyer-engine\.html\?v=fl9/g) || [];
+    return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fl13)/.test(jsx);
   })());
+
+console.log('\n--- FL9: nav bar + HUD do not overlap on mobile ---');
+chk('FL9: the engine tags <html> with bk-in-shell whenever it is iframed by the shell',
+  /classList\.add\(['"]bk-in-shell['"]\)/.test(html) &&
+  /window\.parent[^;]*!==\s*window/.test(html));
+chk('FL9: the coin pill drops below the shell nav band when in-shell (was top:12, now clears the ~52px Sound button)',
+  /html\.bk-in-shell\s+\.pill\s*\{[^}]*top:\s*calc\(60px/.test(html));
+chk('FL9: the mini-map drops with it, so it clears BOTH the shell Sound and Help buttons',
+  /html\.bk-in-shell\s+#minimap\s*\{[^}]*top:\s*calc\(110px/.test(html));
+chk('FL9: the banked flash sits under the shifted mini-map (rhythm preserved)',
+  /html\.bk-in-shell\s+#banked\s*\{[^}]*top:\s*calc\(222px/.test(html));
+chk('FL9: standalone (opened directly) keeps the original top positions — no shift outside the shell',
+  /\.pill\{position:absolute;top:calc\(12px/.test(html) &&
+  /#minimap\{position:absolute;top:calc\(62px/.test(html));
 
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(ok?0:1);
