@@ -41,8 +41,48 @@
   }
   BN.update = postState;
 
+  // --------------------------------------------------------------------------
+  //  The reserved top strip, published INTO the game (Session FL9).
+  //  Hiding the engine's own buttons was never the whole job: the shell's
+  //  buttons still float over the game, so a HUD that keeps drawing in those
+  //  corners ends up UNDER a control it cannot see. Sky Flyer's coin count sat
+  //  under the shell Sound button and its mini-map under the shell Help button
+  //  on every phone width.
+  //
+  //  So in-app we mark the page `.bk-inshell` and publish the strip the shell
+  //  reserves as CSS variables, and a game's own stylesheet lays its HUD out
+  //  around chrome it does not draw. Standalone none of this is set, so a game
+  //  opened directly is untouched.
+  //
+  //  GEOMETRY IS MIRRORED FROM GameFrame/NavBtn in src/BuildableKids.jsx —
+  //  38px round buttons at right:14 stacked at top 14 / 58 / 102, and the Home
+  //  pill at top:14 left:14. If that moves, move these numbers with it.
+  //  We reserve the DEEPEST stack the shell could draw for this engine (menu
+  //  and help capabilities, ignoring inGame) so the strip never shifts under a
+  //  kid mid-play when a button appears or goes away.
+  // --------------------------------------------------------------------------
+  var NAV_LEFT = 104;    // clear of the Home pill (14 + ~75 wide + gap)
+  var NAV_RIGHT = 64;    // clear of the button column (14 + 38 + gap)
+  function publishStrip() {
+    try {
+      if (!iframed() || !g.document || !g.document.documentElement) return;
+      var el = g.document.documentElement;
+      el.classList.add("bk-inshell");
+      el.style.setProperty("--bk-nav-left", NAV_LEFT + "px");
+      el.style.setProperty("--bk-nav-right", NAV_RIGHT + "px");
+      // the depth is only knowable once the engine has registered; until then a
+      // game's CSS falls back to its own default, so the HUD never flashes into
+      // the corner the shell is about to draw over.
+      if (!cfg) return;
+      var rows = 1 + (cfg.onMenu ? 1 : 0) + (cfg.onHelp ? 1 : 0);
+      el.style.setProperty("--bk-nav-bottom", (14 + (rows - 1) * 44 + 38) + "px");   // 52 / 96 / 140
+    } catch (e) {}
+  }
+  BN.publishStrip = publishStrip;
+
   BN.register = function (c) {
     cfg = c || {};
+    publishStrip();
     if (iframed() && g.document && cfg.hide) {
       cfg.hide.forEach(function (id) { const el = g.document.getElementById(id); if (el) el.style.display = "none"; });
     }
@@ -94,6 +134,7 @@
   }
   BN.installHomeCatcher = installHomeCatcher;
   if (typeof document !== "undefined") {
+    publishStrip();   // mark the page in-shell as early as the script runs
     if (document.body) installHomeCatcher();
     else document.addEventListener("DOMContentLoaded", installHomeCatcher);
   }

@@ -1454,7 +1454,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL8c', w4.SKY.version === 'FL8c', w4.SKY.version);
+    chk('engine reports itself as FL9', w4.SKY.version === 'FL9', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();
@@ -2391,23 +2391,33 @@ chk('FM1: a QA handle (window.FARM) exposes patches, stack and seed picker so a 
   /patches:\s*function\(\)/.test(farm) &&
   /stack:\s*function\(\)/.test(farm) &&
   /openSeedPicker:\s*function/.test(farm));
-chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fl9)',
+chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fl9b)',
   (function(){
     const jsx = read('src/BuildableKids.jsx');
-    const hits = jsx.match(/skyflyer-engine\.html\?v=fl9/g) || [];
-    return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fl13)/.test(jsx);
+    const hits = jsx.match(/skyflyer-engine\.html\?v=fl9b/g) || [];
+    return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fl13|fl8c)\b/.test(jsx);
   })());
 
+// FL9. The real gate for this is qa-skyflyer-hud.mjs, which draws the shell's
+// chrome around the engine and MEASURES the two together — a source check can
+// never see an overlap. These are the cheap static guards that stop the wiring
+// being taken apart by a later session that is not looking at a phone.
 console.log('\n--- FL9: nav bar + HUD do not overlap on mobile ---');
-chk('FL9: the engine tags <html> with bk-in-shell whenever it is iframed by the shell',
-  /classList\.add\(['"]bk-in-shell['"]\)/.test(html) &&
+chk('FL9: the engine tags <html> in-shell before <body>, so the HUD never paints in the corner the shell is about to cover',
+  /classList\.add\(['"]bk-inshell['"]\)/.test(html) &&
   /window\.parent[^;]*!==\s*window/.test(html));
-chk('FL9: the coin pill drops below the shell nav band when in-shell (was top:12, now clears the ~52px Sound button)',
-  /html\.bk-in-shell\s+\.pill\s*\{[^}]*top:\s*calc\(60px/.test(html));
-chk('FL9: the mini-map drops with it, so it clears BOTH the shell Sound and Help buttons',
-  /html\.bk-in-shell\s+#minimap\s*\{[^}]*top:\s*calc\(110px/.test(html));
-chk('FL9: the banked flash sits under the shifted mini-map (rhythm preserved)',
-  /html\.bk-in-shell\s+#banked\s*\{[^}]*top:\s*calc\(222px/.test(html));
+chk('FL9: the right-hand column hangs off the strip the nav bridge publishes, not off hardcoded numbers',
+  /\.bk-inshell\s+\.pill\s*\{[^}]*var\(--bk-nav-bottom/.test(html) &&
+  /\.bk-inshell\s+#minimap\s*\{[^}]*var\(--bk-nav-bottom/.test(html) &&
+  /\.bk-inshell\s+#banked\s*\{[^}]*var\(--bk-nav-bottom/.test(html));
+chk('FL9: the fallback depth is 96px — Sky Flyer asks for Sound + Help and no Menu, so the strip is two buttons deep',
+  (html.match(/var\(--bk-nav-bottom,\s*96px\)/g) || []).length === 3 &&
+  /onSound:function/.test(html) && /onHelp:function/.test(html) && !/onMenu:/.test(html));
+chk('FL9: no doubled safe-area inset — --bk-nav-bottom is already in the shell coordinate space this iframe fills',
+  !/\.bk-inshell[^\n]*env\(safe-area-inset-top\)/.test(html));
+chk('FL9: the pad message is centred clear of the right-hand column, so moving the map down did not trade one overlap for another',
+  /#padmsg\{position:absolute;left:calc\(50% - 59px\)/.test(html) &&
+  /#padmsg\{[^}]*max-width:calc\(100% - 190px\)/.test(html));
 chk('FL9: standalone (opened directly) keeps the original top positions — no shift outside the shell',
   /\.pill\{position:absolute;top:calc\(12px/.test(html) &&
   /#minimap\{position:absolute;top:calc\(62px/.test(html));

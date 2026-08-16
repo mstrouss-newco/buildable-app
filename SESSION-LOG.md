@@ -1474,6 +1474,72 @@ live, fact-checked, flipped by Mike) still needs **RP6** (fact-check + flip) and
 **RP7** (narration audio); six books are still `in-review` and the RP5 art pack
 has not fully landed — `qa-topic.mjs` still warns that 6 books are rendering
 painted fallbacks.
+## 2026-08-15: Session FL9 — the nav bar and the HUD stop sharing a corner
+
+**Phase FL, session FL9.** On a phone, the app's buttons sat on top of Sky
+Flyer's coin count and its map. Fixed, and measured. `qa-skyflyer-hud.mjs` (new)
+green at four widths, `qa-skyflyer.mjs` green including all three worlds beaten
+by the autopilot, `qa-skyflyer-look.mjs` and `qa-skyflyer-sky.mjs` both run.
+Breaker, Survival, Croc Tot, Tank, Bubble and Runner re-run green because this
+touched a shared file they all load.
+
+### What was actually wrong
+Neither half was wrong on its own, which is why nothing had caught it. The app
+draws the **Home** pill top-left and a column of round buttons down the
+**top-right** — Sound, then Help — floating over the game. Sky Flyer drew its
+coin count and its map in exactly those places. Measured in a browser with both
+on screen at once:
+
+| Sky Flyer's HUD | the app's button | overlap |
+| --- | --- | --- |
+| coin pill `y 12–54` | Sound `y 14–52` | the button sat **on** the coins |
+| mini-map `y 62–166` | Help `y 58–96` | the button sat **on** the map |
+
+The same at 320, 390, 704 and 820 wide, so it was not a narrow-phone edge case.
+A kid reaching for their coins muted the game.
+
+### The fix, and why the column went DOWN and not sideways
+Hiding a game's own buttons in the app was never the whole job — the app's
+buttons still float over it. So `buildable-gamenav.js` now marks the page
+`.bk-inshell` **in the app only** and publishes the strip the app reserves as
+CSS variables (`--bk-nav-left`, `--bk-nav-right`, `--bk-nav-bottom`), with the
+depth sized to the buttons *that* game asked for — 96px for Sky Flyer, which
+asks for Sound and Help and no Menu. Any game can now lay its HUD out around
+chrome it does not draw, in three lines of CSS. Written up in
+`HUD-AND-NAV-RULES.md`.
+
+Sky Flyer's whole right-hand column — coins, map, banked flash — now drops below
+that strip and keeps the right edge it has always had. Sideways was measured and
+does not fit: on a 320px phone the map alone is 104px wide, the app's button
+column takes the last 52px, and the goal chips already start 104px in. Down is
+the only answer that works at every width, and it is the same answer at every
+width.
+
+### One thing that was NOT traded away
+Moving the map down put it into the pad message's band, which would have swapped
+one overlap for another. The pad message is now centred in the space that is
+**not** the right-hand column rather than in the whole screen — which also fixes
+that card running under the map on a 320px phone, something that was true before
+any of this and had nothing to do with the app's buttons.
+
+### The new gate: `qa-skyflyer-hud.mjs`
+Every harness we had looked at either the app or the game. This one draws the
+app's real chrome around the real engine and measures every HUD box against
+every button box, at four widths, with the transient pieces forced on first — a
+message that only appears near a landing pad is exactly what a screenshot taken
+at second three misses. The mock is served by playwright itself so nothing lands
+in `public/`, and its geometry is asserted against `src/BuildableKids.jsx` so it
+cannot quietly drift from the app it stands in for. **Checked that it fails
+without the fix** rather than assuming it would.
+
+### Left alone on purpose, worth knowing
+The app's own Home/Sound/Help sit at a flat `top:14` with no allowance for an
+iPhone's notch, while the games inside allow for it. On a notched iPhone those
+three buttons are higher than everything else on screen. That is one change in
+`GameFrame` affecting **every** game, not a Sky Flyer fix, so it is not in this
+session. Worth a card of its own.
+
+---
 
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 
