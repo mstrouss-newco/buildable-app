@@ -845,6 +845,51 @@ function botThink(){
 }
 
 // ============================================================================
+//  SD5 — the BRUTE FORCE bot. The opposite of the one above, and the only one
+//  that can prove a level is a puzzle.
+// ============================================================================
+// The sensible bot clearing a level says the level is BEATABLE. It says nothing
+// about whether it had to be SOLVED — the five-minute speedrun that started this
+// phase was a six year old who never planned a single shot. So this bot models
+// her instead: it picks a critter that is still standing, pulls the sling all
+// the way back, and flings in roughly that direction. It never plans an arc, it
+// never asks what is holding a building up, and it never learns from a miss. It
+// does try high lobs as well as flat shots, because she did too — what it never
+// does is think.
+//
+// A level that this bot still clears is a level that can be out-shot rather than
+// worked out. That is the whole test.
+var FLAIL_SPREAD = 0.14;                 // a six year old's finger, in radians
+var flailFn = null;                      // set only for the duration of a _flail() run
+function flailThink(rnd){
+  if(state!=="ready" || !G) return;
+  var alive=G.targets.filter(function(t){return t._alive;}); if(!alive.length) return;
+  // she does watch the tower fall before firing again — that part is not the bug
+  var settling=false;
+  for(var m=0;m<G.blocks.length && !settling;m++) if(Math.hypot(G.blocks[m].velocity.x,G.blocks[m].velocity.y)>1.2) settling=true;
+  for(var mt=0;mt<alive.length && !settling;mt++) if(Math.hypot(alive[mt].velocity.x,alive[mt].velocity.y)>1.2) settling=true;
+  if(settling && botWait<240){ botWait++; return; }
+  botWait=0;
+  var t=alive[(rnd()*alive.length)|0];
+  var flat=Math.atan2(t.position.y-AY, t.position.x-AX);
+  // Two thirds of her shots are "point at it and pull back", lifted by anything
+  // from nothing to a big lob. The other third throws the elevation away
+  // entirely and sweeps the whole sky, so the bot is not quietly prevented from
+  // finding the lob that a hill level actually wants. Deliberately generous:
+  // the claim being tested is that flinging does not work, and a stingy bot
+  // would prove that by being bad rather than by the levels being good.
+  var ang = (rnd()<0.67) ? flat - rnd()*1.25
+                         : flat - 0.05 - rnd()*1.55;
+  ang += (rnd()*2-1)*FLAIL_SPREAD;
+  var sp = MAXV*(0.82+rnd()*0.18);       // she pulls it nearly all the way back, every time
+  doLaunch(Math.cos(ang)*sp, Math.sin(ang)*sp);
+}
+// A small deterministic generator, so a brute-force run is reproducible and a
+// failure can be replayed from its seed instead of "it happened once".
+function flailRnd(seed){ var s=(seed>>>0)||1;
+  return function(){ s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0; return s/4294967296; }; }
+
+// ============================================================================
 //  Main step — physics + pop/settle/win/lose.  draw() is separate (headless-safe).
 // ============================================================================
 function update(){
@@ -883,7 +928,7 @@ function update(){
   }
   if(state==="reload"){ if(--G.reload<=0){ if(G.launchesLeft>0) loadAmmo(); else loseLevel(); } }
   if(fx&&BM) BM.update(fx,1/60);
-  if(botMode) botThink();
+  if(botMode) (flailFn ? flailThink(flailFn) : botThink());
 }
 
 // ============================================================================
@@ -1596,6 +1641,21 @@ window.BUILDABLE_GAME = {
     var f=0, cap=maxFrames||20000; while(state!=="win" && state!=="lose" && f<cap){ update(); f++; }
     return { level:idx, result:state, frames:f, launchesUsed:G?G.launchesUsed:0, launchesLeft:G?G.launchesLeft:0,
              targets:G?G.totalTargets:0, popped:G?G.popped:0, stars:PREFS.stars[idx]||0 }; },
+  // SD5 hook: play one level the way the six year old played it — full pull,
+  // rough aim at whatever is still standing, no plan. Returns the same shape as
+  // sim() plus which critters were left alive, because WHICH ones survive is the
+  // interesting half: flinging is supposed to collect the loose critters on the
+  // ground and then stall at the one the level is actually about.
+  _flail:function(idx,seed,maxFrames){ botMode=true; flailFn=flailRnd(seed==null?1:seed);
+    startLevel(idx); state="ready"; started=true;
+    var f=0, cap=maxFrames||20000;
+    try{ while(state!=="win" && state!=="lose" && f<cap){ update(); f++; } }
+    finally{ flailFn=null; botMode=false; }
+    return { level:idx, seed:seed, result:state, frames:f,
+             launchesUsed:G?G.launchesUsed:0, targets:G?G.totalTargets:0, popped:G?G.popped:0,
+             standing:G?G.targets.filter(function(t){return t._alive;}).map(function(t){return t._ti;}):[],
+             sealedStanding:G?G.targets.filter(function(t){return t._alive&&t._sealed;}).length:0,
+             sealedTotal:G?G.targets.filter(function(t){return t._sealed;}).length:0 }; },
   // whole campaign
   campaign:function(cap){ var out=[]; cap=cap||20000;
     for(var i=0;i<GAME_CONFIG.levels.length;i++){ out.push(this.sim(i,cap)); } botMode=false; return out; },
@@ -1604,6 +1664,17 @@ window.BUILDABLE_GAME = {
   _step:function(n){ for(var i=0;i<(n||1);i++) update(); },
   _draw:function(){ try{ if(G&&ctx) draw(); return "ok"; }catch(e){ return "ERR: "+(e&&e.message||e); } },
   _aimHeld:function(px,py){ if(G){ state="aiming"; G.drag=clampDrag({x:px,y:py}); } },
+  // SD5 — where the sling would have to be PULLED TO for the shot the game
+  // itself would take. The device harness needs an aim it can perform as a real
+  // finger drag rather than a launch it can call, so the gesture path (touch ->
+  // clampDrag -> aimFromDrag -> doLaunch) is what gets exercised, not a shortcut
+  // past it. Same planner the kid's dotted line uses.
+  _aimDragFor:function(){ if(!G) return null;
+    var t=firstAlive(); if(!t) return null;
+    var pl=planShot(t.position.x, t.position.y);
+    if(!pl.good){ var sup=planSupportShot(); if(sup) pl=sup; }
+    // invert aimFromDrag: drag is the mirror of the launch velocity, scaled
+    return clampDrag({ x:AX - pl.vx*(MAXPULL/MAXV), y:AY - pl.vy*(MAXPULL/MAXV) }); },
   // fire a specific power mid-flight and run to rest — verifies powers don't throw
   _power:function(idx,pname){ botMode=false; startLevel(idx||0); state="ready";
     var t=firstAlive(); var pl=t?planShot(t.position.x,t.position.y):{vx:14,vy:-10};
