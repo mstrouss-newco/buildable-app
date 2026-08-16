@@ -6,6 +6,10 @@
   },
   "routes": [
     {
+      "src": "/chess-look-mock.html",
+      "dest": "/chess-look-mock.html"
+    },
+    {
       "src": "/demo/site.webmanifest",
       "dest": "/site.webmanifest"
     },
