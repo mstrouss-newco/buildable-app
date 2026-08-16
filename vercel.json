@@ -918,6 +918,20 @@
       }
     },
     {
+      "src": "/skyflyer-farm.html",
+      "dest": "/skyflyer-farm.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/skyflyer-farm",
+      "dest": "/skyflyer-farm.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }
