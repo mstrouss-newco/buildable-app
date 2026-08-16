@@ -623,6 +623,9 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
     : (fmt === "webp" ? { output_format: "webp", output_compression: 75 } : {});
   // Wide scenery (chess worlds) asks for a landscape frame; everything else stays square.
   const size = opts.size === "1536x1024" ? "1536x1024" : "1024x1024";
+  // A big high-quality landscape takes far longer than a small icon, and these
+  // functions are allowed 300s, so give the wide ones room instead of aborting at 42s.
+  if (size === "1536x1024" && timeoutMs < 180000) timeoutMs = 180000;
   return (
     (await attempt({ model: "gpt-image-1", prompt, n: 1, size, quality: q, ...tx })) ||
     (await attempt({ model: "gpt-image-1", prompt, n: 1, size, ...tx })) ||
