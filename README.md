@@ -3265,6 +3265,37 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-16 (FL9 re-land: two fixes for one bug, resolved into one)
+
+FL9 was reopened because RN3 aborted its merge on a cache-buster conflict. In the
+meantime a later session shipped a **second, independent** FL9 fix straight to
+main, so the repo held two different answers to the same bug under two different
+class names (`bk-in-shell` vs `bk-inshell`). Merged and resolved into one.
+
+The **bridge-driven** approach won: `public/buildable-gamenav.js` publishes the
+strip the shell reserves as CSS variables (`--bk-nav-left`, `--bk-nav-right`,
+`--bk-nav-bottom`, sized to the buttons that engine registered) and the engine
+lays its HUD out against them — reusable by all 19 engines that load the bridge,
+where the other version was three hardcoded pixels for Sky Flyer alone. Kept one
+piece of the other version: the early inline tag in `<head>`, because the bridge
+loads down in the body and without it the coin pill flashes into the corner the
+shell is about to cover. Dropped its `env(safe-area-inset-top)`, which
+double-counted an inset already baked into `--bk-nav-bottom`. Cache-buster
+`?v=fl9` → `?v=fl9b`; `SKY.version` "FL8c" → "FL9".
+
+`qa-skyflyer-hud.mjs` green at 320/390/704/820, and **verified it fails without
+the fix** (reverted the two rules, got the original overlap back at all four
+widths, restored). `qa-skyflyer.mjs` 614 checks green including the autopilot
+beating all three worlds. Breaker, Survival, Croc Tot, Tank, Bubble, Runner,
+Castle Guard, Sling, Tumble and Weather re-run green because they share the
+bridge. Full detail in `SESSION-LOG.md`.
+
+Flagged, unrelated and pre-existing: `qa-maze.mjs` fails on `BuildableWin is not
+defined`. Verified it fails the same way on pre-merge main. Its `libs` list
+(line 7) omits `buildable-wincard.js` that the page itself loads — a harness gap,
+not a broken win screen.
+
+---
 ## Session log — 2026-08-15 (NV4: Nav polish — tap sound + squash on every tab, and Me gets its own /app address)
 
 **Phase NV, session NV4.** Every bottom-bar tab press now fires the shared Feel

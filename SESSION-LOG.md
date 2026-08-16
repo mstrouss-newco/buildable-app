@@ -1,5 +1,70 @@
 # Buildable Kids — Session Log
 
+## 2026-08-16 (FL9 re-land): two fixes for one bug, resolved into one
+
+**Phase FL, card FL9.** FL9 was reopened because RN3 aborted its merge on a
+cache-buster conflict. Between then and now a later session shipped a **second,
+independent FL9 fix** straight to main (`8ae2d6b`). So the repo held two
+different answers to the same bug under two different class names —
+`bk-in-shell` on main, `bk-inshell` on the branch. This session merged the
+branch and resolved them into one approach.
+
+### Which one won, and why
+Kept the **branch's** approach: `public/buildable-gamenav.js` publishes the strip
+the shell reserves as CSS variables (`--bk-nav-left` 104px, `--bk-nav-right`
+64px, `--bk-nav-bottom` 52/96/140px, sized to the buttons *that* engine actually
+registered) and the engine lays its HUD out against them. Main's version was
+three hardcoded pixel values that worked for Sky Flyer and helped no other game.
+19 engines load the shared bridge; only one of the two approaches is reusable by
+the other 18.
+
+Kept **one thing from main's** version: the early inline tag in `<head>`. The
+bridge is loaded down in the body, after the HUD has already had a chance to
+paint, so without it the coin pill flashes up in the corner the shell is about to
+draw a button over. The bridge stays the only source of the geometry — the inline
+line only sets the class, and `classList.add` is idempotent. The CSS fallback
+(96px) is exactly the depth Sky Flyer's own Sound + Help stack resolves to, so
+the layout is right on the first frame and does not move when the real value
+arrives.
+
+**Dropped** from main's version: `env(safe-area-inset-top)` on those rules.
+`--bk-nav-bottom` is already a position in the shell's coordinate space, which is
+the same space the iframe fills, so adding the inset again pushed the column
+lower than it needed to go.
+
+Engine cache-buster `?v=fl9` → **`?v=fl9b`** on both shell links (the engine
+changed again after main's `v=fl9` shipped), and `SKY.version` "FL8c" → "FL9",
+which had been stale since FL8c.
+
+### QA — all run this session, nothing claimed that did not execute
+- **`qa-skyflyer-hud.mjs`** (the new gate, 47 checks) — **green**. Draws the
+  shell's real chrome around the real engine and measures every HUD box against
+  every button box at 320, 390, 704 and 820 wide. Coin pill `y=106`, mini-map
+  `y=156`, strip 96px deep at every width; standalone still `y=12` and unmarked.
+- **Proved the gate is not vacuous.** Reverted just the two layout rules and
+  re-ran: it failed at all four widths with `coin pill under shellSound (38x38px)
+  | minimap under shellHelp (38x34px)` — the original bug, reproduced and caught.
+  Restored before committing.
+- **`qa-skyflyer.mjs`** — **614 checks green**, including the autopilot beating
+  all three worlds (Sunny Islands 12c/1l, Snowy Peaks 18c/2l, Sunset Canyon
+  20c/2l), banking into the shared wallet, unlocking the next journey stop, and
+  flying on forever after the goal.
+- **`qa-skyflyer-look.mjs`** and **`qa-skyflyer-sky.mjs`** ran clean (they are
+  screenshot/inspection tools, not pass/fail gates).
+- **The shared file forced a wider sweep.** `buildable-gamenav.js` is loaded by
+  19 engines, so QA was re-run for breaker, survival, croc, tank, bubble, runner,
+  castleguard, sling, tumble and weather — **all green**. Only Sky Flyer defines
+  any `.bk-inshell` CSS, so the change is inert for the other 18.
+
+### Flagged honestly: one unrelated pre-existing failure
+`qa-maze.mjs` fails on `post-win render: ERR: BuildableWin is not defined`. **Not
+caused by this work** — verified by running it against pre-merge main
+(`288235f`) in a worktree, where it fails identically. The cause is a gap in the
+harness, not a bug kids can hit: `qa-maze.mjs` line 7 builds its sandbox from a
+hardcoded `libs` list that omits `buildable-wincard.js`, even though
+`maze-engine.html` loads it normally at line 82. The live win screen is fine.
+Left alone (not this card) and carried into the planner as its own card.
+
 ## 2026-08-16 (RN4): Stop parking cards Mike never asked to see
 
 **Phase RN, card RN4.** SD4, RN3 and FM1 all landed on Mike's desk as `review` on
