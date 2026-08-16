@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Sky Flyer — Farm corner (FM1)</title>
+<title>Sky Flyer — Farm corner (FM2)</title>
 <!--
   FM1 — the farm corner of Sunny Islands, built in the Sky Flyer engine style.
   Standalone scene: same three.min.js, same hand-built vertex-colored models
@@ -21,7 +21,32 @@
       wobble and sparkle
     - harvest = walk through them; each hops onto the stack with a bounce
 
-  FM2 (chickens/cow) and FM3 (order crate/plane) build on this file.
+  FM2 — THE ANIMALS AND THE FEEDING. Added east of the field:
+    - a coop yard with FOUR chickens: three settled on nests, one strutting a
+      patrol loop. The chicken is a REAL model out of the EverythingLibrary
+      animal kit, cut to its own 65KB glb by scripts/cut-animal-subset.mjs.
+      Its colour is entirely in COLOR_0, so the merge here carries that
+      attribute through — the engine's own mergeByMaterial() drops it and
+      renders every animal solid BLACK.
+    - a pen with ONE cow. There is no cow in the repo's 18-animal cut and the
+      178-animal source library is not in this sandbox, so the cow is turned
+      and lofted in code in the AR1P style, exactly like the crab, parrot and
+      fish the flying engine hand-builds for the same reason. It is built
+      against the note from the mock: the head goes UP ON A NECK, it has
+      HORNS, and it has SURFACE SPOTS — without those three it reads as a pig.
+    - FEEDING WITH NO MENUS AND NO READING. A hungry animal floats a small 3D
+      model of what it wants over its head. Walk past carrying that item and
+      the top matching one FLIES OFF THE STACK to the animal on an arc. Corn
+      to the chickens, wheat to the cow.
+    - After a short wait (well under a minute) an egg or a milk bottle appears
+      beside the animal with a sparkle. Walk over it and it hops onto the
+      stack exactly like a harvested crop.
+    - NOTHING CAN DIE, STARVE OR FAIL. There is no hunger meter, no timer
+      running out, no health. An unfed animal simply keeps waiting.
+    - zoo(): ?zoo=1 (or window.FARM.zoo()) stands every farm model on a
+      turntable at a fixed camera, so a model is judged BEFORE it is placed.
+
+  FM3 (order crate/plane) builds on this file.
 -->
 <style>
   html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#B3E58C;
@@ -123,6 +148,7 @@
   </div>
 </div>
 <script src="/three.min.js"></script>
+<script src="/GLTFLoader.js"></script>
 <script>
 (function(){
 "use strict";
@@ -551,10 +577,12 @@ var STACK_HISTORY = [];           // ring buffer of {t,x,z,yaw}
 var STACK_HISTORY_MAX_SEC = 6;    // enough for a huge stack
 var stack = [];                   // array of {kind, group, tOffset, phase}
 
-// A stack item's model is the same crop recipe at stage=2 (ready), but a bit
+// A stack item's model is the same recipe at stage=2 (ready), but a bit
 // smaller so a tall stack still fits under the camera and reads clearly.
+// FM2: eggs and milk ride the stack on exactly the same terms as a crop, so
+// this reads through ITEM() rather than CROP_RECIPES directly.
 function buildStackItem(kind){
-  var r=CROP_RECIPES[kind]; if(!r) return null;
+  var r=ITEM(kind); if(!r) return null;
   var s=0.72;
   var geo=hbBake(r.parts(s));
   var m=hbMesh(geo);
@@ -632,6 +660,864 @@ function updateStack(dt, now){
       it.rotation.x = swayZ * 0.35;
     }
   }
+}
+
+// =========================================================================
+//  FM2 — WHAT COMES OFF THE STACK: eggs and milk.
+//
+//  Same shape as a CROP_RECIPE (parts + svg + colors) so the FL5b law holds
+//  for produce too: one recipe draws the thing on the ground, the thing on
+//  the stack, and its picture. A crate UI in FM3 gets the icons for free.
+// =========================================================================
+var PRODUCE_RECIPES = {
+  egg: {
+    from: "chicken",
+    colors: {main:0xFDF6E3, accent:0xE8D9B5},
+    parts:function(s){
+      var C=this.colors, p=[];
+      // an egg is a lathe with a fat end and a narrow end, never a ball
+      p.push(hbTurn([
+        [0.001,-0.36*s],[0.19*s,-0.24*s],[0.25*s,-0.02*s],
+        [0.23*s,0.18*s],[0.15*s,0.31*s],[0.001,0.38*s]
+      ], C.main, {p:[0, 0.36*s, 0]}, 14));
+      // ONE COLOUR, because an egg is one colour. The first pass banded it at
+      // the widest point and the model stand showed an egg sitting in an
+      // eggcup. The shape carries this on its own.
+      return p;
+    },
+    svg:function(size){
+      size = size || 82;
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        '<ellipse cx="41" cy="46" rx="21" ry="27" fill="#FDF6E3" stroke="#B9A87E" stroke-width="2.5"/>'+
+        '<path d="M24 52 Q41 60 58 52" fill="none" stroke="#E8D9B5" stroke-width="3"/>'+
+        '</svg>';
+    }
+  },
+  milk: {
+    from: "cow",
+    colors: {main:0xFFFFFF, accent:0xD24B4B, glass:0xDCEAF2},
+    parts:function(s){
+      var C=this.colors, p=[];
+      // bottle body — straight sided, shouldered in to a narrow neck
+      p.push(hbTurn([
+        [0.001,-0.42*s],[0.21*s,-0.42*s],[0.21*s,0.10*s],
+        [0.11*s,0.26*s],[0.11*s,0.40*s],[0.001,0.40*s]
+      ], C.main, {p:[0, 0.44*s, 0]}, 14));
+      // a glassy tint band so it reads as a bottle, not a candle
+      p.push(hbTurn([
+        [0.213*s,-0.30*s],[0.213*s,-0.06*s]
+      ], C.glass, {p:[0, 0.44*s, 0]}, 14));
+      // red cap on the neck
+      p.push(hbTube(0.13*s,0.13*s,0.10*s,C.accent,{p:[0, 0.89*s, 0]},12));
+      return p;
+    },
+    svg:function(size){
+      size = size || 82;
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        '<path d="M28 74 L28 34 Q28 28 34 24 L34 14 L48 14 L48 24 Q54 28 54 34 L54 74 Z" '+
+          'fill="#FFFFFF" stroke="#8FA6B4" stroke-width="2.5"/>'+
+        '<rect x="32" y="8" width="18" height="8" rx="3" fill="#D24B4B"/>'+
+        '<path d="M32 46 L50 46" stroke="#DCEAF2" stroke-width="4"/>'+
+        '</svg>';
+    }
+  }
+};
+// One lookup for anything that can ride the stack: crops AND produce.
+function ITEM(kind){ return CROP_RECIPES[kind] || PRODUCE_RECIPES[kind] || null; }
+
+// =========================================================================
+//  FM2 — THE REAL MODEL (the chicken).
+//
+//  ONE THING MATTERS ABOVE ALL: these models carry no texture at all. Every
+//  scrap of their colour lives in the COLOR_0 vertex attribute. The flying
+//  engine's own mergeByMaterial() copies position, normal and uv, so merging
+//  one that way gives a perfectly-shaped BLACK chicken. This merge carries
+//  the colour through and still folds the model down to one draw call.
+// =========================================================================
+var ANM_URL="/models/skyflyer/animals/farm-animals.glb";
+var ANM={}, ANM_ON=false, ANM_PENDING=[];
+
+function anmMerge(root){
+  root.updateMatrixWorld(true);
+  var pos=[],nor=[],col=[],idx=[],base=0;
+  var v=new THREE.Vector3(), nm=new THREE.Matrix3();
+  root.traverse(function(o){
+    var g=o.isMesh&&o.geometry; if(!g||!g.attributes.position) return;
+    var pa=g.attributes.position, na=g.attributes.normal, ca=g.attributes.color, i, k;
+    nm.getNormalMatrix(o.matrixWorld);
+    for(i=0;i<pa.count;i++){
+      v.fromBufferAttribute(pa,i).applyMatrix4(o.matrixWorld); pos.push(v.x,v.y,v.z);
+      if(na){ v.fromBufferAttribute(na,i).applyMatrix3(nm).normalize(); nor.push(v.x,v.y,v.z); }
+      else nor.push(0,1,0);
+      // COLOR_0 verbatim. Drop this and every animal renders solid black.
+      if(ca) col.push(ca.getX(i),ca.getY(i),ca.getZ(i)); else col.push(1,1,1);
+    }
+    if(g.index){ for(k=0;k<g.index.count;k++) idx.push(g.index.getX(k)+base); }
+    else { for(k=0;k<pa.count;k++) idx.push(k+base); }
+    base+=pa.count;
+  });
+  var out=new THREE.BufferGeometry();
+  out.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  out.setAttribute("normal",new THREE.Float32BufferAttribute(nor,3));
+  out.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  out.setIndex(idx);
+  return new THREE.Mesh(out,HB_MAT);
+}
+// SIZE BY THE LONGEST DIMENSION, never by height. A hen sitting low on a nest
+// is barely taller than an egg; sizing on height makes every bird enormous.
+function anmPrep(node){
+  var g=new THREE.Group(); g.add(node); g.updateMatrixWorld(true);
+  var flat; try{ flat=anmMerge(g); }catch(e){ flat=g; }
+  var box=new THREE.Box3().setFromObject(flat);
+  var h=Math.max(0.001, box.max.y-box.min.y);
+  var span=Math.max(h, box.max.x-box.min.x, box.max.z-box.min.z);
+  flat.position.x-=(box.min.x+box.max.x)/2;
+  flat.position.z-=(box.min.z+box.max.z)/2;
+  flat.position.y-=box.min.y;
+  var wrap=new THREE.Group(); wrap.add(flat);
+  wrap.userData.h=h; wrap.userData.span=span;
+  return wrap;
+}
+function anmGet(name,size){
+  var p=ANM[name]; if(!p) return null;
+  var c=p.clone(true);
+  c.scale.setScalar(size/p.userData.span);
+  return c;
+}
+function loadFarmAnimals(done){
+  if(!renderer || typeof THREE.GLTFLoader!=="function"){ done(false); return; }
+  var loader; try{ loader=new THREE.GLTFLoader(); }catch(e){ done(false); return; }
+  loader.load(ANM_URL,function(gl){
+    gl.scene.children.slice().forEach(function(o){
+      if(o.name) try{ ANM[o.name]=anmPrep(o); }catch(e){}
+    });
+    ANM_ON=!!ANM.Chicken;
+    done(ANM_ON);
+  },null,function(){ done(false); });
+}
+
+// -------------------------------------------------------------------------
+// A HAND-BUILT CHICKEN, used only if the glb never arrives. Shared-library
+// law: read on render, ALWAYS with a local fallback, so a missing file can
+// never leave an empty coop.
+// -------------------------------------------------------------------------
+function buildChickenFallback(){
+  var BODY=0xFBF7EF, COMB=0xD8463C, BEAK=0xF0A62E, LEG=0xE09A34, EYE=0x241E1A;
+  var p=[];
+  p.push(hbBall(0.30,BODY,{s:[0.85,0.92,1.15], p:[0,0.40,0]},12));   // body
+  p.push(hbBall(0.17,BODY,{s:[1.0,1.05,1.0], p:[0,0.62,0.14]},10));  // breast/neck
+  p.push(hbBall(0.145,BODY,{p:[0,0.76,0.20]},10));                   // head
+  p.push(hbCone(0.055,0.16,BEAK,{r:[Math.PI/2,0,0], p:[0,0.75,0.36]},8)); // beak
+  p.push(hbBall(0.055,COMB,{p:[0,0.89,0.16]},7));                    // comb
+  p.push(hbBall(0.048,COMB,{p:[0,0.89,0.24]},7));
+  p.push(hbBall(0.040,COMB,{p:[0,0.885,0.09]},7));
+  p.push(hbBall(0.045,COMB,{s:[0.7,1.1,0.7], p:[0,0.665,0.29]},7));  // wattle
+  p.push(hbBall(0.032,EYE,{p:[-0.085,0.79,0.30]},6));
+  p.push(hbBall(0.032,EYE,{p:[0.085,0.79,0.30]},6));
+  p.push(hbCone(0.13,0.34,BODY,{r:[-0.9,0,0], p:[0,0.56,-0.28]},8)); // tail
+  p.push(hbCone(0.10,0.26,BODY,{r:[-1.2,0,0], p:[0,0.62,-0.24]},8));
+  p.push(hbBall(0.11,BODY,{s:[0.4,1.0,1.2], p:[-0.24,0.42,0.02]},8));// wings
+  p.push(hbBall(0.11,BODY,{s:[0.4,1.0,1.2], p:[0.24,0.42,0.02]},8));
+  p.push(hbTube(0.030,0.030,0.26,LEG,{p:[-0.10,0.13,0.02]},6));      // legs
+  p.push(hbTube(0.030,0.030,0.26,LEG,{p:[0.10,0.13,0.02]},6));
+  p.push(hbBox(0.13,0.035,0.17,LEG,{p:[-0.10,0.018,0.06]}));         // feet
+  p.push(hbBox(0.13,0.035,0.17,LEG,{p:[0.10,0.018,0.06]}));
+  return hbMesh(hbBake(p));
+}
+
+// =========================================================================
+//  FM2 — THE COW, turned and lofted in code.
+//
+//  WHY THIS IS HAND-BUILT: there is no cow in the repo's 18-animal cut of
+//  the EverythingLibrary, and the 178-animal source file is not in the repo
+//  (it is 12.8MB and lives on Mike's machine). The nearest neighbours in the
+//  cut are Pig and Goat, and a repainted pig is precisely the failure this
+//  is trying to avoid. So it is built the way the flying engine builds the
+//  crab, the parrot and the fish — the three the land-animal library also
+//  does not carry.
+//
+//  THE THREE THINGS THAT STOP IT READING AS A PIG, straight off the mock:
+//    1. THE HEAD IS UP, ON A NECK. A pig's head is a snout on the front of
+//       the body at body height. A cow carries its head clear of the
+//       shoulder line on a visible neck.
+//    2. HORNS. Small, curved, up and out. Nothing else on a farm has them.
+//    3. SURFACE SPOTS. Irregular dark patches pressed onto a pale hide,
+//       including one over an eye, which is the most cow thing there is.
+//  Plus the long straight back, the pink udder and the tufted tail.
+// =========================================================================
+function buildCow(){
+  var HIDE=0xF7F3EA, DARK=0x2E2B2C, PINK=0xE79FA6, HORN=0xE6DCBB, HOOF=0x2A231E, EYE=0x1A1614;
+  var p=[], i;
+
+  // ---- barrel body: LONG and flat-backed. A pig is a round ball; this is not.
+  p.push(hbBall(1.0,HIDE,{s:[0.70,0.70,1.28], p:[0,1.26,0]},16));
+  p.push(hbBall(0.62,HIDE,{s:[1.02,0.96,0.85], p:[0,1.34,0.72]},12));  // shoulder
+  p.push(hbBall(0.60,HIDE,{s:[1.05,1.00,0.85], p:[0,1.30,-0.80]},12)); // hip
+  p.push(hbBox(1.16,0.30,2.05,HIDE,{p:[0,1.80,-0.05]}));               // flat back
+
+  // ---- 1. THE NECK, and the head clear of the shoulders on top of it
+  p.push(hbTube(0.38,0.30,0.98,HIDE,{r:[0.72,0,0], p:[0,1.98,1.18]},12));
+  p.push(hbBall(0.46,HIDE,{s:[0.80,0.86,1.18], p:[0,2.44,1.80]},14));  // skull
+  p.push(hbBall(0.30,PINK,{s:[1.00,0.74,0.72], p:[0,2.28,2.34]},12));  // broad muzzle
+  p.push(hbBall(0.045,DARK,{p:[-0.11,2.30,2.52]},6));                  // nostrils
+  p.push(hbBall(0.045,DARK,{p:[0.11,2.30,2.52]},6));
+  p.push(hbBall(0.070,EYE,{p:[-0.28,2.58,2.06]},7));
+  p.push(hbBall(0.070,EYE,{p:[0.28,2.58,2.06]},7));
+  // ears, out sideways and slightly back
+  p.push(hbCone(0.16,0.44,HIDE,{s:[1,1,0.45], r:[0,0,-1.45], p:[0.50,2.60,1.66]},8));
+  p.push(hbCone(0.16,0.44,HIDE,{s:[1,1,0.45], r:[0,0,1.45],  p:[-0.50,2.60,1.66]},8));
+
+  // ---- 2. HORNS. Two segments each so they curve instead of spiking.
+  p.push(hbCone(0.105,0.32,HORN,{r:[-0.20,0,-0.75], p:[0.31,2.80,1.74]},8));
+  p.push(hbCone(0.075,0.27,HORN,{r:[-0.35,0,-1.15], p:[0.52,2.95,1.70]},8));
+  p.push(hbCone(0.105,0.32,HORN,{r:[-0.20,0,0.75],  p:[-0.31,2.80,1.74]},8));
+  p.push(hbCone(0.075,0.27,HORN,{r:[-0.35,0,1.15],  p:[-0.52,2.95,1.70]},8));
+
+  // ---- legs and hooves
+  var legs=[[-0.44,0.80],[0.44,0.80],[-0.44,-0.82],[0.44,-0.82]];
+  for(i=0;i<legs.length;i++){
+    p.push(hbTube(0.175,0.135,1.02,HIDE,{p:[legs[i][0],0.60,legs[i][1]]},9));
+    p.push(hbTube(0.155,0.165,0.20,HOOF,{p:[legs[i][0],0.10,legs[i][1]]},9));
+  }
+
+  // ---- udder and tail
+  p.push(hbBall(0.30,PINK,{s:[1.05,0.72,1.10], p:[0,0.62,-0.42]},10));
+  p.push(hbTube(0.055,0.030,0.05,PINK,{p:[-0.13,0.42,-0.34]},6));
+  p.push(hbTube(0.055,0.030,0.05,PINK,{p:[0.13,0.42,-0.34]},6));
+  // the tail hangs OUT OF THE RUMP, not off the top of it — rooted any higher
+  // and the overhead camera sees a white ball floating above her back
+  p.push(hbTube(0.070,0.045,0.95,HIDE,{r:[0.26,0,0], p:[0,1.20,-1.46]},7));
+  p.push(hbBall(0.135,DARK,{s:[0.8,1.3,0.8], p:[0,0.76,-1.58]},8));
+
+  // ---- 3. SURFACE SPOTS. Flattened along the surface normal so each one sits
+  //      ON the hide rather than floating beside it. Irregular on purpose:
+  //      a cow with tidy symmetrical spots reads as a toy.
+  function flank(x,y,z,ry,rz){
+    p.push(hbBall(1.0,DARK,{s:[0.055,ry,rz], p:[x,y,z]},12));
+  }
+  flank( 0.695, 1.44,  0.30, 0.40, 0.52);
+  flank( 0.700, 1.10, -0.55, 0.26, 0.34);
+  flank(-0.695, 1.36, -0.20, 0.44, 0.46);
+  flank(-0.700, 1.52,  0.72, 0.24, 0.28);
+  // over the back (flattened in Y instead)
+  p.push(hbBall(1.0,DARK,{s:[0.34,0.045,0.46], p:[0.14,1.945,-0.42]},12));
+  p.push(hbBall(1.0,DARK,{s:[0.22,0.045,0.26], p:[-0.22,1.945,0.55]},12));
+  // the patch over one eye — the most cow marking there is
+  p.push(hbBall(1.0,DARK,{s:[0.055,0.20,0.24], p:[0.325,2.56,2.02]},12));
+  p.push(hbBall(1.0,DARK,{s:[0.14,0.16,0.045], p:[0.16,2.66,2.30]},12));
+
+  return hbMesh(hbBake(p));
+}
+
+// =========================================================================
+//  FM2 — THE WALK CYCLE, written in code (the AR1Q rig).
+//
+//  Not one of these models carries a bone. Every vertex is sorted ONCE into a
+//  band by where it sits in the model's own bounding box — bottom 42% front
+//  and back are the four legs, the nose end is the head, the far end is the
+//  tail — and each frame the bands are pushed about. That is a real walk
+//  cycle on a boneless model, and it is still one draw call.
+//
+//  A PUPPETED ANIMAL NEEDS ITS OWN GEOMETRY COPY, or every chicken in the
+//  yard walks in perfect lockstep off the same shared buffer.
+// =========================================================================
+var PUP=[];
+function rigBands(mesh){
+  var g=mesh.geometry, pa=g.attributes.position;
+  g.computeBoundingBox();
+  var bb=g.boundingBox;
+  var hipY=bb.min.y+(bb.max.y-bb.min.y)*0.42, midZ=(bb.min.z+bb.max.z)/2;
+  var headZ=bb.min.z+(bb.max.z-bb.min.z)*0.74, tailZ=bb.min.z+(bb.max.z-bb.min.z)*0.18;
+  var band=new Uint8Array(pa.count), base=new Float32Array(pa.count*3), i;
+  for(i=0;i<pa.count;i++){
+    var x=pa.getX(i),y=pa.getY(i),z=pa.getZ(i);
+    base[i*3]=x; base[i*3+1]=y; base[i*3+2]=z;
+    if(y<hipY)       band[i]=(z>midZ)?(x<0?1:2):(x<0?3:4);
+    else if(z>headZ) band[i]=5;
+    else if(z<tailZ) band[i]=6;
+    else             band[i]=0;
+  }
+  return {mesh:mesh,pos:pa,band:band,base:base,hipY:hipY,
+          h:bb.max.y-bb.min.y,len:bb.max.z-bb.min.z};
+}
+var GAITS={
+  // A STRUT, not the engine's hop. The card asks for one chicken WALKING, and
+  // the thing that says "chicken" is not the feet at all — it is the head
+  // driving forward and holding still while the body catches up. So the legs
+  // alternate and band 5 (the head) runs a sawtooth a half-beat out of phase.
+  strut:function(R,t,pa,i,b,x,y,z){
+    if(b>=1&&b<=4){
+      var ph=(b===1||b===2)?t:t+Math.PI;                  // left pair / right pair
+      pa.setXYZ(i, x, y+Math.max(0,Math.sin(ph))*R.h*0.13, z+Math.sin(ph)*R.len*0.16);
+      return;
+    }
+    if(b===5){
+      var c=(t*0.5)%(Math.PI*2)/(Math.PI*2);
+      var thrust=(c<0.45)?(c/0.45):(1-(c-0.45)/0.55);     // push out fast, drift back
+      pa.setXYZ(i, x, y+Math.sin(t*2)*R.h*0.02, z+(thrust-0.5)*R.len*0.16);
+      return;
+    }
+    if(b===6){ pa.setXYZ(i,x,y+Math.sin(t*2)*R.h*0.05,z); return; }
+    pa.setXYZ(i,x,y+Math.sin(t*2)*R.h*0.030,z);
+  },
+  // Settled on a nest: no legs at all (they are folded under), just a breathing
+  // body and a head that looks about and dips to the straw now and then.
+  nest:function(R,t,pa,i,b,x,y,z){
+    var breathe=Math.sin(t*0.9)*R.h*0.016;
+    if(b===5){
+      var c=(t*0.33)%(Math.PI*2)/(Math.PI*2);
+      var peck=(c>0.80)?Math.sin((c-0.80)/0.20*Math.PI):0;   // a dip, most of the time zero
+      pa.setXYZ(i, x+Math.sin(t*0.7)*R.len*0.03,
+                   y+breathe-peck*R.h*0.30,
+                   z+peck*R.len*0.10);
+      return;
+    }
+    pa.setXYZ(i, x, y+breathe, z);
+  },
+  // A cow is heavy and slow. Legs swing without lifting, the head sways.
+  plod:function(R,t,pa,i,b,x,y,z){
+    if(b>=1&&b<=4){ var ph=(b===1||b===4)?t*0.6:t*0.6+Math.PI;
+      pa.setXYZ(i,x,y,z+Math.sin(ph)*R.len*0.07); return; }
+    if(b===5){ pa.setXYZ(i,x,y,z+Math.sin(t*0.6)*R.len*0.05); return; }
+    pa.setXYZ(i,x+Math.sin(t*0.6)*R.len*0.012,y,z);
+  },
+  // Standing and chewing. The jaw end works, the tail flicks, nothing walks.
+  graze:function(R,t,pa,i,b,x,y,z){
+    if(b===5){
+      var chew=Math.sin(t*3.1);
+      pa.setXYZ(i, x, y+chew*R.h*0.012, z+Math.abs(chew)*R.len*0.010);
+      return;
+    }
+    if(b===6){ pa.setXYZ(i, x+Math.sin(t*1.3)*R.len*0.05, y, z); return; }
+    pa.setXYZ(i, x, y+Math.sin(t*0.8)*R.h*0.008, z);
+  }
+};
+function puppet(obj,gaitName,speed){
+  var mesh=null;
+  obj.traverse(function(o){ if(!mesh&&o.isMesh) mesh=o; });
+  if(!mesh) return null;
+  // ITS OWN GEOMETRY, or every animal sharing this buffer moves in lockstep.
+  mesh.geometry=mesh.geometry.clone();
+  var R=rigBands(mesh);
+  R.gait=GAITS[gaitName]||GAITS.strut;
+  R.sp=speed||3.4;
+  R.ph=Math.random()*6.283;
+  R.obj=obj;
+  PUP.push(R);
+  return R;
+}
+function stepPuppets(t){
+  var i,j;
+  for(i=0;i<PUP.length;i++){
+    var R=PUP[i]; if(!R.obj.visible) continue;
+    var pa=R.pos, base=R.base, band=R.band, tt=t*R.sp+R.ph;
+    for(j=0;j<pa.count;j++) R.gait(R,tt,pa,j,band[j],base[j*3],base[j*3+1],base[j*3+2]);
+    pa.needsUpdate=true;
+  }
+}
+
+// =========================================================================
+//  FM2 — THE FARM BUILDINGS. Coop, nests, pen, trough and hay.
+//
+//  The card says take these from the Kenney kits on the KP1 shelf and only
+//  hand-build what the kits lack. What is actually in the repo is one 2D kit
+//  (tower defense) plus a handful of texture-atlas glbs from the pirate,
+//  survival and nature packs — no coop, no trough, no hay bale, and nothing
+//  vertex-coloured. A texture-atlas prop dropped into this scene would also
+//  break its own law (no textures anywhere in the farm). So the kits lack all
+//  four, and all four are hand-built here in the AR1P style, matching the
+//  fence FM1 already built the same way.
+// =========================================================================
+// Straw is a PALE, dusty yellow. The first pass used a saturated gold with
+// dark banding and the hay bale came back off the model stand reading as a
+// brass barrel, so both straws are lightened and the gap between them closed.
+var WOOD=0xC58A55, WOOD_D=0x9C6939, ROOF=0xA34B3E, STRAW=0xDCC079, STRAW_D=0xB89B4E;
+
+function buildCoop(){
+  var p=[];
+  p.push(hbBox(2.60,1.55,2.05,WOOD,{p:[0,0.90,0]}));                    // hut body
+  p.push(hbBox(2.75,0.14,2.20,WOOD_D,{p:[0,0.15,0]}));                  // raised floor
+  p.push(hbBox(0.20,0.34,0.20,WOOD_D,{p:[-1.15,0.10,0.85]}));           // stilts
+  p.push(hbBox(0.20,0.34,0.20,WOOD_D,{p:[1.15,0.10,0.85]}));
+  p.push(hbBox(0.20,0.34,0.20,WOOD_D,{p:[-1.15,0.10,-0.85]}));
+  p.push(hbBox(0.20,0.34,0.20,WOOD_D,{p:[1.15,0.10,-0.85]}));
+  // PITCHED ROOF. The slab's INNER edge must rise to the ridge: rotating a
+  // left-hand slab the other way splays the two halves open like a book,
+  // which is exactly what the first pass on the model stand showed.
+  p.push(hbBox(1.78,0.14,2.40,ROOF,{r:[0,0,0.60],  p:[-0.68,1.96,0]}));
+  p.push(hbBox(1.78,0.14,2.40,ROOF,{r:[0,0,-0.60], p:[0.68,1.96,0]}));
+  p.push(hbBox(0.20,0.24,2.46,ROOF,{p:[0,2.46,0]}));                    // ridge
+  p.push(hbBox(0.62,0.72,0.10,0x4A342A,{p:[0,0.52,1.03]}));             // doorway hole
+  p.push(hbBox(0.80,0.10,0.10,WOOD_D,{p:[0,0.92,1.04]}));               // door lintel
+  p.push(hbBox(0.52,0.06,1.30,WOOD_D,{r:[0.55,0,0], p:[0,0.30,1.60]}));  // ramp
+  var i;
+  for(i=0;i<4;i++) p.push(hbBox(0.56,0.05,0.07,WOOD,{r:[0.55,0,0], p:[0,0.14+i*0.14,1.94-i*0.29]}));
+  p.push(hbTube(0.07,0.07,2.20,WOOD_D,{r:[Math.PI/2,0,0], p:[0,1.25,-0.55]},8)); // perch
+  // a small round window so the front is not a blank wall
+  p.push(hbTube(0.22,0.22,0.10,0x4A342A,{r:[Math.PI/2,0,0], p:[-0.85,1.30,1.03]},10));
+  p.push(hbTurn([[0.24,-0.02],[0.28,0],[0.24,0.02]],WOOD_D,{r:[Math.PI/2,0,0], p:[-0.85,1.30,1.05]},10));
+  return hbMesh(hbBake(p));
+}
+
+function buildNest(){
+  var p=[], i;
+  // a shallow straw bowl: a lathe rim, then loose strands laid across it
+  p.push(hbTurn([[0.46,0],[0.52,0.14],[0.48,0.22],[0.34,0.20],[0.30,0.06],[0.001,0.04]],
+    STRAW,null,16));
+  for(i=0;i<7;i++){
+    var a=(i/7)*Math.PI*2;
+    p.push(hbBox(0.42,0.04,0.06,STRAW_D,{r:[0,a,0.06], p:[Math.cos(a)*0.26,0.19,Math.sin(a)*0.26]}));
+  }
+  return hbMesh(hbBake(p));
+}
+
+function buildTrough(){
+  var p=[];
+  p.push(hbBox(2.30,0.12,0.86,WOOD,{p:[0,0.34,0]}));                    // floor
+  p.push(hbBox(2.30,0.40,0.10,WOOD_D,{p:[0,0.56,0.38]}));               // long sides
+  p.push(hbBox(2.30,0.40,0.10,WOOD_D,{p:[0,0.56,-0.38]}));
+  p.push(hbBox(0.10,0.40,0.86,WOOD_D,{p:[-1.10,0.56,0]}));              // ends
+  p.push(hbBox(0.10,0.40,0.86,WOOD_D,{p:[1.10,0.56,0]}));
+  p.push(hbBox(0.14,0.30,0.14,WOOD_D,{r:[0,0,0.22], p:[-0.92,0.15,0]}));// splayed legs
+  p.push(hbBox(0.14,0.30,0.14,WOOD_D,{r:[0,0,-0.22], p:[0.92,0.15,0]}));
+  return hbMesh(hbBake(p));
+}
+
+function buildHayBale(){
+  var p=[], i;
+  // a round bale on its side: the drum plus the banding that says "rolled"
+  p.push(hbTube(0.62,0.62,1.30,STRAW,{r:[0,0,Math.PI/2], p:[0,0.62,0]},14));
+  p.push(hbTurn([[0.001,0],[0.60,0.02]],STRAW_D,{r:[0,0,Math.PI/2], p:[0.66,0.62,0]},14));
+  p.push(hbTurn([[0.001,0],[0.60,0.02]],STRAW_D,{r:[0,0,-Math.PI/2], p:[-0.66,0.62,0]},14));
+  // twine, not barrel hoops: barely proud of the drum and close in tone
+  for(i=0;i<2;i++)
+    p.push(hbTube(0.628,0.628,0.045,STRAW_D,{r:[0,0,Math.PI/2], p:[-0.24+i*0.48,0.62,0]},14));
+  // a few loose straws poking out, so it is not a clean barrel
+  for(i=0;i<6;i++){
+    var a=(i/6)*Math.PI*2;
+    p.push(hbBox(0.30,0.035,0.035,STRAW_D,{
+      r:[0,a*0.7,a], p:[(i%2?0.62:-0.62), 0.62+Math.sin(a)*0.55, Math.cos(a)*0.55]}));
+  }
+  return hbMesh(hbBake(p));
+}
+
+// A rectangle of the SAME fence FM1 built for the field, with a gap on one
+// side so the kid always has a way in and can never be shut out.
+function buildPen(cx,cz,halfX,halfZ,gapSide){
+  var g=new THREE.Group(), i, post, rail;
+  var xs=[-halfX,0,halfX], zs=[-halfZ,0,halfZ], j;
+  for(i=0;i<xs.length;i++) for(j=0;j<zs.length;j++){
+    if(i===1&&j===1) continue;
+    post=buildFencePost(); post.position.set(cx+xs[i],0,cz+zs[j]); g.add(post);
+  }
+  function run(len,rotY,x,z){
+    var a=buildFenceRail(len); a.rotation.y=rotY; a.position.set(x,0.55,z); g.add(a);
+    var b=buildFenceRail(len); b.rotation.y=rotY; b.position.set(x,0.9,z); g.add(b);
+  }
+  var sideX=halfX*2, sideZ=halfZ*2, part;
+  if(gapSide!=="N") run(sideX,0,cx,cz+halfZ); else {
+    part=halfX*0.55;
+    run(part,0,cx-(halfX-part/2),cz+halfZ); run(part,0,cx+(halfX-part/2),cz+halfZ);
+  }
+  if(gapSide!=="S") run(sideX,0,cx,cz-halfZ); else {
+    part=halfX*0.55;
+    run(part,0,cx-(halfX-part/2),cz-halfZ); run(part,0,cx+(halfX-part/2),cz-halfZ);
+  }
+  if(gapSide!=="E") run(sideZ,Math.PI/2,cx+halfX,cz); else {
+    part=halfZ*0.55;
+    run(part,Math.PI/2,cx+halfX,cz-(halfZ-part/2)); run(part,Math.PI/2,cx+halfX,cz+(halfZ-part/2));
+  }
+  if(gapSide!=="W") run(sideZ,Math.PI/2,cx-halfX,cz); else {
+    part=halfZ*0.55;
+    run(part,Math.PI/2,cx-halfX,cz-(halfZ-part/2)); run(part,Math.PI/2,cx-halfX,cz+(halfZ-part/2));
+  }
+  return g;
+}
+
+// =========================================================================
+//  FM2 — THE ANIMALS THEMSELVES, and the feeding loop.
+//
+//  THE WHOLE MECHANIC, and every part of it is walking:
+//    hungry  -> a small 3D model of what it wants floats over its head. No
+//               words, no menu, no tap. A child who cannot read can see corn.
+//    feeding -> the kid walks within reach carrying that item, and the TOP
+//               matching one flies off the stack on an arc.
+//    making  -> a short wait, always well under a minute.
+//    ready   -> an egg or a milk bottle sits beside the animal, sparkling.
+//               Walk over it and it hops onto the stack like any crop.
+//
+//  THERE IS NO WAY TO FAIL. No hunger meter, no countdown, no health, no
+//  state an animal can be left in that is worse than waiting.
+// =========================================================================
+var FEED_R=2.9;        // how close the kid must walk to trigger a feed
+// GENEROUS ON PURPOSE, and it must be bigger than the biggest produceOut
+// below, or a kid who walks right up to the cow still misses the bottle
+// sitting beside her and has to learn to aim. Nobody aims here.
+var PICKUP_R=2.0;
+var ANIMALS=[];
+
+var ANIMAL_KINDS={
+  chicken: {
+    wants:"corn", gives:"egg",
+    makeSec:18,          // WELL under a minute, per the card
+    // LONGEST dimension in world units (the kid is ~2.5 tall). Run about 1.4x
+    // life, the same ruler the flying engine uses, or a hen seen from the
+    // farm's overhead camera is a brown speck — which is what the first
+    // render showed at life scale.
+    size:1.70,
+    wantAt:1.65, mouthAt:0.75, produceOut:1.15
+  },
+  cow: {
+    wants:"wheat", gives:"milk",
+    makeSec:26,
+    size:4.10,
+    wantAt:3.55, mouthAt:2.30, produceOut:1.60
+  }
+};
+
+function makeAnimalBody(kind){
+  if(kind==="chicken"){
+    var real = ANM_ON ? anmGet("Chicken", ANIMAL_KINDS.chicken.size) : null;
+    if(real) return {obj:real, real:true};
+    var fb=buildChickenFallback();
+    var w=new THREE.Group(); w.add(fb);
+    return {obj:w, real:false};
+  }
+  // the cow, normalised the same way a loaded model is: sized by its LONGEST
+  // dimension so it can never come out taller-than-long
+  var mesh=buildCow();
+  var wrap=new THREE.Group(); wrap.add(mesh);
+  var box=new THREE.Box3().setFromObject(mesh);
+  var span=Math.max(box.max.x-box.min.x, box.max.y-box.min.y, box.max.z-box.min.z);
+  wrap.scale.setScalar(ANIMAL_KINDS.cow.size/span);
+  return {obj:wrap, real:false};
+}
+
+function addAnimal(kind, x, z, facing, gait, opts){
+  var K=ANIMAL_KINDS[kind];
+  var built=makeAnimalBody(kind);
+  var obj=built.obj;
+  obj.position.set(x, 0, z);
+  obj.rotation.y=facing||0;
+  scene.add(obj);
+  var A={
+    kind:kind, obj:obj, real:built.real,
+    x:x, z:z, homeX:x, homeZ:z, baseY:0,
+    wants:K.wants, gives:K.gives, makeSec:K.makeSec,
+    state:"hungry",        // hungry | making | ready. Never "starving".
+    fedAt:0,
+    want:null, produce:null, halo:null,
+    happy:0,               // seconds of the little celebration bounce left
+    patrol:(opts&&opts.patrol)||null,
+    patrolT:Math.random()*6.283
+  };
+  A.rig=puppet(obj, gait, kind==="cow"?1.5:3.6);
+  ANIMALS.push(A);
+  return A;
+}
+
+// The want sign: the actual 3D item, small, floating and turning over the
+// animal's head. This is the entire instruction, and it needs no words.
+function showWant(A){
+  if(A.want) return;
+  var r=ITEM(A.wants); if(!r) return;
+  // Big enough to READ from the farm's overhead camera. This little model is
+  // the entire instruction — undersize it and a child who cannot read has
+  // nothing at all to go on.
+  var m=hbMesh(hbBake(r.parts(0.85)));
+  var g=new THREE.Group(); g.add(m);
+  g.position.set(A.x, ANIMAL_KINDS[A.kind].wantAt, A.z);
+  scene.add(g); A.want=g;
+}
+function hideWant(A){ if(A.want){ scene.remove(A.want); A.want=null; } }
+
+// ------------------------------------------------- taking one off the stack
+// After a splice every item above drops one place, so the whip-lag delay has
+// to be renumbered or the tower keeps swaying to the old shape.
+function reindexStack(){
+  for(var i=0;i<stack.length;i++){
+    stack[i].userData.stackIndex=i;
+    stack[i].userData.tOffset=STACK_LAG_PER*i;
+  }
+}
+var FLYING=[];    // items in the air between the stack and an animal
+function flyOffStack(kind, A){
+  var i;
+  // the TOPMOST match, because that is the one a child can see leave
+  for(i=stack.length-1;i>=0;i--){
+    if(stack[i].userData.kind===kind){
+      var it=stack.splice(i,1)[0];
+      reindexStack();
+      var K=ANIMAL_KINDS[A.kind];
+      FLYING.push({
+        obj:it,
+        from:it.position.clone(),
+        to:new THREE.Vector3(A.x, K.mouthAt, A.z),
+        t:0, dur:0.62, animal:A
+      });
+      return true;
+    }
+  }
+  return false;
+}
+function updateFlying(dt, now){
+  for(var i=FLYING.length-1;i>=0;i--){
+    var F=FLYING[i];
+    F.t=Math.min(1, F.t+dt/F.dur);
+    var u=F.t;
+    // it flies OUT and OVER, so it reads as thrown rather than teleported
+    F.obj.position.x=lerp(F.from.x,F.to.x,u);
+    F.obj.position.z=lerp(F.from.z,F.to.z,u);
+    F.obj.position.y=lerp(F.from.y,F.to.y,u)+Math.sin(u*Math.PI)*1.15;
+    F.obj.rotation.y+=dt*7.0;
+    F.obj.rotation.x+=dt*4.5;
+    if(u>=1){
+      scene.remove(F.obj);
+      FLYING.splice(i,1);
+      onFed(F.animal, now);
+    }
+  }
+}
+function onFed(A, now){
+  A.state="making";
+  A.fedAt=now;
+  A.happy=0.9;                 // a bounce, so the feed lands with a reaction
+  hideWant(A);
+}
+
+// ------------------------------------------------------------- the produce
+function spawnProduce(A){
+  var r=ITEM(A.gives); if(!r) return;
+  var K=ANIMAL_KINDS[A.kind];
+  var m=hbMesh(hbBake(r.parts(A.kind==="cow"?0.95:0.80)));
+  var g=new THREE.Group(); g.add(m);
+  var side=A.produceSide||(A.produceSide=(Math.random()<0.5?-1:1));
+  var px=A.x+Math.cos(A.obj.rotation.y)*K.produceOut*side;
+  var pz=A.z-Math.sin(A.obj.rotation.y)*K.produceOut*side;
+  g.position.set(px, 0.10, pz);
+  scene.add(g);
+  A.produce=g; A.produceX=px; A.produceZ=pz;
+  // the SAME sparkle a ready crop wears, so "come and get it" reads the same
+  // way everywhere in the farm
+  var halo=hbPaint(new THREE.TorusGeometry(0.62,0.05,6,20),0xFFF6A8,{r:[Math.PI/2,0,0]});
+  var mh=new THREE.Mesh(halo,new THREE.MeshBasicMaterial({color:0xFFF6A8,transparent:true,opacity:0.7}));
+  mh.position.set(px,0.10,pz);
+  scene.add(mh); A.halo=mh;
+  A.state="ready";
+}
+function collectProduce(A){
+  pushOntoStack(A.gives, new THREE.Vector3(A.produceX, 0.8, A.produceZ));
+  scene.remove(A.produce); A.produce=null;
+  if(A.halo){ scene.remove(A.halo); A.halo=null; }
+  A.produceSide=null;
+  A.state="hungry";
+  A.happy=0.6;
+}
+
+// ------------------------------------------------------------ the main tick
+function updateAnimals(dt, now){
+  for(var i=0;i<ANIMALS.length;i++){
+    var A=ANIMALS[i], K=ANIMAL_KINDS[A.kind];
+
+    // the one chicken that walks: a slow loop around the yard
+    if(A.patrol){
+      A.patrolT+=dt*A.patrol.speed;
+      A.x=A.patrol.cx+Math.cos(A.patrolT)*A.patrol.r;
+      A.z=A.patrol.cz+Math.sin(A.patrolT)*A.patrol.r;
+      A.obj.position.x=A.x; A.obj.position.z=A.z;
+      // face along the path (the models front on +Z, same as the kid)
+      A.obj.rotation.y=Math.atan2(-Math.sin(A.patrolT),Math.cos(A.patrolT))+Math.PI/2;
+    }
+
+    // the celebration bounce after a feed or a pickup, measured from the
+    // animal's own resting height (a hen on a nest sits above the ground)
+    if(A.happy>0){
+      A.happy=Math.max(0,A.happy-dt);
+      A.obj.position.y=A.baseY+Math.sin((1-A.happy/0.9)*Math.PI)*0.22*(A.kind==="cow"?0.5:1);
+    } else if(A.obj.position.y!==A.baseY){
+      A.obj.position.y=lerp(A.obj.position.y,A.baseY,0.18);
+      if(Math.abs(A.obj.position.y-A.baseY)<0.002) A.obj.position.y=A.baseY;
+    }
+
+    if(A.state==="hungry"){
+      showWant(A);
+      if(A.want){
+        A.want.position.set(A.x, K.wantAt+Math.sin(now*2.4+i)*0.10, A.z);
+        A.want.rotation.y+=dt*1.5;
+      }
+      // FEED: walk near enough carrying the right thing and it just happens
+      var d=Math.hypot(kid.position.x-A.x, kid.position.z-A.z);
+      if(d<FEED_R){
+        var has=false, s;
+        for(s=0;s<stack.length;s++) if(stack[s].userData.kind===A.wants){ has=true; break; }
+        if(has && flyOffStack(A.wants, A)) A.state="feeding";
+      }
+      continue;
+    }
+
+    if(A.state==="feeding") continue;    // the item is mid-air; onFed takes over
+
+    if(A.state==="making"){
+      if(now-A.fedAt >= A.makeSec) spawnProduce(A);
+      continue;
+    }
+
+    if(A.state==="ready"){
+      // bob and sparkle, exactly like a ready crop
+      A.produce.position.y=0.10+0.06+Math.max(0,Math.sin(now*4.2+i))*0.08;
+      A.produce.rotation.y+=dt*1.1;
+      if(A.halo){
+        A.halo.rotation.z+=dt*2.2;
+        A.halo.material.opacity=0.35+0.35*Math.abs(Math.sin(now*3+i));
+      }
+      var pd=Math.hypot(kid.position.x-A.produceX, kid.position.z-A.produceZ);
+      if(pd<PICKUP_R) collectProduce(A);
+    }
+  }
+}
+
+// ------------------------------------------------------- building the corner
+// East of the field, so the walk is: plant in the field, then carry the load
+// out to the animals. Nothing is fenced shut — the kid walks through fences
+// freely, because being stuck is a way to fail.
+var COOP_C={x:16.5,z:-5.5}, PEN_C={x:15.5,z:8.5};
+
+function buildFarmyard(){
+  var g=new THREE.Group(), i;
+
+  // ---- the coop yard
+  g.add(buildPen(COOP_C.x, COOP_C.z, 4.6, 4.2, "W"));
+  var coop=buildCoop();
+  coop.position.set(COOP_C.x+1.6, 0, COOP_C.z-2.6);
+  coop.rotation.y=-0.35;
+  g.add(coop);
+
+  // ---- the cow pen
+  g.add(buildPen(PEN_C.x, PEN_C.z, 4.8, 3.6, "W"));
+  var trough=buildTrough();
+  trough.position.set(PEN_C.x+2.4, 0, PEN_C.z+2.0);
+  trough.rotation.y=-0.2;
+  g.add(trough);
+  var bale=buildHayBale();
+  bale.position.set(PEN_C.x+3.4, 0, PEN_C.z-2.2);
+  bale.rotation.y=0.4;
+  g.add(bale);
+  var bale2=buildHayBale();
+  bale2.position.set(COOP_C.x-3.2, 0, COOP_C.z+2.9);
+  bale2.rotation.y=-0.7;
+  bale2.scale.setScalar(0.72);
+  g.add(bale2);
+
+  scene.add(g);
+
+  // ---- THREE HENS ON NESTS, one strutting. The nests go down first so a hen
+  //      is sitting IN one rather than beside it.
+  var nestSpots=[
+    [COOP_C.x-1.5, COOP_C.z-2.4, 0.5],
+    [COOP_C.x-0.2, COOP_C.z-0.7, -0.4],
+    [COOP_C.x+2.4, COOP_C.z+1.1, 1.1]
+  ];
+  for(i=0;i<nestSpots.length;i++){
+    var n=buildNest();
+    n.position.set(nestSpots[i][0], 0, nestSpots[i][1]);
+    g.add(n);
+    var hen=addAnimal("chicken", nestSpots[i][0], nestSpots[i][1], nestSpots[i][2], "nest");
+    hen.baseY=0.18;                    // settled down into the straw
+    hen.obj.position.y=hen.baseY;
+    hen.nested=true;
+  }
+  addAnimal("chicken", COOP_C.x-2.4, COOP_C.z+1.4, 0, "strut",
+    {patrol:{cx:COOP_C.x-1.0, cz:COOP_C.z+1.6, r:2.1, speed:0.42}});
+
+  // ---- THE COW
+  addAnimal("cow", PEN_C.x, PEN_C.z, -1.2, "graze");
+}
+
+// The models arrive on the wire, so the yard is built once we know whether the
+// real chicken made it. Either way the yard gets built — a missing file falls
+// back to the hand-built hen and the farm still works.
+loadFarmAnimals(function(){
+  buildFarmyard();
+  if(Q.get("zoo")==="1") zoo();     // judge the models before believing the scene
+});
+
+// =========================================================================
+//  FM2 — zoo(): a stand to judge a model on BEFORE it is placed.
+//
+//  The mock cow read as a PIG right up until the head went up on a neck and
+//  it got horns and spots, and that was only caught by looking at it alone on
+//  a turntable. ?zoo=1 (or window.FARM.zoo()) hides the farm, lines every
+//  model up on plinths at a fixed camera and turns them, so the next session
+//  judges a shape instead of guessing at one.
+// =========================================================================
+var ZOO_ON=false, ZOO=[], zooGroup=null;
+function zoo(){
+  if(ZOO_ON) return true;
+  ZOO_ON=true;
+  // hide the farm but keep the lights, or every exhibit is a silhouette
+  scene.children.slice().forEach(function(o){ if(!o.isLight) o.visible=false; });
+  zooGroup=new THREE.Group(); scene.add(zooGroup);
+  var exhibits=[
+    {name:"chicken (model)", make:function(){ return ANM_ON?anmGet("Chicken",1.0):null; }},
+    {name:"chicken (drawn fallback)", make:function(){ var w=new THREE.Group(); w.add(buildChickenFallback()); return w; }},
+    {name:"cow", make:function(){ return makeAnimalBody("cow").obj; }},
+    {name:"coop", make:buildCoop},
+    {name:"nest", make:buildNest},
+    {name:"trough", make:buildTrough},
+    {name:"hay bale", make:buildHayBale},
+    {name:"egg", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.egg.parts(1))); }},
+    {name:"milk bottle", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.milk.parts(1))); }}
+  ];
+  // EVERY EXHIBIT IS NORMALISED TO THE SAME LONGEST DIMENSION, which is the
+  // whole point of a stand: a shape is judged against the others rather than
+  // against however big it happened to be built. The first pass skipped this
+  // and put a house-sized egg next to a thumbnail cow.
+  // Rows are STAGGERED half a place sideways and stood well apart, so a front
+  // exhibit sits in the gap between two back ones instead of in front of one.
+  // Straight rows hid the cow behind the egg.
+  var SHOW=2.30, perRow=5, gap=4.6, rowGap=6.4, names=[];
+  exhibits.forEach(function(e,i){
+    var col=i%perRow, row=Math.floor(i/perRow);
+    var x=(col-(perRow-1)/2)*gap + (row%2 ? gap*0.5 : 0), z=row*rowGap;
+    var plinth=hbMesh(hbBake([
+      hbTurn([[1.35,0],[1.35,0.26],[1.18,0.34],[0.001,0.36]],0xEFE6D2,{p:[x,0,z]},18)
+    ]));
+    zooGroup.add(plinth);
+    var m=null; try{ m=e.make(); }catch(err){ m=null; }
+    if(m){
+      var box=new THREE.Box3().setFromObject(m);
+      var span=Math.max(0.001, box.max.x-box.min.x, box.max.y-box.min.y, box.max.z-box.min.z);
+      var wrap=new THREE.Group();
+      m.position.y-=box.min.y;          // sit it ON the plinth, never through it
+      wrap.add(m);
+      wrap.scale.setScalar(SHOW/span);
+      wrap.position.set(x,0.36,z);
+      zooGroup.add(wrap); ZOO.push(wrap);
+    }
+    names.push(e.name+(m?"":" (MISSING)"));
+  });
+  var rows=Math.ceil(exhibits.length/perRow);
+  scene.background=new THREE.Color(0x30506B);
+  scene.fog=null;
+  // Frame the whole grid, whatever size it grows to, and sit HIGH enough that
+  // the front row does not stand in front of the back row — the second pass
+  // hid the cow behind the egg.
+  var spanX=(perRow+0.5)*gap, spanZ=(rows-1)*rowGap;
+  var back=Math.max(spanX*0.92, 12);
+  camera.position.set(0, 8.5+spanZ*0.55, spanZ*0.5+back);
+  camera.lookAt(0, 0.6, spanZ*0.55);
+  var strip=document.createElement("div");
+  strip.id="zooNames";
+  strip.style.cssText="position:absolute;left:0;right:0;bottom:8px;text-align:center;"+
+    "color:#fffdf4;font-weight:800;font-size:13px;text-shadow:0 2px 6px rgba(0,0,0,.5);padding:0 10px";
+  strip.textContent="zoo: "+names.join("  |  ");
+  document.getElementById("hud").appendChild(strip);
+  document.getElementById("stick").style.display="none";
+  document.getElementById("hint").style.display="none";
+  return true;
+}
+function stepZoo(dt){
+  for(var i=0;i<ZOO.length;i++) ZOO[i].rotation.y+=dt*0.55;
 }
 
 // -------------------------------------------------------------------------
@@ -795,6 +1681,16 @@ var speed=6.4;   // world units per second
 function step(){
   var now=performance.now()/1000, dt=Math.min(0.05, now-last); last=now;
 
+  // FM2 — the model stand takes the whole frame: no kid, no farm, no camera
+  // follow, just the exhibits turning under a fixed camera.
+  if(ZOO_ON){
+    stepZoo(dt);
+    stepPuppets(now);
+    if(!NODRAW) renderer.render(scene,camera);
+    requestAnimationFrame(step);
+    return;
+  }
+
   // walk from joystick vector. Y axis on screen is Z axis in world (into
   // screen is -Z), so up on the stick moves you forward.
   var mv=stickVec, mag=Math.hypot(mv.x,mv.y);
@@ -895,6 +1791,11 @@ function step(){
   // stack update
   updateStack(dt, now);
 
+  // FM2 — the animals, the items in the air, and the boneless walk cycles
+  updateAnimals(dt, now);
+  updateFlying(dt, now);
+  stepPuppets(now);
+
   if(!NODRAW) renderer.render(scene,camera);
   requestAnimationFrame(step);
 }
@@ -904,7 +1805,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm1",
+  version: "fm2",
   coins: function(){ return coins; },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
@@ -923,10 +1824,14 @@ window.FARM = {
     openSeedPicker(PATCHES[index]); tryPlant(kind); return true;
   },
   // Fast-forward growth: advance all growing patches by seconds. Purely a
-  // testing lever so QA doesn't have to wait 30s per crop.
+  // testing lever so QA doesn't have to wait 30s per crop. FM2 pulls the
+  // animals' making-timers back by the same amount.
   advanceTime: function(sec){
     for(var i=0;i<PATCHES.length;i++){
       var P=PATCHES[i]; if(P.state==="growing"||P.state==="ready") P.plantedAt -= sec;
+    }
+    for(i=0;i<ANIMALS.length;i++){
+      if(ANIMALS[i].state==="making") ANIMALS[i].fedAt -= sec;
     }
   },
   kid: function(){ return { x:kid.position.x, y:kid.position.y, z:kid.position.z, facing:kidState.facing }; },
@@ -939,7 +1844,38 @@ window.FARM = {
   stackHeight: function(){ return stack.length; },
   cropRecipes: function(){ var out={}; for(var k in CROP_RECIPES){
     out[k]={price:CROP_RECIPES[k].price, reward:CROP_RECIPES[k].reward, growSec:CROP_RECIPES[k].growSec};
-  } return out; }
+  } return out; },
+
+  // ---- FM2 -------------------------------------------------------------
+  modelsLoaded: function(){ return ANM_ON; },
+  animals: function(){ return ANIMALS.map(function(A,i){
+    return { i:i, kind:A.kind, real:!!A.real, nested:!!A.nested, patrolling:!!A.patrol,
+             x:+A.x.toFixed(3), z:+A.z.toFixed(3),
+             state:A.state, wants:A.wants, gives:A.gives, makeSec:A.makeSec,
+             wanting:!!A.want, hasProduce:!!A.produce, sparkling:!!A.halo };
+  }); },
+  animalKinds: function(){ var out={}; for(var k in ANIMAL_KINDS){
+    out[k]={wants:ANIMAL_KINDS[k].wants, gives:ANIMAL_KINDS[k].gives,
+            makeSec:ANIMAL_KINDS[k].makeSec, size:ANIMAL_KINDS[k].size};
+  } return out; },
+  // Put something straight on the stack, so a robot can prove the feed
+  // without having to grow a crop first.
+  giveItem: function(kind, n){
+    var i, c=0;
+    for(i=0;i<(n||1);i++){
+      if(!ITEM(kind)) return c;
+      pushOntoStack(kind, new THREE.Vector3(kid.position.x, 0.9, kid.position.z));
+      c++;
+    }
+    return c;
+  },
+  flying: function(){ return FLYING.length; },
+  feedRadius: function(){ return FEED_R; },
+  pickupRadius: function(){ return PICKUP_R; },
+  // there is no lose state to report: nothing here can starve, die or expire
+  canFail: function(){ return false; },
+  zoo: zoo,
+  inZoo: function(){ return ZOO_ON; }
 };
 })();
 </script>
