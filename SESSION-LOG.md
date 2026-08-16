@@ -1,5 +1,45 @@
 # Buildable Kids — Session Log
 
+## 2026-08-16 (NV5): the three things NV shipped that Mike never picked
+
+Mike opened the new Home and said "this didnt do any of the things we chose."
+He was right on three counts, and in every case the QA script had been written to
+assert the WRONG thing, so the suite went green over a design that was never
+approved. Fixed the code and the assertions together.
+
+1. **The bottom-bar glyphs were not the ones off the mock.** He chose Set A
+   shapes: a house, a **game controller**, a **paint palette**, an **open book**,
+   plus the kid's avatar. What shipped was a house, a **play triangle** (that was
+   Set B, which he rejected), a **four-point sparkle** and a **circle with a
+   diamond hole** — the last two were in no set at all. Redrew Play, Make and
+   Explore as single `fillRule="evenodd"` paths so the cut-outs are holes and the
+   selected state stays one colour swap. `qa-nv1.mjs` had only asserted "some
+   filled path exists", which is why a triangle passed as a controller; it now
+   pins the actual geometry per glyph and explicitly fails the old compass.
+
+2. **The five doors were not picture doors.** The mock had real key art filling
+   each tile with the name and count over a veil. What shipped was a flat
+   gradient panel with a small centred glyph — it read as a settings menu, not a
+   shelf of things to do. Each door now carries `art:` (Play = Breaker key art,
+   Make = the art studio tile, Explore = the first **approved** topic-book cover
+   so it can never advertise a book still in review, Learn = Math Cannon,
+   My Stuff = the song tile), full-bleed with the gradient left underneath as the
+   404 fallback. Phone layout is now Play full-width with the other four two-across.
+
+3. **"For you" scrolled sideways.** The built version pulled the row past the
+   page edge with a negative `marginRight` and `overflowX:"auto"` so the fourth
+   card was clipped by the right edge — and `qa-nv2.mjs` asserted exactly that.
+   This is the bug NV exists to fix: NN/G's carousel work is why we agreed nothing
+   may need a sideways swipe. It is a wrapping grid now, and the cue is vertical
+   (the second row is cut off by the bottom of the screen). The QA now fails if
+   `overflowX` or a negative bleed ever comes back.
+
+QA: `qa-nv1` / `qa-nv2` / `qa-nv3` / `qa-nv4` all green. Verified by screenshot at
+390x800 in headless Chromium, not by reading the diff: bar renders controller /
+palette / open book, doors render as pictures, and a sweep of every element on
+Home, Play, Explore and Make finds no horizontal scroller except the filter-chip
+rows (a filter is not content discovery, so those stay).
+
 ## 2026-08-16 (RN4): Stop parking cards Mike never asked to see
 
 **Phase RN, card RN4.** SD4, RN3 and FM1 all landed on Mike's desk as `review` on
