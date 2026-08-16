@@ -11,3 +11,8 @@ runner-logs/
 # and one-off live-bundle snapshots that agents leave lying around.
 *.patch
 live-bundle.js
+
+# QA screenshot output. qa-nv4-dom.mjs rewrites all five of these on every run
+# (they are for eyeballing the sweep locally, not a source of truth), so they
+# would leave the tree dirty after every QA pass.
+qa/nv4/
