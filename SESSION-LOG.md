@@ -1,5 +1,142 @@
 # Buildable Kids — Session Log
 
+## 2026-08-16 (SD5): She can still brute force it, and now we can prove it
+
+**Phase SD, session SD5.** The last of the five sessions on the problem Mike
+described as a six year old finishing all twenty Sling levels in five minutes.
+SD1 gave blocks materials, SD2 hid critters where a direct hit is impossible,
+SD3 gave the ground a shape, SD4 rebuilt levels 7-20 and cut the shot budget to
+one spare. SD5's job was not to build anything — it was to check whether all of
+that actually worked.
+
+It does not, and the answer is a number now rather than an opinion.
+
+### The thing that was missing
+
+`qa-sling.mjs` proved the game was BEATABLE: a bot that plans good arcs clears
+every level with a sling in hand. That was never the question. The question was
+whether a level has to be SOLVED — and a bot that plans arcs cannot answer it,
+because planning is precisely the thing the six year old never did. Five green
+runs from a good player is not evidence that a level is a puzzle. That is the
+stray-critter trap the card points at: QA can go green on a level that plays
+itself.
+
+So the engine got a second bot that plays the way she played. It picks a critter
+that is still standing, pulls the sling all the way back, and throws in roughly
+that direction — high or low, but never worked out. It is deliberately given a
+fair shake: it tries lobs as well as flat shots, and it waits for a collapse to
+finish before spending the next pal, so a level it fails has failed it on merit
+rather than because the bot is bad. It is seeded, so any surprising run replays.
+
+### What it found
+
+Sixteen runs per level, fixed seeds:
+
+- **Levels 1-6 fall to plain flinging 81-94% of the time.** The on-ramp promise
+  holds — a six year old gets through the easy levels without being taught
+  anything, and the real-browser session below says that is about a minute of
+  play. This is the one done-when condition that is comfortably met.
+- **The back half is harder to fling through than the on-ramp — 90% vs 50%, a
+  40-point gap.** SD1 to SD4 did move the needle. It is just nowhere near far
+  enough.
+- **13 of the 14 back-half levels still fall to pure flinging more often than
+  1 attempt in 5**, which was the phase's goal. Worst: Glass, Wood and Stone
+  75%, The High Keep 69%, Two Ways In 69%, Drop the Roof 63%, Snap the Shelf
+  63%. Only **Between the Hills** meets it, at 19%.
+
+### The one line that explains all of it
+
+Read the per-critter column rather than the per-level one. On the levels that
+fall easiest, flinging eventually collects **every** critter — 88%, 94%, 100%
+each — so the level is only ever a question of how many slings you were handed.
+Rank the back half by its most stubborn critter and you get The Floating Deck
+(38%), Between the Hills (31%) and The Pit Between (31%); rank it by how often
+flinging wins and you get the same three levels. **The lever is the critter, not
+the sling count.**
+
+But note the size of the gap. Only **one** of those three (Between the Hills,
+19%) gets under the goal, so a stubborn critter at 38% is not enough on its own
+— it has to be nearer 30%. **Eleven of fourteen back-half levels have no
+stubborn critter at all.** That is the finding, and `qa-sling.mjs` now prints
+both halves of it so the next session does not have to rediscover them.
+
+Note what this does NOT say. The seals from SD2 are real: the arc sweep still
+proves no shot in the game can touch a sealed critter while its shell stands,
+and that check is still green. The gap is that opening the shell by accident is
+easy — on The Glass Stalk, Two Ways In and Grand Finale the sealed critter is
+crushed in essentially every flinging run, because the glass support holding the
+pen up stands directly in the flight path of a shot aimed at something else.
+Sealed means "you cannot hit it", not "you had to mean it".
+
+### The real play session
+
+`qa-sling-device.mjs` (new) opens the actual game in a real browser at iPhone
+390x844 and iPad 1024x768, with touch, and plays it with real gestures — press
+on the sling, drag it back, let go. It aims with the game's own predictor and
+then performs that aim as a finger drag, so the gesture path is what is tested
+rather than being called past. All green on both:
+
+- the yard fits, the page never scrolls sideways, nothing throws
+- the sling is reachable with room behind it to pull (68px on the phone)
+- a real drag stretches the sling and letting go fires
+- **2.2 to 3.8 seconds between shots**, and Castle Keep played end to end in two
+  drags — levels 1 to 6 at that pace is about a minute
+- on the phone a critter is 12px across (30px on the iPad). Not a problem — you
+  aim at it, you never tap it — but it is why the sling has to stay forgiving
+
+**Nothing frustrated, so nothing was softened.** The card allows softening one
+level; the evidence did not ask for it, and softening a level on a hunch would
+have been the wrong way round.
+
+One honest caveat on the harness: the first two runs said 8-10 seconds between
+shots, which would have been a real frustration finding. It was not real. The
+container renders at about 22fps under load, and a frame counter that started a
+new loop per shot was triple-counting by the third level. The harness now
+measures frames during the shot and converts at 60fps, which is why the numbers
+above are trustworthy and the first ones were not.
+
+### What this session did NOT do
+
+**It did not redesign the levels, and that is deliberate.** Closing a 13-level
+gap means giving each of those levels a critter that flinging cannot reach, which
+is a level-design job of at least SD4's size. Doing it inside a verification
+session would have meant reshaping most of the back half with no way to check the
+result against the failure mode Mike named — a level that frustrates instead of
+puzzling — because the real child on the real iPad is the only test for that and
+this session did not have one.
+
+**The brute-force verdict is printed, not gated.** `qa-sling.mjs` still exits 0
+and everything it gated before SD5 is still green. Folding the measurement into
+the exit code would turn `main` red for every other session over a design call
+that is Mike's. Instead the script's last line reads
+`BRUTE FORCE: NOT PROVED — 13 of 14 back-half levels ...` with the worst named,
+so nobody can read "ALL CHECKS PASS" without also reading that.
+
+### QA
+
+- `node qa-sling.mjs .` — **ALL CHECKS PASS** (every SD1-SD4 check still green;
+  the bot clears all 20 levels inside the tighter budget with a sling in hand),
+  followed by `BRUTE FORCE: NOT PROVED — 13 of 14`.
+- `node qa-sling-device.mjs .` — **ALL CHECKS PASS** on iPhone and iPad.
+  Playwright was installed into this container only (not added to `package.json`);
+  the script skips with one line where it is absent.
+
+### Files
+
+`public/sling-squad.html` (flailThink/flailRnd, `_flail`, `_aimDragFor`),
+`qa-sling.mjs` (the brute-force section and verdict), `qa-sling-device.mjs`
+(new). No manifest change, no level change, no change to the shot budget or the
+pop rule.
+
+### What remains in phase SD
+
+Everything above is measurement; the design work it points at is not done.
+Levels 7-20 each need one critter that pure flinging cannot reliably reach, and
+the three glass-stalk seals (The Glass Stalk, Two Ways In, Grand Finale) need
+their support moved out of the accidental flight path so that opening the pen is
+a shot you chose. That is a new session, and it wants a child on an iPad at the
+end of it rather than a bot.
+
 ## 2026-08-16 (FL9 re-land): two fixes for one bug, resolved into one
 
 **Phase FL, card FL9.** FL9 was reopened because RN3 aborted its merge on a

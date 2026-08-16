@@ -6,6 +6,38 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## She can still brute force it, and now we can prove it (SD5, August 16 2026)
+`public/sling-squad.html`, `qa-sling.mjs`, `qa-sling-device.mjs` (new).
+Phase **SD**, card **SD5** — the check at the end of the five sessions on "a six
+year old finished all twenty Sling levels in five minutes". `qa-sling.mjs` only
+ever proved the game was BEATABLE, using a bot that plans good arcs — which
+cannot answer whether a level had to be SOLVED, since planning is the thing she
+never did. So the engine gained a **brute-force bot**: pick a critter still
+standing, pull all the way back, throw roughly that way, never ask what is
+holding anything up. Sixteen seeded runs per level. **Levels 1-6 still fall to
+plain flinging 81-94% of the time** (the on-ramp promise holds — about a minute
+of play). **The back half is 40 points harder than the on-ramp**, so SD1-SD4 did
+move the needle — but **13 of 14 back-half levels still fall to flinging more
+than 1 attempt in 5**, the phase's goal. The explanation is one column: on the
+levels that fall easiest, flinging eventually collects *every* critter, so the
+level is only ever a question of how many slings you were handed. Rank the back
+half by its most stubborn critter and you get the same three levels as ranking it
+by how often flinging wins — **the lever is the critter, not the sling count** —
+but only Between the Hills (stubbornest critter 31%) gets under the goal, so 30%
+is the bar, not 40%. **Eleven of fourteen have no stubborn critter at all.**
+SD2's seals are still real (the arc sweep is still green); what is easy is
+opening a shell *by accident*. The verdict is printed, not gated: everything
+qa-sling gated before is still green and it still exits 0, with a last line
+reading `BRUTE FORCE: NOT PROVED — 13 of 14 ...` so it cannot be read past.
+Also new: **`qa-sling-device.mjs`**, the real play session made repeatable — the
+actual game in a real browser at iPhone and iPad sizes, played with real finger
+drags using the game's own aim predictor. All green: yard fits, sling reachable
+with room to pull, **2.2-3.8s between shots**, Castle Keep won in two drags,
+nothing throws. Nothing frustrated, so **nothing was softened**. The level
+redesign the finding points at was deliberately NOT done — it is a design job of
+SD4's size and wants a child on an iPad to check it. Full detail in
+`SESSION-LOG.md`.
+
 ## Stop parking cards Mike never asked to see (RN4, August 16 2026)
 `scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
 Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16

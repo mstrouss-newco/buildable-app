@@ -432,17 +432,23 @@ for(const f of backFlail){
 }
 const bruteForceProved = bruteForceable.length===0;
 
-// 5) and the one number that explains all of the above. Read down the per-critter
-//    column: on every level that falls to flinging, EVERY critter is gettable by
-//    flinging sooner or later, so the level is only ever a matter of how many
-//    slings you have. The level that holds (Between the Hills) is the one with a
-//    critter flinging keeps missing. That is the whole design rule in a line —
-//    a back-half level needs at least one critter that pure flinging cannot get,
-//    and thirteen of fourteen do not have one.
-const RESISTS = 40;      // a critter flinging gets less than this often is one it cannot rely on
+// 5) and the number that explains the shape of all of the above. Read DOWN the
+//    per-critter column rather than across the per-level one. A level is only a
+//    puzzle if it has a critter flinging keeps missing; a level whose critters
+//    are all gettable sooner or later is just a question of how many slings you
+//    were handed, whatever its name says. Rank the back half by its most
+//    stubborn critter and the same three levels come out on top as when you rank
+//    it by how often flinging wins — so the lever is the critter, not the sling
+//    count. Note the size of the gap, though: a critter at 38% is not enough on
+//    its own, and only the level whose hardest critter sits near 30% gets under
+//    the goal.
+const RESISTS = 40;      // a critter flinging gets less often than this is one it cannot rely on
 const withResistant = backFlail.filter(f=>f.hardest<RESISTS);
 console.log(`    ${withResistant.length} of ${backFlail.length} back-half levels have a critter flinging cannot reliably get (under ${RESISTS}%): ${withResistant.map(f=>`L${f.i+1} ${f.name} (${f.hardest}%)`).join(', ')||'none'}`);
-console.log(`    every level in that list meets the goal; every level not in it does not. The lever is the critter, not the sling count.`);
+const byStubborn = backFlail.slice().sort((a,b)=>a.hardest-b.hardest).slice(0,3).map(f=>'L'+(f.i+1));
+const byFling    = backFlail.slice().sort((a,b)=>a.rate-b.rate).slice(0,3).map(f=>'L'+(f.i+1));
+console.log(`    hardest to fling through: ${byFling.join(' ')} — most stubborn critter: ${byStubborn.join(' ')}. Same three levels, so the lever is the critter, not the sling count.`);
+console.log(`    but only ${backFlail.filter(f=>f.rate<=FLAIL_GOAL).length} gets under the goal, so a stubborn critter has to be nearer 30% than 40% to carry a level on its own.`);
 
 console.log('--- a clean run earns stars ---');
 const s=SG.sim(0,20000); console.log(`stars(L1)=${s.stars}`);
