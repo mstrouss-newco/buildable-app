@@ -3286,6 +3286,40 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-16 (NV6: Home shows things, not signposts — the five picture doors are gone)
+
+**Phase NV, session NV6.** Deleted the five picture doors (Play / Make /
+Explore / Learn / My Stuff) from Home. The bottom bar already IS the navigation,
+so those five words appeared twice on one screen — NN/G's finding is that
+duplicate links on a page cost the reader real effort deciding whether the two
+are the same thing, a hub-of-buttons home suits task-based apps where a session
+lives in one branch (Buildable isn't that), and for ages 3-5 text is invisible
+noise so a real cover beats a category word. **THE RULE: never repeat the tab bar
+on the home screen. A shortcut strip on Home is only allowed if it does a job the
+bar cannot (2 players / quick game / new this week) — never Play, Make, Explore
+again.** Home is now real content in wrapping grids, each row with a small "See
+all" landing on that row's own tab: Keep playing (unchanged, keeps the NV5
+friend-turn art fix), Games for you (4, most-played first), New in Kidspedia (3
+real approved book covers), Make something (every live studio), Play with a
+friend (the one allowed shortcut, rendered only while a live 2-player game
+exists), Learn (joins only once the lessons switch is flipped AND a subject has
+an approved lesson, so it's never a dead Coming Soon tile), and Made by other
+kids. The 20 games / 14 books / 3 studios counts moved onto each **section page**
+header, where a number is information rather than decoration on a button — still
+derived from the catalogs, still respecting `soon` / `approved`. Nothing scrolls
+sideways and the last row is cut off by the bottom of the screen as the vertical
+cue (Home measures 2200px at 390x844). `qa-nv2.mjs` rewritten as the NV6 gate:
+it FAILS if `NV2_DOORS` / `data-nv2-door` / `data-nv2-doors` / `DoorTile` return,
+or if a Home tile carries a tab word as its label, and it asserts every Home row
+is a grid with a See all; verified it bites by running it against the pre-NV6
+source. `qa-nv1`-`qa-nv4` green. Also fixed `qa-nv4-dom.mjs`, which never
+stripped vite's `/demo/` base from asset URLs — every asset 404'd, React never
+mounted, and the sweep had been passing against a blank page; it now really
+opens all five tabs and additionally asserts in the live DOM that Home has zero
+doors and each row is a computed CSS grid with a See all. No game engine was
+touched, so no per-game QA script applies.
+
+---
 ## Session log — 2026-08-15 (NV4: Nav polish — tap sound + squash on every tab, and Me gets its own /app address)
 
 **Phase NV, session NV4.** Every bottom-bar tab press now fires the shared Feel

@@ -1,5 +1,77 @@
 # Buildable Kids — Session Log
 
+## 2026-08-16 (NV6): Home shows things, not signposts
+
+**Deleted the five picture doors from Home.** The bottom bar already IS the
+navigation, so Play / Make / Explore / Learn / My Stuff appeared twice on the
+same screen — once as a strip of big buttons, once as the bar four centimetres
+below it. NN/G's finding is that duplicate links on one page cost the reader real
+effort deciding whether the two are the same thing. A hub-of-buttons home suits
+task-based apps where a session lives in one branch; Buildable is not that — a
+kid drifts between playing, making and reading in one sitting. And for a 3-5 year
+old, text is invisible noise, so a real book cover beats the word "Explore".
+
+**THE RULE THIS ENCODES:** never repeat the tab bar on the home screen. A
+shortcut strip on Home is only allowed if it does a job the bar cannot
+(2 players / quick game / new this week). Never Play, Make, Explore again.
+
+Home is now real content in wrapping grids, every row with a small **See all**
+that lands on that row's own tab:
+
+- **Keep playing** — unchanged, including the NV5 fix so a friend turn shows
+  THAT game's art instead of a chess pawn.
+- **Games for you** — 4 live games, most-played first for this kid.
+- **New in Kidspedia** — 3 real approved book covers (the newest three; an
+  in-review book can never reach Home).
+- **Make something** — every live studio (song, sound, art today).
+- **Play with a friend** — live 2-player games. This is the one shortcut Home is
+  allowed, because "with someone else" is not a section the bar can express. It
+  renders only while a live 2-player game actually exists.
+- **Learn** — joins as its own row the day the lessons switch is flipped AND a
+  subject has an approved lesson, so it is never sitting there as a dead Coming
+  Soon tile.
+- **Made by other kids** — published creations as pictures rather than a
+  leaderboard list.
+
+**The counts moved.** 20 games / 14 books / 3 studios now sit on each **section
+page** header, where a number on a page listing everything is information. On a
+door it was decoration. Still derived from the catalogs, still respecting the
+`soon` and `approved` flags — nothing is typed by hand.
+
+Rows still build from the catalogs, nothing scrolls sideways, and the last
+visible row is cut off by the bottom of the screen as the vertical scroll cue
+(measured: Home is 2200px tall at 390x844).
+
+**QA.** `qa-nv2.mjs` is rewritten as the NV6 gate: it FAILS if `NV2_DOORS`,
+`data-nv2-door`, `data-nv2-doors` or `DoorTile` ever come back, or if any Home
+tile is labelled with a bottom-bar tab word, and it asserts every Home row is a
+wrapping grid with a See all pointing at its own tab. Verified it bites by
+running it against the pre-NV6 source (20 failures). `qa-nv3`'s three door
+checks now assert the same three destinations on their new owner. `qa-nv1` /
+`qa-nv2` / `qa-nv3` / `qa-nv4` all green. **No game engine was touched this
+session, so no per-game QA script applies.**
+
+**Found and fixed while here:** `qa-nv4-dom.mjs` — the live-DOM phone sweep —
+never stripped vite's `/demo/` base from asset URLs, so every asset 404'd, React
+never mounted, and the sweep had been happily "passing" against a blank page.
+Fixed; it now really opens all five tabs at 390x844, and it additionally asserts
+in the live DOM that Home has zero doors and that each row is a computed CSS
+grid with a See all and no sideways scroll. All five tabs green. Its "content
+taller than viewport" check is now skipped for Me when the creations list is
+empty — an empty page that fits one screen is correct, and demanding a scrollbar
+there would be asking the page to lie.
+
+**Calls I made, that you can overrule:** the mock named in the prompt
+(`claude/home-no-doors-mock.html`) is not in the repo — there is no `claude/`
+directory — so I built from the written spec, which was detailed enough to be
+unambiguous about every row. Row order follows the order you listed them, with
+Learn slotted in before "Made by other kids". I read "only renders when a live
+2-player game exists" as catalog-derived (a game that is 2-player and not
+`soon`), matching "rows still build from the catalogs and respect the soon flag"
+— not as "a match is currently in progress". Keep playing stays the hero card
+above the rows rather than becoming a row with its own See all, because you said
+it was unchanged.
+
 ## 2026-08-16 (NV5): the three things NV shipped that Mike never picked
 
 Mike opened the new Home and said "this didnt do any of the things we chose."
