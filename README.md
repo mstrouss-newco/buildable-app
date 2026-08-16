@@ -31,6 +31,27 @@ review keeps the lane going, only `open` stops the chain. Rewritten to say
 so. No product code touched; QA is three smoke tests on `planner.mjs review`
 (refuse-no-id, refuse-no-note, refuse-no-question) + a `--dry` render of the
 new autopilot prompt. All green. `git status` clean.
+## Sky Flyer HUD clears the shell nav band on mobile (August 16 2026)
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
+Phase **FL**, card **FL9**. On a phone, the shell's own Home (top-left) and
+Sound / Help stack (top-right, 38×38 buttons at 14/14) landed directly on top
+of Sky Flyer's coin `.pill` (top:12, right:14) and `#minimap` (top:62,
+right:14) — the shell chrome and the game HUD were sharing the same real
+estate. Fresh, targeted fix on main (supersedes the earlier
+`claude/nav-hud-overlap-mobile-hd7qte` branch RN3 could not merge): the engine
+now tags `<html>` with `bk-in-shell` whenever `window.parent !== window`, and
+three CSS overrides shift the top-right HUD stack down by 48px in-shell —
+`.pill` 12 → 60, `#minimap` 62 → 110, `#banked` 174 → 222. Standalone at
+`/skyflyer-engine.html` is unchanged (no shell, no shift). Cache-bust on both
+engine links in `BuildableKids.jsx` bumped `v=fm1 → v=fl9`, and the
+`vercel.json` route on `/skyflyer-engine.html` already carries `no-cache`.
+`qa-skyflyer.mjs` gained an FL9 block (5 checks) and the FM1 cache-bust pin
+follows to `v=fl9`; full skyflyer QA green. **Marked `done`, not
+`deployed`** — this session can only read summarized page content from the
+live site, not raw inline CSS, so the pixel-level check wants Mike's eyes on a
+phone before the flag flips. Open `/demo` on your phone → Sky Flyer, confirm
+the coin count and map sit BELOW the top-right icons (not under them), then
+`node scripts/planner.mjs deployed FL9`.
 
 ## Farm corner v1 — the field, the crops, and the endless stack (August 15 2026)
 `public/skyflyer-farm.html` (new), `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
