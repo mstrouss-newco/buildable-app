@@ -6,6 +6,38 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Farm 2 — the chickens, the cow, and feeding off the stack (FM2, August 16 2026)
+`public/skyflyer-farm.html`, `public/models/skyflyer/animals/farm-animals.glb`,
+`qa-farm.mjs`, `qa-skyflyer.mjs`, `src/BuildableKids.jsx`.
+Phase **FM**, card **FM2.** The animals go into the farm corner FM1 built.
+**The mechanic:** a hungry animal floats a small 3D model of what it wants over
+its head — no menu, no tap, nothing to read — and walking past carrying it makes
+the top matching item **fly off the stack** to every animal in reach (corn to the
+chickens, wheat to the cow). After 18s an egg appears beside the hen, after 26s a
+milk bottle beside the cow, both wearing the same sparkle a ready crop wears;
+walking over one hops it onto the stack like a harvested crop. **Nothing can die,
+starve or fail** — there is no hunger meter, countdown or health anywhere in it,
+and QA asserts an animal's only states are waiting, feeding, making and ready.
+**The chickens are a real library model** cut to a 64KB glb by
+`scripts/cut-animal-subset.mjs`, with `COLOR_0` carried through the merge (drop
+it and every animal renders solid black) and sized by longest dimension. **The
+cow is hand-built** — there is no cow in the repo's 18-animal cut and the
+178-animal source is not in the repo — with the head UP ON A NECK, HORNS and
+SURFACE SPOTS, which are the three things that stop it reading as a pig. They
+move on the AR1Q banding rig, each with its own geometry copy so the hens do not
+walk in lockstep. **New: `?zoo=1`**, a turntable stand that normalises every
+model to one size so a shape is judged before it is placed — it immediately
+caught a coop roof splayed open like a book, a hay bale reading as a brass
+barrel and an egg sitting in an eggcup. Coop, nests, trough, hay and pen fences
+are hand-built in the AR1P style because the KP1 shelf catalogues 241 kits but
+only the 2D tower-defense one is actually in the repo. **QA:** `qa-skyflyer.mjs`
+652 checks green (jsdom half included, 40 new FM2 assertions) and the new
+`qa-farm.mjs` 33 checks green — a robot that drives real Chromium and plays the
+whole feed → wait → produce → pickup loop, because jsdom cannot see a WebGL
+scene that loads a glb. Cache-bust bumped on both shell links (`v=fl9` →
+`v=fm2`). Flagged **needsReview**: the cow and the coop yard are hand-built
+rather than library/kit-sourced, and that is a look call.
+
 ## Stop parking cards Mike never asked to see (RN4, August 16 2026)
 `scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
 Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16
