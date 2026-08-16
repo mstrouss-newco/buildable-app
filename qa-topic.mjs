@@ -93,6 +93,9 @@ for (const f of files) {
       // The whole point of the book: a grown-up can check every single fact.
       if (!fact || typeof fact.source !== 'string' || !fact.source.trim()) fail(`${f} ${label}.facts[${k}]: every fact needs its own source`);
     });
+    // Session RP7 — no factAudio id means that page's speaker buttons can never
+    // be anything but the robot voice, however much narration has been made.
+    if (!p.factAudio && data.status !== 'draft') fail(`${f} ${label}: no factAudio id, so this page can never play a real narrator clip`);
     if (p.factAudio && !/^[a-z0-9-]+$/.test(p.factAudio)) fail(`${f} ${label}: factAudio "${p.factAudio}" must be a plain id (used in /api/explore-audio?id=)`);
     if (p.factAudio && p.factAudio !== `${data.id}-${p.id}`) warn(`${f} ${label}: factAudio "${p.factAudio}" is not the conventional "{exhibitId}-{pageId}"`);
     if (typeof p.art === 'string' && !p.art.startsWith('/')) fail(`${f} ${label}: art must be a root-absolute path (a relative path is swallowed by the /explore/(.*) route)`);
@@ -302,6 +305,7 @@ async function runBook(exhibit, opts) {
   const globalListeners = {};
   const posted = [];
   const spoken = [];
+  const audioSrcs = [];
   const apiCalls = [];
   const store = {};
 
@@ -357,9 +361,10 @@ async function runBook(exhibit, opts) {
   const sandbox = {
     document: documentStub,
     localStorage: localStorageStub,
-    // Narrator clips are not generated yet, so the Audio element fails — which is
-    // exactly the path that must fall through to the browser voice.
-    Audio: class { constructor(src) { this.src = src; setImmediate(() => { if (this.onerror) this.onerror(); }); } play() { return { catch() {} }; } pause() {} },
+    // The clip the page ASKS for is recorded, then made to fail — so one run
+    // proves both halves at once: the right narrator id was requested, and a
+    // missing clip falls straight through to the browser voice with no wait.
+    Audio: class { constructor(src) { this.src = src; audioSrcs.push(src); setImmediate(() => { if (this.onerror) this.onerror(); }); } play() { return { catch() {} }; } pause() {} },
     speechSynthesis: { cancel() {}, speak(u) { spoken.push(u); } },
     SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } },
     location: { pathname: `/explore/${exhibit.data.id}`, search: OPTS.search || '', href: `/explore/${exhibit.data.id}` },
@@ -498,6 +503,32 @@ async function runBook(exhibit, opts) {
   for (let i = 0; i < 4; i++) await new Promise((x) => setImmediate(x));
   r.readAloud = spoken.length >= 1 && spoken[0].text.indexOf(p1.facts[0].text) !== -1;
 
+  // Session RP7 — EVERY fact card is narrated, not just the first. Tap each
+  // speaker on the page and check two things per card: the clip id it asked for
+  // (the page's own factAudio id, then "-2", "-3" for the cards after it, which
+  // is exactly what /api/gen-exhibit-audio writes), and the words the browser
+  // voice falls back to — the page title introduces the FIRST card only, so the
+  // narrator clip and the robot voice never say different things.
+  r.clipIds = [];
+  r.voiceText = [];
+  const factText = (f) => (typeof f === 'string' ? f : (f && f.text) || '');
+  if (p1.factAudio) {
+    for (let n = 0; n < p1.facts.length; n++) {
+      sandbox.stopNarration();
+      const beforeAudio = audioSrcs.length, beforeSpoken = spoken.length;
+      sandbox.readAloud(firstPageIdx, n);
+      for (let k = 0; k < 4; k++) await new Promise((x) => setImmediate(x));
+      const src = audioSrcs[beforeAudio] || '';
+      const want = '/api/explore-audio?id=' + encodeURIComponent(n ? `${p1.factAudio}-${n + 1}` : p1.factAudio);
+      const said = (spoken[beforeSpoken] || {}).text || '';
+      r.clipIds.push(src === want);
+      r.voiceText.push(
+        said.indexOf(factText(p1.facts[n])) !== -1 &&
+        (n ? said.indexOf(p1.title) !== 0 : said.indexOf(p1.title) === 0)
+      );
+    }
+  }
+
   // Dog-ear: folds, marks the corner, mirrors locally, AND pushes to the API on
   // the KID lane so it follows the kid across devices.
   const before = apiCalls.length;
@@ -574,6 +605,11 @@ for (const ex of candidates) {
   }
   if (!r.readAloud) fail(`${r.id}: read-aloud did not fall back to the browser voice when the narrator clip is missing`);
   else pass(`${r.id}: read-aloud plays, falling back to the browser voice with no waiting`);
+  if (!r.clipIds.length) fail(`${r.id}: no fact card asked for a narrator clip — the book has no factAudio id`);
+  else if (r.clipIds.some((ok) => !ok)) fail(`${r.id}: a fact card asked /api/explore-audio for the wrong clip id — later cards must be "{factAudio}-2", "-3"`);
+  else pass(`${r.id}: all ${r.clipIds.length} fact cards ask for their own narrator clip`);
+  if (r.voiceText.some((ok) => !ok)) fail(`${r.id}: the browser-voice fallback does not say what the narrator clip says (the page title belongs on the first card only)`);
+  else if (r.voiceText.length) pass(`${r.id}: narrator clip and browser voice read each fact card the same way`);
   if (!r.folded || !r.unfolded) fail(`${r.id}: the dog-ear corner did not fold/unfold`);
   else pass(`${r.id}: the corner folds and unfolds`);
   if (!r.foldPushed) fail(`${r.id}: folding a corner never reached /api/saved-pages — dog-ears would be local-only`);
@@ -655,6 +691,19 @@ if (fs.existsSync(genPath)) {
   const gen = fs.readFileSync(genPath, 'utf8');
   if (/data\.pages/.test(gen) && /p\.title/.test(gen)) pass('gen-exhibit-audio reads topic-book pages, so read-aloud clips can be generated for a book');
   else fail('api/gen-exhibit-audio.js does not read a topic book\'s pages[] — narration would generate nothing for every book');
+  // Session RP7 — the generator must walk EVERY fact on a page and hang the
+  // later cards off the page id ("-2", "-3"), which is what the template asks
+  // /api/explore-audio for. If it goes back to first-fact-only, two of every
+  // three speaker buttons quietly return to the robot voice.
+  if (/facts\.forEach/.test(gen) && /\$\{p\.id\}-\$\{n\s*\+\s*1\}/.test(gen))
+    pass('gen-exhibit-audio narrates every fact card, ids matching what topic.html requests');
+  else fail('api/gen-exhibit-audio.js narrates only the first fact of each page — the other speaker buttons would stay on the browser voice');
+  // The per-call cap has to clear the biggest book, or the last cards of a long
+  // book are silently never generated.
+  const capM = gen.match(/MAX_ITEMS\s*=\s*(\d+)/);
+  const biggest = Math.max(0, ...candidates.map((b) => (b.data.pages || []).reduce((s, p) => s + (p.facts || []).length, 0)));
+  if (capM && Number(capM[1]) >= biggest) pass(`gen-exhibit-audio's per-run cap (${capM[1]}) covers the biggest book (${biggest} fact cards)`);
+  else fail(`gen-exhibit-audio's per-run cap ${capM ? capM[1] : '(not found)'} is below the biggest book's ${biggest} fact cards — the last clips would never be made`);
 } else fail('api/gen-exhibit-audio.js is missing — no way to generate read-aloud clips');
 
 // The API and its table must exist, or the dog-ear promise is a lie.

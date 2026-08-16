@@ -69,18 +69,28 @@ function collectItems(data){
   (Array.isArray(data.bodies)?data.bodies:[]).forEach(push);
   (Array.isArray(data.items)?data.items:[]).forEach(push);
   (Array.isArray(data.creatures)?data.creatures:[]).forEach(push);
-  // Topic books (template "topic-book"): every page is one narratable item.
-  // The template plays the clip for the page's FIRST fact only and reads any
-  // other fact with the browser voice, so the clip must say exactly what that
-  // fallback says — "<page title>. <first fact>" — or the narrator and the
-  // robot voice would tell the kid two different things.
+  // Topic books (template "topic-book"): EVERY fact card is one narratable item.
+  // Session RP1 gave each fact card its own speaker button, so a page-only clip
+  // would leave two of every three buttons on the robot voice. Ids follow the
+  // page's existing factAudio id so nothing already generated is orphaned:
+  //   fact 1 -> "<pageId>"        (the id already written in every book json)
+  //   fact 2 -> "<pageId>-2", fact 3 -> "<pageId>-3", and so on.
+  // Each clip must say exactly what the browser-voice fallback says for that
+  // same card — the first fact is introduced by the page title, the rest are
+  // read on their own — or the narrator and the robot voice would tell the kid
+  // two different things.
   (Array.isArray(data.pages)?data.pages:[]).forEach((p)=>{
     if(!p||!p.id) return;
     const facts=Array.isArray(p.facts)?p.facts:[];
-    const first=facts[0];
-    const text=typeof first==="string"?first:(first&&first.text)||"";
-    if(!text.trim()) return;
-    push({ id:p.id, name:p.title||"", fact:((p.title?p.title+". ":"")+text) });
+    facts.forEach((f,n)=>{
+      const text=(typeof f==="string"?f:(f&&f.text)||"").trim();
+      if(!text) return;
+      push({
+        id: n?`${p.id}-${n+1}`:p.id,
+        name: p.title||"",
+        fact: n?text:((p.title?p.title+". ":"")+text),
+      });
+    });
   });
   return out.slice(0,MAX_ITEMS);
 }
@@ -134,6 +144,6 @@ export default async function handler(req,res){
   }
 
   if(!dry && report.totalCharsGenerated) await logCost(report.totalCharsGenerated,exhibit);
-  report.note=`Set factAudio:"<${exhibit}-{itemId}>" on each item in public/explore/${exhibit}.json so the template plays these; missing clips fall back to the browser voice.`;
+  report.note=`Set factAudio:"<${exhibit}-{itemId}>" on each item in public/explore/${exhibit}.json so the template plays these; a topic book's later fact cards are served from the same id with "-2", "-3" appended. Missing clips fall back to the browser voice.`;
   return res.status(200).json(report);
 }

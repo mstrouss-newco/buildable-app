@@ -1452,12 +1452,22 @@ function stopNarration() {
     else setSayButton(i, false, 0);
   });
 }
+// The narrator clip for one fact card. The page's own factAudio id covers the
+// FIRST card; the cards after it hang off the same id ("-2", "-3"), which is
+// exactly what /api/gen-exhibit-audio writes. No book json has to change.
+function narrationId(sp, n) {
+  if (!sp || !sp.factAudio) return "";
+  return n ? sp.factAudio + "-" + (n + 1) : sp.factAudio;
+}
 function browserVoice(i, text, token, n) {
   if (!("speechSynthesis" in window)) { showToast("Read-aloud isn't available on this device."); if (token === sayToken) { speaking = false; setSayButton(i, false, n); } return; }
   try {
     speechSynthesis.cancel();
     const sp = SPREADS[i] || {};
-    const u = new SpeechSynthesisUtterance((sp.title || "") + ". " + (text || ""));
+    // Only the first card is introduced by the page title — saying it again on
+    // every card sounds like a stuck record, and the narrator clips are cut the
+    // same way, so the voice never changes what the kid hears.
+    const u = new SpeechSynthesisUtterance(n ? (text || "") : ((sp.title || "") + ". " + (text || "")));
     u.rate = 0.92; u.pitch = 1.05;
     u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(i, false, n); } };
     speechSynthesis.speak(u);
@@ -1473,11 +1483,12 @@ function readAloud(i, which) {
   const text = (list[n] && list[n].text) || "";
   stopNarration();
   const token = ++sayToken; speaking = true; setSayButton(i, true, n);
-  // The pre-made narrator clip covers the page's FIRST fact only; anything
-  // else is read by the browser voice, so a kid never waits on a download.
-  if (n === 0 && sp.factAudio) {
+  // Every fact card has its own pre-made narrator clip. If one is missing the
+  // browser voice takes over on the spot, so a kid never waits on a download.
+  const clipId = narrationId(sp, n);
+  if (clipId) {
     try {
-      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(sp.factAudio));
+      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(clipId));
       narrAudio = a;
       a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(i, false, n); } };
       a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token, n); };
