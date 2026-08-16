@@ -41,6 +41,42 @@ prompt (both green). "Live" for a runner-config change is the next chained
 session picking up the new prompt from `main` — which the runner reads on
 `--watch` poll, so this ships the moment the commit is on `origin/main`.
 
+### Verification pass + the card RN4 was written to stop (same session, later)
+
+The four changes above were already on `main` when this pass started, so this half
+was verification rather than new code — and it turned up one card sitting in exactly
+the state RN4 exists to prevent.
+
+- **All four changes re-checked against the card, not against the commit message.**
+  The narrowed rule, the split-don't-stall rule and the rewritten closing paragraph
+  are in `scripts/autopilot.mjs`; `AGENTS.md` (~233) and `AUTOPILOT.md` mirror them;
+  the stale strings (`chain STOPS`, `half-finished, use review`) are gone from the
+  repo. All three `planner.mjs review` refusal branches were re-run live: no id, no
+  note, and a note that does not open with the question are all refused; a note that
+  does open with a question passes validation and proceeds to the write.
+- **The off-main gate was proven in both failure modes,** not just its happy path:
+  an uncommitted file and a committed-but-unpushed commit each return `ok:false`
+  with the branch name and the landing hint. Probe branch deleted, tree clean.
+- **FL9 was still open, and should not have been.** Its fix reached `main` as
+  `8ae2d6b` — re-landed as a *fresh* fix rather than by merging the stranded branch
+  `claude/nav-hud-overlap-mobile-hd7qte`, which still carries 3 unmerged commits.
+  Because it did not come off that branch, the card's "REOPENED — work never reached
+  main" note read as still-true and nobody closed it. `qa-skyflyer.mjs` re-run this
+  session: **ALL CHECKS PASSED**, including the 5 FL9 checks. Card closed, with a
+  note correcting the stale one. `HUD-AND-NAV-RULES.md` and
+  `public/buildable-gamenav.js` from the old branch never landed and were not needed;
+  that branch can be deleted.
+- **Both planner writes went through the Supabase tool, not `scripts/planner.mjs`.**
+  This container's network policy refuses to tunnel to `buildablekids.com`
+  (`CONNECT tunnel failed, 403`), so `/api/planner` is unreachable from here — the
+  planner CLI cannot run in a remote session. Writes used the same surgical
+  `jsonb_agg` mapping Mike's own SQL uses, one statement each, never `op:'meta'`.
+  Card count verified 126 before and after; no card was rebuilt or lost.
+- **Environment note, not a repo bug:** `jsdom` is already in `devDependencies` but
+  was not installed in this fresh container, and without it `qa-skyflyer.mjs` prints
+  `FAIL flight proof ran (needs jsdom)` — a real FAIL line that reads like a code
+  regression. `npm i jsdom` first, or the autopilot half of that harness does not run.
+
 ## 2026-08-15 (RN3): Three of the four stranded cards landed; FL9 needs a human
 
 **Phase RN, card RN3.** RN1 built the gate that catches false greens; this card was
