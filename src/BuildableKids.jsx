@@ -3166,20 +3166,28 @@ function HomeScreen(props) {
   const sectionTitle = { fontFamily: FRED, fontWeight: 700, fontSize: 17, color: HOME_INK };
 
   // -------------------------------------------------------------------------
-  // NV2 — the new above-the-fold layout: slim header, one big Keep-playing
-  // card, five picture doors with LIVE counts (Play/Make/Explore/Learn/My
-  // Stuff), then four suggested games deliberately clipped by the right edge
-  // as the scroll cue. Counts come from the catalogs and RESPECT the soon
-  // flag — never hardcoded — so a game or a book flipping from "soon" or
-  // "in-review" to live updates the door count without a code change.
+  // NV6 — Home shows THINGS, not signposts.
   // -------------------------------------------------------------------------
-  // Every count is derived, never typed. If you move a game out of soon in
-  // GAME_CATALOG (or a studio out of MAKE_CATALOG, or an exhibit's status flips
-  // to "approved"), the door on Home updates on the next render.
-  const nv2LiveGames = GAME_CATALOG.filter((g) => g.type === "game" && !g.soon).length;
-  const nv2LiveStudios = MAKE_CATALOG.filter((m) => !m.soon).length;
-  const nv2ApprovedLabs = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template !== "topic-book").length;
-  const nv2ApprovedBooks = EXHIBIT_CATALOG.filter((ex) => ex.status === "approved" && ex.template === "topic-book").length;
+  // THE RULE THIS ENCODES: never repeat the tab bar on the home screen. The
+  // bottom bar already IS the navigation, so the five picture doors NV2 shipped
+  // (Play / Make / Explore / Learn / My Stuff) said the same five words twice on
+  // one screen. They are gone. NN/G: duplicate links on one page cost the reader
+  // real effort deciding whether the two are the same thing. A hub-of-buttons
+  // home suits task-based apps where a session lives in ONE branch — Buildable
+  // is not that; a kid drifts between playing, making and reading in one sitting.
+  // And for ages 3-5, text is invisible noise: a real book cover beats the word
+  // "Explore" every time.
+  //
+  // A shortcut strip on Home is only ever allowed if it does a job the bar
+  // CANNOT (2 players / quick game / new this week). Never Play, Make, Explore
+  // again.
+  //
+  // What replaces the doors: real content in WRAPPING grids, each row carrying a
+  // small "See all" that lands on that row's own tab. Rows still build from the
+  // catalogs and still respect the `soon` flag; the section COUNTS (20 games,
+  // 14 books, 3 studios) moved onto each section page's own header, where a
+  // number is information rather than decoration on a button.
+  // -------------------------------------------------------------------------
 
   // Per-kid play stats for the "for you" suggested-games row + Keep-playing
   // favourite pick. Best-effort — never blocks render, catalog order is the
@@ -3270,58 +3278,92 @@ function HomeScreen(props) {
       .slice(0, 4);
   })();
 
-  // The five picture doors. Colours mirror the bottom-bar NAV_TAB_COLORS so a
-  // door and its tab are unmistakably the same section (Home orange keeps a
-  // slightly different accent since Home IS the door). Each door carries a
-  // LIVE count line pulled from the catalogs above.
-  // NV2 fix — a door is a PICTURE, not a coloured panel with a small glyph. Each
-  // one shows real key art from its own section (the same art the section's own
-  // cards use), with the gradient left underneath as the instant fallback if the
-  // image 404s. Explore borrows the first approved topic-book cover so the art
-  // can never advertise a book that is still in review.
-  const nv2ExploreArt = (EXHIBIT_CATALOG.find((e) => e.status === "approved" && e.template === "topic-book") || {}).heroArt || "";
-  const NV2_DOORS = [
-    { id: "play",    label: "Play",     count: nv2LiveGames + " games", color: NAV_TAB_COLORS.play,     grad: "linear-gradient(160deg,#5BC8E4,#2FB7D6)", art: "/api/images?kind=game&id=breaker", glyph: <NavPlayGlyph />,     onClick: onGames },
-    // NV3 — Make + Explore doors now open the dedicated section hubs (matching
-    // the bottom-bar tabs), instead of jumping straight to a single studio or
-    // exhibit. A kid learns the pattern once and it works everywhere.
-    { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", art: "/api/images?kind=make&id=art", glyph: <NavMakeGlyph />,     onClick: onMakeHub || onMusic },
-    { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", art: nv2ExploreArt, glyph: <NavExploreGlyph />, onClick: onExploreHub || (() => props.onExplore && props.onExplore("kidspedia")) },
-    { id: "learn",   label: "Learn",    count: lessonsLive ? "Math & reading" : "Coming soon", color: "#8A6BFF", grad: "linear-gradient(160deg,#B197FF,#8A6BFF)", art: "/api/images?kind=game&id=mathcannon", glyph: <SchoolGlyph />, soon: !lessonsLive, onClick: lessonsLive ? onLessons : () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
-    { id: "mystuff", label: "My Stuff", count: (jumpItems.length ? jumpItems.length + " recent" : "Your creations"), color: NAV_TAB_COLORS.me, grad: "linear-gradient(160deg,#9F86FF,#6A4FE0)", art: "/api/images?kind=make&id=song", glyph: <StuffGlyph />, onClick: onMyStuff },
-  ];
+  // ---- NV6 row data. Every list below is DERIVED from a catalog and respects
+  // the `soon` / `approved` flags, exactly as the doors' counts used to. ----
 
-  // Door tile: the section's own KEY ART fills the tile, a dark veil sits over
-  // the bottom of it, and the name + LIVE count sit on top. The section colour
-  // survives as the gradient underneath (visible while the art loads, and the
-  // permanent look if the art 404s) plus a small tinted glyph chip that ties the
-  // door to its bottom-bar tab. On phone: Play is full width, the other four
-  // pair up two-across. On tablet/desktop all five sit in one row.
-  const DoorTile = ({ d }) => (
-    <button
-      data-nv2-door={d.id}
-      data-soon={d.soon ? "1" : "0"}
-      onClick={d.onClick}
-      style={{
-        gridColumn: phone ? (d.id === "play" ? "span 2" : "span 1") : "span 1",
-        position: "relative", overflow: "hidden", padding: 0, border: "none",
-        borderRadius: 20, background: d.grad, color: "#fff",
-        cursor: "pointer", fontFamily: NUN, textAlign: "left",
-        boxShadow: "0 8px 18px rgba(58,46,77,0.16)", opacity: d.soon ? 0.9 : 1,
-        minHeight: phone ? (d.id === "play" ? 104 : 118) : 124,
-      }}
-    >
-      {d.art && (
-        <img src={d.art} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-      )}
-      <span style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.70))", pointerEvents: "none" }} />
-      <span style={{ position: "absolute", top: 8, left: 8, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 10, background: "rgba(255,255,255,0.24)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>{d.glyph}</span>
-      <span style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
-        <span style={{ display: "block", fontFamily: FRED, fontWeight: 700, fontSize: phone ? 20 : 21, lineHeight: 1.1, textShadow: "0 2px 8px rgba(0,0,0,0.55)" }}>{d.label}</span>
-        <span style={{ display: "block", fontSize: 11, fontWeight: 800, opacity: 0.95, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 5px rgba(0,0,0,0.5)" }}>{d.count}</span>
-      </span>
-      {d.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 7px", borderRadius: 999, background: "rgba(58,46,77,0.78)", color: "#fff" }}>Soon</span>}
+  // New in Kidspedia: three REAL approved picture-book covers. Catalog order is
+  // the order books were added, so the tail is genuinely the newest — and only
+  // status "approved" is ever eligible, so Home can never advertise a book that
+  // is still being fact-checked.
+  const nv6Books = EXHIBIT_CATALOG
+    .filter((ex) => ex.status === "approved" && ex.template === "topic-book")
+    .slice(-3)
+    .reverse();
+
+  // Make something: every LIVE studio (song / sound / art today). A studio
+  // flagged `soon` never takes a slot on Home — it waits on the Make page.
+  const nv6Studios = MAKE_CATALOG.filter((m) => !m.soon);
+
+  // Play with a friend: live 2-player games. This row is the one shortcut strip
+  // Home is allowed, because it does a job the bottom bar CANNOT — "I want to
+  // play with someone right now" is not a section. It renders ONLY when a live
+  // 2-player game actually exists; an empty shelf is worse than no shelf.
+  const nv6FriendGames = GAME_CATALOG
+    .filter((g) => g.type === "game" && !g.soon && g.multiplayer)
+    .slice(0, 4);
+
+  // Learn: joins Home as its own row the day the lessons switch is flipped, so
+  // it is never sitting there as a dead "Coming soon" tile. Subjects come from
+  // the same lesson map /lessons reads (live API first, static file as the
+  // fallback), and a subject only earns a card once it has a lesson the owner
+  // has APPROVED — the same gate the Lessons page uses.
+  const [nv6Subjects, setNv6Subjects] = useState([]);
+  useEffect(() => {
+    if (!lessonsLive) { setNv6Subjects([]); return undefined; }
+    let alive = true;
+    const readySubjects = (d) => {
+      if (!d || !Array.isArray(d.subjects) || !Array.isArray(d.paths)) return [];
+      const ready = new Set();
+      d.paths.forEach((p) => (p.units || []).forEach((u) => (u.lessons || []).forEach((l) => {
+        if (l && l.status === "approved") ready.add(p.subject);
+      })));
+      return d.subjects.filter((s) => ready.has(s.id)).slice(0, 4);
+    };
+    fetch("/api/lesson-map", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => (d && d.paths ? d : fetch("/lessons/index.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null))))
+      .then((d) => { if (alive) setNv6Subjects(readySubjects(d)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [lessonsLive]);
+
+  // ---- NV6 row chrome. One shape for every row: a plain heading, a small
+  // "See all" that lands on THAT row's tab, and a WRAPPING grid underneath.
+  // Nothing on Home may scroll sideways — kids stop after 3-4 cards in a swipe
+  // row and never reach the rest — so a row wraps down the page and the scroll
+  // cue is the last row being cut off by the bottom of the screen. ----
+  const rowCols = phone ? 2 : tablet ? 3 : 4;
+  const HomeRow = ({ id, title, seeAll, accent, children }) => (
+    <section data-nv6-row={id} style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+        <span style={sectionTitle}>{title}</span>
+        <button data-nv6-see-all={id} onClick={seeAll} style={{ background: "none", border: "none", padding: 0, color: accent, fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>See all &rarr;</button>
+      </div>
+      <div data-nv6-row-grid={id} style={{ display: "grid", gridTemplateColumns: "repeat(" + rowCols + ", 1fr)", gap: 10 }}>
+        {children}
+      </div>
+    </section>
+  );
+
+  // The one card face every row uses: a 4:3 picture on top of the item's own
+  // colour, then the name and a small kicker. The colour panel stays underneath
+  // the art so a 404 leaves a coloured card, never an empty hole.
+  const rowCardStyle = {
+    width: "100%", textAlign: "left", padding: 0, borderRadius: 16,
+    border: HOME_CARD_BORDER, background: HOME_CARD, color: HOME_INK,
+    cursor: "pointer", fontFamily: NUN, overflow: "hidden", boxShadow: HOME_SHADOW,
+  };
+  const RowCard = ({ hook, id, art, color, glyph, badge, title, kicker, onClick }) => (
+    <button {...{ [hook]: id }} onClick={onClick} style={rowCardStyle}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "linear-gradient(160deg," + color + "," + color + "99)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        {art && <img src={art} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        {!art && glyph && <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 54, height: 54, borderRadius: 16, background: "rgba(255,255,255,0.18)" }}>{glyph}</span>}
+        {badge && <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "2px 7px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>{badge}</span>}
+      </div>
+      <div style={{ padding: "8px 10px 10px" }}>
+        <div style={{ fontFamily: FRED, fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: HOME_SUB, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kicker}</div>
+      </div>
     </button>
   );
 
@@ -3384,49 +3426,10 @@ function HomeScreen(props) {
           </button>
         )}
 
-        {/* ---- NV2 C. Five picture doors with LIVE counts. Counts come from
-                 the catalogs and respect the soon flag — never hardcoded. ---- */}
-        <div data-nv2-doors style={{ display: "grid", gridTemplateColumns: phone ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: 10, marginBottom: 18 }}>
-          {NV2_DOORS.map((d) => <DoorTile key={d.id} d={d} />)}
-        </div>
-
-        {/* ---- NV2 D. Four suggested games in a WRAPPING GRID. This deliberately
-                 does NOT scroll sideways: the whole point of NV is that most kids
-                 stop after 3-4 cards in a swipe row and never reach the rest, so
-                 nothing in the app may require a sideways swipe. The scroll cue
-                 is vertical instead — this block sits low enough that its second
-                 row is cut off by the bottom of the phone screen. ---- */}
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={sectionTitle}>For you</span>
-          <button onClick={onGames} style={{ background: "none", border: "none", color: NAV_TAB_COLORS.play, fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all &rarr;</button>
-        </div>
-        <div data-nv2-suggested style={{
-          display: "grid", gridTemplateColumns: phone ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-          gap: 10, marginBottom: 22,
-        }}>
-          {nv2Suggested.map((g) => (
-            <button key={"nv2s_" + g.id} data-nv2-sug={g.id} onClick={() => openCatalogGame(g)} style={{
-              width: "100%", textAlign: "left", padding: 0, borderRadius: 16,
-              border: HOME_CARD_BORDER, background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
-              overflow: "hidden", boxShadow: HOME_SHADOW,
-            }}>
-              <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "linear-gradient(160deg, " + g.color + ", " + g.color + "99)" }}>
-                {g.imgId && <img src={"/api/images?kind=game&id=" + g.imgId} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
-                {g.multiplayer && <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "2px 7px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multi</span>}
-              </div>
-              <div style={{ padding: "8px 10px 10px" }}>
-                <div style={{ fontFamily: FRED, fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: HOME_SUB, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.3px" }}>{g.category}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* ---- NV2 E. Below the fold — the pieces the doors can't yet show,
-                 kept so no live feature is silently dropped ahead of NV3's
-                 dedicated section pages. Buddy moment (dismissible), extra
-                 turn/invite banners that the Keep-playing card didn't already
-                 surface, Brain Boost (Learning Mode only), and Trending. ---- */}
+        {/* ---- NV6 C. The personal, time-sensitive cards sit directly under
+                 Keep playing: the buddy moment (dismissible), any turn/invite
+                 the Keep-playing card did not already promote, and Brain Boost
+                 when Learning Mode is on. Content ROWS follow below them. ---- */}
 
         {buddyMoment && (
           <div style={{
@@ -3520,41 +3523,102 @@ function HomeScreen(props) {
           </div>
         )}
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={sectionTitle}>Trending from other kids</span>
-          {trending.length > 0 && <button onClick={onTop} style={{ background: "none", border: "none", color: "#6A4FE0", fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all &rarr;</button>}
-        </div>
-        {trending.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {trending.map((it, i) => {
-              const tag = KIND_TAG[it.kind] || KIND_TAG.game;
-              return (
-                <button key={it.kind + it.id} onClick={onTop} style={{
-                  display: "flex", alignItems: "center", gap: 11, background: HOME_CARD,
-                  border: HOME_CARD_BORDER, borderRadius: 13, padding: "9px 11px", boxShadow: HOME_SHADOW,
-                  cursor: "pointer", color: HOME_INK, fontFamily: NUN, textAlign: "left",
-                }}>
-                  <span style={{ fontFamily: FRED, fontWeight: 700, fontSize: 14, color: HOME_SUB, width: 14, flexShrink: 0 }}>{i + 1}</span>
-                  <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: it.thumbnail ? ("center/cover no-repeat url(" + it.thumbnail + ")") : (it.cover_color || tag.bg) }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title || "Untitled"}</div>
-                    <div style={{ fontSize: 11, color: HOME_SUB }}>by {it.creator || "a kid"}</div>
-                  </div>
-                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", color: tag.color, background: tag.bg, padding: "3px 8px", borderRadius: 999, flexShrink: 0 }}>{tag.label}</span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#C23E72" }}><HeartGlyph />{it.heart_count || 0}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <button onClick={onTop} style={{
-            width: "100%", textAlign: "center", cursor: "pointer", color: HOME_SUB, fontFamily: NUN,
-            background: HOME_CARD, border: "1px dashed rgba(58,46,77,0.22)", borderRadius: 14, padding: "18px 16px",
-          }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: HOME_INK, marginBottom: 4 }}>No top projects yet</div>
-            <div style={{ fontSize: 13 }}>Make something and publish it to be the first on the board!</div>
-          </button>
+        {/* ================= NV6 D. The content rows =================
+             Real things a kid can look at and tap, never a second copy of the
+             tab bar. Each row: heading, a small "See all" landing on that row's
+             own tab, then a WRAPPING grid. No row scrolls sideways, and the last
+             one is cut off by the bottom of the screen as the vertical cue. */}
+
+        {/* Games for you — four live games, most-played first for THIS kid. */}
+        <HomeRow id="games" title="Games for you" seeAll={onGames} accent={NAV_TAB_COLORS.play}>
+          {nv2Suggested.map((g) => (
+            <RowCard key={"nv6g_" + g.id} hook="data-nv2-sug" id={g.id}
+              art={g.imgId ? "/api/images?kind=game&id=" + g.imgId : ""} color={g.color}
+              badge={g.multiplayer ? "Multi" : null} title={g.name} kicker={g.category}
+              onClick={() => openCatalogGame(g)} />
+          ))}
+        </HomeRow>
+
+        {/* New in Kidspedia — three REAL approved book covers. For a 3-5 year
+            old the cover IS the label; the word "Explore" is invisible noise. */}
+        {nv6Books.length > 0 && (
+          <HomeRow id="kidspedia" title="New in Kidspedia" seeAll={onExploreHub || (() => props.onExplore && props.onExplore("kidspedia"))} accent={NAV_TAB_COLORS.explore}>
+            {nv6Books.map((b) => (
+              <RowCard key={"nv6b_" + b.id} hook="data-nv6-book" id={b.id}
+                art={b.heroArt} color={b.color} title={b.title} kicker={b.topic}
+                onClick={() => props.onExplore && props.onExplore(b.id)} />
+            ))}
+          </HomeRow>
         )}
+
+        {/* Make something — every live studio. */}
+        {nv6Studios.length > 0 && (
+          <HomeRow id="make" title="Make something" seeAll={onMakeHub || onMusic} accent={NAV_TAB_COLORS.make}>
+            {nv6Studios.map((m) => (
+              <RowCard key={"nv6m_" + m.id} hook="data-nv6-make" id={m.id}
+                art="" color={m.color} glyph={MAKE_GLYPH[m.id] || null}
+                title={m.name} kicker={m.category}
+                onClick={() => { const fn = props[m.handlerName]; if (fn) fn(); }} />
+            ))}
+          </HomeRow>
+        )}
+
+        {/* Play with a friend — the ONE shortcut Home is allowed, because
+            "with someone else" is not a section the bottom bar can express.
+            Renders only while a live 2-player game exists. */}
+        {nv6FriendGames.length > 0 && (
+          <HomeRow id="friend" title="Play with a friend" seeAll={onGames} accent="#1C8F5A">
+            {nv6FriendGames.map((g) => (
+              <RowCard key={"nv6f_" + g.id} hook="data-nv6-friend" id={g.id}
+                art={g.imgId ? "/api/images?kind=game&id=" + g.imgId : ""} color={g.color}
+                badge="2 players" title={g.name} kicker={g.category}
+                onClick={() => openCatalogGame(g)} />
+            ))}
+          </HomeRow>
+        )}
+
+        {/* Learn — joins Home only once the lessons switch is flipped AND a
+            subject actually has an approved lesson. Never a dead Coming Soon. */}
+        {lessonsLive && nv6Subjects.length > 0 && (
+          <HomeRow id="learn" title="Learn" seeAll={onLessons} accent="#8A6BFF">
+            {nv6Subjects.map((s) => (
+              <RowCard key={"nv6l_" + s.id} hook="data-nv6-subject" id={s.id}
+                art="" color={s.color || "#8A6BFF"} glyph={<SchoolGlyph />}
+                title={s.title} kicker={s.blurb || "Lessons"}
+                onClick={onLessons} />
+            ))}
+          </HomeRow>
+        )}
+
+        {/* Made by other kids — published creations, as pictures rather than a
+            leaderboard list. Empty state fills the grid so the row keeps its
+            shape before the first project lands. */}
+        <HomeRow id="kids" title="Made by other kids" seeAll={onTop} accent="#6A4FE0">
+          {trending.length > 0 ? trending.slice(0, 4).map((it) => {
+            const tag = KIND_TAG[it.kind] || KIND_TAG.game;
+            return (
+              <button key={"nv6k_" + it.kind + it.id} data-nv6-kid={it.id} onClick={onTop} style={rowCardStyle}>
+                <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: it.cover_color || tag.bg, overflow: "hidden" }}>
+                  {it.thumbnail && <img src={it.thumbnail} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+                  <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "2px 7px", borderRadius: 999, color: tag.color, background: "rgba(255,255,255,0.92)" }}>{tag.label}</span>
+                  <span style={{ position: "absolute", bottom: 6, right: 6, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 800, color: "#C23E72", background: "rgba(255,255,255,0.92)", borderRadius: 999, padding: "2px 7px" }}><HeartGlyph size={11} />{it.heart_count || 0}</span>
+                </div>
+                <div style={{ padding: "8px 10px 10px" }}>
+                  <div style={{ fontFamily: FRED, fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title || "Untitled"}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: HOME_SUB, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>by {it.creator || "a kid"}</div>
+                </div>
+              </button>
+            );
+          }) : (
+            <button onClick={onTop} style={{
+              gridColumn: "1 / -1", width: "100%", textAlign: "center", cursor: "pointer", color: HOME_SUB, fontFamily: NUN,
+              background: HOME_CARD, border: "1px dashed rgba(58,46,77,0.22)", borderRadius: 14, padding: "18px 16px",
+            }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: HOME_INK, marginBottom: 4 }}>No top projects yet</div>
+              <div style={{ fontSize: 13 }}>Make something and publish it to be the first on the board!</div>
+            </button>
+          )}
+        </HomeRow>
 
       </div>
 
@@ -3803,7 +3867,10 @@ function PlayScreen(props) {
       <div style={{ width: "100%", maxWidth: maxW, margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
           <h1 style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 26 : 32, color: HOME_INK, margin: 0 }}>Play</h1>
-          <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{GAMES.filter((g) => !g.soon).length} games</span>
+          {/* NV6 — the count lives HERE, on the section page header, not on a
+              Home button. On a page listing every game it is information; on a
+              door it was decoration. Derived from the catalog, respects soon. */}
+          <span data-nv6-count="play" style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{GAMES.filter((g) => !g.soon).length} games</span>
         </div>
         <div data-nv1-chips style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8, marginBottom: 16 }}>
           {CATS.map((c) => {
@@ -3954,7 +4021,8 @@ function MakeScreen(props) {
         </div>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
           <h1 style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 26 : 32, color: HOME_INK, margin: 0 }}>Make</h1>
-          <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{liveStudios} studios</span>
+          {/* NV6 — studios count lives on the section header (see PlayScreen). */}
+          <span data-nv6-count="make" style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{liveStudios} studios</span>
         </div>
         <div data-nv3-make-chips style={{ display: "flex", gap: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8, marginBottom: 16 }}>
           {CATS.map((c) => {
@@ -4070,7 +4138,8 @@ function ExploreHubScreen({ onHome, onOpenExhibit }) {
         </div>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
           <h1 style={{ fontFamily: FRED, fontWeight: 700, fontSize: phone ? 26 : 32, color: HOME_INK, margin: 0 }}>Explore</h1>
-          <span style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{labs.length} labs + {books.length} books</span>
+          {/* NV6 — labs + books counts live on the section header (see PlayScreen). */}
+          <span data-nv6-count="explore" style={{ fontSize: 12, fontWeight: 700, color: HOME_SUB }}>{labs.length} labs + {books.length} books</span>
         </div>
 
         {/* ---- Section 1: Labs you can play with. Three today (Weather Lab,
