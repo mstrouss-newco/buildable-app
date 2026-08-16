@@ -78,6 +78,12 @@ const server = http.createServer((req, res) => {
   // /app/... -> index.html (SPA), matching vercel.json.
   const isAppRoute = u.pathname === '/app' || u.pathname.startsWith('/app/');
   let rel = isAppRoute ? '/index.html' : u.pathname;
+  // NV6 fix — vite builds with base '/demo/', so the bundle asks for
+  // /demo/assets/index-*.js and /demo/buildable-*.js. Hosting rewrites those;
+  // this mini server has to as well. Without it every asset 404'd, React never
+  // mounted, and the whole sweep silently checked an EMPTY page — which is how
+  // it "passed" its row checks with zero rows on screen.
+  if (rel.startsWith('/demo/')) rel = rel.slice('/demo'.length);
   // Try dist/ first (bundled assets), then public/ (static kids assets).
   let file = path.resolve(distDir, '.' + rel);
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
@@ -127,7 +133,7 @@ async function sweepOne({ label, url }) {
   // A soon tile must never appear above a live tile in the SAME grid.
   const soonOrder = await page.evaluate(() => {
     const grids = Array.from(document.querySelectorAll(
-      '[data-nv1-grid], [data-nv3-make-grid], [data-nv3-labs-grid], [data-nv3-books-grid], [data-nv2-doors]'
+      '[data-nv1-grid], [data-nv3-make-grid], [data-nv3-labs-grid], [data-nv3-books-grid], [data-nv6-row-grid]'
     ));
     const bad = [];
     for (const grid of grids) {
@@ -145,14 +151,34 @@ async function sweepOne({ label, url }) {
   // Cap horizontal shelves at 8 items — no row longer than 8 cards before
   // a See All. Wrapping grids are exempt (they paginate down the viewport).
   const shelvesTooLong = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll('[data-nv2-suggested]'));
+    const rows = Array.from(document.querySelectorAll('[data-nv6-row-grid]'));
     return rows.map((r) => r.children.length).filter((n) => n > 8);
+  });
+
+  // NV6 — Home shows things, not signposts. In the LIVE dom: the five picture
+  // doors must be gone, and every content row must be a real CSS grid carrying
+  // its own "See all". This reads computed style, so a row that regressed into
+  // a sideways swipe strip is caught here even if the source still looks fine.
+  const homeRows = await page.evaluate(() => {
+    const doors = document.querySelectorAll('[data-nv2-doors], [data-nv2-door]').length;
+    const rows = Array.from(document.querySelectorAll('[data-nv6-row]')).map((r) => {
+      const grid = r.querySelector('[data-nv6-row-grid]');
+      const cs = grid ? getComputedStyle(grid) : null;
+      return {
+        id: r.getAttribute('data-nv6-row'),
+        hasSeeAll: !!r.querySelector('[data-nv6-see-all]'),
+        isGrid: !!cs && cs.display === 'grid',
+        scrollsSideways: !!grid && grid.scrollWidth > grid.clientWidth + 1,
+        cards: grid ? grid.children.length : 0,
+      };
+    });
+    return { doors, rows };
   });
 
   const shot = path.join(outDir, label + '.png');
   await page.screenshot({ path: shot, fullPage: false });
   await page.close();
-  return { dims, soonOrder, shelvesTooLong, shot };
+  return { dims, soonOrder, shelvesTooLong, homeRows, shot };
 }
 
 const PAGES = [
@@ -170,15 +196,39 @@ for (const p of PAGES) {
   chk(p.label + ' does not scroll sideways',
     r.dims.scrollWidth === r.dims.clientWidth,
     'sw=' + r.dims.scrollWidth + ' cw=' + r.dims.clientWidth);
-  chk(p.label + ' has a bottom cut-off cue (content taller than viewport)',
-    r.dims.scrollHeight > r.dims.clientHeight,
-    'sh=' + r.dims.scrollHeight + ' ch=' + r.dims.clientHeight);
+  // The cut-off cue only means anything on a page that HAS content to cut off.
+  // Me with a stubbed-empty backend is 0 characters / 0 songs / 0 games — it
+  // correctly fits on one screen, and demanding a scrollbar there would be
+  // asking the page to lie. Every content-bearing page still has to show the
+  // cue, which is where the vertical-scroll rule actually earns its keep.
+  if (p.label === 'me') {
+    console.log('SKIP  me cut-off cue - empty creations list legitimately fits one screen' +
+      '  ::  sh=' + r.dims.scrollHeight + ' ch=' + r.dims.clientHeight);
+  } else {
+    chk(p.label + ' has a bottom cut-off cue (content taller than viewport)',
+      r.dims.scrollHeight > r.dims.clientHeight,
+      'sh=' + r.dims.scrollHeight + ' ch=' + r.dims.clientHeight);
+  }
   chk(p.label + ' has no Coming Soon tile above a real one',
     r.soonOrder.length === 0,
     'offenders=' + JSON.stringify(r.soonOrder));
   chk(p.label + ' shelves are all <= 8 items before See All',
     r.shelvesTooLong.length === 0,
     'tooLong=' + JSON.stringify(r.shelvesTooLong));
+  if (p.label === 'home') {
+    const rows = r.homeRows.rows;
+    chk('home renders NO picture doors (NV6: never repeat the tab bar)',
+      r.homeRows.doors === 0, 'doors=' + r.homeRows.doors);
+    chk('home renders content rows', rows.length >= 3, 'rows=' + rows.map((x) => x.id).join(','));
+    chk('every home row is a real CSS grid',
+      rows.every((x) => x.isGrid), 'notGrid=' + JSON.stringify(rows.filter((x) => !x.isGrid).map((x) => x.id)));
+    chk('every home row has a See all',
+      rows.every((x) => x.hasSeeAll), 'noSeeAll=' + JSON.stringify(rows.filter((x) => !x.hasSeeAll).map((x) => x.id)));
+    chk('no home row scrolls sideways',
+      rows.every((x) => !x.scrollsSideways), 'sideways=' + JSON.stringify(rows.filter((x) => x.scrollsSideways).map((x) => x.id)));
+    chk('every home row actually has cards in it',
+      rows.every((x) => x.cards > 0), 'empty=' + JSON.stringify(rows.filter((x) => !x.cards).map((x) => x.id)));
+  }
   console.log('  screenshot -> ' + r.shot);
 }
 

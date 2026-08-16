@@ -151,7 +151,9 @@ chk('Home suggested row is capped at 4 (< 8) via slice(0, 4)',
   ['Make page grid',    'data-nv3-make-grid'],
   ['Explore labs grid', 'data-nv3-labs-grid'],
   ['Explore books grid','data-nv3-books-grid'],
-  ['Home doors grid',   'data-nv2-doors'],
+  // NV6 — the Home doors are gone. Home is now content ROWS, and every row body
+  // is the same wrapping grid (one shared HomeRow component).
+  ['Home content row',  'data-nv6-row-grid'],
 ].forEach(([name, hook]) => {
   const re = new RegExp(hook + '[\\s\\S]{0,900}display:\\s*"grid"[\\s\\S]{0,300}gridTemplateColumns');
   chk(name + ' uses display:grid + gridTemplateColumns (wraps, does not scroll sideways)', re.test(S));

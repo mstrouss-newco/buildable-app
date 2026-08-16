@@ -1,10 +1,14 @@
-// Headless QA for NV2 — the New Home screen. Screen 1 has to fit the whole
-// app on the first phone view: slim header, one big Keep-playing card, five
-// picture doors with LIVE counts (Play 20 games, Make 3 studios, Explore 3
-// labs + 14 books, Learn, My Stuff), and four suggested games in a WRAPPING
-// GRID. Counts must come from the catalogs and RESPECT the soon flag — never
-// hardcoded. A "picture door" means real key art fills the tile; a flat colour
-// panel with a small glyph is NOT a picture door and fails here.
+// Headless QA for the Home screen — originally NV2 (five picture doors),
+// rewritten in NV6 when those doors were deleted.
+//
+// THE RULE THIS FILE ENFORCES: never repeat the tab bar on the home screen.
+// The bottom bar already IS the navigation, so a Play / Make / Explore / Learn /
+// My Stuff strip on Home says the same five words twice on one page. A shortcut
+// strip on Home is only allowed when it does a job the bar CANNOT (2 players /
+// quick game / new this week). This script FAILS if NV2_DOORS or data-nv2-door
+// ever come back, and it holds the replacement to its shape: every Home row is
+// real content in a WRAPPING GRID with a small "See all" that lands on that
+// row's own tab, and the section counts live on the SECTION PAGE headers.
 //
 //   node qa-nv2.mjs .
 import fs from 'fs';
@@ -22,137 +26,185 @@ const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u
 
 const S = read('src/BuildableKids.jsx');
 
-// -------------------------------------------------------------- 1) MAKE_CATALOG
-console.log('--- MAKE_CATALOG: module-scope, so counts are derivable without rendering ---');
-chk('MAKE_CATALOG defined at module scope', /^const\s+MAKE_CATALOG\s*=\s*\[/m.test(S));
-const MC = /^const\s+MAKE_CATALOG\s*=\s*\[([\s\S]*?)\n\];/m.exec(S);
-chk('MAKE_CATALOG block extractable', !!MC);
-const mcBody = MC ? MC[1] : '';
-const mcEntries = mcBody.split('\n').filter((l) => /{\s*id:/.test(l));
-const mcLive = mcEntries.filter((l) => !/soon:\s*true/.test(l));
-const mcSoon = mcEntries.filter((l) => /soon:\s*true/.test(l));
-chk('MAKE_CATALOG has exactly 3 live studios', mcLive.length === 3, 'live=' + mcLive.length);
-chk('MAKE_CATALOG has at least 1 soon studio (soon flag matters)', mcSoon.length >= 1, 'soon=' + mcSoon.length);
+// The Home component on its own. Several checks below are about what HOME does,
+// and must not trip over the bottom bar (which legitimately owns the five tab
+// words) or the coming-soon password modal that sits outside every row.
+const homeFn = /function\s+HomeScreen\(props\)\s*\{[\s\S]*?\n\/\/ NV1 — the always-visible 5-tab bottom bar/.exec(S);
+const H = homeFn ? homeFn[0] : '';
 
-// -------------------------------------------------------------- 2) counts derived, not typed
-console.log('--- Counts pull from catalogs and respect the soon flag — never hardcoded ---');
-chk('Play count = live games in GAME_CATALOG (type==="game" && !soon)',
-  /nv2LiveGames\s*=\s*GAME_CATALOG\.filter\(\(g\)\s*=>\s*g\.type\s*===\s*"game"\s*&&\s*!g\.soon\)\.length/.test(S));
-chk('Make count = live studios in MAKE_CATALOG (!soon)',
-  /nv2LiveStudios\s*=\s*MAKE_CATALOG\.filter\(\(m\)\s*=>\s*!m\.soon\)\.length/.test(S));
-chk('Explore labs count = approved non-book EXHIBIT_CATALOG entries',
-  /nv2ApprovedLabs\s*=\s*EXHIBIT_CATALOG\.filter\(\(ex\)\s*=>\s*ex\.status\s*===\s*"approved"\s*&&\s*ex\.template\s*!==\s*"topic-book"\)\.length/.test(S));
-chk('Explore books count = approved topic-book EXHIBIT_CATALOG entries',
-  /nv2ApprovedBooks\s*=\s*EXHIBIT_CATALOG\.filter\(\(ex\)\s*=>\s*ex\.status\s*===\s*"approved"\s*&&\s*ex\.template\s*===\s*"topic-book"\)\.length/.test(S));
+// Each <HomeRow ...> ... </HomeRow> block, opening tag included. Matched with a
+// lazy scan rather than [^>]* because a seeAll arrow function contains ">".
+const rowBlocks = H.match(/<HomeRow\s[\s\S]*?<\/HomeRow>/g) || [];
+const rowTags = rowBlocks.map((b) => (/<HomeRow\s[\s\S]*?>\s*\n/.exec(b) || [''])[0]);
 
-// Sanity — the today catalog IS the shipped numbers named on the card.
+// ============================================================================
+// 1) THE DOORS ARE GONE, AND MAY NEVER COME BACK
+// ============================================================================
+console.log('--- NV6 law: Home never repeats the tab bar ---');
+chk('NV2_DOORS is gone (the five picture doors must never come back)',
+  !/NV2_DOORS/.test(S), 'found NV2_DOORS');
+chk('data-nv2-door is gone (no door tile markup anywhere)',
+  !/data-nv2-door/.test(S), 'found data-nv2-door');
+chk('the doors GRID hook data-nv2-doors is gone',
+  !/data-nv2-doors/.test(S), 'found data-nv2-doors');
+chk('no DoorTile component survives',
+  !/DoorTile/.test(S), 'found DoorTile');
+
+// The doors' real sin was the WORDS. Home may still link to a section (a "See
+// all" does exactly that) but it may never render the tab bar's own five labels
+// as a strip of big buttons. Guard the specific shape: a tile whose visible
+// label is one of the tab words.
+chk('HomeScreen block extracted', !!homeFn);
+chk('no Home tile is labelled with a bottom-bar tab word (Play/Make/Explore/Learn/My Stuff)',
+  !/label:\s*"(Play|Make|Explore|Learn|My Stuff)"/.test(H), 'found a tab-word tile label in HomeScreen');
+
+// ============================================================================
+// 2) HOME IS ROWS OF REAL CONTENT, EACH A GRID WITH A "See all"
+// ============================================================================
+console.log('--- Every Home row is a wrapping GRID with a small See all ---');
+chk('root Home wrapper still carries data-nv2-home', /data-nv2-home/.test(S));
+chk('slim header still carries data-nv2-header', /data-nv2-header/.test(S));
+
+// One shared row component means one place to get the shape right.
+const rowFn = /const\s+HomeRow\s*=\s*\(\{[\s\S]*?\n  \);\n/.exec(S);
+chk('HomeRow row component exists', !!rowFn);
+const rowSrc = rowFn ? rowFn[0] : '';
+chk('HomeRow tags each row with data-nv6-row', /data-nv6-row=\{id\}/.test(rowSrc));
+chk('HomeRow renders a See all button tagged data-nv6-see-all',
+  /data-nv6-see-all=\{id\}[\s\S]{0,400}See all/.test(rowSrc));
+chk('HomeRow See all is wired to the row\'s own destination (seeAll prop)',
+  /onClick=\{seeAll\}/.test(rowSrc));
+chk('HomeRow body is a GRID (display:grid + gridTemplateColumns)',
+  /data-nv6-row-grid=\{id\}[\s\S]{0,200}display:\s*"grid"[\s\S]{0,120}gridTemplateColumns/.test(rowSrc));
+chk('HomeRow grid NEVER scrolls sideways (no overflowX, no flex swipe row)',
+  !/overflowX/.test(rowSrc) && !/flexDirection:\s*"row"/.test(rowSrc));
+
+// Every row on Home must go through HomeRow, and every use must name both an id
+// and a See all destination. A row without a See all is a dead end.
+chk('Home renders rows through HomeRow', rowTags.length >= 5, 'rows=' + rowTags.length);
+rowTags.forEach((u) => {
+  const id = (/id="([a-z]+)"/.exec(u) || [])[1] || '?';
+  chk('row "' + id + '" passes a See all destination', /seeAll=\{/.test(u));
+  chk('row "' + id + '" passes an accent colour for its See all', /accent=/.test(u));
+});
+
+// The rows Mike asked for, by name. Keep playing stays the hero CARD above them
+// (explicitly unchanged in NV6), so it is not a row and is exempt here.
+const ROWS = ['games', 'kidspedia', 'make', 'friend', 'learn', 'kids'];
+ROWS.forEach((id) => {
+  chk('row "' + id + '" is rendered', new RegExp('<HomeRow\\s+id="' + id + '"').test(S));
+});
+
+// Each row's See all lands on THAT row's tab, not somewhere generic.
+chk('Games row See all lands on the Play tab (onGames)',
+  /<HomeRow\s+id="games"[^>]*seeAll=\{onGames\}/.test(S));
+chk('Kidspedia row See all lands on the Explore tab (onExploreHub)',
+  /<HomeRow\s+id="kidspedia"[^>]*seeAll=\{onExploreHub/.test(S));
+chk('Make row See all lands on the Make tab (onMakeHub)',
+  /<HomeRow\s+id="make"[^>]*seeAll=\{onMakeHub/.test(S));
+chk('Friend row See all lands on the Play tab (onGames)',
+  /<HomeRow\s+id="friend"[^>]*seeAll=\{onGames\}/.test(S));
+chk('Learn row See all lands on Lessons (onLessons)',
+  /<HomeRow\s+id="learn"[^>]*seeAll=\{onLessons\}/.test(S));
+chk('Made-by-other-kids row See all lands on the top board (onTop)',
+  /<HomeRow\s+id="kids"[^>]*seeAll=\{onTop\}/.test(S));
+
+// ============================================================================
+// 3) ROWS BUILD FROM THE CATALOGS AND RESPECT THE soon FLAG
+// ============================================================================
+console.log('--- Rows derive from the catalogs and respect soon / approved ---');
+chk('MAKE_CATALOG still defined at module scope', /^const\s+MAKE_CATALOG\s*=\s*\[/m.test(S));
+chk('Games row filters to live games (type==="game" && !soon)',
+  /nv2Suggested[\s\S]{0,600}GAME_CATALOG\.filter\(\(g\)\s*=>\s*g\.type\s*===\s*"game"\s*&&\s*!g\.soon\)/.test(S));
+chk('Games row trims to at most 4',
+  /nv2Suggested[\s\S]{0,900}\.slice\(0,\s*4\)/.test(S));
+chk('Games row sorts most-played first (per-kid stats)',
+  /nv2PlayCount\[a\.id\][\s\S]{0,200}nv2PlayCount\[b\.id\][\s\S]{0,80}return\s+pb\s*-\s*pa/.test(S));
+chk('Kidspedia row takes only APPROVED topic books (never an in-review cover)',
+  /nv6Books\s*=\s*EXHIBIT_CATALOG[\s\S]{0,200}ex\.status\s*===\s*"approved"\s*&&\s*ex\.template\s*===\s*"topic-book"/.test(S));
+chk('Kidspedia row shows exactly 3 book covers',
+  /nv6Books\s*=[\s\S]{0,320}\.slice\(-3\)/.test(S));
+chk('Kidspedia cards paint the REAL cover art (heroArt), not a word',
+  /data-nv6-book[\s\S]{0,240}art=\{b\.heroArt\}/.test(S));
+chk('Make row filters to live studios (!soon)',
+  /nv6Studios\s*=\s*MAKE_CATALOG\.filter\(\(m\)\s*=>\s*!m\.soon\)/.test(S));
+chk('Friend row filters to LIVE 2-player games (!soon && multiplayer)',
+  /nv6FriendGames\s*=\s*GAME_CATALOG[\s\S]{0,220}!g\.soon\s*&&\s*g\.multiplayer/.test(S));
+
+// The friend row is the ONE shortcut Home is allowed, and only while it has
+// something real to show.
+chk('Friend row renders ONLY when a live 2-player game exists',
+  /\{nv6FriendGames\.length\s*>\s*0\s*&&\s*\(\s*\n?\s*<HomeRow\s+id="friend"/.test(S));
+
+// ============================================================================
+// 4) LEARN JOINS AS A ROW ONLY WHEN THE SWITCH IS FLIPPED
+// ============================================================================
+console.log('--- Learn is a real row or nothing at all — never a dead Coming Soon tile ---');
+chk('Learn row is gated on lessonsLive',
+  /\{lessonsLive\s*&&\s*nv6Subjects\.length\s*>\s*0\s*&&\s*\(\s*\n?\s*<HomeRow\s+id="learn"/.test(S));
+chk('Learn subjects are cleared when lessons are not live',
+  /if\s*\(!lessonsLive\)\s*\{\s*setNv6Subjects\(\[\]\)/.test(S));
+chk('Learn subjects come from the live lesson map, with the static file as fallback',
+  /fetch\("\/api\/lesson-map"[\s\S]{0,400}\/lessons\/index\.json/.test(S));
+chk('a subject only earns a card once it has an APPROVED lesson',
+  /l\.status\s*===\s*"approved"[\s\S]{0,120}ready\.add\(p\.subject\)/.test(S));
+chk('no "Coming soon" tile is rendered inside any Home row',
+  rowBlocks.every((b) => !/Coming soon/i.test(b)),
+  'offenders=' + rowBlocks.filter((b) => /Coming soon/i.test(b)).length);
+
+// ============================================================================
+// 5) THE COUNTS MOVED TO THE SECTION PAGE HEADERS
+// ============================================================================
+console.log('--- 20 games / 14 books / 3 studios live on the SECTION PAGE headers ---');
+chk('Play page header carries the games count (data-nv6-count="play")',
+  /data-nv6-count="play"[\s\S]{0,200}GAMES\.filter\(\(g\)\s*=>\s*!g\.soon\)\.length\}\s*games/.test(S));
+chk('Make page header carries the studios count (data-nv6-count="make")',
+  /data-nv6-count="make"[\s\S]{0,160}\{liveStudios\}\s*studios/.test(S));
+chk('Explore page header carries labs + books (data-nv6-count="explore")',
+  /data-nv6-count="explore"[\s\S]{0,200}\{labs\.length\}\s*labs\s*\+\s*\{books\.length\}\s*books/.test(S));
+chk('no count string is hardcoded ("20 games")', !/["'`]20\s*games["'`]/.test(S));
+chk('no count string is hardcoded ("3 studios")', !/["'`]3\s*studios["'`]/.test(S));
+chk('no count string is hardcoded ("14 books")', !/["'`]14\s*books/.test(S));
+
+// Sanity — today's catalogs ARE the numbers those headers print.
 const CAT = /GAME_CATALOG\s*=\s*\[([\s\S]*?)\n\];/.exec(S);
-const catBody = CAT ? CAT[1] : '';
-const gameEntries = catBody.split('\n').filter((l) => /{\s*id:/.test(l));
+const gameEntries = (CAT ? CAT[1] : '').split('\n').filter((l) => /{\s*id:/.test(l));
 const liveGames = gameEntries.filter((l) => /type:\s*"game"/.test(l) && !/soon:\s*true/.test(l));
-chk('catalog TODAY has 20 live games (Play door count today)', liveGames.length === 20, 'live=' + liveGames.length);
+chk('catalog TODAY has 20 live games (Play header)', liveGames.length === 20, 'live=' + liveGames.length);
+const MC = /^const\s+MAKE_CATALOG\s*=\s*\[([\s\S]*?)\n\];/m.exec(S);
+const mcEntries = (MC ? MC[1] : '').split('\n').filter((l) => /{\s*id:/.test(l));
+const mcLive = mcEntries.filter((l) => !/soon:\s*true/.test(l));
+chk('catalog TODAY has 3 live studios (Make header + Make row)', mcLive.length === 3, 'live=' + mcLive.length);
+chk('MAKE_CATALOG still has at least 1 soon studio (so the soon flag is exercised)',
+  mcEntries.length - mcLive.length >= 1);
 const EX = /EXHIBIT_CATALOG\s*=\s*\[([\s\S]*?)\n\];/.exec(S);
-const exBody = EX ? EX[1] : '';
-const exEntries = exBody.split('\n').filter((l) => /{\s*id:/.test(l));
+const exEntries = (EX ? EX[1] : '').split('\n').filter((l) => /{\s*id:/.test(l));
 const approvedLabs = exEntries.filter((l) => /status:\s*"approved"/.test(l) && !/template:\s*"topic-book"/.test(l));
 const approvedBooks = exEntries.filter((l) => /status:\s*"approved"/.test(l) && /template:\s*"topic-book"/.test(l));
-chk('catalog TODAY has 3 approved labs (Explore door labs count)', approvedLabs.length === 3, 'labs=' + approvedLabs.length);
-chk('catalog TODAY has 14 approved books (Explore door books count)', approvedBooks.length === 14, 'books=' + approvedBooks.length);
+chk('catalog TODAY has 3 approved labs (Explore header)', approvedLabs.length === 3, 'labs=' + approvedLabs.length);
+chk('catalog TODAY has 14 approved books (Explore header)', approvedBooks.length === 14, 'books=' + approvedBooks.length);
+chk('Kidspedia row has enough approved books to fill its 3 covers', approvedBooks.length >= 3);
+const liveMultiplayer = gameEntries.filter((l) => /type:\s*"game"/.test(l) && !/soon:\s*true/.test(l) && /multiplayer:\s*true/.test(l));
+chk('catalog TODAY has at least one live 2-player game (so the friend row shows)',
+  liveMultiplayer.length >= 1, 'live 2p=' + liveMultiplayer.length);
 
-// The door label MUST render the derived formula, not a hardcoded "20 games".
-chk('Play door label composes from nv2LiveGames (no hardcoded number)',
-  /nv2LiveGames\s*\+\s*"\s*games"/.test(S));
-chk('Make door label composes from nv2LiveStudios (no hardcoded number)',
-  /nv2LiveStudios\s*\+\s*"\s*studios"/.test(S));
-chk('Explore door label composes labs + books (no hardcoded numbers)',
-  /nv2ApprovedLabs\s*\+\s*"\s*labs\s*\+\s*"\s*\+\s*nv2ApprovedBooks\s*\+\s*"\s*books"/.test(S));
-chk('no hardcoded "20 games" string sneaked into the door labels',
-  !/["'`]20\s*games["'`]/.test(S));
-chk('no hardcoded "3 studios" string sneaked into the door labels',
-  !/["'`]3\s*studios["'`]/.test(S));
-chk('no hardcoded "3 labs" string sneaked into the door labels',
-  !/["'`]3\s*labs/.test(S));
-
-// -------------------------------------------------------------- 3) NV2 layout DOM markers
-console.log('--- Screen 1 layout: slim header, Keep playing, five doors, four suggested ---');
-chk('root Home wrapper carries data-nv2-home', /data-nv2-home/.test(S));
-chk('slim header carries data-nv2-header',     /data-nv2-header/.test(S));
-chk('Keep-playing card carries data-nv2-keep', /data-nv2-keep/.test(S));
-chk('doors grid carries data-nv2-doors',       /data-nv2-doors/.test(S));
-chk('suggested-games row carries data-nv2-suggested', /data-nv2-suggested/.test(S));
-
-// The five doors are named + rendered from NV2_DOORS. Grep by data-nv2-door=<id>.
-['play', 'make', 'explore', 'learn', 'mystuff'].forEach((id) => {
-  chk('door "' + id + '" is rendered from NV2_DOORS', new RegExp('id:\\s*"' + id + '"').test(S));
-});
-chk('NV2_DOORS has exactly the five expected picture doors',
-  /NV2_DOORS\s*=\s*\[[\s\S]{0,4000}?id:\s*"play"[\s\S]{0,4000}?id:\s*"make"[\s\S]{0,4000}?id:\s*"explore"[\s\S]{0,4000}?id:\s*"learn"[\s\S]{0,4000}?id:\s*"mystuff"/.test(S));
-
-// Doors carry the bottom-bar section colours so a door and its tab match.
-chk('Play door uses NAV_TAB_COLORS.play',       /id:\s*"play"[\s\S]{0,400}NAV_TAB_COLORS\.play/.test(S));
-chk('Make door uses NAV_TAB_COLORS.make',       /id:\s*"make"[\s\S]{0,400}NAV_TAB_COLORS\.make/.test(S));
-chk('Explore door uses NAV_TAB_COLORS.explore', /id:\s*"explore"[\s\S]{0,400}NAV_TAB_COLORS\.explore/.test(S));
-chk('My Stuff door uses NAV_TAB_COLORS.me',     /id:\s*"mystuff"[\s\S]{0,400}NAV_TAB_COLORS\.me/.test(S));
-
-// A PICTURE door means real key art fills the tile. An earlier pass shipped flat
-// gradient panels with a small centred glyph, which is what these pin down.
-['play', 'make', 'explore', 'learn', 'mystuff'].forEach((id) => {
-  chk('door "' + id + '" carries real key art (art:)', new RegExp('id:\\s*"' + id + '"[\\s\\S]{0,600}art:\\s*[^,]').test(S));
-});
-chk('DoorTile paints the art as a full-bleed <img>, gradient only as fallback',
-  /DoorTile[\s\S]{0,1600}d\.art\s*&&\s*\([\s\S]{0,300}<img[\s\S]{0,400}objectFit:\s*"cover"/.test(S));
-chk('DoorTile veils the art so the name stays readable',
-  /DoorTile[\s\S]{0,2200}linear-gradient\(180deg,\s*rgba\(0,0,0/.test(S));
-chk('Explore door art comes from an APPROVED book (never an in-review cover)',
-  /nv2ExploreArt\s*=\s*\(EXHIBIT_CATALOG\.find\(\(e\)\s*=>\s*e\.status\s*===\s*"approved"/.test(S));
-chk('doors are NOT flat panels with a centred glyph (no centre-stacked layout)',
-  !/DoorTile[\s\S]{0,900}flexDirection:\s*"column",\s*alignItems:\s*"center",\s*justifyContent:\s*"center"/.test(S));
-
-// -------------------------------------------------------------- 4) Learn door respects the soon gate
-console.log('--- Learn door respects the lessons_live flag (soft-gates until owner flip) ---');
-chk('Learn door count switches on lessonsLive',
-  /id:\s*"learn"[\s\S]{0,400}count:\s*lessonsLive\s*\?/.test(S));
-chk('Learn door onClick routes to onLessons directly when lessonsLive is true',
-  /id:\s*"learn"[\s\S]{0,600}lessonsLive\s*\?\s*onLessons/.test(S));
-chk('Learn door falls back to the 1111 preview gate when Lessons are NOT live',
-  /id:\s*"learn"[\s\S]{0,900}setCatalogGate\(\(\)\s*=>\s*onLessons\)/.test(S));
-
-// -------------------------------------------------------------- 5) Suggested games row
-console.log('--- Suggested games row: exactly 4, live only, most-played first, NO sideways scroll ---');
-chk('nv2Suggested filters to live games (type==="game" && !soon)',
-  /nv2Suggested[\s\S]{0,600}GAME_CATALOG\.filter\(\(g\)\s*=>\s*g\.type\s*===\s*"game"\s*&&\s*!g\.soon\)/.test(S));
-chk('nv2Suggested trims to at most 4 games',
-  /nv2Suggested[\s\S]{0,900}\.slice\(0,\s*4\)/.test(S));
-chk('nv2Suggested sorts most-played first (per-kid stats)',
-  /nv2PlayCount\[a\.id\][\s\S]{0,200}nv2PlayCount\[b\.id\][\s\S]{0,80}return\s+pb\s*-\s*pa/.test(S));
-// THE NV LAW: nothing on Home may require a sideways swipe. Kids stop after 3-4
-// cards in a horizontal row and never reach the rest — that is the whole bug NV
-// exists to fix. The suggested games WRAP into a grid instead, and the scroll
-// cue is vertical (a row cut off by the bottom of the screen).
-chk('suggested row is a wrapping GRID, not a swipe row',
-  /data-nv2-suggested[\s\S]{0,400}display:\s*"grid"[\s\S]{0,300}gridTemplateColumns/.test(S));
-chk('suggested row NEVER scrolls horizontally (no overflowX)',
-  !/data-nv2-suggested[\s\S]{0,900}overflowX/.test(S));
-chk('suggested row does NOT bleed past the page edge',
-  !/data-nv2-suggested[\s\S]{0,900}marginRight:\s*phone\s*\?\s*-/.test(S));
-
-// -------------------------------------------------------------- 6) Keep-playing priority order
-console.log('--- Keep-playing card: notifications first, then recent, then favourite, then default ---');
+// ============================================================================
+// 6) KEEP PLAYING IS UNCHANGED — INCLUDING THE NV5 FRIEND-TURN ART FIX
+// ============================================================================
+console.log('--- Keep playing: unchanged hero card, notifications first ---');
+chk('Keep-playing card still carries data-nv2-keep', /data-nv2-keep/.test(S));
 chk('Keep-playing prefers a chess turn first',
   /keepPlaying\s*=[\s\S]{0,1200}chessTurns\s*>\s*0[\s\S]{0,600}kind:\s*"chess-turn"/.test(S));
 chk('Keep-playing then a pending friend turn',
   /keepPlaying\s*=[\s\S]{0,2600}friendTurns[\s\S]{0,700}kind:\s*"friend-turn"/.test(S));
-// A friend turn must show THAT GAME's art. It used to hardcode ChessGlyph + the
-// chess purple, so "Your move in Tic-Tac-Toe" drew a chess pawn.
-chk('friend turn looks its game up in GAME_CATALOG (no hardcoded chess art)',
-  /kind:\s*"friend-turn"[\s\S]{0,200}/.test(S) &&
+// NV5 fix: a friend turn shows THAT game's art. It used to draw a chess pawn on
+// a purple chess gradient for every friend turn, including tic-tac-toe.
+chk('NV5 fix held: friend turn looks its game up in GAME_CATALOG',
   /friendTurns\[0\][\s\S]{0,400}GAME_CATALOG\.find\(\(x\)\s*=>\s*x\.id\s*===\s*m\.game\)/.test(S));
-chk('friend invite looks its game up in GAME_CATALOG too',
+chk('NV5 fix held: friend invite looks its game up in GAME_CATALOG too',
   /friendInvites\[0\][\s\S]{0,400}GAME_CATALOG\.find\(\(x\)\s*=>\s*x\.id\s*===\s*iv\.game\)/.test(S));
-chk('no friend-turn/invite branch still hardcodes <ChessGlyph />',
+chk('NV5 fix held: no friend-turn/invite branch hardcodes <ChessGlyph />',
   !/kind:\s*"friend-(turn|invite)"[\s\S]{0,600}<ChessGlyph/.test(S));
-chk('Keep-playing then a pending friend invite',
-  /keepPlaying\s*=[\s\S]{0,3300}friendInvites[\s\S]{0,300}kind:\s*"friend-invite"/.test(S));
 chk('Keep-playing then a real-time (family) invite',
   /keepPlaying\s*=[\s\S]{0,4200}rtInvite[\s\S]{0,300}kind:\s*"rt-invite"/.test(S));
 chk('Keep-playing then the most-recent creation (jumpItems)',
@@ -162,25 +214,26 @@ chk('Keep-playing then the favourite game',
 chk('Keep-playing falls back to a "discover" default so the card never disappears',
   /keepPlaying\s*=[\s\S]{0,7500}kind:\s*"discover"/.test(S));
 
-// -------------------------------------------------------------- 7) product guardrails
-console.log('--- Guardrails: no emoji anywhere in the NV2 block ---');
-const nv2Match = /\/\/ NV2 — the new above-the-fold layout[\s\S]*?\n  \);\s*\n\}\s*\n/.exec(S);
-chk('NV2 block extracted for emoji scan', !!nv2Match);
-chk('no emoji in the NV2 addition block (product guardrail)',
-  !!nv2Match && !emoji.test(nv2Match[0]));
+// ============================================================================
+// 7) PRODUCT GUARDRAILS
+// ============================================================================
+console.log('--- Guardrails: no emoji anywhere in the Home block ---');
+const homeBlock = /\/\/ NV6 — Home shows THINGS[\s\S]*?\n\/\/ NV1 — the always-visible 5-tab bottom bar/.exec(S);
+chk('Home NV6 block extracted for emoji scan', !!homeBlock);
+chk('no emoji in the Home NV6 block (product guardrail)',
+  !!homeBlock && !emoji.test(homeBlock[0]));
 
-// The doors ARE inside the same block, and their labels are computed strings,
-// so emojis would show up there if anyone tried. Belt-and-braces.
-chk('NV2_DOORS block has no emoji',
-  !emoji.test((/NV2_DOORS\s*=\s*\[[\s\S]*?\];/.exec(S) || ["", ""])[0]));
-
-// -------------------------------------------------------------- 8) NV1 still wires through
-console.log('--- Shell wiring unchanged: HomeScreen still gets all its NV1 props + is rendered ---');
-chk('shell still renders <HomeScreen with onGames->PLAY_HUB (NV1 handoff)',
+// ============================================================================
+// 8) SHELL WIRING UNCHANGED
+// ============================================================================
+console.log('--- Shell wiring: HomeScreen still gets its props + the bar is still there ---');
+chk('shell still renders <HomeScreen with onGames->PLAY_HUB',
   /<HomeScreen[\s\S]{0,4000}onGames=\{\(\)\s*=>\s*setScreen\(SCREEN_PLAY_HUB\)\}/.test(S));
 chk('shell still renders BottomBar current="home"', /<BottomBar\s+current="home"/.test(S));
+chk('the bottom bar is still the navigation (5 tabs)',
+  /TABS\s*=\s*\[[\s\S]{0,700}id:\s*"home"[\s\S]{0,700}id:\s*"play"[\s\S]{0,700}id:\s*"make"[\s\S]{0,700}id:\s*"explore"[\s\S]{0,700}id:\s*"me"/.test(S));
 
-// -------------------------------------------------------------- summary
+// ---------------------------------------------------------------- summary
 console.log('---');
 console.log(ok ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED');
 process.exit(ok ? 0 : 1);

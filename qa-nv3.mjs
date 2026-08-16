@@ -136,23 +136,28 @@ chk('Solar System lab is approved', hasApproved('solar-system'));
 chk('Journey to the Deep lab is approved', hasApproved('ocean-deep'));
 chk('Weather Lab (make-it-rain) is approved', hasApproved('make-it-rain'));
 
-// ---------------------------------------------------------------- 6) Home doors open the new hubs
-console.log('--- Home Make + Explore doors open the new section hubs ---');
+// ---------------------------------------------------------------- 6) Home reaches the new hubs
+// NV6 UPDATE: the five picture doors these checks were written against are
+// gone — Home never repeats the tab bar. The route they guarded is now the
+// small "See all" on each content row, so the same three destinations are
+// still pinned down, just on their new owner. qa-nv2.mjs is the harness that
+// fails if the doors ever come back.
+console.log('--- Home Make + Explore rows reach the new section hubs ---');
 chk('HomeScreen destructures onMakeHub + onExploreHub props',
   /function\s+HomeScreen[\s\S]{0,600}onMakeHub[\s\S]{0,200}onExploreHub/.test(S));
-chk('Make door onClick prefers onMakeHub',
-  /id:\s*"make"[\s\S]{0,400}onClick:\s*onMakeHub/.test(S));
-chk('Explore door onClick prefers onExploreHub',
-  /id:\s*"explore"[\s\S]{0,400}onClick:\s*onExploreHub/.test(S));
+chk('Make row See all prefers onMakeHub',
+  /<HomeRow\s+id="make"[\s\S]{0,200}?seeAll=\{onMakeHub/.test(S));
+chk('Kidspedia row See all prefers onExploreHub',
+  /<HomeRow\s+id="kidspedia"[\s\S]{0,200}?seeAll=\{onExploreHub/.test(S));
 chk('shell passes onMakeHub={() => setScreen(SCREEN_MAKE_HUB)}',
   /onMakeHub=\{\(\)\s*=>\s*setScreen\(SCREEN_MAKE_HUB\)\}/.test(S));
 chk('shell passes onExploreHub={() => setScreen(SCREEN_EXPLORE_HUB)}',
   /onExploreHub=\{\(\)\s*=>\s*setScreen\(SCREEN_EXPLORE_HUB\)\}/.test(S));
 
-// Learn door on Home still opens the existing lessons path (card says
-// "Learn = the lessons path" — no new lessons UI is in scope for NV3).
-chk('Learn door still routes to onLessons (the existing lessons path)',
-  /id:\s*"learn"[\s\S]{0,600}onLessons/.test(S));
+// Learn on Home still opens the existing lessons path — as its own ROW now,
+// and only once the lessons switch is flipped, so it is never a dead tile.
+chk('Learn row See all still routes to onLessons (the existing lessons path)',
+  /<HomeRow\s+id="learn"[\s\S]{0,200}?seeAll=\{onLessons\}/.test(S));
 
 // ---------------------------------------------------------------- 7) guardrails
 console.log('--- Guardrails: no emoji anywhere in the NV3 additions ---');
