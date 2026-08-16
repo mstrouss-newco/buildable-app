@@ -1,0 +1,255 @@
+# Session RP7 — the read-aloud narration run for the Kidspedia topic books.
+#
+# Every fact card in a book has a speaker button. Tapping it should play a warm
+# human voice, not the browser's robot. The voice is made once, up front, by
+# /api/gen-exhibit-audio and cached; /api/explore-audio only ever serves what is
+# already there, so a kid never waits on ElevenLabs.
+#
+# This Action is the thing that presses that button. It exists because the
+# generator has to run somewhere that can reach the deployed site AND has the
+# ElevenLabs key — which is the Vercel deployment itself. Nothing here handles a
+# key: the workflow only makes plain GET requests to the site, and the site
+# reads its own env.
+#
+# Why an Action and not a browser click: twenty books is twenty clicks, a page
+# may take a couple of minutes, and there is no record afterwards of what was
+# made or what it cost. This prints a per-book report and refuses to go green
+# until a final no-cost pass confirms every clip exists.
+#
+# Generation is generate-once / skip-if-present, so re-running is free. Only
+# clips that do not exist yet cost anything.
+#
+# Two ways in:
+#   1. workflow_dispatch — run it from the Actions tab after new books or new
+#      facts land. Leave every input blank for "all twenty, against the site
+#      this commit deployed".
+#   2. push            — when this file itself changes on the RP7 branch, so the
+#      first run happens against that branch's own preview build.
+#
+# No secrets and no repo variables are needed.
+
+name: Kidspedia narration
+
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Base URL to generate against (blank = this commit''s own deployment, then the live site)'
+        required: false
+        default: ''
+      books:
+        description: 'Space-separated book ids (blank = every book on the shelf)'
+        required: false
+        default: ''
+      dry:
+        description: 'Report what would be made and spend nothing'
+        type: boolean
+        default: false
+  push:
+    branches:
+      - 'claude/rp7-narration-audio-**'
+    paths:
+      - '.github/workflows/kidspedia-narration.yml'
+
+# One narration run at a time. Two overlapping runs would race on the same cache
+# rows and could pay for the same clip twice.
+concurrency:
+  group: kidspedia-narration
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  narrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # Which books. The bookshelf is the source of truth for what is on the
+      # shelf, so a book added there is narrated without editing this file.
+      - name: Work out which books to narrate
+        id: books
+        env:
+          INPUT_BOOKS: ${{ github.event.inputs.books }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_BOOKS" ]; then
+            BOOKS="$INPUT_BOOKS"
+          else
+            BOOKS=$(jq -r '[.shelves[].books[]] | join(" ")' public/explore/bookshelf.json)
+          fi
+          echo "books=$BOOKS" >> "$GITHUB_OUTPUT"
+          echo "Narrating: $BOOKS"
+          echo "$BOOKS" | wc -w | xargs echo "Book count:"
+
+      # Where to generate. The generator reads the book json from its OWN
+      # deployment, so running against this commit's build is what makes new
+      # facts (or a smarter generator) take effect before the change is merged.
+      # If that build cannot be reached — no preview, or Vercel Authentication
+      # in front of it — fall back to the live site and say so loudly, because
+      # the live site is running whatever is on main, not this commit.
+      - name: Pick the site to generate against
+        id: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SITE: ${{ github.event.inputs.site }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          LIVE="https://www.buildablekids.com"
+          PICKED=""
+
+          probe() {
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$1/explore/penguins.json" || echo 000)
+            echo "  probe $1 -> $code"
+            [ "$code" = "200" ]
+          }
+
+          if [ -n "$INPUT_SITE" ]; then
+            PICKED="$INPUT_SITE"
+            echo "Site given as an input: $PICKED"
+            probe "$PICKED" || { echo "::error::the site given as an input did not serve /explore/penguins.json"; exit 1; }
+          else
+            echo "Looking for a deployment of $SHA (up to 15 minutes)..."
+            for attempt in $(seq 1 30); do
+              URL=$(gh api "repos/$REPO/deployments?sha=$SHA&per_page=20" \
+                      --jq '.[].id' 2>/dev/null | while read -r id; do
+                      gh api "repos/$REPO/deployments/$id/statuses?per_page=20" \
+                        --jq '.[] | select(.state == "success") | .environment_url // empty' 2>/dev/null
+                    done | grep -m1 '^https://' || true)
+              if [ -n "$URL" ] && probe "$URL"; then PICKED="$URL"; break; fi
+              echo "  no reachable deployment yet (attempt $attempt/30)"
+              sleep 30
+            done
+          fi
+
+          if [ -z "$PICKED" ]; then
+            echo "::warning::No reachable deployment for this commit. Falling back to the LIVE site, which runs main — clips will be generated from main's generator and main's book json, not this commit's."
+            probe "$LIVE" || { echo "::error::neither this commit's deployment nor the live site could be reached"; exit 1; }
+            PICKED="$LIVE"
+          fi
+
+          echo "site=$PICKED" >> "$GITHUB_OUTPUT"
+          echo "Generating against: $PICKED"
+          echo "### Narration target" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$PICKED\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # A no-cost pass first, always. It prints exactly what the run is about to
+      # buy, so the spend is on the record before a penny of it happens.
+      - name: What would this cost (spends nothing)
+        env:
+          SITE: ${{ steps.site.outputs.site }}
+          BOOKS: ${{ steps.books.outputs.books }}
+        run: |
+          set -euo pipefail
+          TOTAL=0
+          echo "| Book | Clips to make | Already made | Characters |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | ---: | ---: | ---: |" >> "$GITHUB_STEP_SUMMARY"
+          for b in $BOOKS; do
+            R=$(curl -sS --max-time 300 "$SITE/api/gen-exhibit-audio?exhibit=$b&dry=1" || echo '{}')
+            TODO=$(echo "$R" | jq -r '(.generated // []) | length')
+            SKIP=$(echo "$R" | jq -r '(.skipped // []) | length')
+            CH=$(echo "$R"  | jq -r '.totalCharsGenerated // 0')
+            TOTAL=$((TOTAL + CH))
+            printf '%-20s to make: %-4s already: %-4s chars: %s\n' "$b" "$TODO" "$SKIP" "$CH"
+            echo "$R" | jq -r 'if .ok then empty else "  !! " + (.error // "unreadable response") end'
+            echo "| $b | $TODO | $SKIP | $CH |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo "Characters still to generate: $TOTAL"
+          # ElevenLabs bills per character; the same rough rate the generator logs.
+          USD=$(awk -v c="$TOTAL" 'BEGIN{printf "%.2f", c*0.00003}')
+          {
+            echo ""
+            echo "**Still to generate: $TOTAL characters** (roughly \$$USD at the rate api/gen-exhibit-audio logs)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The real run. Two passes: a book whose function run is cut short still
+      # saved every clip it finished, so the second pass picks up the remainder
+      # instead of the whole book being lost.
+      - name: Generate the narration
+        if: ${{ github.event.inputs.dry != 'true' }}
+        env:
+          SITE: ${{ steps.site.outputs.site }}
+          BOOKS: ${{ steps.books.outputs.books }}
+        run: |
+          set -euo pipefail
+          for pass in 1 2; do
+            echo "===== pass $pass ====="
+            for b in $BOOKS; do
+              R=$(curl -sS --max-time 300 "$SITE/api/gen-exhibit-audio?exhibit=$b" || echo '{}')
+              MADE=$(echo "$R" | jq -r '(.generated // []) | length')
+              SKIP=$(echo "$R" | jq -r '(.skipped // []) | length')
+              BAD=$(echo "$R"  | jq -r '(.failed // []) | length')
+              CH=$(echo "$R"   | jq -r '.totalCharsGenerated // 0')
+              printf '%-20s made: %-4s skipped: %-4s failed: %-4s chars: %s\n' "$b" "$MADE" "$SKIP" "$BAD" "$CH"
+              echo "$R" | jq -r '(.failed // [])[] | "  FAILED " + (.item // "?") + ": " + ((.status // .error // "") | tostring) + " " + (.detail // "")'
+              echo "$R" | jq -r 'if .ok then empty else "  !! " + (.error // "unreadable response") end'
+            done
+          done
+
+      # The run is only green when every clip a kid can ask for actually answers.
+      #
+      # This deliberately does NOT re-ask the generator "is there anything left",
+      # because that only ever reports on the generator that happens to be
+      # deployed: an older one that narrates one fact per page would report
+      # "nothing left to do" while two of every three speaker buttons were still
+      # silent. The expected ids are worked out here, from the book json in this
+      # checkout, exactly the way public/topic.html builds them — page factAudio
+      # id for the first fact card, then "-2", "-3" — and each one is fetched
+      # from the SERVE endpoint, which is what the kid's tap really hits.
+      - name: Check every fact card can be spoken
+        if: ${{ github.event.inputs.dry != 'true' }}
+        env:
+          SITE: ${{ steps.site.outputs.site }}
+          BOOKS: ${{ steps.books.outputs.books }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("fs");
+            const out = [];
+            for (const b of process.argv[1].split(/\s+/).filter(Boolean)) {
+              const d = JSON.parse(fs.readFileSync("public/explore/" + b + ".json", "utf8"));
+              for (const p of d.pages || []) {
+                if (!p.factAudio) continue;
+                (p.facts || []).forEach((f, n) => out.push(n ? p.factAudio + "-" + (n + 1) : p.factAudio));
+              }
+            }
+            fs.writeFileSync("expected.txt", out.join("\n") + "\n");
+          ' "$BOOKS"
+          COUNT=$(wc -l < expected.txt)
+          echo "Fact cards that must have a voice: $COUNT"
+
+          # Eight at a time: 239 one-at-a-time round trips is several minutes of
+          # doing nothing. Anything that is not a 200 is a clip a kid would not get.
+          probe_one() {
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 "$SITE/api/explore-audio?id=$1" || echo 000)
+            [ "$code" = "200" ] || echo "$1 -> $code"
+          }
+          export -f probe_one
+          export SITE
+          xargs -a expected.txt -I{} -P 8 bash -c 'probe_one "$@"' _ {} > missing.txt
+
+          MISSING=$(wc -l < missing.txt)
+          if [ "$MISSING" -ne 0 ]; then
+            echo "Clips a kid would not get:"
+            cat missing.txt
+            {
+              echo ""
+              echo "**$MISSING of $COUNT fact cards still have no clip** — those speaker buttons fall back to the browser voice."
+              echo ""
+              echo '```'
+              head -50 missing.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::$MISSING of $COUNT fact cards still have no narrator clip"
+            exit 1
+          fi
+          echo "Every one of the $COUNT fact cards plays a real narrator clip."
+          {
+            echo ""
+            echo "Verified: all **$COUNT** fact cards across the shelf answer with a real narrator clip."
+          } >> "$GITHUB_STEP_SUMMARY"
