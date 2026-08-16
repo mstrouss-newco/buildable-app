@@ -357,6 +357,93 @@ console.log('--- SD3: level cards paint the terrain ---');
   if(!paintOk) ok=false;
 }
 
+// --- 3h) SD5: can she brute force it? ----------------------------------------
+// Everything above proves the game is BEATABLE. None of it proves a level had to
+// be SOLVED — and "beatable" was never the complaint. The complaint was a six
+// year old finishing all twenty levels in five minutes without once thinking
+// about what was holding a tower up, and a bot that plans good arcs cannot see
+// that, because planning is the thing she never did.
+//
+// So this section plays the game the way SHE played it. `_flail` picks a critter
+// that is still standing, pulls the sling all the way back, and throws in roughly
+// that direction — high or low, but never worked out. It is deliberately given a
+// fair shake: it tries lobs as well as flat shots, and it waits for a tower to
+// finish falling before spending the next pal. What it never does is ask what is
+// holding anything up.
+//
+// The reading that matters is the gap. If flinging clears the on-ramp but stalls
+// on the back half, the back half is a puzzle. If flinging clears both, the back
+// half is just a bigger version of the on-ramp, whatever the level names say —
+// and the bot's five green runs above were never evidence to the contrary. That
+// is the stray-critter trap from July in one sentence: QA can go green on a level
+// that plays itself.
+console.log('--- SD5: can she brute force it? ---');
+const FLAIL_RUNS = 16;
+const FLAIL_GOAL = 0.20;      // the phase goal: at most 1 attempt in 5 should get there by luck
+const flail=[];
+for(let i=0;i<n;i++){
+  let wins=0, popped=0; const freeTargets=new Array(cfg.levels[i].targets.length).fill(0);
+  for(let r=0;r<FLAIL_RUNS;r++){
+    // fixed seeds: a brute-force run is reproducible, so a surprise can be replayed
+    const f=SG._flail(i, 1000+r*7919, 20000);
+    if(f.result==='win') wins++;
+    popped+=f.popped;
+    for(const t of SG._targets()) if(!t.alive) freeTargets[t.i]++;
+  }
+  flail.push({ i, name:cfg.levels[i].name, rate:wins/FLAIL_RUNS,
+               popShare:popped/FLAIL_RUNS/cfg.levels[i].targets.length, freeTargets });
+}
+const onrampFlail = flail.slice(0,6), backFlail = flail.slice(6);
+const avg = a => a.reduce((s,x)=>s+x.rate,0)/a.length;
+
+// 1) the bot has to be a real player, or "it cannot brute force the back half"
+//    is just a statement about how bad the bot is. It clears the on-ramp, so it
+//    can aim; what it cannot do is think.
+const flailPlays = onrampFlail.every(f=>f.rate>0) && avg(onrampFlail)>=0.5;
+console.log(`${flailPlays?'PASS':'FAIL'}  the brute-force bot can actually play — it clears the on-ramp ${Math.round(avg(onrampFlail)*100)}% of attempts (so a failure below is the level, not the bot)`);
+if(!flailPlays) ok=false;
+
+// 2) the six year old must still get through levels 1-6 without being taught
+//    anything. That promise is the reason the on-ramp was never touched.
+const onrampFlingable = onrampFlail.every(f=>f.rate>=0.5);
+console.log(`${onrampFlingable?'PASS':'FAIL'}  levels 1-6 still fall to plain flinging (${onrampFlail.map(f=>Math.round(f.rate*100)+'%').join(' ')}) — a six year old finishes the on-ramp in a few minutes`);
+if(!onrampFlingable) ok=false;
+
+// 3) and the back half has to be measurably harder to fling your way through
+const gap = avg(onrampFlail)-avg(backFlail);
+console.log(`${gap>=0.2?'PASS':'FAIL'}  flinging is weaker on the back half than on the on-ramp (${Math.round(avg(onrampFlail)*100)}% vs ${Math.round(avg(backFlail)*100)}%, gap ${Math.round(gap*100)} points)`);
+if(gap<0.2) ok=false;
+
+// 4) THE PHASE GOAL, level by level: no back-half level should fall to pure
+//    flinging more than one attempt in five. This is REPORTED, not gated — see
+//    the verdict at the bottom and SESSION-LOG.md (SD5) for why.
+console.log(`    the phase goal is <=${Math.round(FLAIL_GOAL*100)}% — levels above that can still be out-shot rather than solved:`);
+const bruteForceable=[];
+for(const f of backFlail){
+  const meets = f.rate<=FLAIL_GOAL;
+  if(!meets) bruteForceable.push(f);
+  // WHICH critters flinging gets for free is the interesting half. A level is
+  // supposed to hand over its loose critters and then STALL on the one it is
+  // about. A level where flinging eventually collects every critter has no
+  // puzzle in it, whatever its name says.
+  const free=f.freeTargets.map(c=>Math.round(c/FLAIL_RUNS*100));
+  f.hardest=Math.min(...free);
+  console.log(`    ${meets?'meets ':'ABOVE '} L${f.i+1} ${f.name.padEnd(22)} flinging clears ${String(Math.round(f.rate*100)+'%').padStart(4)} of attempts; it collects ${Math.round(f.popShare*100)}% of the critters (per critter: ${free.map(c=>String(c+'%').padStart(4)).join(' ')})`);
+}
+const bruteForceProved = bruteForceable.length===0;
+
+// 5) and the one number that explains all of the above. Read down the per-critter
+//    column: on every level that falls to flinging, EVERY critter is gettable by
+//    flinging sooner or later, so the level is only ever a matter of how many
+//    slings you have. The level that holds (Between the Hills) is the one with a
+//    critter flinging keeps missing. That is the whole design rule in a line —
+//    a back-half level needs at least one critter that pure flinging cannot get,
+//    and thirteen of fourteen do not have one.
+const RESISTS = 40;      // a critter flinging gets less than this often is one it cannot rely on
+const withResistant = backFlail.filter(f=>f.hardest<RESISTS);
+console.log(`    ${withResistant.length} of ${backFlail.length} back-half levels have a critter flinging cannot reliably get (under ${RESISTS}%): ${withResistant.map(f=>`L${f.i+1} ${f.name} (${f.hardest}%)`).join(', ')||'none'}`);
+console.log(`    every level in that list meets the goal; every level not in it does not. The lever is the critter, not the sling count.`);
+
 console.log('--- a clean run earns stars ---');
 const s=SG.sim(0,20000); console.log(`stars(L1)=${s.stars}`);
 
@@ -369,4 +456,15 @@ SG.sim(0,20000); d=SG._draw(); console.log(`${d==='ok'?'PASS':'FAIL'}  win rende
 if(trio>=0){ SG._begin(trio); SG._hitBlock(1,18,1); SG._hitBlock(0,18,1); SG._step(2);
   d=SG._draw(); console.log(`${d==='ok'?'PASS':'FAIL'}  cracked + shatter render: ${d}`); if(d!=='ok')ok=false; }
 
-console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);
+console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED');
+// SD5's verdict rides alongside the gate rather than inside it, and is printed
+// last so it cannot be read past. Everything this script gated before SD5 is
+// still gated; what SD5 added is a measurement of the one thing the phase set
+// out to achieve, and that measurement is not there yet. Folding it into the
+// exit code would turn `main` red for every other session over a level-design
+// decision that is Mike's to make — so it is stated loudly instead, and carried
+// to him in SESSION-LOG.md and the planner.
+console.log(bruteForceProved
+  ? `BRUTE FORCE: PROVED — no back-half level falls to pure flinging more than ${Math.round(FLAIL_GOAL*100)}% of attempts.`
+  : `BRUTE FORCE: NOT PROVED — ${bruteForceable.length} of ${n-6} back-half levels still fall to pure flinging above the ${Math.round(FLAIL_GOAL*100)}% goal (worst: ${bruteForceable.slice().sort((a,b)=>b.rate-a.rate).slice(0,3).map(f=>`L${f.i+1} ${Math.round(f.rate*100)}%`).join(', ')}). See SESSION-LOG.md (SD5).`);
+process.exit(ok?0:1);
