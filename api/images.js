@@ -418,6 +418,28 @@ function build(q) {
       transparent:true, quality:"medium",
     };
   }
+  if (kind === "chessworld") {
+    // The scenery BEHIND the chess board. The board is a big square parked in the
+    // middle of the screen, so the centre is deliberately calm and open and all the
+    // detail lives around the edges — same trick as mahjongbg, but wide and hi-def.
+    const CW_STYLE = "Rich high-detail painterly children's storybook scene, smooth polished digital painting, deep layered depth with a soft far background and crisp detail near the edges, warm cinematic lighting, wide landscape composition. The CENTRE of the image is calm, open and uncluttered (a big square in the middle will be covered by a game board) with all of the scenery framing the top, bottom and sides. Absolutely NOT pixel art, no pixelation, no 8-bit, no retro, no dithering. No people, no characters, no animals in the middle, no board, no chess pieces, no grid, no game UI, no text, no words, no letters. Child-friendly ages 4-8";
+    const CW = {
+      jungle: "A lush sunlit rainforest clearing: enormous glossy leaves, hanging vines and bright tropical flowers crowding the edges, tall mossy trees fading into warm green mist, golden dappled sunbeams falling through the canopy, a soft mossy forest floor along the bottom",
+      ocean:  "A bright underwater coral garden: colourful branching coral, sea fans and kelp along the edges, drifting bubbles, soft turquoise water fading to deep blue in the distance, brilliant sunbeams streaming down from the surface, pale rippled sand along the bottom",
+      space:  "A magical deep-space vista: a glowing pastel nebula in violet and teal, scattered twinkling stars, a large softly-lit ringed planet low toward one edge and a small moon toward the other, gentle cosmic dust, calm and wondrous",
+      candy:  "A dreamy candy kingdom: rolling pink and mint cotton-candy hills, giant swirled lollipops, candy-cane trees and glossy gumdrops framing the edges, a chocolate river winding along the bottom, a soft baby-blue sky with fluffy whipped-cream clouds, sprinkles drifting in the air",
+      castle: "A grand fairytale castle courtyard at golden hour: warm carved stone walls, tall banner-hung towers and a stone archway framing the edges, ivy and flowering window boxes, distant rolling green hills and a soft amber sky, a worn flagstone floor along the bottom",
+      desert: "A warm golden desert oasis at late afternoon: sculpted sand dunes, tall saguaro cacti with little flowers and weathered red rock arches framing the edges, a small palm-fringed pool of blue water, a wide peach-and-lavender sky, long soft shadows across rippled sand",
+    };
+    const world = (q.world || "").toString();
+    const subject = CW[world];
+    if (!subject) return null;
+    return {
+      descriptor: `chessworld|${world}|v1`,
+      prompt: `${subject}. ${CW_STYLE}`,
+      transparent: false, quality: "high", size: "1536x1024", format: "webp",
+    };
+  }
   if (kind === "runnerobj") {
     // Shared (theme-neutral) foreground art for the 3D runner: the cars, obstacles
     // and treats. Transparent modern-3D cut-outs rendered as billboards in-scene.
@@ -599,9 +621,13 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
         ? { background: "transparent", output_format: "webp", output_compression: 75 }
         : { background: "transparent", output_format: "png" })
     : (fmt === "webp" ? { output_format: "webp", output_compression: 75 } : {});
+  // Wide scenery (chess worlds) asks for a landscape frame; everything else stays square.
+  const size = opts.size === "1536x1024" ? "1536x1024" : "1024x1024";
   return (
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: q, ...tx })) ||
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", ...tx })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size, quality: q, ...tx })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size, ...tx })) ||
+    (size === "1024x1024" ? null
+      : (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", ...tx }))) ||
     null
   );
 }
@@ -615,7 +641,7 @@ async function bgWarm(key, spec, kind) {
     if (!process.env.OPENAI_API_KEY) return;
     if (!(await underBudget())) return;
     const b64 = await generateImage(spec.prompt, process.env.OPENAI_API_KEY,
-      { transparent: spec.transparent, quality: spec.quality, format: spec.format });
+      { transparent: spec.transparent, quality: spec.quality, format: spec.format, size: spec.size });
     if (!b64) return;
     await cachePut(key, spec.descriptor, (kind || "").toString(), b64);
     const COST = { low: 0.011, medium: 0.042, high: 0.167 };
@@ -676,7 +702,7 @@ export default async function handler(req, res) {
   if (!openaiKey) return res.status(503).json({ error: "no_openai_key" });      // <img onError> -> fallback
   if (!(await underBudget())) return res.status(503).json({ error: "over_budget" });
 
-  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent, quality: spec.quality, format: spec.format });
+  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent, quality: spec.quality, format: spec.format, size: spec.size });
   if (!b64) return res.status(502).json({ error: "image_provider_failed" });
   await cachePut(key, spec.descriptor, (q.kind || "").toString(), b64);
   const COST = { low: 0.011, medium: 0.042, high: 0.167 };
