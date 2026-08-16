@@ -3216,15 +3216,28 @@ function HomeScreen(props) {
     if (chessTurns > 0) {
       return { kind: "chess-turn", title: "Your move in chess", sub: chessTurns + " game" + (chessTurns > 1 ? "s" : "") + " waiting on you", cta: "Play", tint: "#FFF6E9", accent: "#F0972A", grad: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", glyph: <ChessGlyph />, onClick: onChessResume || onChess };
     }
+    // BUG FIX — the card used to draw a CHESS piece on a purple chess gradient
+    // for EVERY friend turn, so "Your move in Tic-Tac-Toe" showed a chess pawn.
+    // The friend game codes are the same ids GAME_CATALOG uses, so look the game
+    // up and show its OWN key art and colour. Unknown code = neutral controller,
+    // never another game's picture.
     if (friendTurns && friendTurns.length) {
       const m = friendTurns[0];
       const t = FRIEND_GAME_TITLES[m.game] || "a game";
-      return { kind: "friend-turn", title: "Your move in " + t, sub: "A friend is waiting on you", cta: "Play", tint: "#FFF6E9", accent: "#F0972A", grad: "linear-gradient(135deg,#5B3FD6,#8B6CFF)", glyph: <ChessGlyph />, onClick: () => onOpenFriendMatch && onOpenFriendMatch(m) };
+      const g = GAME_CATALOG.find((x) => x.id === m.game);
+      return { kind: "friend-turn", title: "Your move in " + t, sub: "A friend is waiting on you", cta: "Play", tint: "#FFF6E9", accent: "#F0972A",
+        grad: g ? "linear-gradient(160deg," + g.color + "," + g.color + "99)" : "linear-gradient(135deg,#5B3FD6,#8B6CFF)",
+        imgId: g ? g.imgId : null, glyph: g ? null : <ControllerGlyph />,
+        onClick: () => onOpenFriendMatch && onOpenFriendMatch(m) };
     }
     if (friendInvites && friendInvites.length) {
       const iv = friendInvites[0];
       const t = FRIEND_GAME_TITLES[iv.game] || "a game";
-      return { kind: "friend-invite", title: (iv.fromName || "A friend") + " wants to play " + t, sub: "Tap to join and play together", cta: "Join", tint: "#EAFBF3", accent: "#34D399", grad: "linear-gradient(135deg,#34D399,#0EA5E9)", glyph: <ControllerGlyph />, onClick: () => onJoinFriendInvite && onJoinFriendInvite(iv) };
+      const g = GAME_CATALOG.find((x) => x.id === iv.game);
+      return { kind: "friend-invite", title: (iv.fromName || "A friend") + " wants to play " + t, sub: "Tap to join and play together", cta: "Join", tint: "#EAFBF3", accent: "#34D399",
+        grad: g ? "linear-gradient(160deg," + g.color + "," + g.color + "99)" : "linear-gradient(135deg,#34D399,#0EA5E9)",
+        imgId: g ? g.imgId : null, glyph: g ? null : <ControllerGlyph />,
+        onClick: () => onJoinFriendInvite && onJoinFriendInvite(iv) };
     }
     if (rtInvite && onJoinInvite) {
       return { kind: "rt-invite", title: rtInvite.hostName + " wants to play " + rtInvite.gameTitle + "!", sub: "Tap to join and play together", cta: "Join", tint: "#EAFBF3", accent: "#34D399", grad: "linear-gradient(135deg,#34D399,#0EA5E9)", glyph: <ControllerGlyph />, onClick: () => onJoinInvite(rtInvite.match) };
@@ -3267,41 +3280,54 @@ function HomeScreen(props) {
   // door and its tab are unmistakably the same section (Home orange keeps a
   // slightly different accent since Home IS the door). Each door carries a
   // LIVE count line pulled from the catalogs above.
+  // NV2 fix — a door is a PICTURE, not a coloured panel with a small glyph. Each
+  // one shows real key art from its own section (the same art the section's own
+  // cards use), with the gradient left underneath as the instant fallback if the
+  // image 404s. Explore borrows the first approved topic-book cover so the art
+  // can never advertise a book that is still in review.
+  const nv2ExploreArt = (EXHIBIT_CATALOG.find((e) => e.status === "approved" && e.template === "topic-book") || {}).heroArt || "";
   const NV2_DOORS = [
-    { id: "play",    label: "Play",     count: nv2LiveGames + " games", color: NAV_TAB_COLORS.play,     grad: "linear-gradient(160deg,#5BC8E4,#2FB7D6)", glyph: <NavPlayGlyph />,     onClick: onGames },
+    { id: "play",    label: "Play",     count: nv2LiveGames + " games", color: NAV_TAB_COLORS.play,     grad: "linear-gradient(160deg,#5BC8E4,#2FB7D6)", art: "/api/images?kind=game&id=breaker", glyph: <NavPlayGlyph />,     onClick: onGames },
     // NV3 — Make + Explore doors now open the dedicated section hubs (matching
     // the bottom-bar tabs), instead of jumping straight to a single studio or
     // exhibit. A kid learns the pattern once and it works everywhere.
-    { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", glyph: <NavMakeGlyph />,     onClick: onMakeHub || onMusic },
-    { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", glyph: <NavExploreGlyph />, onClick: onExploreHub || (() => props.onExplore && props.onExplore("kidspedia")) },
-    { id: "learn",   label: "Learn",    count: lessonsLive ? "Math & reading" : "Coming soon", color: "#8A6BFF", grad: "linear-gradient(160deg,#B197FF,#8A6BFF)", glyph: <SchoolGlyph />, soon: !lessonsLive, onClick: lessonsLive ? onLessons : () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
-    { id: "mystuff", label: "My Stuff", count: (jumpItems.length ? jumpItems.length + " recent" : "Your creations"), color: NAV_TAB_COLORS.me, grad: "linear-gradient(160deg,#9F86FF,#6A4FE0)", glyph: <StuffGlyph />, onClick: onMyStuff },
+    { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", art: "/api/images?kind=make&id=art", glyph: <NavMakeGlyph />,     onClick: onMakeHub || onMusic },
+    { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", art: nv2ExploreArt, glyph: <NavExploreGlyph />, onClick: onExploreHub || (() => props.onExplore && props.onExplore("kidspedia")) },
+    { id: "learn",   label: "Learn",    count: lessonsLive ? "Math & reading" : "Coming soon", color: "#8A6BFF", grad: "linear-gradient(160deg,#B197FF,#8A6BFF)", art: "/api/images?kind=game&id=mathcannon", glyph: <SchoolGlyph />, soon: !lessonsLive, onClick: lessonsLive ? onLessons : () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
+    { id: "mystuff", label: "My Stuff", count: (jumpItems.length ? jumpItems.length + " recent" : "Your creations"), color: NAV_TAB_COLORS.me, grad: "linear-gradient(160deg,#9F86FF,#6A4FE0)", art: "/api/images?kind=make&id=song", glyph: <StuffGlyph />, onClick: onMyStuff },
   ];
 
-  // Door tile: a colored key panel with the section glyph, name and LIVE count
-  // — sits inside a 6-col grid so on phone the first three doors take 2 cols
-  // each (top row) and the last two take 3 cols each (bottom row), and on
-  // tablet/desktop all five sit in one row.
+  // Door tile: the section's own KEY ART fills the tile, a dark veil sits over
+  // the bottom of it, and the name + LIVE count sit on top. The section colour
+  // survives as the gradient underneath (visible while the art loads, and the
+  // permanent look if the art 404s) plus a small tinted glyph chip that ties the
+  // door to its bottom-bar tab. On phone: Play is full width, the other four
+  // pair up two-across. On tablet/desktop all five sit in one row.
   const DoorTile = ({ d }) => (
     <button
       data-nv2-door={d.id}
       data-soon={d.soon ? "1" : "0"}
       onClick={d.onClick}
       style={{
-        gridColumn: phone ? (d.id === "learn" || d.id === "mystuff" ? "span 3" : "span 2") : "span 1",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        gap: 6, padding: phone ? "12px 8px 10px" : "16px 10px 12px",
-        borderRadius: 18, border: "none", background: d.grad, color: "#fff",
-        cursor: "pointer", fontFamily: NUN, textAlign: "center",
-        boxShadow: "0 8px 18px rgba(58,46,77,0.16)", opacity: d.soon ? 0.85 : 1,
-        minHeight: phone ? 96 : 108, position: "relative", overflow: "hidden",
+        gridColumn: phone ? (d.id === "play" ? "span 2" : "span 1") : "span 1",
+        position: "relative", overflow: "hidden", padding: 0, border: "none",
+        borderRadius: 20, background: d.grad, color: "#fff",
+        cursor: "pointer", fontFamily: NUN, textAlign: "left",
+        boxShadow: "0 8px 18px rgba(58,46,77,0.16)", opacity: d.soon ? 0.9 : 1,
+        minHeight: phone ? (d.id === "play" ? 104 : 118) : 124,
       }}
     >
-      <span style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0) 55%)", pointerEvents: "none" }} />
-      <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,0.18)" }}>{d.glyph}</span>
-      <span style={{ position: "relative", fontFamily: FRED, fontWeight: 700, fontSize: phone ? 15 : 16, lineHeight: 1, marginTop: 2 }}>{d.label}</span>
-      <span style={{ position: "relative", fontSize: 11, fontWeight: 700, opacity: 0.92, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{d.count}</span>
-      {d.soon && <span style={{ position: "absolute", top: 6, right: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "2px 6px", borderRadius: 999, background: "rgba(58,46,77,0.68)", color: "#fff" }}>Soon</span>}
+      {d.art && (
+        <img src={d.art} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      )}
+      <span style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.70))", pointerEvents: "none" }} />
+      <span style={{ position: "absolute", top: 8, left: 8, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 10, background: "rgba(255,255,255,0.24)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>{d.glyph}</span>
+      <span style={{ position: "absolute", left: 12, right: 12, bottom: 10 }}>
+        <span style={{ display: "block", fontFamily: FRED, fontWeight: 700, fontSize: phone ? 20 : 21, lineHeight: 1.1, textShadow: "0 2px 8px rgba(0,0,0,0.55)" }}>{d.label}</span>
+        <span style={{ display: "block", fontSize: 11, fontWeight: 800, opacity: 0.95, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 5px rgba(0,0,0,0.5)" }}>{d.count}</span>
+      </span>
+      {d.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 7px", borderRadius: 999, background: "rgba(58,46,77,0.78)", color: "#fff" }}>Soon</span>}
     </button>
   );
 
@@ -3366,30 +3392,29 @@ function HomeScreen(props) {
 
         {/* ---- NV2 C. Five picture doors with LIVE counts. Counts come from
                  the catalogs and respect the soon flag — never hardcoded. ---- */}
-        <div data-nv2-doors style={{ display: "grid", gridTemplateColumns: phone ? "repeat(6, 1fr)" : "repeat(5, 1fr)", gap: 10, marginBottom: 18 }}>
+        <div data-nv2-doors style={{ display: "grid", gridTemplateColumns: phone ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: 10, marginBottom: 18 }}>
           {NV2_DOORS.map((d) => <DoorTile key={d.id} d={d} />)}
         </div>
 
-        {/* ---- NV2 D. Four suggested games. The row overflows the viewport by
-                 design so the fourth card is clipped by the right edge as the
-                 scroll cue — a kid learns to swipe here first. ---- */}
+        {/* ---- NV2 D. Four suggested games in a WRAPPING GRID. This deliberately
+                 does NOT scroll sideways: the whole point of NV is that most kids
+                 stop after 3-4 cards in a swipe row and never reach the rest, so
+                 nothing in the app may require a sideways swipe. The scroll cue
+                 is vertical instead — this block sits low enough that its second
+                 row is cut off by the bottom of the phone screen. ---- */}
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
           <span style={sectionTitle}>For you</span>
           <button onClick={onGames} style={{ background: "none", border: "none", color: NAV_TAB_COLORS.play, fontFamily: NUN, fontWeight: 800, fontSize: 13, cursor: "pointer" }}>See all &rarr;</button>
         </div>
         <div data-nv2-suggested style={{
-          display: "flex", gap: 10, overflowX: "auto", WebkitOverflowScrolling: "touch",
-          scrollSnapType: "x proximity", paddingBottom: 6,
-          // Pull past the right padding so the fourth card is clipped by the
-          // viewport instead of the page container (marginRight in the negative
-          // + a matching paddingRight makes the row bleed cleanly into the edge).
-          marginLeft: 0, marginRight: phone ? -14 : -20, paddingRight: phone ? 8 : 14, marginBottom: 22,
+          display: "grid", gridTemplateColumns: phone ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: 10, marginBottom: 22,
         }}>
           {nv2Suggested.map((g) => (
             <button key={"nv2s_" + g.id} data-nv2-sug={g.id} onClick={() => openCatalogGame(g)} style={{
-              flex: "0 0 auto", width: phone ? 132 : 168, textAlign: "left", padding: 0, borderRadius: 16,
+              width: "100%", textAlign: "left", padding: 0, borderRadius: 16,
               border: HOME_CARD_BORDER, background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
-              overflow: "hidden", boxShadow: HOME_SHADOW, scrollSnapAlign: "start",
+              overflow: "hidden", boxShadow: HOME_SHADOW,
             }}>
               <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "linear-gradient(160deg, " + g.color + ", " + g.color + "99)" }}>
                 {g.imgId && <img src={"/api/images?kind=game&id=" + g.imgId} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
@@ -3589,14 +3614,21 @@ function navInitial(name) { const n = (name || "").trim(); return n ? n[0].toUpp
 const NavHomeGlyph = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L21 11 L21 20 A1 1 0 0 1 20 21 L14.5 21 L14.5 14.5 L9.5 14.5 L9.5 21 L4 21 A1 1 0 0 1 3 20 L3 11 Z" fill="currentColor" /></svg>
 );
+// Play = a GAME CONTROLLER, not a play triangle. Body + d-pad + two buttons in
+// ONE evenodd path, so the cut-outs are holes and "flip to white" stays a single
+// colour swap.
 const NavPlayGlyph = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.6 L20 12 L7 19.4 Z" fill="currentColor" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" /></svg>
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" clipRule="evenodd" fill="currentColor" d="M7.25 7.25 H16.75 A5.375 5.375 0 0 1 16.75 18 H7.25 A5.375 5.375 0 0 1 7.25 7.25 Z M6.85 10.55 H8.75 V11.8 H10 V13.7 H8.75 V14.95 H6.85 V13.7 H5.6 V11.8 H6.85 Z M15.25 11.6 A1.15 1.15 0 1 0 17.55 11.6 A1.15 1.15 0 1 0 15.25 11.6 Z M17.45 13.9 A1.15 1.15 0 1 0 19.75 13.9 A1.15 1.15 0 1 0 17.45 13.9 Z" /></svg>
 );
+// Make = a PAINT PALETTE, not a sparkle. Blob outline with the thumb notch, and
+// four paint wells as evenodd holes.
 const NavMakeGlyph = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L14.4 9.6 L22 12 L14.4 14.4 L12 22 L9.6 14.4 L2 12 L9.6 9.6 Z" fill="currentColor" /></svg>
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" clipRule="evenodd" fill="currentColor" d="M12 2.6c-5.2 0-9.4 4.2-9.4 9.4s4.2 9.4 9.4 9.4c1.1 0 1.9-.8 1.9-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8h2.1c3.1 0 5.6-2.5 5.6-5.6 0-4.6-4.6-7.2-10.4-7.2z M5.7 12.2 A1.5 1.5 0 1 0 8.7 12.2 A1.5 1.5 0 1 0 5.7 12.2 Z M8.1 7.7 A1.5 1.5 0 1 0 11.1 7.7 A1.5 1.5 0 1 0 8.1 7.7 Z M13.1 7.2 A1.5 1.5 0 1 0 16.1 7.2 A1.5 1.5 0 1 0 13.1 7.2 Z M16.5 10.4 A1.4 1.4 0 1 0 19.3 10.4 A1.4 1.4 0 1 0 16.5 10.4 Z" /></svg>
 );
+// Explore = an OPEN BOOK, not a gem. Two page shapes with a gap between them
+// that reads as the spine.
 const NavExploreGlyph = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" clipRule="evenodd" d="M12 2 A10 10 0 1 0 12 22 A10 10 0 1 0 12 2 Z M12 7 L15 12 L12 17 L9 12 Z" fill="currentColor" /></svg>
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.1 6.9C9.4 5.5 7 4.8 4 4.8c-.7 0-1.2.5-1.2 1.2v11.3c0 .7.5 1.2 1.2 1.2 2.9 0 5 .5 6.4 1.5.3.2.7 0 .7-.4z M12.9 6.9c1.7-1.4 4.1-2.1 7.1-2.1.7 0 1.2.5 1.2 1.2v11.3c0 .7-.5 1.2-1.2 1.2-2.9 0-5 .5-6.4 1.5-.3.2-.7 0-.7-.4z" /></svg>
 );
 function BottomBar({ current, activeKid, onHome, onPlay, onMake, onExplore, onMe }) {
   const kidName = activeKid && activeKid.display_name;

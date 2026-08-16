@@ -1,9 +1,10 @@
 // Headless QA for NV2 — the New Home screen. Screen 1 has to fit the whole
 // app on the first phone view: slim header, one big Keep-playing card, five
 // picture doors with LIVE counts (Play 20 games, Make 3 studios, Explore 3
-// labs + 14 books, Learn, My Stuff), and four suggested games deliberately
-// clipped by the right edge as the scroll cue. Counts must come from the
-// catalogs and RESPECT the soon flag — never hardcoded.
+// labs + 14 books, Learn, My Stuff), and four suggested games in a WRAPPING
+// GRID. Counts must come from the catalogs and RESPECT the soon flag — never
+// hardcoded. A "picture door" means real key art fills the tile; a flat colour
+// panel with a small glyph is NOT a picture door and fails here.
 //
 //   node qa-nv2.mjs .
 import fs from 'fs';
@@ -93,6 +94,20 @@ chk('Make door uses NAV_TAB_COLORS.make',       /id:\s*"make"[\s\S]{0,400}NAV_TA
 chk('Explore door uses NAV_TAB_COLORS.explore', /id:\s*"explore"[\s\S]{0,400}NAV_TAB_COLORS\.explore/.test(S));
 chk('My Stuff door uses NAV_TAB_COLORS.me',     /id:\s*"mystuff"[\s\S]{0,400}NAV_TAB_COLORS\.me/.test(S));
 
+// A PICTURE door means real key art fills the tile. An earlier pass shipped flat
+// gradient panels with a small centred glyph, which is what these pin down.
+['play', 'make', 'explore', 'learn', 'mystuff'].forEach((id) => {
+  chk('door "' + id + '" carries real key art (art:)', new RegExp('id:\\s*"' + id + '"[\\s\\S]{0,600}art:\\s*[^,]').test(S));
+});
+chk('DoorTile paints the art as a full-bleed <img>, gradient only as fallback',
+  /DoorTile[\s\S]{0,1600}d\.art\s*&&\s*\([\s\S]{0,300}<img[\s\S]{0,400}objectFit:\s*"cover"/.test(S));
+chk('DoorTile veils the art so the name stays readable',
+  /DoorTile[\s\S]{0,2200}linear-gradient\(180deg,\s*rgba\(0,0,0/.test(S));
+chk('Explore door art comes from an APPROVED book (never an in-review cover)',
+  /nv2ExploreArt\s*=\s*\(EXHIBIT_CATALOG\.find\(\(e\)\s*=>\s*e\.status\s*===\s*"approved"/.test(S));
+chk('doors are NOT flat panels with a centred glyph (no centre-stacked layout)',
+  !/DoorTile[\s\S]{0,900}flexDirection:\s*"column",\s*alignItems:\s*"center",\s*justifyContent:\s*"center"/.test(S));
+
 // -------------------------------------------------------------- 4) Learn door respects the soon gate
 console.log('--- Learn door respects the lessons_live flag (soft-gates until owner flip) ---');
 chk('Learn door count switches on lessonsLive',
@@ -103,24 +118,39 @@ chk('Learn door falls back to the 1111 preview gate when Lessons are NOT live',
   /id:\s*"learn"[\s\S]{0,900}setCatalogGate\(\(\)\s*=>\s*onLessons\)/.test(S));
 
 // -------------------------------------------------------------- 5) Suggested games row
-console.log('--- Suggested games row: exactly 4, live only, most-played first, edge-clipped ---');
+console.log('--- Suggested games row: exactly 4, live only, most-played first, NO sideways scroll ---');
 chk('nv2Suggested filters to live games (type==="game" && !soon)',
   /nv2Suggested[\s\S]{0,600}GAME_CATALOG\.filter\(\(g\)\s*=>\s*g\.type\s*===\s*"game"\s*&&\s*!g\.soon\)/.test(S));
 chk('nv2Suggested trims to at most 4 games',
   /nv2Suggested[\s\S]{0,900}\.slice\(0,\s*4\)/.test(S));
 chk('nv2Suggested sorts most-played first (per-kid stats)',
   /nv2PlayCount\[a\.id\][\s\S]{0,200}nv2PlayCount\[b\.id\][\s\S]{0,80}return\s+pb\s*-\s*pa/.test(S));
-chk('suggested row overflows the right edge on purpose (negative marginRight bleed)',
-  /data-nv2-suggested[\s\S]{0,900}marginRight:\s*phone\s*\?\s*-14\s*:\s*-20/.test(S));
-chk('suggested row scrolls horizontally (overflowX: "auto")',
-  /data-nv2-suggested[\s\S]{0,900}overflowX:\s*"auto"/.test(S));
+// THE NV LAW: nothing on Home may require a sideways swipe. Kids stop after 3-4
+// cards in a horizontal row and never reach the rest — that is the whole bug NV
+// exists to fix. The suggested games WRAP into a grid instead, and the scroll
+// cue is vertical (a row cut off by the bottom of the screen).
+chk('suggested row is a wrapping GRID, not a swipe row',
+  /data-nv2-suggested[\s\S]{0,400}display:\s*"grid"[\s\S]{0,300}gridTemplateColumns/.test(S));
+chk('suggested row NEVER scrolls horizontally (no overflowX)',
+  !/data-nv2-suggested[\s\S]{0,900}overflowX/.test(S));
+chk('suggested row does NOT bleed past the page edge',
+  !/data-nv2-suggested[\s\S]{0,900}marginRight:\s*phone\s*\?\s*-/.test(S));
 
 // -------------------------------------------------------------- 6) Keep-playing priority order
 console.log('--- Keep-playing card: notifications first, then recent, then favourite, then default ---');
 chk('Keep-playing prefers a chess turn first',
   /keepPlaying\s*=[\s\S]{0,1200}chessTurns\s*>\s*0[\s\S]{0,600}kind:\s*"chess-turn"/.test(S));
 chk('Keep-playing then a pending friend turn',
-  /keepPlaying\s*=[\s\S]{0,2200}friendTurns[\s\S]{0,300}kind:\s*"friend-turn"/.test(S));
+  /keepPlaying\s*=[\s\S]{0,2600}friendTurns[\s\S]{0,700}kind:\s*"friend-turn"/.test(S));
+// A friend turn must show THAT GAME's art. It used to hardcode ChessGlyph + the
+// chess purple, so "Your move in Tic-Tac-Toe" drew a chess pawn.
+chk('friend turn looks its game up in GAME_CATALOG (no hardcoded chess art)',
+  /kind:\s*"friend-turn"[\s\S]{0,200}/.test(S) &&
+  /friendTurns\[0\][\s\S]{0,400}GAME_CATALOG\.find\(\(x\)\s*=>\s*x\.id\s*===\s*m\.game\)/.test(S));
+chk('friend invite looks its game up in GAME_CATALOG too',
+  /friendInvites\[0\][\s\S]{0,400}GAME_CATALOG\.find\(\(x\)\s*=>\s*x\.id\s*===\s*iv\.game\)/.test(S));
+chk('no friend-turn/invite branch still hardcodes <ChessGlyph />',
+  !/kind:\s*"friend-(turn|invite)"[\s\S]{0,600}<ChessGlyph/.test(S));
 chk('Keep-playing then a pending friend invite',
   /keepPlaying\s*=[\s\S]{0,3300}friendInvites[\s\S]{0,300}kind:\s*"friend-invite"/.test(S));
 chk('Keep-playing then a real-time (family) invite',

@@ -57,13 +57,24 @@ chk('selected glyph flips white',
 // The word is always under the icon: the tab pill uses flexDirection:"column",
 // icon span first, label span second.
 chk('word always under icon (column layout)', /flexDirection:\s*"column"/.test(S));
-// Set A chunky solid shapes: each nav glyph is one filled path per icon (no
-// emoji anywhere).
-chk('Home glyph is a chunky solid house path', /NavHomeGlyph[\s\S]{0,200}<path[\s\S]{0,120}fill="currentColor"/.test(S));
-chk('Play glyph is a chunky solid triangle path', /NavPlayGlyph[\s\S]{0,240}<path[\s\S]{0,160}fill="currentColor"/.test(S));
-chk('Make glyph is a chunky solid star/spark path', /NavMakeGlyph[\s\S]{0,240}<path[\s\S]{0,160}fill="currentColor"/.test(S));
-chk('Explore glyph is a chunky solid disc-with-cutout (compass) path',
-  /NavExploreGlyph[\s\S]{0,300}fillRule="evenodd"/.test(S));
+// Set A chunky solid shapes, and they are SPECIFIC shapes Mike picked off the
+// mock: a house, a GAME CONTROLLER, a PAINT PALETTE, an OPEN BOOK. An earlier
+// pass shipped a play triangle, a sparkle and a gem because this file only
+// asserted "some filled path" — so each check below pins the actual geometry.
+chk('Home glyph is a chunky solid house path', /NavHomeGlyph[\s\S]{0,200}<path[\s\S]{0,200}fill="currentColor"/.test(S));
+// Controller = pill body + d-pad + 2 round buttons, cut out with evenodd.
+chk('Play glyph is a GAME CONTROLLER, not a play triangle',
+  /NavPlayGlyph[\s\S]{0,700}fillRule="evenodd"[\s\S]{0,700}A5\.375 5\.375/.test(S));
+chk('Play glyph has a d-pad and two button cut-outs',
+  /NavPlayGlyph[\s\S]{0,900}A1\.15 1\.15[\s\S]{0,300}A1\.15 1\.15/.test(S));
+// Palette = blob + thumb notch + four paint wells cut out with evenodd.
+chk('Make glyph is a PAINT PALETTE, not a sparkle',
+  /NavMakeGlyph[\s\S]{0,700}fillRule="evenodd"[\s\S]{0,900}A1\.5 1\.5[\s\S]{0,400}A1\.5 1\.5[\s\S]{0,400}A1\.5 1\.5/.test(S));
+// Open book = TWO page subpaths with a gap between them for the spine.
+chk('Explore glyph is an OPEN BOOK (two page shapes), not a gem',
+  /NavExploreGlyph[\s\S]{0,600}d="M11\.1 6\.9[\s\S]{0,400}M12\.9 6\.9/.test(S));
+chk('Explore glyph is NOT the old disc-with-diamond compass',
+  !/NavExploreGlyph[\s\S]{0,300}A10 10 0 1 0/.test(S));
 
 // Me tab: card mandate — use the kid's own initial + gradient avatar circle,
 // NOT a generic face glyph. If Mike later asks to flip it to a face glyph,
