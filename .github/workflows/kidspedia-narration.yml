@@ -121,8 +121,19 @@ jobs:
                       gh api "repos/$REPO/deployments/$id/statuses?per_page=20" \
                         --jq '.[] | select(.state == "success") | .environment_url // empty' 2>/dev/null
                     done | grep -m1 '^https://' || true)
-              if [ -n "$URL" ] && probe "$URL"; then PICKED="$URL"; break; fi
-              echo "  no reachable deployment yet (attempt $attempt/30)"
+              # Once the deployment for this commit exists, one probe settles it.
+              # Waiting out the full fifteen minutes on a build that is already
+              # up and simply refusing us (Vercel Authentication in front of
+              # previews does exactly that) is fifteen minutes of nothing.
+              if [ -n "$URL" ]; then
+                if probe "$URL"; then
+                  PICKED="$URL"
+                else
+                  echo "::warning::This commit deployed to $URL but it will not answer a plain request — a preview behind Vercel Authentication cannot be used to generate. Falling back to the live site."
+                fi
+                break
+              fi
+              echo "  no deployment for this commit yet (attempt $attempt/30)"
               sleep 30
             done
           fi
@@ -181,6 +192,21 @@ jobs:
             echo "===== pass $pass ====="
             for b in $BOOKS; do
               R=$(curl -sS --max-time 300 "$SITE/api/gen-exhibit-audio?exhibit=$b" || echo '{}')
+              # A rejected or missing ElevenLabs key answers the same way for
+              # every clip in every book. Stop on the first one and say what to
+              # fix, rather than printing the same rejection eighty times.
+              if [ "$(echo "$R" | jq -r '.configured // "-"')" = "false" ]; then
+                echo "::error::$(echo "$R" | jq -r '.error // "ElevenLabs is not configured on this deployment"')"
+                {
+                  echo ""
+                  echo "**Stopped: the site cannot reach ElevenLabs.**"
+                  echo ""
+                  echo "> $(echo "$R" | jq -r '.error // "not configured"')"
+                  echo ""
+                  echo "Nothing was generated and nothing was spent. This is a key in Vercel, not a code change."
+                } >> "$GITHUB_STEP_SUMMARY"
+                exit 1
+              fi
               MADE=$(echo "$R" | jq -r '(.generated // []) | length')
               SKIP=$(echo "$R" | jq -r '(.skipped // []) | length')
               BAD=$(echo "$R"  | jq -r '(.failed // []) | length')

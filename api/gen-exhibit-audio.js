@@ -135,7 +135,22 @@ export default async function handler(req,res){
         headers:{"xi-api-key":elKey,"Content-Type":"application/json","Accept":"audio/mpeg"},
         body:JSON.stringify({text:it.text,model_id:MODEL,voice_settings:{stability:0.45,similarity_boost:0.8,style:0.35,use_speaker_boost:true}}),
       });
-      if(!r.ok){ report.failed.push({item:it.id,status:r.status,detail:(await r.text().catch(()=>"")).slice(0,160)}); continue; }
+      if(!r.ok){
+        const detail=(await r.text().catch(()=>"")).slice(0,160);
+        // A rejected key is not a per-item failure — it is the same answer for
+        // every clip in every book. Say so once, in words the owner can act on,
+        // instead of eighty identical lines that read like eighty problems.
+        // (This is what a whole shelf's narration run looked like before: 400
+        // "API key ID used as API key" x 80, and nothing generated.)
+        if(r.status===401||r.status===403||/authentication_error|invalid_api_key/i.test(detail)){
+          return res.status(503).json({ok:false,configured:false,
+            error:"ElevenLabs rejected ELEVENLABS_API_KEY — no narration can be generated until the key in Vercel is replaced with a working one. Nothing was spent.",
+            status:r.status,detail,item:it.id,
+            generated:report.generated,skipped:report.skipped});
+        }
+        report.failed.push({item:it.id,status:r.status,detail});
+        continue;
+      }
       const b64=Buffer.from(await r.arrayBuffer()).toString("base64");
       await cachePut(key,b64);
       report.generated.push({item:it.id,id:audioId,chars:it.text.length});
