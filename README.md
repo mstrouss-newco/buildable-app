@@ -6,6 +6,32 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Stop parking cards Mike never asked to see (RN4, August 16 2026)
+`scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
+Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16
+(SD4, RN3, FM1) and only FM1 wanted Mike's eyes — the other two were sessions
+over-flagging. Four things changed. **(1)** The autopilot session prompt no
+longer says *"If anything is half-finished, use review instead"* — it now says
+decide-and-log is the DEFAULT and review is ONLY for work that cannot be
+finished (merge conflict you should not force, QA that will not go green,
+missing asset) or a call that is Mike's alone and hard to undo (LOOKS, money,
+kid-facing and irreversible). Mirrored the same wording in `AGENTS.md`.
+**(2) A review note is now mandatory.** `planner.mjs review <id>` refuses
+without a note, and refuses again if the note does not open with the question
+(walks the string until it hits `?`, `.`, `!` or newline — `?` first passes).
+So a card in review now always tells Mike what the decision IS
+(*"Does the farm palette look right?"*), never just *"marked review because
+the mock file wasn't available."* **(3) Split, don't stall.** Prompt +
+AGENTS.md now say: if a multi-item card has some pieces land and one blocked,
+mark it DONE for what landed and open a NEW card for the blocked piece with
+`planner.mjs add`, carrying the branch name and the exact error. RN3 should
+have closed itself and reopened FL9 — that had to be done by hand.
+**(4) Deleted the stale "chain STOPS" paragraph.** RN2 made it untrue —
+review keeps the lane going, only `open` stops the chain. Rewritten to say
+so. No product code touched; QA is three smoke tests on `planner.mjs review`
+(refuse-no-id, refuse-no-note, refuse-no-question) + a `--dry` render of the
+new autopilot prompt. All green. `git status` clean.
+
 ## Farm corner v1 — the field, the crops, and the endless stack (August 15 2026)
 `public/skyflyer-farm.html` (new), `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
 Phase **FM**, card **FM1**. First cut of the farm corner of Sunny Islands:

@@ -12,7 +12,9 @@
 //   node scripts/planner.mjs show LP3             one card in full, with its notes
 //   node scripts/planner.mjs done LP3 "what shipped"     tick it off (note optional)
 //   node scripts/planner.mjs open LP3             untick it
-//   node scripts/planner.mjs review LP3           done, but wants Mike's eyes first
+//   node scripts/planner.mjs review LP3 "Does the palette look right?  context"
+//                                                 wants Mike's eyes. FIRST sentence
+//                                                 must be the question, ending in ?.
 //   node scripts/planner.mjs deployed LP3         mark it live
 //   node scripts/planner.mjs note LP3 "text"      add one session note
 //   node scripts/planner.mjs add LP4 LP "Title" "Body"   new card in phase LP
@@ -46,6 +48,20 @@ async function post(body) {
 function flag(args, key) {
   const i = args.indexOf("--" + key);
   return i === -1 ? null : args[i + 1];
+}
+
+// True if the first sentence of `text` is a question. Walks the string until
+// it hits '?', '.', or newline: '?' first is a pass, anything else is not.
+// Allows "Does X look right?  Then any context." on one line — the point is
+// the question comes FIRST, not that it stands alone.
+function opensWithQuestion(text) {
+  const s = String(text || "").trimStart();
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "?") return true;
+    if (ch === "." || ch === "\n" || ch === "!") return false;
+  }
+  return false;
 }
 
 const MARK = { done: "[x]", review: "[?]", later: "[~]", open: "[ ]" };
@@ -118,10 +134,29 @@ switch (cmd) {
     await post({ op: "card", id: id || die("which card?"), fields: { done: false } });
     console.log("reopened: " + id);
     break;
-  case "review":
-    await post({ op: "card", id: id || die("which card?"), fields: { needsReview: true } });
-    console.log("flagged for review: " + id);
+  case "review": {
+    // A review is the planner asking Mike for a decision. Without a note it
+    // asks him for a decision without saying what the decision IS — which is
+    // how SD4, RN3 and FM1 all landed on his desk with no question attached
+    // on 2026-08-15/16. So: refuse without a note, and require the note to
+    // OPEN with the question ('Does the farm palette look right?'), not a
+    // description of the work.
+    if (!id) die("which card?");
+    const note = args[1];
+    if (!note) {
+      die('review needs a note whose FIRST sentence is the question for Mike.\n' +
+          '  planner review ' + id + ' "Does the farm palette look right?  All four crops shipped."');
+    }
+    if (!opensWithQuestion(note)) {
+      die('review note must OPEN with the question (ending in "?") before any other sentence.\n' +
+          '  you wrote: ' + note.slice(0, 100).replace(/\s+/g, ' ') + (note.length > 100 ? '…' : '') + '\n' +
+          '  try:       "Does the farm palette look right?  All four crops shipped, but the corn looks yellow-ish."');
+    }
+    await post({ op: "note", id, text: note });
+    await post({ op: "card", id, fields: { needsReview: true } });
+    console.log("flagged for review: " + id + " (with question)");
     break;
+  }
   case "deployed": case "live":
     await post({ op: "card", id: id || die("which card?"), fields: { deployed: true } });
     console.log("marked live: " + id);

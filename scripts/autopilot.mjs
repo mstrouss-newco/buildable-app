@@ -152,13 +152,35 @@ When the work is finished, in this order:
   2. Push to main.
   3. Check the live site actually shows it.
   4. node scripts/planner.mjs done ${card.id} "one line on what shipped"
-     If anything is half-finished, use \`review ${card.id}\` instead and say why in a note.
+
+     DECIDE AND LOG IS THE DEFAULT. Use \`review ${card.id}\` ONLY when:
+       - the work cannot be finished (a merge conflict you should not force,
+         QA that will not go green, an asset that does not exist), or
+       - the choice is Mike's alone and hard to undo (how something LOOKS,
+         money, anything kid-facing and irreversible).
+     A judgement call you made and can explain is NOT a review: make it, do
+     it, and write it under 'Calls I made for you' in AUTOPILOT-REPORT.md.
+
+     SPLIT, DON'T STALL. If this card has several items and some landed but
+     one is blocked, mark ${card.id} DONE for what landed and open a NEW card
+     for the blocked piece with \`planner.mjs add\` — carry the branch name
+     and the exact error in the body. Do not park the whole card because one
+     piece stuck.
+
+     REVIEW NEEDS A QUESTION. \`planner.mjs review\` will refuse without a
+     note, and the note MUST open with the question in one line
+     ('Does the farm palette look right?'), not a description of the work.
+       node scripts/planner.mjs review ${card.id} "Question ending in a ?  Then any context."
+
   5. node scripts/planner.mjs deployed ${card.id}   (only after step 3)
   6. Dated entries in SESSION-LOG.md and README.md, per AGENTS.md.
 
-A runner is watching the planner. If card ${card.id} is not marked done when you exit,
-the chain STOPS. That is the correct outcome for unfinished work. Do NOT mark it done
-to keep the chain moving — a false green here poisons every card built on top of it.`;
+A runner is watching the planner. Both \`done\` and \`review\` let the lane
+carry on — \`done\` ships, \`review\` logs a specific question for Mike and
+the runner moves to the next card. The chain only stops if the card is left
+'open' (a real error). Do NOT mark done to fake a green — a false green here
+poisons every card built on top of it. Do NOT hide behind review when the
+call was yours to make.`;
 }
 
 // BILLING. Claude Code prefers ANTHROPIC_API_KEY over a Claude subscription login,

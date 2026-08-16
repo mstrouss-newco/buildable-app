@@ -229,13 +229,24 @@ no jargon.
   node scripts/planner.mjs reword LP3 --desc "..."   # the work proved the wording wrong
   ```
 
-  Rules: only tick `done` when the work is **pushed to main and QA is green**. If
-  anything is half-finished, use `review` instead and say why in a note. Only set
-  `deployed` once you have checked the live site, never on the strength of a push.
-  Notes are for what a future session would need, one or two lines, not essays. If the
-  work invalidated the wording of a *later* card, reword it directly and list what you
-  changed in your recap. Never post `op:'meta'` to rebuild the roadmap blob by hand:
-  that is how 107 cards get wiped. The card ops exist so the server does it safely.
+  Rules: only tick `done` when the work is **pushed to main and QA is green**. Decide
+  and log is the DEFAULT — use `review` ONLY when the work cannot be finished (a merge
+  conflict you should not force, QA that will not go green, an asset that does not
+  exist) or when the choice is Mike's alone and hard to undo (how something LOOKS,
+  money, anything kid-facing and irreversible). A judgement call you made and can
+  explain is NOT a review: make it, do it, and write it under 'Calls I made for you'
+  in `AUTOPILOT-REPORT.md`. If a multi-item card had some pieces land and one blocked,
+  mark it `done` for what landed and `add` a NEW card for the blocked piece — carry
+  the branch name and the error in the body. Do not park the whole card because one
+  piece stuck. `planner.mjs review` will refuse without a note, and the note MUST open
+  with the question in one line ('Does the farm palette look right?'), not a
+  description of the work — the planner asks Mike for a decision and needs to say
+  what the decision is. Only set `deployed` once you have checked the live site,
+  never on the strength of a push. Notes are for what a future session would need,
+  one or two lines, not essays. If the work invalidated the wording of a *later*
+  card, reword it directly and list what you changed in your recap. Never post
+  `op:'meta'` to rebuild the roadmap blob by hand: that is how 107 cards get wiped.
+  The card ops exist so the server does it safely.
 - **One card, one session.** The owner taps **Run this phase** in `/planner`; a runner left
   open with `npm run cards -- --watch` (`scripts/autopilot.mjs`) picks it up and works that
   phase by starting a **brand new** session per card, reading the planner between them to

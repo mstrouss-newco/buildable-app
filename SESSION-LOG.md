@@ -1,5 +1,46 @@
 # Buildable Kids — Session Log
 
+## 2026-08-16 (RN4): Stop parking cards Mike never asked to see
+
+**Phase RN, card RN4.** SD4, RN3 and FM1 all landed on Mike's desk as `review` on
+2026-08-15/16, and only FM1 was a real review — the other two were sessions being
+too cautious. Four things changed:
+
+- **Narrowed the review rule in `scripts/autopilot.mjs`.** The session prompt used
+  to say *"If anything is half-finished, use review instead"* — far too wide. It
+  now says decide-and-log is the DEFAULT and review is ONLY for work that cannot
+  be finished (merge conflict you should not force, QA that will not go green,
+  missing asset) or a call that is Mike's alone and hard to undo (how something
+  LOOKS, money, kid-facing and irreversible). A judgement call the session made
+  and can explain is not a review.
+- **A review note is now mandatory.** `node scripts/planner.mjs review <id>`
+  refuses without a note (exit 1), and refuses again if the note does not OPEN
+  with the question. First non-space characters must lead to a `?` before any
+  `.`, `!` or newline. The planner-page rendering already surfaces the first
+  note under the card, so a review now always reads as *"Does the farm palette
+  look right?"* and never as *"Marked review because the mock file wasn't
+  available."* Smoke-tested all three refusal branches on `RN4`.
+- **Split, don't stall.** Both the autopilot prompt and `AGENTS.md` now spell
+  out: if a multi-item card has some pieces land and one blocked, mark it DONE
+  for what landed and open a NEW card for the blocked piece with
+  `planner.mjs add`, carrying the branch name and the exact error. RN3 should
+  have closed itself and reopened FL9 — that had to be done by hand.
+- **Deleted the stale "chain STOPS" paragraph.** The autopilot prompt used to
+  end with *"If card X is not marked done when you exit, the chain STOPS."* RN2
+  made that untrue (review keeps the lane going, only `open` stops it), and it
+  is the sentence that scared sessions into over-flagging. Rewritten to say
+  both `done` and `review` let the lane carry on, and only a real error (card
+  still `open`) stops the chain.
+
+Files touched: `scripts/autopilot.mjs` (buildPrompt + trailing paragraph),
+`scripts/planner.mjs` (new `opensWithQuestion` helper + review command),
+`AGENTS.md` (~line 233 rules block), `AUTOPILOT.md` (verification gate blockquote).
+No product code touched, no game QA to run; the QA for this card is the three
+smoke tests on `planner.mjs review` + the `--dry` render of the new autopilot
+prompt (both green). "Live" for a runner-config change is the next chained
+session picking up the new prompt from `main` — which the runner reads on
+`--watch` poll, so this ships the moment the commit is on `origin/main`.
+
 ## 2026-08-15 (RN3): Three of the four stranded cards landed; FL9 needs a human
 
 **Phase RN, card RN3.** RN1 built the gate that catches false greens; this card was

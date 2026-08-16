@@ -65,11 +65,24 @@ times card one. A fresh session starts empty. The cost is re-reading `AGENTS.md`
 repo each time, roughly 15-30k tokens, so this is a win from about the third card on.
 
 **The verification gate is the planner, not your own summary.** The runner believes
-`state === "done"` on the card and nothing else. Which means:
+`state === "done"` on the card and nothing else. `review` is its own outcome — the
+lane still carries on (see RN2), the runner just logs that Mike owes an answer on
+that specific card. Which means:
 
-> **Never tick a card done to keep the chain moving.** If the work is half-finished, use
-> `review` and say why in a note. The chain stopping is the correct outcome. A false green
-> here quietly poisons every card built on top of it.
+> **Never tick a card done to fake a green.** But also **do not hide behind `review`
+> when the call was yours to make.** `review` is for work that cannot be finished
+> (merge conflict you should not force, QA that will not go green, missing asset) or
+> a decision that is Mike's alone and hard to undo (how something LOOKS, money,
+> anything kid-facing and irreversible). Everything else: decide, do, log under
+> 'Calls I made for you', tick `done`. If a multi-item card had some pieces land
+> and one blocked, mark it `done` for what landed and open a NEW card for the
+> blocked piece (`planner.mjs add`) — carry the branch name and the error. Do not
+> park the whole card because one piece stuck (RN3 is why).
+>
+> `planner.mjs review` will refuse without a note, and the note MUST open with the
+> question in one line ('Does the farm palette look right?'), not a description of
+> the work. The planner is asking Mike for a decision; it needs to say what the
+> decision is.
 
 Default ceiling is **four cards** per run (`--max`). Keep it there until this has a few
 clean runs behind it.
