@@ -6,6 +6,58 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Read-aloud narration: the plumbing is finished, the key is not (RP7, August 16 2026)
+
+Phase **RP**, card **RP7.** Every fact card in the twenty Kidspedia books leads
+with a speaker button. Tapping one should play a warm human voice. This session
+built everything needed for that and then found the one thing it could not fix.
+
+**What changed in the product.** The narration plumbing only ever knew about one
+clip per page, from before RP1 gave every fact card its own speaker — so two of
+every three buttons were guaranteed to fall back to the browser voice however
+much audio existed. `api/gen-exhibit-audio.js` now walks every fact on a page,
+and `public/topic.html` asks for the matching clip on any card. Ids hang off the
+page's existing `factAudio` id (`penguins-chick`, then `penguins-chick-2`,
+`penguins-chick-3`), so no book json changed and nothing already generated was
+orphaned. The browser-voice fallback now speaks the page title on the FIRST card
+only, matching how the clips are cut, so the narrator and the fallback can never
+tell a kid two different things. **80 narratable pages became 239 narratable
+fact cards.**
+
+**A way to actually run it.** New `.github/workflows/kidspedia-narration.yml`.
+Generation has to happen somewhere that can reach the deployed site AND has the
+ElevenLabs key — which is the deployment itself — so the Action makes plain GET
+requests and the site reads its own env; no key is handled anywhere. It reads
+the book list from `bookshelf.json`, prints a no-cost dry pass with the exact
+character spend before buying anything, and goes green only after fetching every
+expected clip from `/api/explore-audio`. That last check is deliberately
+independent of the generator: asking the generator "anything left?" would let an
+older deployment answer "nothing to do" while two thirds of the buttons were
+still silent.
+
+**What it found: the ElevenLabs key in Vercel is not a key.** Every one of the
+80 calls came back `400 authentication_error / invalid_api_key — "API key ID
+used as API key"`. `ELEVENLABS_API_KEY` holds an API key's *ID*, not the secret.
+**No audio was generated and nothing was spent.** `usage_log` shows no
+successful ElevenLabs call since 2026-07-29, so anything that generates fresh
+audio — narration, chess voice-over, sound effects, per-world music — has been
+failing quietly for weeks; already-cached audio still plays, which is why
+nothing looked broken. Replacing that value in Vercel is a dashboard step only
+the owner can do.
+
+The generator and the Action now say this once, in plain words, instead of
+eighty times: a rejected key aborts the whole run with a 503 explaining that
+nothing was spent.
+
+**Also found:** Vercel previews are behind deployment protection (a preview of
+this branch answered `302` to the SSO login), so narration cannot be generated
+against a branch build — it has to run against whatever is on `main`.
+
+QA: `qa-topic.mjs`, `qa-kidspedia.mjs`, `qa-explore.mjs`, `qa-dive.mjs` — all
+green. `qa-topic.mjs` gained checks that tap every speaker on a page and assert
+both the clip id requested and the words the fallback speaks, plus a cross-file
+check that the generator still writes the ids the template asks for.
+
 ## Stop parking cards Mike never asked to see (RN4, August 16 2026)
 `scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
 Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16

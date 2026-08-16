@@ -1,5 +1,103 @@
 # Buildable Kids — Session Log
 
+## 2026-08-16 (RP7): Read-aloud narration — everything built, blocked on the key
+
+**Phase RP, card RP7.** The card: every fact card leads with a speaker button but
+still falls back to the robotic browser voice; generate real narration for all 20
+books. The plumbing is now finished and provable. The audio does not exist,
+because the ElevenLabs key in Vercel is not a valid key.
+
+### The bug the card assumed away
+The card says "the factAudio ids already exist in every book", and they do — one
+per page. But RP1 gave **every fact card** its own speaker button, and each page
+carries three facts. The narration path only ever played a clip for a page's
+first fact; the other two were hardcoded to the browser voice. Generating audio
+against the old plumbing would have left **two of every three speaker buttons
+robotic** and looked, from the outside, like the money had been spent for
+nothing. So the plumbing was widened first.
+
+- `api/gen-exhibit-audio.js` walks every fact on a page instead of `facts[0]`.
+- Ids extend the id each book already carries: `penguins-chick`, then
+  `penguins-chick-2`, `penguins-chick-3`. **No book json changed**, and the 39
+  clips that already exist for the older exhibits are untouched.
+- `public/topic.html` asks `/api/explore-audio` for that id on any fact card.
+- The browser-voice fallback now prefixes the page title on the **first** card
+  only — which is exactly how the clips are cut. Before, a clip and its fallback
+  would have said different things on cards 2 and 3.
+- **80 narratable pages → 239 narratable fact cards.**
+
+### A way to run it that leaves a record
+New `.github/workflows/kidspedia-narration.yml`. Generation needs a place that
+can reach the deployed site and has the ElevenLabs key, which is the deployment
+itself — so the Action only makes plain GET requests and the site reads its own
+env. **No key is handled anywhere, and no new secret or repo variable is needed.**
+It reads the shelf from `bookshelf.json`; runs a free dry pass that prints the
+per-book counts and the exact character spend into the run summary before buying
+anything; generates in two passes so a function cut short keeps what it made; and
+goes green **only** after fetching all 239 expected clips from
+`/api/explore-audio`. That verification deliberately does not ask the generator
+"is there anything left" — an older deployment would answer "nothing to do" while
+two thirds of the buttons were still silent.
+
+### What the run found — and this is the blocker
+Every call: `400 authentication_error / invalid_api_key`, message *"API key ID
+used as API key — only valid API keys can be used"*. `ELEVENLABS_API_KEY` in
+Vercel holds an API key's **ID**, not the key itself.
+
+- **Nothing was generated. Nothing was spent.** All 80 attempts failed before any
+  audio was made.
+- `usage_log` has no successful ElevenLabs call since **2026-07-29**. So this is
+  not narration-specific: chess voice-over, `/api/sfx`, per-world music and story
+  ambience all generate through the same key and have been failing quietly for
+  weeks. Nothing *looks* broken because everything already cached still plays.
+- Fixing it means pasting a real key into Vercel — a dashboard step with a
+  secret, which a session must not do.
+
+The failure now explains itself: the generator treats a rejected key as fatal for
+the whole run and returns a 503 saying the key needs replacing and that nothing
+was spent; the Action stops on the first book instead of walking the other 19,
+and puts the reason in the run summary. A full shelf run went from four minutes
+of eighty identical rejections to fifteen seconds and one sentence.
+
+### Second finding: previews cannot be generated against
+Vercel deployment protection sits in front of preview builds — the preview of
+this branch answered `302` (the SSO login) to a plain request. So narration can
+only be generated against whatever is on `main`. Running it today against `main`
+would have produced 80 page-level clips, not 239, because `main` does not have
+this session's generator yet. The Action names this in a warning rather than
+quietly producing a partial result.
+
+### To finish RP7 (in order)
+1. Put a working ElevenLabs key in `ELEVENLABS_API_KEY` in Vercel (starts `sk_`,
+   not the key's ID).
+2. Merge this branch to `main` so the deployed generator narrates every fact
+   card, not just the first.
+3. Run the **Kidspedia narration** workflow from the Actions tab with every input
+   blank. Expect ~239 clips and roughly $1.70. It is skip-if-present, so a
+   re-run after a partial one is free.
+4. It goes green only when all 239 answer. Then flip RP7 `deployed` after
+   listening to one on a phone.
+
+### QA
+`qa-topic.mjs` ALL CHECKS PASS (10 warnings, all pre-existing pending-art),
+`qa-kidspedia.mjs` ALL CHECKS PASS, `qa-explore.mjs` ALL CHECKS PASS,
+`qa-dive.mjs` ALL CHECKS PASS. `qa-topic.mjs` gained: every speaker on a page is
+tapped and both the clip id requested and the fallback wording are asserted; a
+cross-file check that the generator writes the ids the template asks for; a check
+that its per-run cap clears the biggest book; and a failure if an approved book
+has a page with no `factAudio` id. The new checks were negative-tested — reverting
+the template to first-fact-only makes them fail.
+
+### What remains in phase RP
+RP1-RP6 and RP8 are done. **RP7 is the last card**, and it is one key away. The
+phase's own "done when" also wants Mike to have flipped the six `in-review` books
+(deep-ocean, planets, rockets, snakes-reptiles, volcanoes, wild-weather) live —
+that is unchanged by this session and is still only Mike's to do.
+
+Files: `api/gen-exhibit-audio.js`, `public/topic.html`, `qa-topic.mjs`,
+`.github/workflows/kidspedia-narration.yml`, `README.md`, `SESSION-LOG.md`,
+`AUTOPILOT-REPORT.md`. Branch `claude/rp7-narration-audio-sdxo2g`.
+
 ## 2026-08-16 (FL9 re-land): two fixes for one bug, resolved into one
 
 **Phase FL, card FL9.** FL9 was reopened because RN3 aborted its merge on a
@@ -64,6 +162,7 @@ harness, not a bug kids can hit: `qa-maze.mjs` line 7 builds its sandbox from a
 hardcoded `libs` list that omits `buildable-wincard.js`, even though
 `maze-engine.html` loads it normally at line 82. The live win screen is fine.
 Left alone (not this card) and carried into the planner as its own card.
+
 ## 2026-08-16 (NV5): the three things NV shipped that Mike never picked
 
 Mike opened the new Home and said "this didnt do any of the things we chose."
