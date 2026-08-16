@@ -77,6 +77,37 @@ the state RN4 exists to prevent.
   `FAIL flight proof ran (needs jsdom)` — a real FAIL line that reads like a code
   regression. `npm i jsdom` first, or the autopilot half of that harness does not run.
 
+## 2026-08-16 (FL9): Sky Flyer HUD clears the shell nav band on mobile
+
+**Phase FL, card FL9.** Fresh, targeted fix directly on main (the earlier
+`claude/nav-hud-overlap-mobile-hd7qte` branch RN3 tried to merge is now
+superseded — that one wanted new files, a shared library edit and a rules doc;
+this one is one file of engine CSS + a body-class flag). Diagnosis: the shell
+draws its own Home top-left and a Sound/Help stack top-right (both at 14/14,
+buttons 38×38 in `NavBtn`) OUTSIDE the game iframe. Sky Flyer's own coin `.pill`
+was pinned at `top:12, right:14` and `#minimap` at `top:62, right:14`, so on a
+phone the shell buttons sat directly on top of the coin count and the map.
+
+Fix: `public/skyflyer-engine.html` now tags `<html>` with a `bk-in-shell` class
+whenever `window.parent !== window`, and three CSS overrides drop the top-right
+HUD stack by 48px in-shell:
+- `.pill`     `top:12 → 60`  (clears the shell's Sound button)
+- `#minimap`  `top:62 → 110` (clears both Sound and Help)
+- `#banked`   `top:174 → 222` (rhythm preserved under the shifted map)
+
+Standalone at `/skyflyer-engine.html` is unchanged — no shell, no shift. Cache-bust
+on both engine links in `src/BuildableKids.jsx` bumped `v=fm1 → v=fl9` and the
+`vercel.json` route on `/skyflyer-engine.html` already carries `no-cache`, so a
+mobile browser cannot serve the old top-right layout.
+
+`qa-skyflyer.mjs` gained a new **FL9 block** (5 checks) and the FM1 cache-bust
+pin now follows to `v=fl9`. Full skyflyer QA still green. Marked **done**;
+`deployed` NOT set — this session can only get natural-language summaries of
+the live page (not raw inline CSS/JS), so Mike wants a phone eyeball before the
+flag flips. **Try it: open `/demo` on your phone → Sky Flyer → the coin count
+and map should sit below (not under) the top-right icons.** Then
+`node scripts/planner.mjs deployed FL9`.
+
 ## 2026-08-15 (RN3): Three of the four stranded cards landed; FL9 needs a human
 
 **Phase RN, card RN3.** RN1 built the gate that catches false greens; this card was
