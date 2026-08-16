@@ -195,13 +195,23 @@ jobs:
               # A rejected or missing ElevenLabs key answers the same way for
               # every clip in every book. Stop on the first one and say what to
               # fix, rather than printing the same rejection eighty times.
-              if [ "$(echo "$R" | jq -r '.configured // "-"')" = "false" ]; then
-                echo "::error::$(echo "$R" | jq -r '.error // "ElevenLabs is not configured on this deployment"')"
+              #
+              # Two shapes, because the deployment may be running an older
+              # generator: the current one calls the whole run off with
+              # configured:false, an older one just files the rejection under
+              # every item it tried.
+              AUTHFAIL=$(echo "$R" | jq -r '
+                if (.configured == false) then (.error // "ElevenLabs is not configured on this deployment")
+                elif ((.failed // []) | map(.detail // "") | join(" ") | test("authentication_error|invalid_api_key"; "i"))
+                  then "ElevenLabs rejected the key on this deployment: " + ((.failed // [])[0].detail // "")
+                else "" end')
+              if [ -n "$AUTHFAIL" ]; then
+                echo "::error::$AUTHFAIL"
                 {
                   echo ""
                   echo "**Stopped: the site cannot reach ElevenLabs.**"
                   echo ""
-                  echo "> $(echo "$R" | jq -r '.error // "not configured"')"
+                  echo "> $AUTHFAIL"
                   echo ""
                   echo "Nothing was generated and nothing was spent. This is a key in Vercel, not a code change."
                 } >> "$GITHUB_STEP_SUMMARY"
