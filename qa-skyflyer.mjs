@@ -1454,7 +1454,7 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   console.log('--- FL4 LIVE: manifest colours, music slot, buddy, learning gate ---');
   {
     const d4 = fly(0); const w4 = d4.window;
-    chk('engine reports itself as FL8c', w4.SKY.version === 'FL8c', w4.SKY.version);
+    chk('engine reports itself as FL9', w4.SKY.version === 'FL9', w4.SKY.version);
     const before = w4.SKY.paletteNow();
     const applied = w4.SKY.applyManifest(manifest);
     const after = w4.SKY.paletteNow();
@@ -2395,229 +2395,31 @@ chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.j
   (function(){
     const jsx = read('src/BuildableKids.jsx');
     const hits = jsx.match(/skyflyer-engine\.html\?v=fm2/g) || [];
-    return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fl9|fl13)/.test(jsx);
+    return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fl9|fl9b|fl13|fl8c)\b/.test(jsx);
   })());
 
-// ==========================================================================
-//  FM2 — THE ANIMALS AND THE FEEDING (public/skyflyer-farm.html).
-//
-//  Chickens and a cow east of FM1's field, fed by walking past carrying the
-//  right crop. STATIC checks only, in the same spirit as the FM1 block above:
-//  the farm scene needs a real WebGL context to run, which jsdom does not
-//  provide. The live half of this card was proved with a headless Chromium
-//  play-through (26 checks: feed, wait, produce, pickup, wrong-crop, no fail
-//  state) and by rendering every model on the ?zoo=1 stand — both recorded in
-//  SESSION-LOG.md for 2026-08-16.
-// ==========================================================================
-console.log('\n--- FM2 STATIC: the animals, and feeding off the stack ---');
+// 
 
-chk('FM2: the chicken is a REAL model cut from the animal library, not drawn',
-  fs.existsSync(dir+'/public/models/skyflyer/animals/farm-animals.glb') &&
-  /ANM_URL\s*=\s*"\/models\/skyflyer\/animals\/farm-animals\.glb"/.test(farm));
-chk('FM2: that cut is small enough to ship (a game must never carry the whole library)',
-  (function(){
-    const st = fs.statSync(dir+'/public/models/skyflyer/animals/farm-animals.glb');
-    return st.size > 1000 && st.size < 400*1024;
-  })(),
-  Math.round(fs.statSync(dir+'/public/models/skyflyer/animals/farm-animals.glb').size/1024)+'KB');
-chk('FM2: the cut carries COLOR_0 and no texture — drop it and every animal renders BLACK',
-  (function(){
-    const d = fs.readFileSync(dir+'/public/models/skyflyer/animals/farm-animals.glb');
-    let off = 12, json = null;
-    while(off < d.length){
-      const len = d.readUInt32LE(off), type = d.readUInt32LE(off+4);
-      if(type === 0x4e4f534a) json = JSON.parse(d.subarray(off+8, off+8+len).toString('utf8'));
-      off += 8 + len + ((4-(len%4))%4);
-    }
-    if(!json) return false;
-    const attrs = new Set();
-    (json.meshes||[]).forEach(m => m.primitives.forEach(p => Object.keys(p.attributes).forEach(a => attrs.add(a))));
-    return attrs.has('COLOR_0') && (json.images||[]).length === 0 &&
-           (json.nodes||[]).some(n => n.name === 'Chicken');
-  })());
-chk('FM2: the in-page merge copies COLOR_0 through (the whole reason these are not black)',
-  /function anmMerge\(root\)/.test(farm) &&
-  /if\(ca\) col\.push\(ca\.getX\(i\),ca\.getY\(i\),ca\.getZ\(i\)\)/.test(farm));
-chk('FM2: models are sized by their LONGEST dimension, never by height',
-  /span\s*=\s*Math\.max\(h, box\.max\.x-box\.min\.x, box\.max\.z-box\.min\.z\)/.test(farm) &&
-  /c\.scale\.setScalar\(size\/p\.userData\.span\)/.test(farm));
-chk('FM2: a missing glb falls back to a drawn hen — a library miss never empties the coop',
-  /function buildChickenFallback\(\)/.test(farm) &&
-  /ANM_ON\s*\?\s*anmGet\("Chicken"/.test(farm));
-
-// ---- the cow: the three things that stop it reading as a pig
-chk('FM2: the cow is hand-built in the AR1P style (the library cut carries no cow)',
-  /function buildCow\(\)/.test(farm));
-chk('FM2: the cow carries its head UP ON A NECK, clear of the shoulder line',
-  (function(){
-    const cow = farm.slice(farm.indexOf('function buildCow()'), farm.indexOf('FM2 — THE WALK CYCLE'));
-    // a neck tube tilted forward, and a skull sitting ABOVE the body barrel
-    const neck = /hbTube\([\d.]+,[\d.]+,[\d.]+,HIDE,\{r:\[0\.\d+,0,0\]/.test(cow);
-    const bodyY = parseFloat((cow.match(/hbBall\(1\.0,HIDE,\{s:\[[\d.,]+\], p:\[0,([\d.]+),0\]/)||[])[1]);
-    const skullY = parseFloat((cow.match(/hbBall\(0\.46,HIDE,\{s:\[[\d.,]+\], p:\[0,([\d.]+),[\d.]+\]/)||[])[1]);
-    return neck && bodyY > 0 && skullY > bodyY + 0.8;
-  })());
-chk('FM2: the cow has HORNS',
-  /hbCone\([\d.]+,[\d.]+,HORN,/.test(farm) &&
-  (farm.match(/hbCone\([\d.]+,[\d.]+,HORN,/g)||[]).length >= 4);
-chk('FM2: the cow has SURFACE SPOTS, flattened onto the hide rather than floating beside it',
-  (function(){
-    const cow = farm.slice(farm.indexOf('function buildCow()'), farm.indexOf('FM2 — THE WALK CYCLE'));
-    return /function flank\(x,y,z,ry,rz\)/.test(cow) &&
-           (cow.match(/hbBall\(1\.0,DARK,/g)||[]).length >= 3 &&
-           /flank\(/.test(cow);
-  })());
-chk('FM2: and the rest of the cow read — pink muzzle, udder, tufted tail, hooves',
-  /PINK/.test(farm) && /HOOF/.test(farm) &&
-  /hbBall\(0\.135,DARK,\{s:\[0\.8,1\.3,0\.8\]/.test(farm));
-
-// ---- the walk cycle, borrowed from AR1Q
-chk('FM2: the walk cycle is the AR1Q rig — vertices banded once, bands pushed each frame',
-  /function rigBands\(mesh\)/.test(farm) &&
-  /band\[i\]=\(z>midZ\)\?\(x<0\?1:2\):\(x<0\?3:4\)/.test(farm) &&
-  /function stepPuppets\(t\)/.test(farm));
-chk('FM2: a puppeted animal gets its OWN geometry, or every hen walks in lockstep',
-  /mesh\.geometry=mesh\.geometry\.clone\(\)/.test(farm));
-chk('FM2: gaits exist for a strutting hen, a settled hen and a standing cow',
-  /strut:function\(R,t,pa,i,b,x,y,z\)/.test(farm) &&
-  /nest:function\(R,t,pa,i,b,x,y,z\)/.test(farm) &&
-  /graze:function\(R,t,pa,i,b,x,y,z\)/.test(farm));
-
-// ---- the cast
-chk('FM2: three hens settle on nests and one walks a patrol loop',
-  (function(){
-    const yard = farm.slice(farm.indexOf('function buildFarmyard()'));
-    const nests = (yard.match(/\[COOP_C\.x[^\]]*\]/g)||[]).length;
-    return nests >= 3 && /addAnimal\("chicken"[\s\S]{0,200}?patrol:\{/.test(yard) &&
-           /hen\.nested=true/.test(yard);
-  })());
-chk('FM2: exactly one cow',
-  (farm.match(/addAnimal\("cow"/g)||[]).length === 1);
-chk('FM2: chickens want corn and give eggs, the cow wants wheat and gives milk',
-  /chicken:\s*\{\s*\n?\s*wants:"corn", gives:"egg"/.test(farm) &&
-  /cow:\s*\{\s*\n?\s*wants:"wheat", gives:"milk"/.test(farm));
-
-// ---- the coop yard, hand-built because the kits in the repo carry none of it
-chk('FM2: coop, nest, trough and hay bale are all hand-built in the AR1P style',
-  /function buildCoop\(\)/.test(farm) && /function buildNest\(\)/.test(farm) &&
-  /function buildTrough\(\)/.test(farm) && /function buildHayBale\(\)/.test(farm));
-chk('FM2: the pens reuse the SAME fence FM1 built, and always leave a way in',
-  /function buildPen\(cx,cz,halfX,halfZ,gapSide\)/.test(farm) &&
-  /buildFencePost\(\)/.test(farm) && /buildFenceRail\(/.test(farm) &&
-  (farm.match(/buildPen\([^)]*"[NSEW]"\)/g)||[]).length >= 2);
-
-// ---- THE FEEDING: no menus, no reading
-chk('FM2: a hungry animal floats a real 3D model of what it wants — no words, no menu',
-  /function showWant\(A\)/.test(farm) &&
-  /var r=ITEM\(A\.wants\)/.test(farm) &&
-  /hbBake\(r\.parts\(/.test(farm.slice(farm.indexOf('function showWant'))));
-chk('FM2: feeding is triggered by WALKING PAST, never by a tap or a menu',
-  (function(){
-    const feed = farm.slice(farm.indexOf('if(A.state==="hungry")'), farm.indexOf('if(A.state==="feeding")'));
-    return /Math\.hypot\(kid\.position\.x-A\.x, kid\.position\.z-A\.z\)/.test(feed) &&
-           /d<FEED_R/.test(feed) && /flyOffStack\(A\.wants, A\)/.test(feed) &&
-           !/addEventListener|onclick|\.click\(/.test(feed);
-  })());
-chk('FM2: the item FLIES OFF THE STACK on an arc, and it is the topmost match',
-  /function flyOffStack\(kind, A\)/.test(farm) &&
-  /for\(i=stack\.length-1;i>=0;i--\)/.test(farm) &&
-  /Math\.sin\(u\*Math\.PI\)\*1\.15/.test(farm));
-chk('FM2: taking an item out of the stack renumbers the whip-lag above it',
-  /function reindexStack\(\)/.test(farm) &&
-  /stack\[i\]\.userData\.tOffset=STACK_LAG_PER\*i/.test(farm) &&
-  /reindexStack\(\);/.test(farm.slice(farm.indexOf('function flyOffStack'))));
-chk('FM2: only the RIGHT item is ever taken (a carrot past a cow does nothing)',
-  /if\(stack\[i\]\.userData\.kind===kind\)/.test(farm) &&
-  /for\(s=0;s<stack\.length;s\+\+\) if\(stack\[s\]\.userData\.kind===A\.wants\)/.test(farm));
-
-// ---- the payoff
-chk('FM2: eggs and milk are recipes shaped exactly like a crop (FL5b: one source of art)',
-  /PRODUCE_RECIPES\s*=\s*\{/.test(farm) &&
-  /egg:\s*\{[\s\S]*?parts:function\(s\)[\s\S]*?svg:function\(size\)/.test(farm) &&
-  /milk:\s*\{[\s\S]*?parts:function\(s\)[\s\S]*?svg:function\(size\)/.test(farm));
-chk('FM2: produce rides the stack on the same terms as a crop (one ITEM lookup)',
-  /function ITEM\(kind\)\{ return CROP_RECIPES\[kind\] \|\| PRODUCE_RECIPES\[kind\]/.test(farm) &&
-  /var r=ITEM\(kind\); if\(!r\) return null;/.test(farm));
-chk('FM2: the wait for an egg or milk is well under a minute',
-  (function(){
-    const m = farm.match(/makeSec:\s*(\d+)/g) || [];
-    if(m.length !== 2) return false;
-    return m.every(s => { const n = parseInt(s.replace(/[^0-9]/g,''),10); return n > 0 && n < 60; });
-  })(),
-  (farm.match(/makeSec:\s*\d+/g)||[]).join(', '));
-chk('FM2: the produce appears BESIDE the animal and sparkles like a ready crop',
-  /function spawnProduce\(A\)/.test(farm) &&
-  /K\.produceOut/.test(farm) &&
-  /TorusGeometry\(0\.62,0\.05,6,20\),0xFFF6A8/.test(farm));
-chk('FM2: walking over it hops it onto the stack exactly like a harvested crop',
-  /function collectProduce\(A\)/.test(farm) &&
-  /pushOntoStack\(A\.gives,/.test(farm) &&
-  /pd<PICKUP_R/.test(farm));
-chk('FM2: pickup reach is WIDER than the furthest an item is ever set down (nobody aims)',
-  (function(){
-    const R = parseFloat((farm.match(/var PICKUP_R=([\d.]+)/)||[])[1]);
-    const outs = (farm.match(/produceOut:([\d.]+)/g)||[]).map(s => parseFloat(s.split(':')[1]));
-    return R > 0 && outs.length === 2 && outs.every(o => o < R);
-  })(),
-  'PICKUP_R=' + (farm.match(/var PICKUP_R=([\d.]+)/)||[])[1] +
-  ' vs ' + (farm.match(/produceOut:[\d.]+/g)||[]).join(', '));
-
-// ---- NOTHING CAN FAIL. This is the card's hard rule.
-chk('FM2: there is no hunger meter, no countdown, no health and no starve state',
-  (function(){
-    const fm2 = farm.slice(farm.indexOf('FM2 — WHAT COMES OFF THE STACK'));
-    const code = fm2.replace(/\/\/[^\n]*/g,'').replace(/\/\*[\s\S]*?\*\//g,'');
-    return !/\b(starv\w*|hunger|health|hp|lives|timeLeft|timeLimit|expire\w*|penalt\w*|damage|die|dead)\b/i.test(code);
-  })());
-chk('FM2: the only states an animal can be in are waiting, feeding, making and ready',
-  (function(){
-    // scoped to the FM2 section — FM1's dirt patches have their own states
-    // (empty / growing / ready) and they are none of this check's business
-    const fm2 = farm.slice(farm.indexOf('FM2 — THE ANIMALS THEMSELVES'));
-    const states = new Set((fm2.match(/(?:A\.state\s*=|state:)\s*"(\w+)"/g)||[])
-      .map(s => s.match(/"(\w+)"/)[1]));
-    const allowed = new Set(['hungry','feeding','making','ready']);
-    return states.size === 4 && [...states].every(s => allowed.has(s));
-  })(),
-  [...new Set((farm.slice(farm.indexOf('FM2 — THE ANIMALS THEMSELVES'))
-    .match(/(?:A\.state\s*=|state:)\s*"(\w+)"/g)||[]).map(s=>s.match(/"(\w+)"/)[1]))].join(','));
-chk('FM2: the QA handle says so out loud, so a robot can assert it',
-  /canFail:\s*function\(\)\{ return false; \}/.test(farm));
-
-// ---- the model stand
-chk('FM2: zoo() stands every model on a turntable so a shape is judged before it is placed',
-  /function zoo\(\)/.test(farm) &&
-  /Q\.get\("zoo"\)==="1"/.test(farm) &&
-  /zoo: zoo/.test(farm));
-chk('FM2: the stand normalises every exhibit to the same size, or it compares nothing',
-  /var SHOW=[\d.]+/.test(farm) &&
-  /wrap\.scale\.setScalar\(SHOW\/span\)/.test(farm));
-chk('FM2: the stand keeps the lights on (hiding them would show silhouettes)',
-  /if\(!o\.isLight\) o\.visible=false/.test(farm));
-
-// ---- the handle a robot plays it through
-chk('FM2: the QA handle exposes the animals, the feed and the model stand',
-  /version:\s*"fm2"/.test(farm) &&
-  /animals:\s*function\(\)/.test(farm) &&
-  /animalKinds:\s*function\(\)/.test(farm) &&
-  /giveItem:\s*function\(kind, n\)/.test(farm) &&
-  /flying:\s*function\(\)/.test(farm) &&
-  /modelsLoaded:\s*function\(\)/.test(farm));
-chk('FM2: advanceTime pulls the animals\' timers back too, so QA never waits 26s',
-  /if\(ANIMALS\[i\]\.state==="making"\) ANIMALS\[i\]\.fedAt -= sec/.test(farm));
-chk('FM2: still no emojis, still no textures, after everything FM2 added',
-  !emoji.test(farm) && !/TextureLoader|ImageLoader|loadTexture/.test(farm));
-
+// FL9. The real gate for this is qa-skyflyer-hud.mjs, which draws the shell's
+// chrome around the engine and MEASURES the two together — a source check can
+// never see an overlap. These are the cheap static guards that stop the wiring
+// being taken apart by a later session that is not looking at a phone.
 console.log('\n--- FL9: nav bar + HUD do not overlap on mobile ---');
-chk('FL9: the engine tags <html> with bk-in-shell whenever it is iframed by the shell',
-  /classList\.add\(['"]bk-in-shell['"]\)/.test(html) &&
+chk('FL9: the engine tags <html> in-shell before <body>, so the HUD never paints in the corner the shell is about to cover',
+  /classList\.add\(['"]bk-inshell['"]\)/.test(html) &&
   /window\.parent[^;]*!==\s*window/.test(html));
-chk('FL9: the coin pill drops below the shell nav band when in-shell (was top:12, now clears the ~52px Sound button)',
-  /html\.bk-in-shell\s+\.pill\s*\{[^}]*top:\s*calc\(60px/.test(html));
-chk('FL9: the mini-map drops with it, so it clears BOTH the shell Sound and Help buttons',
-  /html\.bk-in-shell\s+#minimap\s*\{[^}]*top:\s*calc\(110px/.test(html));
-chk('FL9: the banked flash sits under the shifted mini-map (rhythm preserved)',
-  /html\.bk-in-shell\s+#banked\s*\{[^}]*top:\s*calc\(222px/.test(html));
+chk('FL9: the right-hand column hangs off the strip the nav bridge publishes, not off hardcoded numbers',
+  /\.bk-inshell\s+\.pill\s*\{[^}]*var\(--bk-nav-bottom/.test(html) &&
+  /\.bk-inshell\s+#minimap\s*\{[^}]*var\(--bk-nav-bottom/.test(html) &&
+  /\.bk-inshell\s+#banked\s*\{[^}]*var\(--bk-nav-bottom/.test(html));
+chk('FL9: the fallback depth is 96px — Sky Flyer asks for Sound + Help and no Menu, so the strip is two buttons deep',
+  (html.match(/var\(--bk-nav-bottom,\s*96px\)/g) || []).length === 3 &&
+  /onSound:function/.test(html) && /onHelp:function/.test(html) && !/onMenu:/.test(html));
+chk('FL9: no doubled safe-area inset — --bk-nav-bottom is already in the shell coordinate space this iframe fills',
+  !/\.bk-inshell[^\n]*env\(safe-area-inset-top\)/.test(html));
+chk('FL9: the pad message is centred clear of the right-hand column, so moving the map down did not trade one overlap for another',
+  /#padmsg\{position:absolute;left:calc\(50% - 59px\)/.test(html) &&
+  /#padmsg\{[^}]*max-width:calc\(100% - 190px\)/.test(html));
 chk('FL9: standalone (opened directly) keeps the original top positions — no shift outside the shell',
   /\.pill\{position:absolute;top:calc\(12px/.test(html) &&
   /#minimap\{position:absolute;top:calc\(62px/.test(html));

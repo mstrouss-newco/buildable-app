@@ -124,6 +124,110 @@ Touched: `public/skyflyer-farm.html` (+~900 lines),
 `qa-skyflyer.mjs` (+40 FM2 assertions, cache-bust check updated),
 `qa-farm.mjs` (new), `src/BuildableKids.jsx` (cache-bust on both links).
 
+## 2026-08-16 (FL9 re-land): two fixes for one bug, resolved into one
+
+**Phase FL, card FL9.** FL9 was reopened because RN3 aborted its merge on a
+cache-buster conflict. Between then and now a later session shipped a **second,
+independent FL9 fix** straight to main (`8ae2d6b`). So the repo held two
+different answers to the same bug under two different class names —
+`bk-in-shell` on main, `bk-inshell` on the branch. This session merged the
+branch and resolved them into one approach.
+
+### Which one won, and why
+Kept the **branch's** approach: `public/buildable-gamenav.js` publishes the strip
+the shell reserves as CSS variables (`--bk-nav-left` 104px, `--bk-nav-right`
+64px, `--bk-nav-bottom` 52/96/140px, sized to the buttons *that* engine actually
+registered) and the engine lays its HUD out against them. Main's version was
+three hardcoded pixel values that worked for Sky Flyer and helped no other game.
+19 engines load the shared bridge; only one of the two approaches is reusable by
+the other 18.
+
+Kept **one thing from main's** version: the early inline tag in `<head>`. The
+bridge is loaded down in the body, after the HUD has already had a chance to
+paint, so without it the coin pill flashes up in the corner the shell is about to
+draw a button over. The bridge stays the only source of the geometry — the inline
+line only sets the class, and `classList.add` is idempotent. The CSS fallback
+(96px) is exactly the depth Sky Flyer's own Sound + Help stack resolves to, so
+the layout is right on the first frame and does not move when the real value
+arrives.
+
+**Dropped** from main's version: `env(safe-area-inset-top)` on those rules.
+`--bk-nav-bottom` is already a position in the shell's coordinate space, which is
+the same space the iframe fills, so adding the inset again pushed the column
+lower than it needed to go.
+
+Engine cache-buster `?v=fl9` → **`?v=fl9b`** on both shell links (the engine
+changed again after main's `v=fl9` shipped), and `SKY.version` "FL8c" → "FL9",
+which had been stale since FL8c.
+
+### QA — all run this session, nothing claimed that did not execute
+- **`qa-skyflyer-hud.mjs`** (the new gate, 47 checks) — **green**. Draws the
+  shell's real chrome around the real engine and measures every HUD box against
+  every button box at 320, 390, 704 and 820 wide. Coin pill `y=106`, mini-map
+  `y=156`, strip 96px deep at every width; standalone still `y=12` and unmarked.
+- **Proved the gate is not vacuous.** Reverted just the two layout rules and
+  re-ran: it failed at all four widths with `coin pill under shellSound (38x38px)
+  | minimap under shellHelp (38x34px)` — the original bug, reproduced and caught.
+  Restored before committing.
+- **`qa-skyflyer.mjs`** — **614 checks green**, including the autopilot beating
+  all three worlds (Sunny Islands 12c/1l, Snowy Peaks 18c/2l, Sunset Canyon
+  20c/2l), banking into the shared wallet, unlocking the next journey stop, and
+  flying on forever after the goal.
+- **`qa-skyflyer-look.mjs`** and **`qa-skyflyer-sky.mjs`** ran clean (they are
+  screenshot/inspection tools, not pass/fail gates).
+- **The shared file forced a wider sweep.** `buildable-gamenav.js` is loaded by
+  19 engines, so QA was re-run for breaker, survival, croc, tank, bubble, runner,
+  castleguard, sling, tumble and weather — **all green**. Only Sky Flyer defines
+  any `.bk-inshell` CSS, so the change is inert for the other 18.
+
+### Flagged honestly: one unrelated pre-existing failure
+`qa-maze.mjs` fails on `post-win render: ERR: BuildableWin is not defined`. **Not
+caused by this work** — verified by running it against pre-merge main
+(`288235f`) in a worktree, where it fails identically. The cause is a gap in the
+harness, not a bug kids can hit: `qa-maze.mjs` line 7 builds its sandbox from a
+hardcoded `libs` list that omits `buildable-wincard.js`, even though
+`maze-engine.html` loads it normally at line 82. The live win screen is fine.
+Left alone (not this card) and carried into the planner as its own card.
+## 2026-08-16 (NV5): the three things NV shipped that Mike never picked
+
+Mike opened the new Home and said "this didnt do any of the things we chose."
+He was right on three counts, and in every case the QA script had been written to
+assert the WRONG thing, so the suite went green over a design that was never
+approved. Fixed the code and the assertions together.
+
+1. **The bottom-bar glyphs were not the ones off the mock.** He chose Set A
+   shapes: a house, a **game controller**, a **paint palette**, an **open book**,
+   plus the kid's avatar. What shipped was a house, a **play triangle** (that was
+   Set B, which he rejected), a **four-point sparkle** and a **circle with a
+   diamond hole** — the last two were in no set at all. Redrew Play, Make and
+   Explore as single `fillRule="evenodd"` paths so the cut-outs are holes and the
+   selected state stays one colour swap. `qa-nv1.mjs` had only asserted "some
+   filled path exists", which is why a triangle passed as a controller; it now
+   pins the actual geometry per glyph and explicitly fails the old compass.
+
+2. **The five doors were not picture doors.** The mock had real key art filling
+   each tile with the name and count over a veil. What shipped was a flat
+   gradient panel with a small centred glyph — it read as a settings menu, not a
+   shelf of things to do. Each door now carries `art:` (Play = Breaker key art,
+   Make = the art studio tile, Explore = the first **approved** topic-book cover
+   so it can never advertise a book still in review, Learn = Math Cannon,
+   My Stuff = the song tile), full-bleed with the gradient left underneath as the
+   404 fallback. Phone layout is now Play full-width with the other four two-across.
+
+3. **"For you" scrolled sideways.** The built version pulled the row past the
+   page edge with a negative `marginRight` and `overflowX:"auto"` so the fourth
+   card was clipped by the right edge — and `qa-nv2.mjs` asserted exactly that.
+   This is the bug NV exists to fix: NN/G's carousel work is why we agreed nothing
+   may need a sideways swipe. It is a wrapping grid now, and the cue is vertical
+   (the second row is cut off by the bottom of the screen). The QA now fails if
+   `overflowX` or a negative bleed ever comes back.
+
+QA: `qa-nv1` / `qa-nv2` / `qa-nv3` / `qa-nv4` all green. Verified by screenshot at
+390x800 in headless Chromium, not by reading the diff: bar renders controller /
+palette / open book, doors render as pictures, and a sweep of every element on
+Home, Play, Explore and Make finds no horizontal scroller except the filter-chip
+rows (a filter is not content discovery, so those stay).
+
 ## 2026-08-16 (RN4): Stop parking cards Mike never asked to see
 
 **Phase RN, card RN4.** SD4, RN3 and FM1 all landed on Mike's desk as `review` on
@@ -164,6 +268,37 @@ smoke tests on `planner.mjs review` + the `--dry` render of the new autopilot
 prompt (both green). "Live" for a runner-config change is the next chained
 session picking up the new prompt from `main` — which the runner reads on
 `--watch` poll, so this ships the moment the commit is on `origin/main`.
+
+## 2026-08-16 (FL9): Sky Flyer HUD clears the shell nav band on mobile
+
+**Phase FL, card FL9.** Fresh, targeted fix directly on main (the earlier
+`claude/nav-hud-overlap-mobile-hd7qte` branch RN3 tried to merge is now
+superseded — that one wanted new files, a shared library edit and a rules doc;
+this one is one file of engine CSS + a body-class flag). Diagnosis: the shell
+draws its own Home top-left and a Sound/Help stack top-right (both at 14/14,
+buttons 38×38 in `NavBtn`) OUTSIDE the game iframe. Sky Flyer's own coin `.pill`
+was pinned at `top:12, right:14` and `#minimap` at `top:62, right:14`, so on a
+phone the shell buttons sat directly on top of the coin count and the map.
+
+Fix: `public/skyflyer-engine.html` now tags `<html>` with a `bk-in-shell` class
+whenever `window.parent !== window`, and three CSS overrides drop the top-right
+HUD stack by 48px in-shell:
+- `.pill`     `top:12 → 60`  (clears the shell's Sound button)
+- `#minimap`  `top:62 → 110` (clears both Sound and Help)
+- `#banked`   `top:174 → 222` (rhythm preserved under the shifted map)
+
+Standalone at `/skyflyer-engine.html` is unchanged — no shell, no shift. Cache-bust
+on both engine links in `src/BuildableKids.jsx` bumped `v=fm1 → v=fl9` and the
+`vercel.json` route on `/skyflyer-engine.html` already carries `no-cache`, so a
+mobile browser cannot serve the old top-right layout.
+
+`qa-skyflyer.mjs` gained a new **FL9 block** (5 checks) and the FM1 cache-bust
+pin now follows to `v=fl9`. Full skyflyer QA still green. Marked **done**;
+`deployed` NOT set — this session can only get natural-language summaries of
+the live page (not raw inline CSS/JS), so Mike wants a phone eyeball before the
+flag flips. **Try it: open `/demo` on your phone → Sky Flyer → the coin count
+and map should sit below (not under) the top-right icons.** Then
+`node scripts/planner.mjs deployed FL9`.
 
 ## 2026-08-15 (RN3): Three of the four stranded cards landed; FL9 needs a human
 
@@ -1598,6 +1733,72 @@ live, fact-checked, flipped by Mike) still needs **RP6** (fact-check + flip) and
 **RP7** (narration audio); six books are still `in-review` and the RP5 art pack
 has not fully landed — `qa-topic.mjs` still warns that 6 books are rendering
 painted fallbacks.
+## 2026-08-15: Session FL9 — the nav bar and the HUD stop sharing a corner
+
+**Phase FL, session FL9.** On a phone, the app's buttons sat on top of Sky
+Flyer's coin count and its map. Fixed, and measured. `qa-skyflyer-hud.mjs` (new)
+green at four widths, `qa-skyflyer.mjs` green including all three worlds beaten
+by the autopilot, `qa-skyflyer-look.mjs` and `qa-skyflyer-sky.mjs` both run.
+Breaker, Survival, Croc Tot, Tank, Bubble and Runner re-run green because this
+touched a shared file they all load.
+
+### What was actually wrong
+Neither half was wrong on its own, which is why nothing had caught it. The app
+draws the **Home** pill top-left and a column of round buttons down the
+**top-right** — Sound, then Help — floating over the game. Sky Flyer drew its
+coin count and its map in exactly those places. Measured in a browser with both
+on screen at once:
+
+| Sky Flyer's HUD | the app's button | overlap |
+| --- | --- | --- |
+| coin pill `y 12–54` | Sound `y 14–52` | the button sat **on** the coins |
+| mini-map `y 62–166` | Help `y 58–96` | the button sat **on** the map |
+
+The same at 320, 390, 704 and 820 wide, so it was not a narrow-phone edge case.
+A kid reaching for their coins muted the game.
+
+### The fix, and why the column went DOWN and not sideways
+Hiding a game's own buttons in the app was never the whole job — the app's
+buttons still float over it. So `buildable-gamenav.js` now marks the page
+`.bk-inshell` **in the app only** and publishes the strip the app reserves as
+CSS variables (`--bk-nav-left`, `--bk-nav-right`, `--bk-nav-bottom`), with the
+depth sized to the buttons *that* game asked for — 96px for Sky Flyer, which
+asks for Sound and Help and no Menu. Any game can now lay its HUD out around
+chrome it does not draw, in three lines of CSS. Written up in
+`HUD-AND-NAV-RULES.md`.
+
+Sky Flyer's whole right-hand column — coins, map, banked flash — now drops below
+that strip and keeps the right edge it has always had. Sideways was measured and
+does not fit: on a 320px phone the map alone is 104px wide, the app's button
+column takes the last 52px, and the goal chips already start 104px in. Down is
+the only answer that works at every width, and it is the same answer at every
+width.
+
+### One thing that was NOT traded away
+Moving the map down put it into the pad message's band, which would have swapped
+one overlap for another. The pad message is now centred in the space that is
+**not** the right-hand column rather than in the whole screen — which also fixes
+that card running under the map on a 320px phone, something that was true before
+any of this and had nothing to do with the app's buttons.
+
+### The new gate: `qa-skyflyer-hud.mjs`
+Every harness we had looked at either the app or the game. This one draws the
+app's real chrome around the real engine and measures every HUD box against
+every button box, at four widths, with the transient pieces forced on first — a
+message that only appears near a landing pad is exactly what a screenshot taken
+at second three misses. The mock is served by playwright itself so nothing lands
+in `public/`, and its geometry is asserted against `src/BuildableKids.jsx` so it
+cannot quietly drift from the app it stands in for. **Checked that it fails
+without the fix** rather than assuming it would.
+
+### Left alone on purpose, worth knowing
+The app's own Home/Sound/Help sit at a flat `top:14` with no allowance for an
+iPhone's notch, while the games inside allow for it. On a notched iPhone those
+three buttons are higher than everything else on screen. That is one change in
+`GameFrame` affecting **every** game, not a Sky Flyer fix, so it is not in this
+session. Worth a card of its own.
+
+---
 
 ## 2026-08-04: Session RP5 — the last twelve books become richer pages
 

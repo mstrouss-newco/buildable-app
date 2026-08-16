@@ -63,6 +63,27 @@ review keeps the lane going, only `open` stops the chain. Rewritten to say
 so. No product code touched; QA is three smoke tests on `planner.mjs review`
 (refuse-no-id, refuse-no-note, refuse-no-question) + a `--dry` render of the
 new autopilot prompt. All green. `git status` clean.
+## Sky Flyer HUD clears the shell nav band on mobile (August 16 2026)
+`public/skyflyer-engine.html`, `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
+Phase **FL**, card **FL9**. On a phone, the shell's own Home (top-left) and
+Sound / Help stack (top-right, 38×38 buttons at 14/14) landed directly on top
+of Sky Flyer's coin `.pill` (top:12, right:14) and `#minimap` (top:62,
+right:14) — the shell chrome and the game HUD were sharing the same real
+estate. Fresh, targeted fix on main (supersedes the earlier
+`claude/nav-hud-overlap-mobile-hd7qte` branch RN3 could not merge): the engine
+now tags `<html>` with `bk-in-shell` whenever `window.parent !== window`, and
+three CSS overrides shift the top-right HUD stack down by 48px in-shell —
+`.pill` 12 → 60, `#minimap` 62 → 110, `#banked` 174 → 222. Standalone at
+`/skyflyer-engine.html` is unchanged (no shell, no shift). Cache-bust on both
+engine links in `BuildableKids.jsx` bumped `v=fm1 → v=fl9`, and the
+`vercel.json` route on `/skyflyer-engine.html` already carries `no-cache`.
+`qa-skyflyer.mjs` gained an FL9 block (5 checks) and the FM1 cache-bust pin
+follows to `v=fl9`; full skyflyer QA green. **Marked `done`, not
+`deployed`** — this session can only read summarized page content from the
+live site, not raw inline CSS, so the pixel-level check wants Mike's eyes on a
+phone before the flag flips. Open `/demo` on your phone → Sky Flyer, confirm
+the coin count and map sit BELOW the top-right icons (not under them), then
+`node scripts/planner.mjs deployed FL9`.
 
 ## Farm corner v1 — the field, the crops, and the endless stack (August 15 2026)
 `public/skyflyer-farm.html` (new), `src/BuildableKids.jsx`, `qa-skyflyer.mjs`.
@@ -3297,6 +3318,37 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-16 (FL9 re-land: two fixes for one bug, resolved into one)
+
+FL9 was reopened because RN3 aborted its merge on a cache-buster conflict. In the
+meantime a later session shipped a **second, independent** FL9 fix straight to
+main, so the repo held two different answers to the same bug under two different
+class names (`bk-in-shell` vs `bk-inshell`). Merged and resolved into one.
+
+The **bridge-driven** approach won: `public/buildable-gamenav.js` publishes the
+strip the shell reserves as CSS variables (`--bk-nav-left`, `--bk-nav-right`,
+`--bk-nav-bottom`, sized to the buttons that engine registered) and the engine
+lays its HUD out against them — reusable by all 19 engines that load the bridge,
+where the other version was three hardcoded pixels for Sky Flyer alone. Kept one
+piece of the other version: the early inline tag in `<head>`, because the bridge
+loads down in the body and without it the coin pill flashes into the corner the
+shell is about to cover. Dropped its `env(safe-area-inset-top)`, which
+double-counted an inset already baked into `--bk-nav-bottom`. Cache-buster
+`?v=fl9` → `?v=fl9b`; `SKY.version` "FL8c" → "FL9".
+
+`qa-skyflyer-hud.mjs` green at 320/390/704/820, and **verified it fails without
+the fix** (reverted the two rules, got the original overlap back at all four
+widths, restored). `qa-skyflyer.mjs` 614 checks green including the autopilot
+beating all three worlds. Breaker, Survival, Croc Tot, Tank, Bubble, Runner,
+Castle Guard, Sling, Tumble and Weather re-run green because they share the
+bridge. Full detail in `SESSION-LOG.md`.
+
+Flagged, unrelated and pre-existing: `qa-maze.mjs` fails on `BuildableWin is not
+defined`. Verified it fails the same way on pre-merge main. Its `libs` list
+(line 7) omits `buildable-wincard.js` that the page itself loads — a harness gap,
+not a broken win screen.
+
+---
 ## Session log — 2026-08-15 (NV4: Nav polish — tap sound + squash on every tab, and Me gets its own /app address)
 
 **Phase NV, session NV4.** Every bottom-bar tab press now fires the shared Feel
@@ -3317,6 +3369,33 @@ longer than 8 before a See All. It skips loudly when Playwright isn't installed
 so this session (running in the autopilot loop with no Playwright) doesn't
 claim a green it can't see; the source harness is the one that must pass. NV1-3
 QAs still green.
+
+---
+## Session log — 2026-08-15 (Session FL9: the nav bar and the HUD stop sharing a corner)
+
+On a phone the app's Sound button sat on top of Sky Flyer's coin count and its
+Help button sat on top of the mini-map — measured at 320, 390, 704 and 820 wide,
+so not an edge case. Hiding a game's own nav buttons in the app was never the
+whole job: the app's buttons still float over the game's iframe.
+
+`public/buildable-gamenav.js` now marks the page `.bk-inshell` **in-app only**
+and publishes the strip the shell reserves as CSS variables
+(`--bk-nav-left` 104px, `--bk-nav-right` 64px, `--bk-nav-bottom` 52/96/140px
+sized to the buttons that engine actually registered), so any engine can lay its
+HUD out around chrome it does not draw. Documented in `HUD-AND-NAV-RULES.md`;
+the geometry is mirrored from `GameFrame`/`NavBtn` in `src/BuildableKids.jsx`
+and both sides carry a comment saying so.
+
+Sky Flyer's right-hand column (coins, map, banked flash) drops below that strip
+and keeps its right edge — sideways does not fit on a 320px phone. Its pad
+message is now centred in the space that is not the right-hand column, so moving
+the map down did not trade one overlap for another. Standalone the engine is
+unchanged. Engine cache-buster `?v=fl8c` → `?v=fl9`.
+
+New gate `qa-skyflyer-hud.mjs` draws the shell's real chrome around the real
+engine and measures every HUD box against every button box at four widths
+(playwright-core + a served-from-memory shell mock). Verified it fails without
+the fix. Full detail in `SESSION-LOG.md`.
 
 ---
 ## Session log — 2026-07-26 (Planner: the Right now bar stops being a wall of text)
