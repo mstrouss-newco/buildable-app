@@ -509,7 +509,7 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
         // The music service is down or out of budget. NEVER show the dev synth
         // tone as if it were the kid's song — say it plainly and offer a retry.
         speak("The song machine is having a nap. Let's try again!");
-        setStatus("The song machine is having a nap! Tap GO to try again.");
+        setStatus("The song machine is having a nap! Let's try again in a minute.");
       }
       else setStatus("Hmm, that didn't work. Try again!");
     } catch { setStatus("Hmm, that didn't work. Try again!"); }
