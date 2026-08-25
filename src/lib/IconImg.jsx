@@ -12,6 +12,13 @@ import { useState } from "react";
 // While the photo loads (and if it ever fails) it shows a faint music-note
 // placeholder — never an emoji. Control options (Auto/None/Surprise) don't use
 // this; MusicMaker draws those with a vector glyph instead.
+//
+// THE WARMING TRAP: the first ever request for an icon returns 503
+// {"error":"warming"} while it is generated, and the background warm never
+// finishes on Vercel — so a single <img> error used to pin the card on the grey
+// note forever. On failure we retry the same URL with &wait=1, which makes the
+// server draw it inline (~25s) and cache it. One slow first paint per icon,
+// instant for every kid after that.
 
 // Icons that have a static WebP baked under public/music-maker/icons/.
 // (Empty for now — populate as files are baked so we never 404-then-API.)
@@ -43,19 +50,19 @@ function Note({ size }) {
 }
 
 export default function IconImg({ cat, id, size = 28, radius = 6 }) {
-  // stage: 0 = static file, 1 = image library API, 2 = note glyph
+  // stage: 0 = static file, 1 = image library API, 2 = API asking it to wait, 3 = note glyph
   const firstStage = cat && id && BAKED.has(cat + "-" + id) ? 0 : 1;
   const [stage, setStage] = useState(firstStage);
   const [loaded, setLoaded] = useState(false);
 
-  if (!cat || !id || stage > 1) {
+  if (!cat || !id || stage > 2) {
     return (
       <span style={{ width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
         <Note size={size} />
       </span>
     );
   }
-  const src = stage === 0 ? staticPath(cat, id) : apiPath(cat, id);
+  const src = stage === 0 ? staticPath(cat, id) : apiPath(cat, id) + (stage === 2 ? "&wait=1" : "");
   return (
     <span style={{ position: "relative", width: size, height: size, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
       {!loaded && <Note size={size} />}
