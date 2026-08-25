@@ -73,6 +73,20 @@ const ICONS = {
             waltz:"an elegant golden harp with a swirl of dancing musical notes",
             samba:"colorful carnival hand drums with bright feathers and maracas",
             afrobeat:"a set of colorful African djembe hand drums with warm patterns" },
+  // Music Maker song topics. These are the picture chips on step 1 of the
+  // "Make a Song" flow (TOPICS in src/MusicMaker.jsx) — the ids MUST stay in
+  // sync with that list or the card falls back to a grey music note and a kid
+  // who can't read sees ten identical buttons.
+  topic:  { dog:"a happy friendly puppy dog sitting with its tongue out",
+            cat:"a cute fluffy kitten sitting and looking up",
+            dinosaur:"a friendly green cartoon dinosaur with a big smile",
+            space:"a cheerful cartoon rocket ship flying past a ringed planet and stars",
+            pancakes:"a tall stack of golden pancakes with a pat of butter and syrup",
+            princess:"a smiling young princess wearing a sparkling crown and a pretty gown",
+            trucks:"a chunky colorful toy dump truck",
+            ocean:"a friendly smiling cartoon whale spouting water above blue waves",
+            robots:"a friendly cute boxy toy robot with big round eyes waving",
+            family:"a happy cartoon family of four holding hands together" },
   world:  { space:"a colorful outer-space scene with planets, stars and a rocket",
             underwater:"a vibrant underwater coral reef with tropical fish and sunbeams",
             castle:"a majestic fairytale castle on a green hill under a bright sky",

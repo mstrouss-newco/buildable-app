@@ -121,6 +121,10 @@
       "dest": "/assets/$1"
     },
     {
+      "src": "/demo/(buildable-[^/]+\\.js)",
+      "dest": "/$1"
+    },
+    {
       "src": "/demo/(.*)",
       "status": 308,
       "headers": {

@@ -505,6 +505,12 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
         speak("Oops! Let's keep it friendly. Try some different words for your song.");
         setStatus("Oops! Some of those words aren't allowed. Let's keep songs kind and friendly — try something fun like animals, space, or a silly adventure!");
       }
+      else if (j && j.reason === "music_unavailable") {
+        // The music service is down or out of budget. NEVER show the dev synth
+        // tone as if it were the kid's song — say it plainly and offer a retry.
+        speak("The song machine is having a nap. Let's try again!");
+        setStatus("The song machine is having a nap! Tap GO to try again.");
+      }
       else setStatus("Hmm, that didn't work. Try again!");
     } catch { setStatus("Hmm, that didn't work. Try again!"); }
     finally { setBusy(false); }
@@ -699,6 +705,12 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
               <button style={{ ...S.playPrizeBtn, background: draft.coverColor }} onClick={() => { feel("tap"); setRevealPlay(true); }} aria-label="Play my song">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="#15131f" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg>
                 <span>Play my song</span>
+              </button>
+              {/* Save lives HERE too, not only after Play. A kid who taps Home from
+                  the reveal used to lose the song entirely and My Songs stayed at 0. */}
+              <button style={S.revealSaveBtn} onClick={keepSong} aria-label="Save this song">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <span>Save it</span>
               </button>
               <button style={S.tweakBtn} onClick={() => { setDraft(null); setMkStep(1); }}>← Change my song</button>
               {status && <div style={S.status}>{status}</div>}
@@ -934,6 +946,7 @@ const S = {
   keepBtn: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px", fontWeight: 800, color: "#1a1a2a", border: "none", borderRadius: 14, cursor: "pointer" },
   againBtn: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "12px", fontWeight: 700, color: "#fff", background: "#2a2a3a", border: "none", borderRadius: 14, cursor: "pointer" },
   btnCap: { fontSize: 13, fontWeight: 800 },
+  revealSaveBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", maxWidth: 340, margin: "10px auto 0", padding: "12px", fontSize: 16, fontWeight: 800, color: "#fff", background: "rgba(255,255,255,0.10)", border: "2px solid rgba(255,255,255,0.28)", borderRadius: 14, cursor: "pointer" },
   tweakBtn: { display: "block", margin: "12px auto 0", background: "transparent", color: "#9a9ac0", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14 },
   status: { marginTop: 14, textAlign: "center", color: "#FFD93D", fontWeight: 700 },
   songGrid: { display: "flex", flexDirection: "column", gap: 12 },

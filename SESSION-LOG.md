@@ -1,5 +1,60 @@
 # Buildable Kids — Session Log
 
+## 2026-08-25 (MM-FIX): the Music Maker was handing kids a 3-second beep
+
+**QA session, four fixes, no new features.** Mike reported "the music creation
+tool and the new work flow doesn't work at all, nothing gets created." Ran the
+whole flow live and found five things, one of them app-wide.
+
+### Root cause (NOT a code bug — Vercel env)
+`ELEVENLABS_API_KEY` holds the API key **ID**, not the `sk_` secret. ElevenLabs
+answers every call with `400 invalid_api_key` — *"API key ID used as API key…
+API keys start with 'sk_'"*. Thirteen endpoints share that key, so ALL new audio
+generation app-wide is dead; already-cached tracks still play, which is why the
+games sound fine and only the makers look broken. Owner's fix in Vercel.
+
+### What this session changed
+1. **`api/generate-song.js` — stop dressing the dev tone up as a song.** The
+   ElevenLabs adapter silently fell back to `generateDemo` (a 3s 8 kHz sine
+   chord) and the handler returned `ok:true`, so the UI showed "YOUR NEW SONG!"
+   over a beep. Straight violation of the ASSET-LIBRARY sound rule. The three
+   fallback paths now set `demoFallback`, and when `MUSIC_PROVIDER !== "demo"`
+   the handler returns `ok:false, reason:"music_unavailable"` with a kid-safe
+   message. `src/MusicMaker.jsx` speaks and shows "The song machine is having a
+   nap! Tap GO to try again."
+2. **`api/generate-song.js` — deterministic cover seed.** `coverSeed` mixed in
+   `Math.random()`, so every song asked for a brand-new image, `/api/images`
+   answered `503 {"error":"warming"}`, and the background warm never finishes on
+   Vercel. Every cover was a blank colour square, forever. Seed is now derived
+   from title + vibe + theme, so the URL is stable and cacheable.
+3. **`src/lib/CoverThumb.jsx` — survive the first warm.** On the first image
+   error it now retries the same URL with `&wait=1`, which makes the server
+   generate inline (~25s) and cache it. One slow first paint, instant after.
+4. **`api/images.js` — the `topic` icon category did not exist.** MusicMaker
+   asks for `kind=icon&cat=topic&id=dog…` for the ten step-1 chips; `ICONS` had
+   no `topic` key, so all ten 400'd and every card fell back to the same grey
+   music note. For a flow whose whole point is zero reading, ten identical
+   buttons. Added all ten subjects, ids kept in sync with `TOPICS`.
+5. **`vercel.json` — five core scripts were serving HTML.** `vite.config.js` has
+   `base: '/demo/'`, so the built `index.html` asks for `/demo/buildable-wallet.js`
+   (+ audio, mechanics, feel, manifest). The `/demo/(.*)` catch-all 308s those to
+   `/app/…`, which the SPA rewrite answers with `index.html` → five
+   `SyntaxError: Unexpected token '<'` on every app load, and no wallet. Added a
+   `/demo/(buildable-[^/]+\.js)` → `/$1` route above the catch-all, matching the
+   existing `/demo/assets/` pattern. (The deeper fix is the `base`, left alone —
+   changing it moves every built asset path.)
+
+### Also found, NOT fixed
+- The Make hub cards render as flat gradient + glyph although
+  `/api/images?kind=make&id=…` returns 200 for all five. The MK1 key-art cards
+  appear to have been dropped in a redesign. Asked the owner whether that was
+  deliberate before touching it.
+
+### Verified
+`vite build` clean (70 modules). `api/images.js` and `api/generate-song.js`
+import clean under node. Live re-QA of the song flow is blocked until the real
+`sk_` key is in Vercel.
+
 ## 2026-08-16 (FL9 re-land): two fixes for one bug, resolved into one
 
 **Phase FL, card FL9.** FL9 was reopened because RN3 aborted its merge on a

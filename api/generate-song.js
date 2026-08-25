@@ -280,7 +280,7 @@ function encodeWav(samples, rate) {
 async function generateWithElevenLabs(brief, opts) {
   const o = opts || {};
   const key = process.env.ELEVENLABS_API_KEY;
-  if (!key) return generateDemo(brief, o);
+  if (!key) { const demo = generateDemo(brief, o); demo.demoFallback = true; demo.meta = { ...(demo.meta || {}), reason: "no_api_key" }; return demo; }
 
   // Budget guard before spending.
   if (o.supabaseUrl && o.supabaseKey) {
@@ -288,6 +288,7 @@ async function generateWithElevenLabs(brief, opts) {
     if (!inBudget) {
       const demo = generateDemo(brief, o);
       demo.meta = { ...(demo.meta || {}), reason: "daily_budget_reached" };
+      demo.demoFallback = true;
       return demo;
     }
   }
@@ -318,6 +319,7 @@ async function generateWithElevenLabs(brief, opts) {
       const errText = await res.text().catch(() => "");
       const demo = generateDemo(brief, o);
       demo.meta = { ...(demo.meta || {}), elevenlabs_error: `${res.status}: ${errText.slice(0, 200)}` };
+      demo.demoFallback = true;
       return demo;
     }
 
@@ -340,6 +342,7 @@ async function generateWithElevenLabs(brief, opts) {
     clearTimeout(timer);
     const demo = generateDemo(brief, o);
     demo.meta = { ...(demo.meta || {}), elevenlabs_error: String((e && e.message) || e).slice(0, 200) };
+    demo.demoFallback = true;
     return demo;
   }
 }
@@ -402,7 +405,11 @@ export default async function handler(req, res) {
   // it travels with the song (stored in meta on save). The theme carries the topic
   // so the art matches what the song is about; label gives the cover a title cue.
   const coverTheme = (choices.theme || choices.prompt || "").toString().slice(0, 40);
-  const coverSeed = (title.replace(/[^\w]+/g, "").slice(0, 20) + Math.random().toString(36).slice(2, 6)).toLowerCase();
+  // Deterministic ON PURPOSE. A random seed made every song's cover a brand-new
+  // image, so /api/images always answered 503 "warming" and the art never showed
+  // up anywhere. Same choices -> same URL -> generated once, cached forever.
+  const coverSeed = (title + "|" + (choices.vibe || "") + "|" + coverTheme)
+    .toLowerCase().replace(/[^\w]+/g, "").slice(0, 28);
   const coverUrl =
     "/api/images?kind=cover&vibe=" + encodeURIComponent(choices.vibe || "happy") +
     "&theme=" + encodeURIComponent(coverTheme) +
@@ -414,6 +421,20 @@ export default async function handler(req, res) {
 
   try {
     const result = await generateMusic(brief, { ...choices, recipe, supabaseUrl, supabaseKey });
+
+    // THE RULE (see ASSET-LIBRARY.md "Sound rule"): only real created music ever
+    // reaches a kid. The 3-second synth tone in generateDemo is a DEV fallback,
+    // never the product. If we asked for real music and got the tone back, say so
+    // instead of handing over a beep with "YOUR NEW SONG!" over the top of it.
+    if (result.demoFallback && MUSIC_PROVIDER !== "demo") {
+      return res.status(200).json({
+        ok: false,
+        reason: "music_unavailable",
+        message: "The song machine is having a nap! Try again in a minute.",
+        detail: (result.meta && (result.meta.elevenlabs_error || result.meta.reason)) || "music provider unavailable",
+      });
+    }
+
     return res.status(200).json({
       ok: true,
       title,
