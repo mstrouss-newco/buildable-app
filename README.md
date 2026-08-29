@@ -3286,6 +3286,22 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-29 (LP3+LP4+LP5: the last two flat level pickers get pictures)
+
+The LEVEL PICKER batch, run as one session per the GROUPED note. `buildable-levelthumb.js`
+gained two painters: `letters` (Typing — the world's sky and lane, the row of key tiles you
+spell, and that world's drawn boss) and `court` (Tennis — the top-down court, dashed net and
+both paddles, drawn over the world scene the game already loads, with the ball's streak length
+telling the three tiers apart). Typing's world cards, which are drawn by the game rather than
+by the shared start screen, got a picture area for the first time; the level number moved to a
+chip beside the name so it stays readable on a phone, and `.world-card` got an explicit font
+and colour because a `<button>` inherits neither and the world names had been near-black.
+Tennis's three difficulty cards now repaint when the scene loads and when a new court is
+picked. Verified in Chromium across all 18 games with a level picker: zero cards left without
+a picture, locked cards still readable. qa-typing, qa-tennis, qa-sling, qa-croc and
+qa-mathcannon all pass. Still flat and logged as a new card, not in scope here: the
+opponent-tier cards on Tic-Tac-Toe, Connect Four and Dots & Boxes. See SESSION-LOG.md.
+
 ## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
 
 Mike found the Make section tiles unexciting. From four mocked options he picked

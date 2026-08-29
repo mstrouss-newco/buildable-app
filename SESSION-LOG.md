@@ -1,3 +1,58 @@
+## 2026-08-29 — LP3 + LP4 + LP5: pictures on the last two flat level pickers
+
+The LEVEL PICKER batch, run as one session per the GROUPED note on all three
+cards. LP1 (Sling) and LP2 (Croc Tot, Math Cannon) had already replaced flat
+colour cards with drawn pictures; Typing and Tennis were the two left.
+
+**The shared helper gets two new painters** (`public/buildable-levelthumb.js`):
+
+- **`letters`** — the world's own sky and lane, the row of key tiles you spell
+  with the first one lit like the game's glowing key, and that world's boss
+  standing at the end of the lane. Six drawn bosses: a saucer, a crowned
+  gorilla, a spouting whale, a crowned lollipop, a frosty tuft-headed yeti and
+  a lava lord.
+- **`court`** — the top-down court with its dashed net and both paddles, drawn
+  from the equipped world's palette and composited over the world scene the
+  game itself has already loaded. Because all three tennis cards share one
+  court, the ball's streak length is what tells the tiers apart (2 / 6 / 11
+  fading discs).
+- `make()` gained one safety: a painter that composites a hosted photo can
+  taint the canvas, and a tainted canvas refuses `toDataURL`. It now redraws on
+  the painter's own colours instead of handing the card back nothing.
+
+**LP3 — Typing.** Typing draws its own world list rather than using the shared
+start screen, so the card had no picture area at all. The flat 46px tint swatch
+became a 15:7 picture; the level number moved out of the art into a chip beside
+the world name so it stays readable at phone widths. The picture's colours are
+read back out of each world's own backdrop CSS and the word off its own boss,
+so a card cannot drift from the world it opens. Found and fixed on the way:
+`.world-card` is a `<button>`, which inherits neither the page font nor its
+colour, so the six world names had been rendering near-black on a dark card.
+
+**LP4 — Tennis.** The three difficulty cards now show the court you are about
+to play on. They repaint when the world scene finishes loading and again when a
+new court is picked in "Choose your court", so the picker never shows a court
+you are not about to play on.
+
+**LP5 — verification.** Every start-screen game was opened in Chromium and its
+picker screenshotted, desktop and portrait phone. Across the 18 games with a
+journey/level picker — bingo, breaker, bubble, castle guard, croc tot, family
+town, mahjong, math cannon, maze, memory, runner, sling squad, snakes, string
+match, survival, tank, tennis, tumble — plus Typing's own world list, **zero
+cards are left without a picture** (20 sling cards, 6 typing worlds, 5 croc,
+5 cannon, 3 tennis, and the rest unchanged). Locked and dimmed cards stay
+readable: the start screen's dim plus the lock badge sit over the art without
+hiding the level name.
+
+**QA (all run, all green):** qa-typing, qa-tennis, qa-sling, qa-croc,
+qa-mathcannon.
+
+**Flagged, not fixed — outside this batch.** Tic-Tac-Toe, Connect Four and Dots
+& Boxes still show flat blue cards, but those are opponent-tier / board-size
+choices on a single board, not a journey level picker, so they sit outside
+LP3-LP5's scope. Logged as a new planner card rather than widened into this
+session.
+
 ## 2026-08-29 - SL1: the sign-in that forgot itself, and guest stops asking for a child
 
 Mike, on his iPad: "I logged in under OAuth, and its asking me to create an account
