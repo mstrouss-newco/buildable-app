@@ -42,5 +42,20 @@ try{ ['ribbon','fur','dots','glow','grain','spray','waxy'].forEach(t=>BR.stroke(
   BR.mirror(ctxStub,'V',100,100,()=>{}); BR.mirror(ctxStub,'H',100,100,()=>{}); BR.mirror(ctxStub,8,100,100,()=>{});
   ok(true,'all textures/shapes/mirror modes run without throwing');
 }catch(e){ ok(false,'textures/shapes threw: '+e.message); }
+
+// ---- New Page flow (no yes/no confirm; clear is undoable; nothing is lost) ----
+G.reset(); G.sim();
+const cu=G.clearUndo();
+ok(cu.wiped,'New Page wipes the paper and keeps a safety copy');
+ok(cu.restored,'Undo after New Page brings the whole drawing back');
+ok(cu.snapshotGone,'the safety copy is used up once it has been restored');
+ok(!/id="clearOv"/.test(html),'the yes/no "Start over?" box is gone');
+ok(/newpage/.test(html)&&/New Page/.test(html),'button now reads New Page with a page icon');
+ok(!/ICONS\.trash\+cap/.test(html),'trash icon no longer used for the page button');
+// every element the code reaches for must actually exist in the markup
+const wanted=[...new Set([...scripts.matchAll(/getElementById\(["']([\w-]+)["']\)/g)].map(m=>m[1]))];
+const missing=wanted.filter(id=>!new RegExp('id="'+id+'"').test(html));
+ok(missing.length===0,'every id the code touches exists in the page'+(missing.length?' — missing: '+missing.join(', '):' ('+wanted.length+' checked)'));
+
 console.log(fail?('\nQA FAILED ('+fail+')'):'\nALL QA PASSED');
 process.exit(fail?1:0);
