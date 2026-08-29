@@ -1,6 +1,6 @@
 # QA-SWEEP-REPORT.md
 
-Written by `scripts/qa-all.mjs` — 2026-08-29 19:12:41 UTC. Took 481s.
+Written by `scripts/qa-all.mjs` — 2026-08-29 19:23:08 UTC. Took 470s.
 
 This file is generated. Do not hand-edit it: re-run `npm run qa`.
 
@@ -10,28 +10,28 @@ This file is generated. Do not hand-edit it: re-run `npm run qa`.
 
 | Harness | Result | Time |
 |---|---|---|
-| `qa-ap2-use-in-game.mjs` | QUAR | 4.9s |
+| `qa-ap2-use-in-game.mjs` | QUAR | 4.5s |
 | `qa-art.mjs` | PASS | 0.1s |
-| `qa-bingo.mjs` | PASS | 0.3s |
-| `qa-breaker.mjs` | PASS | 1.4s |
-| `qa-bubble.mjs` | PASS | 5.2s |
-| `qa-castleguard.mjs` | PASS | 9.4s |
+| `qa-bingo.mjs` | PASS | 0.2s |
+| `qa-breaker.mjs` | PASS | 1.5s |
+| `qa-bubble.mjs` | PASS | 5.1s |
+| `qa-castleguard.mjs` | PASS | 9.8s |
 | `qa-checkers-dom.mjs` | PASS | 1.3s |
-| `qa-checkers.mjs` | PASS | 2.6s |
-| `qa-chess.mjs` | PASS | 45.8s |
+| `qa-checkers.mjs` | PASS | 2.3s |
+| `qa-chess.mjs` | PASS | 30.0s |
 | `qa-connectfour.mjs` | PASS | 0.8s |
-| `qa-croc.mjs` | PASS | 0.1s |
+| `qa-croc.mjs` | PASS | 0.0s |
 | `qa-dive.mjs` | PASS | 0.1s |
-| `qa-dotsandboxes.mjs` | PASS | 1.6s |
+| `qa-dotsandboxes.mjs` | PASS | 1.4s |
 | `qa-explore.mjs` | PASS | 0.1s |
 | `qa-family-town.mjs` | PASS | 0.1s |
 | `qa-invite.mjs` | PASS | 0.0s |
 | `qa-kidspedia.mjs` | PASS | 0.1s |
 | `qa-kits.mjs` | PASS | 0.1s |
-| `qa-kp3-add-a-kit.mjs` | PASS | 5.9s |
-| `qa-lessons-dom.mjs` | QUAR | 0.6s |
+| `qa-kp3-add-a-kit.mjs` | PASS | 5.7s |
+| `qa-lessons-dom.mjs` | QUAR | 0.7s |
 | `qa-lessons.mjs` | QUAR | 0.1s |
-| `qa-mahjong.mjs` | PASS | 0.6s |
+| `qa-mahjong.mjs` | PASS | 0.7s |
 | `qa-mathcannon.mjs` | PASS | 0.0s |
 | `qa-maze.mjs` | PASS | 3.5s |
 | `qa-memory.mjs` | PASS | 0.2s |
@@ -41,24 +41,24 @@ This file is generated. Do not hand-edit it: re-run `npm run qa`.
 | `qa-nv3.mjs` | PASS | 0.1s |
 | `qa-nv4-dom.mjs` | PASS | 0.5s |
 | `qa-nv4.mjs` | PASS | 0.0s |
-| `qa-question-bank.mjs` | PASS | 0.1s |
+| `qa-question-bank.mjs` | PASS | 0.0s |
 | `qa-quickgame.mjs` | PASS | 0.1s |
 | `qa-rileys.mjs` | PASS | 0.1s |
-| `qa-rn1.mjs` | PASS | 4.7s |
-| `qa-runner.mjs` | PASS | 0.2s |
-| `qa-skyflyer-hud.mjs` | PASS | 42.2s |
-| `qa-skyflyer-look.mjs` | PASS | 106.9s |
-| `qa-skyflyer-sky.mjs` | PASS | 15.1s |
-| `qa-skyflyer.mjs` | PASS | 62.0s |
-| `qa-sling.mjs` | PASS | 79.1s |
+| `qa-rn1.mjs` | PASS | 7.0s |
+| `qa-runner.mjs` | PASS | 0.1s |
+| `qa-skyflyer-hud.mjs` | PASS | 43.5s |
+| `qa-skyflyer-look.mjs` | PASS | 107.8s |
+| `qa-skyflyer-sky.mjs` | PASS | 15.3s |
+| `qa-skyflyer.mjs` | PASS | 62.2s |
+| `qa-sling.mjs` | PASS | 81.9s |
 | `qa-snakes.mjs` | PASS | 0.4s |
-| `qa-stringmatch.mjs` | PASS | 2.3s |
-| `qa-survival.mjs` | PASS | 2.4s |
-| `qa-tank.mjs` | PASS | 3.3s |
-| `qa-tennis.mjs` | PASS | 0.4s |
-| `qa-tictactoe.mjs` | PASS | 6.2s |
-| `qa-topic.mjs` | PASS | 0.5s |
-| `qa-tumble.mjs` | PASS | 12.1s |
+| `qa-stringmatch.mjs` | PASS | 2.2s |
+| `qa-survival.mjs` | PASS | 2.6s |
+| `qa-tank.mjs` | PASS | 3.4s |
+| `qa-tennis.mjs` | PASS | 0.2s |
+| `qa-tictactoe.mjs` | PASS | 8.4s |
+| `qa-topic.mjs` | PASS | 0.2s |
+| `qa-tumble.mjs` | PASS | 11.3s |
 | `qa-typing.mjs` | PASS | 0.1s |
 | `qa-weather.mjs` | PASS | 0.1s |
 
