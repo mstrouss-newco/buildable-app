@@ -480,6 +480,38 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
   );
 }
 
+// ---------------------------------------------------------------------------
+// GN1 — how much room the NV1 five-tab bottom bar takes at the foot of a screen.
+// The bar is position:fixed and already carries env(safe-area-inset-bottom), so
+// anything ELSE pinned to the bottom of a screen that also shows the bar has to
+// clear the same distance or it sits in the bar strip. One number, one helper:
+// move NAV_BAR_H and every screen's padding and every floating pill move with it.
+//
+//   navBarClear()    the top of the bar, in the page's own coordinate space
+//   navBarClear(14)  the same, plus the gap a floating pill normally keeps
+//
+// Keep this in step with the BottomBar <nav> style further down: 8px + 8px of bar
+// padding around a ~60px tab pill (28px glyph + 3px gap + label, 8/6 pad) = 76.
+// ---------------------------------------------------------------------------
+const NAV_BAR_H = 76;
+const navBarClear = (extra = 0) => `calc(env(safe-area-inset-bottom, 0px) + ${NAV_BAR_H + extra}px)`;
+
+// Session 9B's "Gear up" pill (bottom-right, so it clears the engine's own Home /
+// mute / help / hint controls). GN1: on a screen that ALSO shows the bottom bar it
+// would land in the bar strip, so `overBar` lifts it to sit just above the bar.
+// Doing screens (GameFrame) never show the bar and pass nothing.
+function gearUpBtn(onUpgrades, overBar) {
+  if (!onUpgrades) return null;
+  return (
+    <button onClick={onUpgrades} data-gear-up data-over-bar={overBar ? "1" : "0"} style={{
+      position: "absolute", bottom: overBar ? navBarClear(14) : 14, right: 14, zIndex: 3,
+      fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff",
+      background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none",
+      borderRadius: 999, padding: "8px 16px", cursor: "pointer",
+    }}>Gear up</button>
+  );
+}
+
 function familyBtn(onFamily) {
   return <button onClick={onFamily} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Play a sibling</button>;
 }
@@ -499,9 +531,10 @@ function survivalUpParam() {
 }
 function SurvivalScreen({ onHome, onUpgrades, level }) {
   const src = "/survival-engine.html?v=9c" + survivalUpParam() + (level != null ? "&level=" + level : "");
-  const right = onUpgrades ? (
-    <button onClick={onUpgrades} style={{ position: "absolute", bottom: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Gear up</button>
-  ) : null;
+  // This is a DOING screen — the bottom bar never shows over play — so the pill
+  // keeps its normal 14px offset. Any deciding screen that grows a Gear up pill
+  // passes overBar so it clears the bar (GN1).
+  const right = gearUpBtn(onUpgrades, false);
   return <GameFrame title="Buildable Survival" src={src} onHome={onHome} right={right} />;
 }
 
@@ -605,8 +638,15 @@ function BreakerScreen({ onHome, entry = "journey" }) {
 //      Play a friend) driven straight off the manifest switch (Session 6A). A
 //      button only appears when the shell was handed its callback, so nothing
 //      per-game is hardcoded here — the router wires each manifest's modes.
+//
+//  GN1 — this is a DECIDING screen: the kid is still choosing how to play, so the
+//  five-tab bottom bar rides along with Play lit as a you-are-here sign, and a tap
+//  on any tab hops straight to that section. (Doing screens — the engine inside
+//  GameFrame — never show the bar.) The handlers arrive as one `nav` object, the
+//  same bottomBarProps every other bar on the shell is built from, so a tab means
+//  the same thing here as it does on Home.
 // ============================================================================
-function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multiplayer, onSolo, onSameDevice, onPlayFriend }) {
+function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multiplayer, onSolo, onSameDevice, onPlayFriend, nav }) {
   const accent = game.color;
   const modeOn = (multiplayer === "turn-based" || multiplayer === "realtime") && (onSolo || onSameDevice || onPlayFriend);
   const modeBtnStyle = (primary) => ({
@@ -619,7 +659,7 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multipl
     display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
   });
   return (
-    <div style={{ ...styles.container, justifyContent: "flex-start" }}>
+    <div style={{ ...styles.container, justifyContent: "flex-start", paddingBottom: navBarClear(18) }}>
       <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
         <button onClick={onBack} style={styles.backButton}>Home</button>
       </div>
@@ -647,6 +687,7 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multipl
           {onMake && <button onClick={onMake} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}>Make a level</button>}
         </div>
       </div>
+      <BottomBar current="play" {...(nav || {})} />
     </div>
   );
 }
@@ -2267,7 +2308,7 @@ export default function BuildableKids() {
     // Studio front door: same shell landing every converted game uses. No demo
     // engine (studios have no attract mode) and no "Make a level" — just Play
     // (open the maker) and "Make it mine" (instrument-pack loadout).
-    return <GameLanding game={st}
+    return <GameLanding game={st} nav={bottomBarProps}
       onPlay={() => { setReturnTo(SCREEN_MUSIC_LANDING); setScreen(SCREEN_MUSIC); }}
       onLoadout={() => setScreen(SCREEN_MUSIC_LOADOUT)}
       onBack={() => setScreen(SCREEN_HOME)} />;
@@ -2321,7 +2362,7 @@ export default function BuildableKids() {
     // (their manifest multiplayer is turn-based). Everyone else keeps one Play button.
     const mp = BOARD_MP_LANDING[landingId];
     if (mp) {
-      return <GameLanding game={g} demoSrc={cfg.demo}
+      return <GameLanding game={g} nav={bottomBarProps} demoSrc={cfg.demo}
         multiplayer="turn-based"
         onSolo={() => { setBoardDiff(null); setScreen(SCREEN_BOARD_SOLO); }}
         onSameDevice={() => { setBoardDiff(null); setScreen(mp.play); }}
@@ -2329,7 +2370,7 @@ export default function BuildableKids() {
         onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
         onBack={() => setScreen(SCREEN_HOME)} />;
     }
-    return <GameLanding game={g} demoSrc={cfg.demo}
+    return <GameLanding game={g} nav={bottomBarProps} demoSrc={cfg.demo}
       onPlay={() => { if (cfg.journey) { setWrapLevel(null); setScreen(SCREEN_WRAP_JOURNEY); } else setScreen(cfg.play); }}
       onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
       onBack={() => setScreen(SCREEN_HOME)} />;
@@ -2366,7 +2407,7 @@ export default function BuildableKids() {
   // is "realtime" so the mode row shows Solo / Same device / Play a friend.
   if (screen === SCREEN_TENNIS_LANDING) {
     const tn = GAME_CATALOG.find((g) => g.id === "tennis");
-    return <GameLanding game={tn}
+    return <GameLanding game={tn} nav={bottomBarProps}
       multiplayer="realtime"
       onSolo={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }}
       onSameDevice={() => { setTennisStart("local"); setScreen(SCREEN_TENNIS); }}
@@ -2394,7 +2435,7 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER_LANDING) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
-    return <GameLanding game={bk} demoSrc="/breaker-engine.html?v=3c&screen=demo"
+    return <GameLanding game={bk} nav={bottomBarProps} demoSrc="/breaker-engine.html?v=3c&screen=demo"
       onPlay={() => setScreen(SCREEN_BREAKER_JOURNEY)}
       onLoadout={() => setScreen(SCREEN_BREAKER_LOADOUT)}
       onMake={() => { setBreakerEntry("maker"); setScreen(SCREEN_BREAKER); }}
@@ -2578,7 +2619,7 @@ export default function BuildableKids() {
     // Play a friend. Solo opens the board frame (pick difficulty); Same device
     // launches the engine in pass-and-play; Play a friend opens the lobby.
     const cg = GAME_CATALOG.find((g) => g.id === "chess");
-    return <GameLanding game={cg}
+    return <GameLanding game={cg} nav={bottomBarProps}
       multiplayer="turn-based"
       onSolo={() => setScreen(SCREEN_CHESS_SOLO)}
       onSameDevice={() => { setChessStart("start=local"); setScreen(SCREEN_CHESS); }}
