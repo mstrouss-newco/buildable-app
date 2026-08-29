@@ -1,0 +1,318 @@
+{
+  "id": "sight-words-first",
+  "name": "First Grade",
+  "group": "Sight Words",
+  "blurb": "41 words for first grade",
+  "subject": "reading",
+  "skill": "sight-words-first",
+  "grade": "1",
+  "order": 3,
+  "audioBase": "/practice/audio/words/",
+  "items": [
+    {
+      "id": "after",
+      "prompt": "after",
+      "answer": "after",
+      "audio": "after.mp3"
+    },
+    {
+      "id": "again",
+      "prompt": "again",
+      "answer": "again",
+      "audio": "again.mp3",
+      "heart": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "an",
+      "prompt": "an",
+      "answer": "an",
+      "audio": "an.mp3"
+    },
+    {
+      "id": "any",
+      "prompt": "any",
+      "answer": "any",
+      "audio": "any.mp3",
+      "heart": [
+        0
+      ]
+    },
+    {
+      "id": "as",
+      "prompt": "as",
+      "answer": "as",
+      "audio": "as.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "ask",
+      "prompt": "ask",
+      "answer": "ask",
+      "audio": "ask.mp3"
+    },
+    {
+      "id": "by",
+      "prompt": "by",
+      "answer": "by",
+      "audio": "by.mp3"
+    },
+    {
+      "id": "could",
+      "prompt": "could",
+      "answer": "could",
+      "audio": "could.mp3",
+      "heart": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "every",
+      "prompt": "every",
+      "answer": "every",
+      "audio": "every.mp3",
+      "heart": [
+        2
+      ]
+    },
+    {
+      "id": "fly",
+      "prompt": "fly",
+      "answer": "fly",
+      "audio": "fly.mp3"
+    },
+    {
+      "id": "from",
+      "prompt": "from",
+      "answer": "from",
+      "audio": "from.mp3",
+      "heart": [
+        2
+      ]
+    },
+    {
+      "id": "give",
+      "prompt": "give",
+      "answer": "give",
+      "audio": "give.mp3",
+      "heart": [
+        3
+      ]
+    },
+    {
+      "id": "going",
+      "prompt": "going",
+      "answer": "going",
+      "audio": "going.mp3"
+    },
+    {
+      "id": "had",
+      "prompt": "had",
+      "answer": "had",
+      "audio": "had.mp3"
+    },
+    {
+      "id": "has",
+      "prompt": "has",
+      "answer": "has",
+      "audio": "has.mp3",
+      "heart": [
+        2
+      ]
+    },
+    {
+      "id": "her",
+      "prompt": "her",
+      "answer": "her",
+      "audio": "her.mp3"
+    },
+    {
+      "id": "him",
+      "prompt": "him",
+      "answer": "him",
+      "audio": "him.mp3"
+    },
+    {
+      "id": "his",
+      "prompt": "his",
+      "answer": "his",
+      "audio": "his.mp3",
+      "heart": [
+        2
+      ]
+    },
+    {
+      "id": "how",
+      "prompt": "how",
+      "answer": "how",
+      "audio": "how.mp3"
+    },
+    {
+      "id": "just",
+      "prompt": "just",
+      "answer": "just",
+      "audio": "just.mp3"
+    },
+    {
+      "id": "know",
+      "prompt": "know",
+      "answer": "know",
+      "audio": "know.mp3",
+      "heart": [
+        0
+      ]
+    },
+    {
+      "id": "let",
+      "prompt": "let",
+      "answer": "let",
+      "audio": "let.mp3"
+    },
+    {
+      "id": "live",
+      "prompt": "live",
+      "answer": "live",
+      "audio": "live.mp3",
+      "heart": [
+        3
+      ]
+    },
+    {
+      "id": "may",
+      "prompt": "may",
+      "answer": "may",
+      "audio": "may.mp3"
+    },
+    {
+      "id": "of",
+      "prompt": "of",
+      "answer": "of",
+      "audio": "of.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "old",
+      "prompt": "old",
+      "answer": "old",
+      "audio": "old.mp3"
+    },
+    {
+      "id": "once",
+      "prompt": "once",
+      "answer": "once",
+      "audio": "once.mp3",
+      "heart": [
+        0,
+        3
+      ]
+    },
+    {
+      "id": "open",
+      "prompt": "open",
+      "answer": "open",
+      "audio": "open.mp3"
+    },
+    {
+      "id": "over",
+      "prompt": "over",
+      "answer": "over",
+      "audio": "over.mp3"
+    },
+    {
+      "id": "put",
+      "prompt": "put",
+      "answer": "put",
+      "audio": "put.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "round",
+      "prompt": "round",
+      "answer": "round",
+      "audio": "round.mp3"
+    },
+    {
+      "id": "some",
+      "prompt": "some",
+      "answer": "some",
+      "audio": "some.mp3",
+      "heart": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "stop",
+      "prompt": "stop",
+      "answer": "stop",
+      "audio": "stop.mp3"
+    },
+    {
+      "id": "take",
+      "prompt": "take",
+      "answer": "take",
+      "audio": "take.mp3"
+    },
+    {
+      "id": "thank",
+      "prompt": "thank",
+      "answer": "thank",
+      "audio": "thank.mp3"
+    },
+    {
+      "id": "them",
+      "prompt": "them",
+      "answer": "them",
+      "audio": "them.mp3"
+    },
+    {
+      "id": "then",
+      "prompt": "then",
+      "answer": "then",
+      "audio": "then.mp3"
+    },
+    {
+      "id": "think",
+      "prompt": "think",
+      "answer": "think",
+      "audio": "think.mp3"
+    },
+    {
+      "id": "walk",
+      "prompt": "walk",
+      "answer": "walk",
+      "audio": "walk.mp3",
+      "heart": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "were",
+      "prompt": "were",
+      "answer": "were",
+      "audio": "were.mp3",
+      "heart": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "when",
+      "prompt": "when",
+      "answer": "when",
+      "audio": "when.mp3"
+    }
+  ]
+}

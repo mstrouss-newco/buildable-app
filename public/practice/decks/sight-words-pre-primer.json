@@ -1,0 +1,312 @@
+{
+  "id": "sight-words-pre-primer",
+  "name": "First Words",
+  "group": "Sight Words",
+  "blurb": "The very first 40 words",
+  "subject": "reading",
+  "skill": "sight-words-pre-primer",
+  "grade": "K",
+  "order": 1,
+  "audioBase": "/practice/audio/words/",
+  "items": [
+    {
+      "id": "a",
+      "prompt": "a",
+      "answer": "a",
+      "audio": "a.mp3",
+      "heart": [
+        0
+      ]
+    },
+    {
+      "id": "and",
+      "prompt": "and",
+      "answer": "and",
+      "audio": "and.mp3"
+    },
+    {
+      "id": "away",
+      "prompt": "away",
+      "answer": "away",
+      "audio": "away.mp3",
+      "heart": [
+        0
+      ]
+    },
+    {
+      "id": "big",
+      "prompt": "big",
+      "answer": "big",
+      "audio": "big.mp3"
+    },
+    {
+      "id": "blue",
+      "prompt": "blue",
+      "answer": "blue",
+      "audio": "blue.mp3",
+      "heart": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "can",
+      "prompt": "can",
+      "answer": "can",
+      "audio": "can.mp3"
+    },
+    {
+      "id": "come",
+      "prompt": "come",
+      "answer": "come",
+      "audio": "come.mp3",
+      "heart": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "down",
+      "prompt": "down",
+      "answer": "down",
+      "audio": "down.mp3"
+    },
+    {
+      "id": "find",
+      "prompt": "find",
+      "answer": "find",
+      "audio": "find.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "for",
+      "prompt": "for",
+      "answer": "for",
+      "audio": "for.mp3"
+    },
+    {
+      "id": "funny",
+      "prompt": "funny",
+      "answer": "funny",
+      "audio": "funny.mp3"
+    },
+    {
+      "id": "go",
+      "prompt": "go",
+      "answer": "go",
+      "audio": "go.mp3"
+    },
+    {
+      "id": "help",
+      "prompt": "help",
+      "answer": "help",
+      "audio": "help.mp3"
+    },
+    {
+      "id": "here",
+      "prompt": "here",
+      "answer": "here",
+      "audio": "here.mp3",
+      "heart": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "i",
+      "prompt": "I",
+      "answer": "I",
+      "audio": "i.mp3",
+      "heart": [
+        0
+      ]
+    },
+    {
+      "id": "in",
+      "prompt": "in",
+      "answer": "in",
+      "audio": "in.mp3"
+    },
+    {
+      "id": "is",
+      "prompt": "is",
+      "answer": "is",
+      "audio": "is.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "it",
+      "prompt": "it",
+      "answer": "it",
+      "audio": "it.mp3"
+    },
+    {
+      "id": "jump",
+      "prompt": "jump",
+      "answer": "jump",
+      "audio": "jump.mp3"
+    },
+    {
+      "id": "little",
+      "prompt": "little",
+      "answer": "little",
+      "audio": "little.mp3",
+      "heart": [
+        4,
+        5
+      ]
+    },
+    {
+      "id": "look",
+      "prompt": "look",
+      "answer": "look",
+      "audio": "look.mp3"
+    },
+    {
+      "id": "make",
+      "prompt": "make",
+      "answer": "make",
+      "audio": "make.mp3"
+    },
+    {
+      "id": "me",
+      "prompt": "me",
+      "answer": "me",
+      "audio": "me.mp3"
+    },
+    {
+      "id": "my",
+      "prompt": "my",
+      "answer": "my",
+      "audio": "my.mp3"
+    },
+    {
+      "id": "not",
+      "prompt": "not",
+      "answer": "not",
+      "audio": "not.mp3"
+    },
+    {
+      "id": "one",
+      "prompt": "one",
+      "answer": "one",
+      "audio": "one.mp3",
+      "heart": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "play",
+      "prompt": "play",
+      "answer": "play",
+      "audio": "play.mp3"
+    },
+    {
+      "id": "red",
+      "prompt": "red",
+      "answer": "red",
+      "audio": "red.mp3"
+    },
+    {
+      "id": "run",
+      "prompt": "run",
+      "answer": "run",
+      "audio": "run.mp3"
+    },
+    {
+      "id": "said",
+      "prompt": "said",
+      "answer": "said",
+      "audio": "said.mp3",
+      "heart": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "see",
+      "prompt": "see",
+      "answer": "see",
+      "audio": "see.mp3"
+    },
+    {
+      "id": "the",
+      "prompt": "the",
+      "answer": "the",
+      "audio": "the.mp3",
+      "heart": [
+        2
+      ]
+    },
+    {
+      "id": "three",
+      "prompt": "three",
+      "answer": "three",
+      "audio": "three.mp3"
+    },
+    {
+      "id": "to",
+      "prompt": "to",
+      "answer": "to",
+      "audio": "to.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "two",
+      "prompt": "two",
+      "answer": "two",
+      "audio": "two.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "up",
+      "prompt": "up",
+      "answer": "up",
+      "audio": "up.mp3"
+    },
+    {
+      "id": "we",
+      "prompt": "we",
+      "answer": "we",
+      "audio": "we.mp3"
+    },
+    {
+      "id": "where",
+      "prompt": "where",
+      "answer": "where",
+      "audio": "where.mp3",
+      "heart": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "yellow",
+      "prompt": "yellow",
+      "answer": "yellow",
+      "audio": "yellow.mp3"
+    },
+    {
+      "id": "you",
+      "prompt": "you",
+      "answer": "you",
+      "audio": "you.mp3",
+      "heart": [
+        1,
+        2
+      ]
+    }
+  ]
+}

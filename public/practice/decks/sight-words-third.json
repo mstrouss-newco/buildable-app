@@ -1,0 +1,310 @@
+{
+  "id": "sight-words-third",
+  "name": "Third Grade",
+  "group": "Sight Words",
+  "blurb": "41 words for third grade",
+  "subject": "reading",
+  "skill": "sight-words-third",
+  "grade": "3",
+  "order": 5,
+  "audioBase": "/practice/audio/words/",
+  "items": [
+    {
+      "id": "about",
+      "prompt": "about",
+      "answer": "about",
+      "audio": "about.mp3",
+      "heart": [
+        0
+      ]
+    },
+    {
+      "id": "better",
+      "prompt": "better",
+      "answer": "better",
+      "audio": "better.mp3"
+    },
+    {
+      "id": "bring",
+      "prompt": "bring",
+      "answer": "bring",
+      "audio": "bring.mp3"
+    },
+    {
+      "id": "carry",
+      "prompt": "carry",
+      "answer": "carry",
+      "audio": "carry.mp3"
+    },
+    {
+      "id": "clean",
+      "prompt": "clean",
+      "answer": "clean",
+      "audio": "clean.mp3"
+    },
+    {
+      "id": "cut",
+      "prompt": "cut",
+      "answer": "cut",
+      "audio": "cut.mp3"
+    },
+    {
+      "id": "done",
+      "prompt": "done",
+      "answer": "done",
+      "audio": "done.mp3",
+      "heart": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "draw",
+      "prompt": "draw",
+      "answer": "draw",
+      "audio": "draw.mp3"
+    },
+    {
+      "id": "drink",
+      "prompt": "drink",
+      "answer": "drink",
+      "audio": "drink.mp3"
+    },
+    {
+      "id": "eight",
+      "prompt": "eight",
+      "answer": "eight",
+      "audio": "eight.mp3",
+      "heart": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "fall",
+      "prompt": "fall",
+      "answer": "fall",
+      "audio": "fall.mp3",
+      "heart": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "far",
+      "prompt": "far",
+      "answer": "far",
+      "audio": "far.mp3"
+    },
+    {
+      "id": "full",
+      "prompt": "full",
+      "answer": "full",
+      "audio": "full.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "got",
+      "prompt": "got",
+      "answer": "got",
+      "audio": "got.mp3"
+    },
+    {
+      "id": "grow",
+      "prompt": "grow",
+      "answer": "grow",
+      "audio": "grow.mp3"
+    },
+    {
+      "id": "hold",
+      "prompt": "hold",
+      "answer": "hold",
+      "audio": "hold.mp3"
+    },
+    {
+      "id": "hot",
+      "prompt": "hot",
+      "answer": "hot",
+      "audio": "hot.mp3"
+    },
+    {
+      "id": "hurt",
+      "prompt": "hurt",
+      "answer": "hurt",
+      "audio": "hurt.mp3"
+    },
+    {
+      "id": "if",
+      "prompt": "if",
+      "answer": "if",
+      "audio": "if.mp3"
+    },
+    {
+      "id": "keep",
+      "prompt": "keep",
+      "answer": "keep",
+      "audio": "keep.mp3"
+    },
+    {
+      "id": "kind",
+      "prompt": "kind",
+      "answer": "kind",
+      "audio": "kind.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "laugh",
+      "prompt": "laugh",
+      "answer": "laugh",
+      "audio": "laugh.mp3",
+      "heart": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "light",
+      "prompt": "light",
+      "answer": "light",
+      "audio": "light.mp3",
+      "heart": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "long",
+      "prompt": "long",
+      "answer": "long",
+      "audio": "long.mp3"
+    },
+    {
+      "id": "much",
+      "prompt": "much",
+      "answer": "much",
+      "audio": "much.mp3"
+    },
+    {
+      "id": "myself",
+      "prompt": "myself",
+      "answer": "myself",
+      "audio": "myself.mp3"
+    },
+    {
+      "id": "never",
+      "prompt": "never",
+      "answer": "never",
+      "audio": "never.mp3"
+    },
+    {
+      "id": "only",
+      "prompt": "only",
+      "answer": "only",
+      "audio": "only.mp3",
+      "heart": [
+        0
+      ]
+    },
+    {
+      "id": "own",
+      "prompt": "own",
+      "answer": "own",
+      "audio": "own.mp3"
+    },
+    {
+      "id": "pick",
+      "prompt": "pick",
+      "answer": "pick",
+      "audio": "pick.mp3"
+    },
+    {
+      "id": "seven",
+      "prompt": "seven",
+      "answer": "seven",
+      "audio": "seven.mp3"
+    },
+    {
+      "id": "shall",
+      "prompt": "shall",
+      "answer": "shall",
+      "audio": "shall.mp3"
+    },
+    {
+      "id": "show",
+      "prompt": "show",
+      "answer": "show",
+      "audio": "show.mp3"
+    },
+    {
+      "id": "six",
+      "prompt": "six",
+      "answer": "six",
+      "audio": "six.mp3"
+    },
+    {
+      "id": "small",
+      "prompt": "small",
+      "answer": "small",
+      "audio": "small.mp3",
+      "heart": [
+        3,
+        4
+      ]
+    },
+    {
+      "id": "start",
+      "prompt": "start",
+      "answer": "start",
+      "audio": "start.mp3"
+    },
+    {
+      "id": "ten",
+      "prompt": "ten",
+      "answer": "ten",
+      "audio": "ten.mp3"
+    },
+    {
+      "id": "today",
+      "prompt": "today",
+      "answer": "today",
+      "audio": "today.mp3",
+      "heart": [
+        1
+      ]
+    },
+    {
+      "id": "together",
+      "prompt": "together",
+      "answer": "together",
+      "audio": "together.mp3",
+      "heart": [
+        1,
+        3
+      ]
+    },
+    {
+      "id": "try",
+      "prompt": "try",
+      "answer": "try",
+      "audio": "try.mp3"
+    },
+    {
+      "id": "warm",
+      "prompt": "warm",
+      "answer": "warm",
+      "audio": "warm.mp3",
+      "heart": [
+        1,
+        2
+      ]
+    }
+  ]
+}

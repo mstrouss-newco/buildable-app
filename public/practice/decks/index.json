@@ -1,0 +1,59 @@
+{
+  "decks": [
+    {
+      "id": "sight-words-pre-primer",
+      "name": "First Words",
+      "group": "Sight Words",
+      "blurb": "The very first 40 words",
+      "subject": "reading",
+      "grade": "K",
+      "order": 1,
+      "count": 40,
+      "file": "/practice/decks/sight-words-pre-primer.json"
+    },
+    {
+      "id": "sight-words-primer",
+      "name": "Next Words",
+      "group": "Sight Words",
+      "blurb": "52 words for the end of kindergarten",
+      "subject": "reading",
+      "grade": "K",
+      "order": 2,
+      "count": 52,
+      "file": "/practice/decks/sight-words-primer.json"
+    },
+    {
+      "id": "sight-words-first",
+      "name": "First Grade",
+      "group": "Sight Words",
+      "blurb": "41 words for first grade",
+      "subject": "reading",
+      "grade": "1",
+      "order": 3,
+      "count": 41,
+      "file": "/practice/decks/sight-words-first.json"
+    },
+    {
+      "id": "sight-words-second",
+      "name": "Second Grade",
+      "group": "Sight Words",
+      "blurb": "46 words for second grade",
+      "subject": "reading",
+      "grade": "2",
+      "order": 4,
+      "count": 46,
+      "file": "/practice/decks/sight-words-second.json"
+    },
+    {
+      "id": "sight-words-third",
+      "name": "Third Grade",
+      "group": "Sight Words",
+      "blurb": "41 words for third grade",
+      "subject": "reading",
+      "grade": "3",
+      "order": 5,
+      "count": 41,
+      "file": "/practice/decks/sight-words-third.json"
+    }
+  ]
+}
