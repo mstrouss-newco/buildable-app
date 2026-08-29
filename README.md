@@ -49,6 +49,17 @@ to `https://buildablekids.com/api/planner`, and this session's network policy re
 CONNECT tunnel to that host (403), so the card was read straight from `planner_meta`
 through the connected Supabase MCP instead.
 
+Each actionable finding is now a planner card in phase QA, one problem per card:
+**QA4** `[BROKEN]` feedback.html never loads in production; **QA5** `[BROKEN]` Snakes and
+Ladders has no tile; **QA6** `[INCONSISTENT]` croc-engine.html is dead but still routed;
+**QA7** `[INCONSISTENT]` play.html is titled "Buildable Runner" but serves the Hop Heroes
+tile; **QA8** `[INCONSISTENT]` ten live games hand-roll their in-game nav — run after
+QA3b/QA3c so their findings pick the order; **QA9** harness the seven unguarded pages
+kids and grown-ups actually use — deliberately unprefixed, it is a coverage gap rather
+than a defect, and it wants QA2 to land first. The two content gaps got no card: the six
+in-review Kidspedia books and the single shipped lesson are designed or planned state,
+not breakage. §8 of the map names the card id beside each finding so the two stay in step.
+
 ## Stop parking cards Mike never asked to see (RN4, August 16 2026)
 `scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
 Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16

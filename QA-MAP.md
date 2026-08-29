@@ -338,7 +338,13 @@ Plus the shared harness helpers under `qa/`: `qa/qa-map.mjs`, `qa/sim-node.mjs`,
 QA1 is **find only**. Everything here is recorded, not fixed. Each item is written
 so QA2 or a later fix card can pick it up without re-deriving it.
 
-### 8a. Coverage gaps — 16 public pages with no harness
+Each actionable finding now has a planner card in phase QA — **QA4** (feedback.html),
+**QA5** (Snakes and Ladders), **QA6** (croc-engine.html), **QA7** (play.html title),
+**QA8** (the ten games without shared nav) and **QA9** (harness coverage). The two
+content gaps in §8c — the six in-review books and the single shipped lesson — got no
+card: both are designed or planned state, not breakage.
+
+### 8a. Coverage gaps — 16 public pages with no harness  → card **QA9**
 
 `/antcity-art-gallery.html` · `/chess-look-mock.html` · `/croc-engine.html` ·
 `/feedback.html` · `/landing.html` · `/partner.html` · `/planner.html` ·
@@ -359,7 +365,7 @@ No shell component outside `BuildableKids.jsx`, `MyStuff.jsx`, `MusicMaker.jsx` 
 `GrownUpFriends.jsx`, `CreatorScreen.jsx`, `StoryMaker.jsx`, `GameLobby.jsx` and the
 four Family multiplayer wrappers.
 
-### 8b. Shared building blocks — who is still off-format
+### 8b. Shared building blocks — who is still off-format  → card **QA8**
 
 The consistency work converted the engines one at a time; §2 shows exactly how far
 it got. Five games use the full set (S H N M): Breaker, Sling Squad, Survival, Croc
@@ -379,27 +385,27 @@ Tot, Math Cannon.
 
 ### 8c. Specific things found while building the map
 
-1. **`/feedback.html` is unreachable in production.** It is the only page under
+1. **`/feedback.html` is unreachable in production.** → card **QA4**. It is the only page under
    `public/` with no entry in `vercel.json`, and `vercel.json` uses legacy `routes`
    with no `handle: filesystem` phase, so the final `"/(.*)" → /landing.html`
    catch-all swallows it. Nothing in the repo links to it either.
-2. **Snakes and Ladders is orphaned.** `/snakes-engine.html` exists, works and is
+2. **Snakes and Ladders is orphaned.** → card **QA5**. `/snakes-engine.html` exists, works and is
    guarded by `qa-snakes.mjs`; `SCREEN_SNAKES` and `SnakesScreen` exist in the
    shell; `onSnakes` is passed to the Home screen at
    `src/BuildableKids.jsx:2053` — and **is never consumed**. There is no
    `GAME_CATALOG` entry for it, so no tile renders and no kid can reach it.
-3. **`/croc-engine.html` is dead but still routed.** Croc Tot ships from
+3. **`/croc-engine.html` is dead but still routed.** → card **QA6**. Croc Tot ships from
    `/croctot.html`. Nothing links to `croc-engine.html`, yet `vercel.json` keeps a
    route for it.
-4. **`/play.html` is titled "Buildable Runner — engine"** but is mounted as the
+4. **`/play.html` is titled "Buildable Runner — engine"** → card **QA7**. It is mounted as the
    **Hop Heroes** platformer tile, while a *different* page,
    `/runner-engine.html`, is the actual Sunny Town Drive runner. Confusing to
    anyone reading either file cold.
-5. **The Kidspedia shelf shows 14 of 20 books.** Six books are `status:
-   "in-review"` and correctly hidden. QA3d should count 14 and not file the other
-   six as missing.
+5. **The Kidspedia shelf shows 14 of 20 books.** Six books are `status: "in-review"`
+   and correctly hidden. QA3d should count 14 and not file the other six as
+   missing. *(No card: designed behaviour, not a defect.)*
 6. **Only one lesson exists** (`public/lessons/g1-making-ten.json`). The Learn
-   section is real but nearly empty.
+   section is real but nearly empty. *(No card: a content gap, not a defect.)*
 
 ### 8d. `GAME-CONSISTENCY-AUDIT.md` — not in this repo
 

@@ -52,6 +52,20 @@ Not run in this session: the planner CLI. `scripts/planner.mjs` talks to
 CONNECT tunnel to that host (403), so the card was read from `planner_meta` through the
 connected Supabase MCP instead. The card write is noted separately.
 
+**Follow-up, same session:** filed the findings as planner cards in phase QA, one
+problem per card, per the phase's done-condition. **QA4** [BROKEN] feedback.html never
+loads in production. **QA5** [BROKEN] Snakes and Ladders has no tile. **QA6**
+[INCONSISTENT] croc-engine.html is dead but still routed. **QA7** [INCONSISTENT]
+play.html is titled "Buildable Runner" but serves the Hop Heroes tile. **QA8**
+[INCONSISTENT] ten live games hand-roll their in-game nav instead of
+`buildable-gamenav.js` -- run after QA3b/QA3c so their findings pick the order.
+**QA9** harness the seven unguarded pages kids and grown-ups actually use -- no bucket
+prefix on purpose, it is a coverage gap rather than a defect, and it should follow QA2
+so each new harness plugs straight into `qa-all.mjs`. The two content gaps got no card:
+the six in-review Kidspedia books and the single shipped lesson are designed or planned
+state, not breakage. QA-MAP.md section 8 now names the card id beside each finding, so
+map and planner stay in step.
+
 ## 2026-08-29 — ONB1: the new-user onboarding QA + fix
 
 QA'd the first run in a cleared browser and against last night's auth records.
