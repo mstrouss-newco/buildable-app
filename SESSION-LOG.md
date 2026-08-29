@@ -1,3 +1,47 @@
+## 2026-08-29 - SL1: the sign-in that forgot itself, and guest stops asking for a child
+
+Mike, on his iPad: "I logged in under OAuth, and its asking me to create an account
+for my kid again." His four kids (Riley, Jack, Dad, Mom) were on the server the
+whole time.
+
+**The measurement (Supabase edge logs, his iPad, 23:21:28Z).** Google handed back,
+`/auth/v1/callback` 302'd, the app read `/auth/v1/user` with a REAL JWT, and asked
+`kid_profiles?select=...grade,pin_hash...` with that JWT (400 -- see below). Then,
+**150ms later**, the same page's very next requests -- `parent_accounts?id=eq.<his
+uid>`, the `kid_profiles` fallback select -- went out with
+`request.sb.apikey.authorization.prefix = sb_publishable_...`, i.e. the ANON key,
+and came back `content_length: 2` (`[]`). The session had been dropped from
+localStorage a tenth of a second after being written to it. Desktop Chrome, driven
+through the same flow in the same minute, worked perfectly and landed on "Who's
+playing?" with all four kids -- this is a Safari storage behaviour, not a flow bug.
+
+**Fix 1 -- the session no longer lives only in the storage box** (`src/lib/accounts.js`).
+`loadSession`/`saveSession` now keep a module-level `memSession` mirror: a visit
+survives the box being emptied under it, and the box is rewritten from memory the
+moment it comes back empty. `saveSession` is also wrapped in try/catch so a full or
+blocked storage box cannot throw mid-sign-in.
+
+**Fix 2 -- a dropped session can no longer masquerade as a new family.**
+`authFetch` now attaches `err.status`; `refreshSession` only clears the session on a
+definite rejection (400/401/403) instead of on ANY error -- a network hiccup used to
+silently sign a parent out. `listKidProfiles` throws `code: "SESSION_LOST"` when it
+gets an empty list while no longer signed in, and `GrownUpScreen.refreshKids` shows
+"Your sign-in dropped out" on the chooser instead of "Add your first child".
+**The rule this encodes: an empty kid list is only a new family if we are still
+holding a session.**
+
+**Fix 3 -- guest play never asks for a child profile** (Mike: "if you say play as a
+guest, no need to create kid profile... it wont save anyway"). "Keep playing as a
+guest" now calls `playAsGuest()`: reuse an existing device profile, else create one
+called "Player" and go straight into Home. The empty picker for a signed-OUT visitor
+offers "Start playing" + "Sign in to find your family", never the setup form.
+
+**Fix 4 -- the 400 on every single load.** `db/6b-kid-profile-grade-pin.sql` had
+never been run: prod `kid_profiles` had no `grade` and no `pin_hash`, so the ideal
+select 400'd on every app load and grade/PIN silently never saved. Applied this
+session via the Supabase MCP (`apply_migration` 6b_kid_profile_grade_pin); columns
+verified present.
+
 ## 2026-08-29 — MK2: the Make page gets studio doorways
 
 Mike: "the make section navigation tiles lacks any sort of excitement." Four tile

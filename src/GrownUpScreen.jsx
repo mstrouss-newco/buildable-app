@@ -267,8 +267,32 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
   async function refreshKids() {
     setLoadingKids(true);
     try { setKids(await listKidProfiles()); }
-    catch (e) { setError(e.message); }
+    catch (e) {
+      if (e && e.code === "SESSION_LOST") {
+        // The sign-in vanished between the check and the request (seen on iPad
+        // Safari). Ask for the sign-in again -- NEVER show "add your first
+        // child" to a family that already has kids on the server.
+        setKids([]);
+        setSignedIn(false);
+        setNotice("Your sign-in dropped out. Tap Continue with Google to pick up where you left off.");
+        setStep("choose");
+      } else setError(e.message);
+    }
     finally { setLoadingKids(false); }
+  }
+
+  // Guest lane: nothing is saved off this device, so there is nothing to set up.
+  // Make one "Player" profile behind the scenes and start playing.
+  async function playAsGuest() {
+    setError(null);
+    try {
+      const existing = await listKidProfiles();
+      if (existing && existing.length) { chooseKid(existing[0]); return; }
+      const created = await createKidProfile("Player", DEFAULT_AVATAR);
+      await refreshKids();
+      if (created && created.id) { chooseKid(created); return; }
+      setStep("picker");
+    } catch (e) { setStep("picker"); }
   }
 
   useEffect(() => { refreshKids(); }, [signedIn]);
@@ -482,6 +506,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
           <h1 style={S.title}>Set up your family</h1>
           <div style={S.card}>
             <p style={S.lead}>Your kids' creations follow them on any device.</p>
+            {notice && <p style={S.noticeBox}>{notice}</p>}
             {!configured && (
               <p style={S.warn}>
                 Accounts aren't switched on for this site yet. You can still play as a
@@ -496,7 +521,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               Continue with email
             </button>
             <div style={S.divider}><span style={S.dividerText}>or</span></div>
-            <button style={S.ghostBig} onClick={() => setStep("picker")}>
+            <button style={S.ghostBig} onClick={playAsGuest}>
               Keep playing as a guest
             </button>
             <p style={S.fineprint}>
@@ -551,10 +576,21 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             {loadingKids && <p style={S.muted}>Loading profiles…</p>}
 
             {!loadingKids && kids.length === 0 ? (
-              <>
-                <p style={S.lead}>Let's set up your first child's profile.</p>
-                <button style={S.primaryBig} onClick={() => setStep("parents")}>Add your first child</button>
-              </>
+              signedIn ? (
+                <>
+                  <p style={S.lead}>Let's set up your first child's profile.</p>
+                  <button style={S.primaryBig} onClick={() => setStep("parents")}>Add your first child</button>
+                </>
+              ) : (
+                // Signed out with nothing on this device. Do NOT demand a child
+                // profile: guest play saves nothing off this device anyway, and
+                // a returning parent needs the way back to their account.
+                <>
+                  <p style={S.lead}>Ready when you are.</p>
+                  <button style={S.primaryBig} onClick={playAsGuest}>Start playing</button>
+                  <button style={S.ghostBig} onClick={() => setStep("choose")}>Sign in to find your family</button>
+                </>
+              )
             ) : (
               <>
                 <div style={S.kidGrid}>
