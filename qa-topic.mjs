@@ -618,6 +618,12 @@ for (const ex of candidates) {
 if (inlineScript && /function browserVoice\(/.test(inlineScript) && inlineScript.indexOf('factAudio') !== -1 && inlineScript.indexOf('/api/explore-audio') !== -1)
   pass('read-aloud: plays the factAudio narrator clip when present, browser voice otherwise');
 else fail('read-aloud factAudio + browser-voice fallback not found in topic.html');
+
+// RP7 — the page must ask for the clip belonging to the fact that was tapped
+// ("<pageAudioId>-2" for the second fact), not the page's first clip every time.
+if (inlineScript && /sp\.factAudio \+ "-" \+ \(n \+ 1\)/.test(inlineScript))
+  pass('read-aloud: each fact plays its own narrator clip');
+else fail('read-aloud: only the first fact looks up a narrator clip — facts 2 and 3 would speak in the robot voice');
 if (inlineScript && /BuildableGameNav\.register/.test(inlineScript) && inlineScript.indexOf('/api/sfx?s=') !== -1 && /Feel\.tap/.test(inlineScript))
   pass('audio wired: ambient bed (/api/sfx), Feel.tap page-turn feedback, and the shell Sound toggle');
 else fail('audio wiring (ambient / Feel.tap / BuildableGameNav) not found in topic.html');
@@ -655,6 +661,11 @@ if (fs.existsSync(genPath)) {
   const gen = fs.readFileSync(genPath, 'utf8');
   if (/data\.pages/.test(gen) && /p\.title/.test(gen)) pass('gen-exhibit-audio reads topic-book pages, so read-aloud clips can be generated for a book');
   else fail('api/gen-exhibit-audio.js does not read a topic book\'s pages[] — narration would generate nothing for every book');
+  // RP7 — a composed page puts a speaker on EVERY fact, so the generator must make
+  // a clip per fact. If it only makes one per page, facts 2 and 3 fall back to the
+  // robot voice and a kid hears two different readers on one page.
+  if (/facts\.forEach/.test(gen) && /p\.id\+"-"\+\(n\+1\)/.test(gen)) pass('gen-exhibit-audio makes one narrator clip per fact, not just the page\'s first');
+  else fail('api/gen-exhibit-audio.js only narrates the first fact of a page — every other speaker button would speak in the robot voice');
 } else fail('api/gen-exhibit-audio.js is missing — no way to generate read-aloud clips');
 
 // The API and its table must exist, or the dog-ear promise is a lie.
