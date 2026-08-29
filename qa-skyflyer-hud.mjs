@@ -155,7 +155,7 @@ async function openInShell(S) {
   page.on('pageerror', e => console.log('   PAGE ERROR ' + S.name + ': ' + e.message));
   await page.route('**/__qa_nav_shell', route => route.fulfill({
     contentType: 'text/html',
-    body: MOCK.replace('SRC', '/skyflyer-engine.html?v=fl9b&level=0'),
+    body: MOCK.replace('SRC', '/skyflyer-engine.html?v=fl15&level=0'),
   }));
   await page.goto(BASE + '/__qa_nav_shell', { waitUntil: 'load' });
   await page.waitForFunction(
@@ -203,7 +203,7 @@ for (const S of SIZES) {
 console.log('\n--- STANDALONE: the engine opened directly is unchanged ---');
 {
   const page = await browser.newPage({ viewport: { width: 390, height: 704 } });
-  await page.goto(BASE + '/skyflyer-engine.html?v=fl9b&level=0', { waitUntil: 'load' });
+  await page.goto(BASE + '/skyflyer-engine.html?v=fl15&level=0', { waitUntil: 'load' });
   await page.waitForFunction('window.SKY && SKY.state', null, { timeout: 60000 });
   await page.waitForTimeout(4000);
   const r = await page.evaluate(() => {

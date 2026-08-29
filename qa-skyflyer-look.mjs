@@ -36,6 +36,14 @@ for (const S of SIZES) {
   // park the plane where a job is waiting to be found, and let the game's own
   // loop do the offering — the card must come up the way a kid gets it
   await page.evaluate(() => { const s = SKY.state; s.pos.x = 0; s.pos.z = -60; s.pos.y = 30; s.yaw = 0; });
+  // FL15: the swoop raises a PILL. Shoot the pill, then tap it the way a kid
+  // does - the card must never come up on its own any more.
+  await page.waitForFunction('SKY.findPill().up === true', null, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(500);
+  const pill = await page.evaluate(() => SKY.findPill());
+  console.log(`\n${S.name} pill: up=${pill.up} job=${pill.id} icons=${pill.icons} "${pill.label}"`);
+  await page.screenshot({ path: `${OUT}/findpill-${S.name}.png` });
+  await page.evaluate(() => SKY.tapPill());
   await page.waitForFunction('SKY.offer().up === true', null, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(1600);   // let the one-shot picture finish walking
   const info = await page.evaluate(() => ({ offer: SKY.offer(), card: SKY.offerCard() }));
@@ -79,6 +87,9 @@ for (const Q of QUESTS) {
   await page.waitForFunction('window.SKY && SKY.state', null, { timeout: 30000 });
   // park where the quest's beam is and let the game's own loop do the offering
   await page.evaluate(a => { const s = SKY.state; s.pos.x=a.x; s.pos.z=a.z; s.pos.y=20; s.yaw=0; }, Q.at);
+  // FL15: swoop raises the pill, the tap opens the card
+  await page.waitForFunction(`SKY.findPill().id === '${Q.id}'`, null, { timeout: 30000 }).catch(() => {});
+  await page.evaluate(() => SKY.tapPill());
   await page.waitForFunction(`SKY.offer().id === '${Q.id}'`, null, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(1600);
   const info = await page.evaluate(() => ({ offer: SKY.offer(), card: SKY.offerCard() }));

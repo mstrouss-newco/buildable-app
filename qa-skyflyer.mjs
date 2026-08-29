@@ -372,10 +372,31 @@ chk('each one lends a body, and the body it names really exists',
   BODY_IDS.join(', '));
 chk('a quest is FOUND exactly like a job: a beam, and a LOW SWOOP, never a landing',
   /function scoutColor\(m\)/.test(html) && /if\(m\.transform\) return 0x9B7BE8;/.test(html) &&
-  // the offer still comes from the same scoutStep that has always run on radius
-  // plus ceiling, and nothing anywhere waits for S.mode==="landed" to offer
-  /d>\(m\.radius\+10\)\|\|S\.pos\.y>\(m\.ceiling\+25\)/.test(html) &&
+  // FL15: the swoop still comes out of the recipe's own radius and ceiling, and
+  // nothing anywhere waits for S.mode==="landed" to offer
+  /function offerRad\(m\)\{ return \(m\.radius\|\|30\); \}/.test(html) &&
+  /function offerCeil\(m\)\{ return Math\.max\(\(m\.ceiling\|\|45\)\*0\.7,30\); \}/.test(html) &&
   !/mode==="landed"[^\n]*openOffer/.test(html));
+// FL15 - Mike: "the game hits side quest too fast, let kids fly around and find
+// them on their own." Two halves, and both are asserted here rather than left
+// as good intentions, because the failure mode is a later session quietly
+// wiring openOffer back into the flight loop.
+chk('FL15: a low swoop RAISES A PILL - it can never open the card by itself',
+  /function showFindPill\(m\)/.test(html) && /function tapFindPill\(\)/.test(html) &&
+  /id="findPill"/.test(html) &&
+  /findPill\.addEventListener\("click",tapFindPill\)/.test(html) &&
+  // scoutStep raises the pill and NOTHING else; openOffer is reached through the tap
+  /showFindPill\(best\.job\);/.test(html) &&
+  (function(){ const b = html.slice(html.indexOf('function scoutStep(){'),
+                                   html.indexOf('// ---------- "show me where it is"'));
+    return !/openOffer\(/.test(b); })());
+chk('FL15: the swoop is genuinely LOW now, not most of the sky',
+  // the old test was radius+10 wide and ceiling+25 high, which on the Mail Run
+  // was 40 units across and 85 up - a kid heading north out of the pad set it off
+  !/d>\(m\.radius\+10\)/.test(html) && !/S\.pos\.y>\(m\.ceiling\+25\)/.test(html));
+chk('FL15: the pill is drawn from the RECIPE, never per job (the FL5b law)',
+  /fpIco\.innerHTML=targetIcon\(scoutStyle\(m\),30,false\)/.test(html) &&
+  /fpName\.textContent=m\.name/.test(html));
 chk('THE FL5 LAW STILL HOLDS: nothing in a quest can be failed, run out or expire',
   (function(){ const g = html.slice(html.indexOf('function gatherStep(dt,px,pz,py){'), html.indexOf('//  FL5 — JOBS ARE THINGS YOU FIND'));
     return !/timer|expire|lives|fail|lose|penalt/i.test(g); })());
@@ -1597,9 +1618,23 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
     // fly straight at it, the way a kid who spotted the beam would
     const S = wk.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
     let t=0, seen=null;
-    for (; t<600; t++){ wk.SKY.tick(1/30); const o=wk.SKY.offer(); if(o.up){ seen=o; break; } }
-    chk('swooping low over it offers the job by name', !!seen && seen.id==='mail-run',
-      'asked after '+(t/30).toFixed(1)+'s of flying at it');
+    for (; t<600; t++){ wk.SKY.tick(1/30); const o=wk.SKY.findPill(); if(o.up){ seen=o; break; } }
+    // FL15: the swoop RAISES A HAND. Nothing has opened, nothing has stopped.
+    chk('swooping low over it raises the pill, by name', !!seen && seen.id==='mail-run',
+      'pill up after '+(t/30).toFixed(1)+'s of flying at it');
+    chk('FL15: the pill does NOT stop the game - the kid is still flying',
+      wk.SKY.offer().up===false && wk.SKY.state.picking===false && wk.SKY.mode()==='free');
+    // and flying on past it puts the hand back down, with nothing asked
+    const zAway = wk.SKY.state.pos.z;
+    for (let k=0;k<400 && wk.SKY.findPill().up;k++) wk.SKY.tick(1/30);
+    chk('FL15: flying on past it lowers the pill again and asks nothing',
+      wk.SKY.findPill().up===false && wk.SKY.offer().up===false &&
+      wk.SKY.state.pos.z < zAway - 40);
+    // come back round; the tap is the only door into the card
+    wk.SKY.state.pos.x=0; wk.SKY.state.pos.z=-60; wk.SKY.state.pos.y=30; wk.SKY.state.yaw=0;
+    for (let k=0;k<600;k++){ wk.SKY.tick(1/30); if (wk.SKY.findPill().up) break; }
+    chk('FL15: tapping the pill is what opens the card',
+      wk.SKY.tapPill()===true && wk.SKY.offer().up===true && wk.SKY.offer().id==='mail-run');
     chk('the sky waits while the kid decides', wk.SKY.state.picking===true);
     chk('"Not now" starts nothing at all', wk.SKY.declineOffer()===true && wk.SKY.mode()==='free' && wk.SKY.state.picking===false);
     let nagged=false;
@@ -1611,7 +1646,8 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
     // "Do it" -> the job runs -> leaving costs nothing and it starts fresh next time
     const da = flyKid(0, ''); const wa = da.window;
     const S = wa.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
-    for (let k=0;k<600;k++){ wa.SKY.tick(1/30); if (wa.SKY.offer().up) break; }
+    for (let k=0;k<600;k++){ wa.SKY.tick(1/30); if (wa.SKY.findPill().up) break; }
+    wa.SKY.tapPill();   // FL15: the pill is the one door into the offer card
     chk('"Do it" starts the job the kid found', wa.SKY.acceptOffer()===true && wa.SKY.mode()==='job' && wa.SKY.job().id==='mail-run');
     chk('once a job is on, its start point is not doubled up in the world', wa.SKY.scouts().length===0);
     wa.SKY.autopilot(true);
@@ -1658,7 +1694,8 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
   {
     const dp = flyKid(0, ''); const wp = dp.window;
     const S = wp.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
-    for (let k=0;k<600;k++){ wp.SKY.tick(1/30); if (wp.SKY.offer().up) break; }
+    for (let k=0;k<600;k++){ wp.SKY.tick(1/30); if (wp.SKY.findPill().up) break; }
+    wp.SKY.tapPill();   // FL15: the pill is the one door into the offer card
     chk('the offer that came up is the one a non-reader can answer',
       wp.SKY.offer().up===true && wp.SKY.offer().id==='mail-run');
     const a = wp.SKY.offerCard();
@@ -1715,7 +1752,8 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
     const dl = flyKid(2, ''); const wl = dl.window;
     const S = wl.SKY.state; const lp = wl.SKY.missions().filter(m=>m.id==='lantern-lighter')[0];
     const pt = lp.targets[0]; S.pos.x=pt.x; S.pos.z=pt.z+70; S.pos.y=30; S.yaw=0;
-    for (let k=0;k<900;k++){ wl.SKY.tick(1/30); if (wl.SKY.offer().up) break; }
+    for (let k=0;k<900;k++){ wl.SKY.tick(1/30); if (wl.SKY.findPill().up) break; }
+    wl.SKY.tapPill();   // FL15: the pill is the one door into the offer card
     const st = wl.SKY.offerStrip();
     chk('a job with NOTHING to carry draws its first stop as the start, and all four lanterns',
       wl.SKY.offer().id==='lantern-lighter' && st.cargo===1 && st.targets===lp.targets.length,
@@ -1815,7 +1853,8 @@ chk('AR1M: every island is FLAT TIERS, and a sandbar is the beach on its own',
     // "Not now" is not "never": it pins the thing so a kid can come back to it
     const dn = flyKid(0, ''); const wn = dn.window;
     const S = wn.SKY.state; S.pos.x=0; S.pos.z=-60; S.pos.y=30; S.yaw=0;
-    for (let k=0;k<600;k++){ wn.SKY.tick(1/30); if (wn.SKY.offer().up) break; }
+    for (let k=0;k<600;k++){ wn.SKY.tick(1/30); if (wn.SKY.findPill().up) break; }
+    wn.SKY.tapPill();   // FL15: the pill is the one door into the offer card
     chk('saying no pins it, so "not now" really can mean not now',
       wn.SKY.declineOffer()===true && wn.SKY.mode()==='free' &&
       !!wn.SKY.waypoint() && wn.SKY.waypoint().label==='Mail Run');
@@ -2391,10 +2430,10 @@ chk('FM1: a QA handle (window.FARM) exposes patches, stack and seed picker so a 
   /patches:\s*function\(\)/.test(farm) &&
   /stack:\s*function\(\)/.test(farm) &&
   /openSeedPicker:\s*function/.test(farm));
-chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fl9b)',
+chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fl15)',
   (function(){
     const jsx = read('src/BuildableKids.jsx');
-    const hits = jsx.match(/skyflyer-engine\.html\?v=fl9b/g) || [];
+    const hits = jsx.match(/skyflyer-engine\.html\?v=fl15/g) || [];
     return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fl13|fl8c)\b/.test(jsx);
   })());
 
