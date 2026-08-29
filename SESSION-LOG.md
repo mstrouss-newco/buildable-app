@@ -1,3 +1,92 @@
+## 2026-08-29 — PT1: the practice engine, and sight words playing on it
+
+The first half of the practice phase: build the shared deck engine, then ship the
+Dolch sight words on top of it so the thing is playable end to end, not a library
+waiting for a page.
+
+**The engine — `public/buildable-practice.js`.** Subject-agnostic on purpose: it
+knows about decks, items and a per-kid box, and nothing about words. The maths
+decks in PT3 are data files, not an engine change. There is no
+`if (subject === "reading")` anywhere in it, and qa-practice fails the build if
+one appears.
+- Boxes 1-5, new items start in 1. **Right AND fast** moves an item up a box;
+  **wrong or slow** moves it down. Fast is under 3000ms.
+- The timing is measured **silently**. No timer, no countdown, no clock, nothing
+  on screen a kid could read as being raced. The milliseconds are never rendered
+  and qa-practice checks for that specifically. A kid only ever notices that the
+  words they know come round less often.
+- A higher box is a longer wait: 0 / 1 / 2 / 4 / 8 days.
+- A session is about 20 items: due reviews first, most overdue leading, and **at
+  most 3 never-seen items** spread through the run rather than stacked at the
+  front. Every new item is flagged for its intro moment so it is never quizzed
+  cold. A deck with nothing due pads from resting items instead of handing back a
+  three-card anticlimax.
+- **Wrong answers are never punished.** No lives, no score, no fail state
+  anywhere. A miss is requeued a few cards later. That is the whole consequence.
+
+**The decks — `public/practice/decks/`.** The five Dolch lists as data:
+pre-primer 40, primer 52, first 41, second 46, third 41 — **220 words**. Each
+word carries its `heart` letters: the indices of the graphemes a kid cannot sound
+out ("said" glows on its ai, "come" on the o and the silent e). Decodable words
+carry none and nothing glows. `scripts/gen-practice-decks.mjs` regenerates them
+and refuses a duplicate id or a heart index pointing past the end of a word.
+
+**The page — `public/practice.html`.** Two modes on one engine:
+- **Find It** — audio says the word, the kid picks from four big word cards.
+- **Flash** — the word flashes for about a second with audio, then the kid picks
+  which word they saw.
+Both work for a non-reader: nothing has to be read to start and every instruction
+is spoken. Cream brand tokens, drawn SVG only, no emojis, touch-first for iPad
+and iPhone. A new word gets its intro moment first — shown big, said aloud,
+tricky letters glowing (heart-word method). A miss quietly shows the right card,
+says the word, and puts it back a few cards later.
+
+**Word audio has three tiers**, so a kid always hears the word: the baked mp3 in
+`/practice/audio/words/`, then `/api/say` (the live ElevenLabs pipeline, which
+caches server-side so a missing file self-heals), then the device voice.
+
+**Flagged honestly: the 220 mp3s are not baked yet.** `scripts/gen-practice-audio.mjs`
+is written and dry-runs clean, but this build sandbox has no network route to
+`www.buildablekids.com` — its policy refused all 220 requests with a 403 before
+they reached the site, and the ElevenLabs key correctly lives only in Vercel. The
+script needs one run from a machine that can reach the live site. **Practice is
+not blocked by it:** tier 2 is the same ElevenLabs voice through `/api/say`, so
+kids hear the right thing today and the static files are purely a speed and
+offline win. See `public/practice/audio/README.md`.
+
+**Wiring.** `/practice` and `/practice.html` routed in `vercel.json`, with the
+deck JSON revalidated, the word audio cached for a year, and the favicon block
+for the new page. `SCREEN_PRACTICE` lives at the stable address `/app/practice`
+and is framed by the shared `GameFrame` like Lessons — which already relays the
+cartridge `skill` message into the 8B learning ledger, so a session reaches the
+ledger with no new shell wiring. Per-kid state is `localStorage bk_practice_v1`
+keyed by kid id, and **one** learning event is posted per finished session, not
+one per answer.
+
+**Home.** The Practice door sits beside Learn and stays **Coming Soon behind the
+1111 owner gate until PT2** — flipping `soon` to false is the whole of that
+change. Six doors now, so on phones My Stuff bookends the run full width and
+nothing is orphaned on its own row; on tablet and desktop all six sit in one row.
+
+**QA.** `qa-practice.mjs` — **129 checks, all green.** Three parts, all
+in-process in jsdom (no Playwright, no network): the box math in a real window;
+the deck data (exact counts, unique ids, every glowing letter landing on a real
+letter, index agreeing with the files); and `practice.html` booted headless with
+its real scripts, playing a whole Find It run and a whole Flash run to the end —
+including a deliberate wrong tap proving the only consequence is the word coming
+back, and exactly one ledger row per finished session. `qa-nv1`, `qa-nv2`,
+`qa-nv3` and `qa-nv4` all still pass after the Home change.
+
+**Two notes for the next session.** There is still no `qa-all.mjs` in the repo,
+so there was nothing to wire `qa-practice` into. And Practice is deliberately
+absent from `qa/qa-map.mjs` — that map is for manifest games, and Lessons is
+absent for the same reason.
+
+**What remains in this phase:** PT2 (open the tile to everyone), PT3 (the four
+maths operations as decks on this same engine), and the placement warm-up, bird
+collection and Sprint-with-parent-settings work that the phase's done-when
+describes.
+
 ## 2026-08-29 — MK2: the Make page gets studio doorways
 
 Mike: "the make section navigation tiles lacks any sort of excitement." Four tile

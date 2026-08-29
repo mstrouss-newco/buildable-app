@@ -6,6 +6,50 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Practice: one deck engine, sight words riding on it (PT1, August 29 2026)
+`public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
+`scripts/gen-practice-decks.mjs`, `scripts/gen-practice-audio.mjs`,
+`qa-practice.mjs`, `vercel.json`, `src/BuildableKids.jsx`.
+Phase **PT**, card **PT1.**
+
+The shared practice engine plus the first subject to ride on it. The engine is
+deliberately subject-agnostic — decks, items, and a per-kid box, with no idea
+what a sight word is — so the maths operations in PT3 arrive as data files and
+not as an engine change.
+
+**The box rule.** Boxes 1-5, new items start in 1. Right AND fast moves an item
+up a box; wrong or slow moves it down. Fast is under 3000ms, and it is measured
+**silently** — no timer, no countdown, no clock, and the milliseconds are never
+rendered anywhere a kid can see (qa-practice fails the build if they are). A
+higher box just means a longer wait: 0/1/2/4/8 days. A session is about 20 items,
+due reviews first with the most overdue leading, and at most 3 never-seen items
+spread through the run. Every new item gets an intro moment before it is ever
+quizzed — shown big, said aloud, tricky letters glowing (heart-word method).
+Wrong answers are never punished: no lives, no score, no fail state, the item
+simply comes back a few cards later.
+
+**The decks.** The five Dolch lists as JSON: pre-primer 40, primer 52, first 41,
+second 46, third 41 = 220 words, each carrying the indices of its heart letters.
+
+**The page.** `/practice` offers Find It (audio says the word, pick from four big
+word cards) and Flash (the word blinks for about a second, pick which one you
+saw). Non-reader friendly, drawn SVG only, no emojis, touch-first for iPad and
+iPhone. Per-kid state is `localStorage bk_practice_v1`; one learning event is
+posted per finished session, through the shell's existing cartridge `skill`
+relay into the 8B ledger.
+
+**Word audio** tries the baked mp3 first, then `/api/say` (live ElevenLabs,
+cached server-side), then the device voice. The 220 static files are **not baked
+yet** — the PT1 sandbox had no network route to the live site — but tier 2 is the
+same voice, so nothing is degraded for a kid today. `scripts/gen-practice-audio.mjs`
+bakes them in one run from any machine that can reach production; details in
+`public/practice/audio/README.md`.
+
+**On Home** the Practice door sits beside Learn and stays Coming Soon behind the
+1111 owner gate until PT2. `qa-practice.mjs` is 129 checks green (box math, deck
+data, and the page booted headless in jsdom playing both modes end to end);
+qa-nv1/2/3/4 still pass.
+
 ## Stop parking cards Mike never asked to see (RN4, August 16 2026)
 `scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
 Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16
