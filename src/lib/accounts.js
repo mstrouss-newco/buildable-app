@@ -37,13 +37,33 @@ export function isConfigured() {
 }
 
 // ---- session persistence (browser) ---------------------------------
+// The browser storage box is NOT reliable. Measured on iPad Safari (server
+// logs, 2026-08-29): a Google sign-in wrote the session and ~150ms later the
+// very next request from the same page went out with the anon key -- the key
+// had already been dropped from localStorage, so the app asked "who are my
+// kids" as a stranger, got nothing back, and showed "add your first child" to
+// a parent who had four. Keep a copy in page memory so one visit never depends
+// on that box surviving, and heal the box whenever it comes back empty.
+let memSession = null;
+
 function loadSession() {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); }
-  catch { return null; }
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); }
+  catch (e) { stored = null; }
+  if (stored && stored.access_token) { memSession = stored; return stored; }
+  if (memSession && memSession.access_token) {
+    // Storage lost it mid-visit. Put it back and carry on as signed in.
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(memSession)); } catch (e) {}
+    return memSession;
+  }
+  return stored;
 }
 function saveSession(s) {
-  if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-  else localStorage.removeItem(SESSION_KEY);
+  memSession = s && s.access_token ? s : null;
+  try {
+    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch (e) { /* storage full or blocked -> memory copy still carries us */ }
 }
 export function getSession() { return loadSession(); }
 export function isSignedIn() { return Boolean(loadSession()?.access_token); }
@@ -69,7 +89,13 @@ export async function refreshSession() {
       saveSession({ access_token: data.access_token, refresh_token: data.refresh_token || sx.refresh_token });
       return data.access_token;
     }
-  } catch { saveSession(null); }
+  } catch (e) {
+    // Only a definite rejection (bad/expired refresh token) means "signed out".
+    // A network hiccup used to wipe the session and silently demote a signed-in
+    // parent to a brand-new visitor, which is how "add your first child" got in
+    // front of families who already had kids.
+    if (e && (e.status === 400 || e.status === 401 || e.status === 403)) saveSession(null);
+  }
   return null;
 }
 // Call on app load: proactively refresh if the saved token is expired/expiring.
@@ -112,7 +138,11 @@ async function authFetch(path, init) {
     headers: { apikey: ANON_KEY, "Content-Type": "application/json", ...(init && init.headers) },
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error_description || data.msg || data.error || "Auth request failed");
+  if (!r.ok) {
+    const err = new Error(data.error_description || data.msg || data.error || "Auth request failed");
+    err.status = r.status;   // callers need to tell "rejected" from "network hiccup"
+    throw err;
+  }
   return data;
 }
 
@@ -239,6 +269,14 @@ export async function listKidProfiles() {
         "kid_profiles?select=id,display_name:name,avatar,helper,created_at&order=created_at.asc",
         { method: "GET" }
       );
+    }
+    // If the session evaporated mid-flight, the rows came back empty only
+    // because the question was asked as a stranger. Say "signed out" rather
+    // than handing the UI a false "this family has no kids".
+    if ((!kids || !kids.length) && !isSignedIn()) {
+      const err = new Error("Your sign-in dropped out");
+      err.code = "SESSION_LOST";
+      throw err;
     }
     // Seed the per-device copy (bk_helper_<id>) from the DB value so getKidHelper
     // is trustworthy on a brand-new browser and never re-creates an existing buddy.

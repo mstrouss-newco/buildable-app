@@ -1457,7 +1457,8 @@ function browserVoice(i, text, token, n) {
   try {
     speechSynthesis.cancel();
     const sp = SPREADS[i] || {};
-    const u = new SpeechSynthesisUtterance((sp.title || "") + ". " + (text || ""));
+    // Only the first fact carries the page title, so facts 2 and 3 do not repeat it.
+    const u = new SpeechSynthesisUtterance((n === 0 && sp.title ? sp.title + ". " : "") + (text || ""));
     u.rate = 0.92; u.pitch = 1.05;
     u.onend = function () { if (token === sayToken) { speaking = false; setSayButton(i, false, n); } };
     speechSynthesis.speak(u);
@@ -1473,11 +1474,13 @@ function readAloud(i, which) {
   const text = (list[n] && list[n].text) || "";
   stopNarration();
   const token = ++sayToken; speaking = true; setSayButton(i, true, n);
-  // The pre-made narrator clip covers the page's FIRST fact only; anything
-  // else is read by the browser voice, so a kid never waits on a download.
-  if (n === 0 && sp.factAudio) {
+  // RP7: every fact has its own narrator clip. Fact 1 is the page's own audio id,
+  // later facts add "-2", "-3". A missing clip still falls straight through to the
+  // browser voice, so a kid never waits on a download.
+  if (sp.factAudio) {
     try {
-      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(sp.factAudio));
+      const clipId = n === 0 ? sp.factAudio : (sp.factAudio + "-" + (n + 1));
+      const a = new Audio("/api/explore-audio?id=" + encodeURIComponent(clipId));
       narrAudio = a;
       a.onended = function () { if (token === sayToken) { speaking = false; setSayButton(i, false, n); } };
       a.onerror = function () { if (token !== sayToken) return; narrAudio = null; browserVoice(i, text, token, n); };
