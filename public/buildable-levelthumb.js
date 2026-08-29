@@ -461,20 +461,200 @@
         for (var r=0;r<rows;r++) for (var c=0;c<cols;c++){ var x=ox+c*tw, y=oy+r*th;
           g.fillStyle="rgba(0,0,0,.18)"; rr(g,x+2,y+3,tw-2,th-2,3); g.fill();
           g.fillStyle=edge; rr(g,x,y,tw-2,th-2,3); g.fill();
-          g.fillStyle=tileFace; rr(g,x+1.2,y+1,tw-4.4,th-5,2.4); g.fill(); } } }
+          g.fillStyle=tileFace; rr(g,x+1.2,y+1,tw-4.4,th-5,2.4); g.fill(); } } },
+
+    // TYPING — the world you are about to type your way through: its sky and
+    // lane, the row of letter tiles you spell (first one lit, like the game's
+    // glowing key), and the world's boss waiting at the end of the lane.
+    // d = { sky:[c1,c2], lane:[c1,c2], word:"COMET", foe:"ufo", tint, accent }
+    letters: function(g, d){
+      var sky = d.sky || ["#3b1d6e", "#150d2e"];
+      var lane = d.lane || ["#241456", "#10233f"];
+      var tint = d.tint || "#7C5CFC", acc = d.accent || "#FFD479";
+      var laneY = 100;
+      grad(g, sky[0], sky[1]);
+      // the lane the baddie walks down, lit along its lip
+      var lg = g.createLinearGradient(0, laneY, 0, CH);
+      lg.addColorStop(0, lane[0]); lg.addColorStop(1, lane[1]);
+      g.fillStyle = lg; g.fillRect(0, laneY, CW, CH - laneY);
+      g.fillStyle = shade(tint, 40); g.globalAlpha = 0.55; g.fillRect(0, laneY, CW, 3); g.globalAlpha = 1;
+      // a soft glow of the world tint behind everything
+      var rg = g.createRadialGradient(CW * 0.72, laneY - 26, 6, CW * 0.72, laneY - 26, 110);
+      rg.addColorStop(0, "rgba(255,255,255,.16)"); rg.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = rg; g.fillRect(0, 0, CW, CH);
+
+      // ---- the world's boss, standing at the end of the lane ----
+      function eyes(x, y, r, col){
+        disc(g, x - r * 0.34, y, r * 0.26, "#fff"); disc(g, x + r * 0.34, y, r * 0.26, "#fff");
+        disc(g, x - r * 0.30, y + r * 0.03, r * 0.13, col || "#141024");
+        disc(g, x + r * 0.38, y + r * 0.03, r * 0.13, col || "#141024");
+      }
+      function crown(x, y, r, col){
+        g.fillStyle = col || "#FFD479"; g.beginPath();
+        g.moveTo(x - r, y); g.lineTo(x - r, y - r * 0.72); g.lineTo(x - r * 0.5, y - r * 0.28);
+        g.lineTo(x, y - r * 0.86); g.lineTo(x + r * 0.5, y - r * 0.28); g.lineTo(x + r, y - r * 0.72);
+        g.lineTo(x + r, y); g.closePath(); g.fill();
+      }
+      function foe(kind, x, y, r){
+        g.fillStyle = "rgba(0,0,0,.22)";
+        g.beginPath(); g.ellipse(x, laneY + 8, r * 0.95, r * 0.22, 0, 0, 6.2832); g.fill();
+        if (kind === "ufo"){
+          disc(g, x, y - r * 0.30, r * 0.56, "#cfe6ff");                       // dome
+          g.fillStyle = "#8fb6ff"; g.beginPath();
+          g.ellipse(x, y + r * 0.10, r * 1.05, r * 0.34, 0, 0, 6.2832); g.fill();   // saucer
+          g.fillStyle = "#5f7fd6"; g.beginPath();
+          g.ellipse(x, y + r * 0.24, r * 0.72, r * 0.18, 0, 0, 6.2832); g.fill();
+          for (var i = -1; i <= 1; i++) disc(g, x + i * r * 0.52, y + r * 0.12, r * 0.10, "#ffe27a");
+          eyes(x, y - r * 0.34, r * 0.62); return;
+        }
+        if (kind === "gorilla"){
+          disc(g, x - r * 0.78, y - r * 0.18, r * 0.30, "#3a2c26");             // ears
+          disc(g, x + r * 0.78, y - r * 0.18, r * 0.30, "#3a2c26");
+          disc(g, x, y, r * 0.86, "#4a382f");                                   // head
+          g.fillStyle = "#c9a887"; g.beginPath();
+          g.ellipse(x, y + r * 0.34, r * 0.50, r * 0.34, 0, 0, 6.2832); g.fill();  // muzzle
+          disc(g, x - r * 0.16, y + r * 0.34, r * 0.07, "#4a382f");
+          disc(g, x + r * 0.16, y + r * 0.34, r * 0.07, "#4a382f");
+          eyes(x, y - r * 0.18, r * 0.70); crown(x, y - r * 0.74, r * 0.42); return;
+        }
+        if (kind === "whale"){
+          g.fillStyle = "#4aa8e8"; g.beginPath();
+          g.ellipse(x - r * 0.10, y + r * 0.10, r * 0.92, r * 0.62, 0, 0, 6.2832); g.fill();
+          g.fillStyle = "#4aa8e8"; g.beginPath();                                // tail
+          g.moveTo(x + r * 0.66, y + r * 0.08); g.lineTo(x + r * 1.28, y - r * 0.44);
+          g.lineTo(x + r * 1.26, y + r * 0.58); g.closePath(); g.fill();
+          g.fillStyle = "#bfe6ff"; g.beginPath();                                // belly
+          g.ellipse(x - r * 0.22, y + r * 0.38, r * 0.56, r * 0.24, 0, 0, 6.2832); g.fill();
+          g.strokeStyle = "#cfefff"; g.lineWidth = r * 0.16; g.lineCap = "round"; // spout
+          g.beginPath(); g.moveTo(x - r * 0.44, y - r * 0.50); g.lineTo(x - r * 0.56, y - r * 0.98); g.stroke();
+          eyes(x - r * 0.46, y - r * 0.02, r * 0.54); return;
+        }
+        if (kind === "lolly"){
+          g.strokeStyle = "#f6ecd8"; g.lineWidth = r * 0.20; g.lineCap = "round"; // stick
+          g.beginPath(); g.moveTo(x, y + r * 0.5); g.lineTo(x, y + r * 1.5); g.stroke();
+          disc(g, x, y, r * 0.86, "#ffd6ec");                                     // swirl
+          g.strokeStyle = "#e85aa8"; g.lineWidth = r * 0.22; g.beginPath();
+          for (var a = 0; a < 14; a++){ var t = a / 13 * 9.4, rr2 = r * 0.10 + t * r * 0.075;
+            var px = x + Math.cos(t) * rr2, py = y + Math.sin(t) * rr2;
+            if (a === 0) g.moveTo(px, py); else g.lineTo(px, py); }
+          g.stroke();
+          eyes(x, y + r * 0.06, r * 0.66); crown(x, y - r * 0.74, r * 0.42); return;
+        }
+        if (kind === "yeti"){
+          disc(g, x, y + r * 0.24, r * 0.82, "#eaf6ff");                         // body
+          disc(g, x - r * 0.62, y + r * 0.10, r * 0.34, "#dcefff");
+          disc(g, x + r * 0.62, y + r * 0.10, r * 0.34, "#dcefff");
+          disc(g, x, y - r * 0.30, r * 0.62, "#f7fcff");                          // head
+          eyes(x, y - r * 0.34, r * 0.58);
+          g.fillStyle = "#7fc7ee"; g.beginPath();                                 // frosty tuft
+          g.moveTo(x - r * 0.30, y - r * 0.82); g.lineTo(x, y - r * 1.24); g.lineTo(x + r * 0.30, y - r * 0.82);
+          g.closePath(); g.fill(); return;
+        }
+        // lava lord (default) — a molten blob with a jagged crown of flame
+        g.fillStyle = "#f0703c"; g.beginPath();
+        g.moveTo(x - r * 0.92, y + r * 0.62);
+        g.bezierCurveTo(x - r * 1.06, y - r * 0.36, x - r * 0.44, y - r * 0.94, x, y - r * 0.86);
+        g.bezierCurveTo(x + r * 0.48, y - r * 0.96, x + r * 1.06, y - r * 0.34, x + r * 0.92, y + r * 0.62);
+        g.closePath(); g.fill();
+        g.fillStyle = "#ffb35c";
+        for (var f = -1; f <= 1; f++){ g.beginPath();
+          g.moveTo(x + f * r * 0.52 - r * 0.20, y - r * 0.74);
+          g.lineTo(x + f * r * 0.52, y - r * 1.30);
+          g.lineTo(x + f * r * 0.52 + r * 0.20, y - r * 0.74); g.closePath(); g.fill(); }
+        eyes(x, y - r * 0.10, r * 0.62, "#5a1410");
+      }
+      foe(d.foe || "lava", CW * 0.845, laneY - 24, 30);
+
+      // ---- the word, on the same key tiles the game spells with ----
+      var word = (d.word || "type").toUpperCase().slice(0, 5);
+      var tw = 34, th = 42, gap = 6;
+      var ox = 16, oy = 44;
+      g.textAlign = "center"; g.textBaseline = "middle";
+      for (var i = 0; i < word.length; i++){
+        var x = ox + i * (tw + gap), lit = (i === 0);
+        g.fillStyle = "rgba(0,0,0,.26)"; rr(g, x + 2, oy + 3, tw, th, 8); g.fill();
+        g.fillStyle = lit ? acc : "rgba(255,255,255,.93)"; rr(g, x, oy, tw, th, 8); g.fill();
+        g.fillStyle = lit ? shade(acc, -70) : "rgba(255,255,255,.55)";
+        rr(g, x, oy + th - 6, tw, 6, 8); g.fill();                        // key lip
+        g.fillStyle = lit ? "#2a2450" : "#3a3466";
+        g.font = "900 24px Nunito,sans-serif";
+        g.fillText(word[i], x + tw / 2, oy + th / 2 - 1);
+      }
+    },
+
+    // TENNIS — the world you play in, with the top-down court drawn on it:
+    // the dashed net, both paddles and the ball, its streak longer the faster
+    // the tier. `photo` is the world scene the game itself already loaded.
+    // d = { bg:[sky,ground], net, me, opp, ball, tier:0..2, photo:<Image> }
+    court: function(g, d){
+      var bg = d.bg || ["#d8eff5", "#73914e"];
+      grad(g, bg[0], bg[1]);
+      if (d.photo){                                   // the same scene the game draws, cover-fit
+        var iw = d.photo.naturalWidth || d.photo.width, ih = d.photo.naturalHeight || d.photo.height;
+        if (iw && ih){
+          var s = Math.max(CW / iw, CH / ih), bw = iw * s, bh = ih * s;
+          g.imageSmoothingEnabled = true;
+          g.drawImage(d.photo, (CW - bw) / 2, (CH - bh) / 2, bw, bh);
+          g.fillStyle = "rgba(8,10,24,0.34)"; g.fillRect(0, 0, CW, CH);   // the game's readability scrim
+        }
+      }
+      // the court itself — portrait and centred, like the game. The card shows a
+      // 300x92-ish slice of this canvas, so the whole court lives in y 24..116.
+      var cw = 86, chh = 92, cx = (CW - cw) / 2, cy = (CH - chh) / 2;
+      g.fillStyle = "rgba(10,14,30,0.26)"; rr(g, cx, cy, cw, chh, 11); g.fill();
+      g.strokeStyle = "rgba(255,255,255,0.55)"; g.lineWidth = 2.5; rr(g, cx, cy, cw, chh, 11); g.stroke();
+      // net across the middle
+      g.strokeStyle = d.net || "#fff6cf"; g.globalAlpha = 0.85; g.lineWidth = 3.5;
+      g.setLineDash([8, 6]); g.beginPath();
+      g.moveTo(cx + 7, cy + chh / 2); g.lineTo(cx + cw - 7, cy + chh / 2); g.stroke();
+      g.setLineDash([]); g.globalAlpha = 1;
+      // paddles — yours at the bottom, the bot's at the top
+      function paddle(px, py, col){
+        var pw = cw * 0.34, ph = 6, x = px - pw / 2, y = py - ph / 2;
+        var pg = g.createLinearGradient(0, y, 0, y + ph);
+        pg.addColorStop(0, "#ffffff"); pg.addColorStop(1, col);
+        g.fillStyle = pg; rr(g, x, y, pw, ph, ph / 2); g.fill();
+      }
+      paddle(cx + cw * 0.60, cy + chh * 0.94, d.me || "#7ee0a0");
+      paddle(cx + cw * 0.38, cy + chh * 0.06, d.opp || "#ff9ec4");
+      // the ball mid-rally, its streak longer the faster the tier — the one thing
+      // that tells the three difficulty cards apart, since the court is the same.
+      var tier = Math.max(0, Math.min(2, d.tier || 0));
+      var bxp = cx + cw * 0.54, byp = cy + chh * 0.50, ball = d.ball || "#ffe27a";
+      var trail = [2, 6, 11][tier];
+      for (var t = trail; t >= 1; t--){
+        g.globalAlpha = 0.62 * (1 - t / (trail + 1));
+        disc(g, bxp + t * 1.7, byp + t * 2.9, 4.4 - t * 0.16, ball);
+      }
+      g.globalAlpha = 1;
+      disc(g, bxp, byp, 4.8, ball);
+      disc(g, bxp - 1.4, byp - 1.5, 1.9, "#ffffff");
+    }
   };
+
+  function draw(type, data){
+    var cv = (typeof document !== "undefined") ? document.createElement("canvas") : null;
+    if (!cv || !cv.getContext) return "";
+    cv.width = CW; cv.height = CH; var g = cv.getContext("2d");
+    (P[type] || P.plain)(g, data || {});
+    return cv.toDataURL("image/png");
+  }
 
   function make(type, data, key){
     var k = type + "|" + (key != null ? key : JSON.stringify(data || {}));
     if (cache[k]) return cache[k];
     var url;
-    try {
-      var cv = (typeof document !== "undefined") ? document.createElement("canvas") : null;
-      if (!cv || !cv.getContext) return "";
-      cv.width = CW; cv.height = CH; var g = cv.getContext("2d");
-      (P[type] || P.plain)(g, data || {});
-      url = cv.toDataURL("image/png");
-    } catch (e) { url = ""; }
+    try { url = draw(type, data); }
+    catch (e) {
+      // A painter that composited a hosted photo can taint the canvas, and a
+      // tainted canvas refuses toDataURL. Redraw on the painter's own colours
+      // rather than handing the card back nothing.
+      url = "";
+      if (data && data.photo){
+        var bare = {}; for (var kk in data) if (kk !== "photo") bare[kk] = data[kk];
+        try { url = draw(type, bare); } catch (e2) { url = ""; }
+      }
+    }
     cache[k] = url; return url;
   }
 
