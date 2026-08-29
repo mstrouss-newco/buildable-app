@@ -253,7 +253,20 @@ no jargon.
   decide whether to carry on. If your session was started that way, **read `AUTOPILOT.md`** — it is
   what changes when nobody is watching (decide and log, never stall), and it explains why
   ticking a card you have not really finished is the one thing that breaks the chain. Do
-  ONLY your card; the runner starts the next one.
+  ONLY your card; the runner starts the next one. ONE EXCEPTION: if your card's notes
+  carry a `GROUPED` line, the batch IS the card. Do every card the note names in this
+  one session (one clone, one deploy, one QA pass), tick each card as its own part
+  lands, and the runner will read them as done and skip ahead. Never tick a batch-mate
+  whose part you did not actually finish.
+- **Size cards to fill a session.** Every session pays a fixed cost before any work
+  lands: clone, install, deploy, QA. Never spend that on one small fix. When adding
+  cards, one card = one full session of real work. A small finding (a CSS fix, one
+  missing file, one broken qa script) does not get its own session-sized card: fold it
+  into an open card that touches the same system, or collect several smalls into one
+  batch card. Group by shared system (same files, same test rig, same deploy surface),
+  not by theme. If small cards already exist separately (findings that arrived one at
+  a time), do not delete them; put a note on each naming the batch, in the form
+  `GROUPED <date>: run as ONE session with <other ids>`, so the exception above fires.
 - **File planner work under the Roadmap, not the Log.** The owner works from the
   **Roadmap** tab in `/planner` (phases + sessions). When recording planned or upcoming
   work in the planner, add it as a session under the right Roadmap phase — never the
