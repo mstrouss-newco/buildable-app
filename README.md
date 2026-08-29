@@ -3286,6 +3286,16 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
+
+Mike found the Make section tiles unexciting. From four mocked options he picked
+"studio doorways": MakeScreen's grid tiles are now wide cards — painted kind=make
+key art on the left, name + fun subtitle + an "Open studio" pill on the right,
+one per row on phones, two-up from 700px. The drawn glyph stays behind the art as
+the 503 fallback, the tiles now show MAKE_CATALOG's `sub` line instead of the
+category word, and chips / sort / the 1111 gate / all data-nv3-make-* QA hooks
+are unchanged. qa-nv1, qa-nv2, qa-nv3 all pass. See SESSION-LOG.md for detail.
+
 ## Session log — 2026-08-16 (FL9 re-land: two fixes for one bug, resolved into one)
 
 FL9 was reopened because RN3 aborted its merge on a cache-buster conflict. In the

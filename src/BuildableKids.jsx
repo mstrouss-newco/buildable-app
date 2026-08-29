@@ -229,8 +229,8 @@ const MAKE_CATALOG = [
   { id: "song",  name: "Make a song",     sub: "Sing about anything",         category: "Music",   color: "#6A4FE0", handlerName: "onMusic" },
   { id: "sound", name: "Sound Machine",   sub: "Silly sounds & explosions",   category: "Sound",   color: "#F0577E", handlerName: "onSounds" },
   { id: "art",   name: "Make art",        sub: "Draw, stamp & mirror",        category: "Art",     color: "#1098AD", handlerName: "onArt" },
-  { id: "story", name: "Make a story",    sub: "Coming soon",                 category: "Stories", color: "#E0578F", handlerName: "onStories", soon: true, gated: true },
-  { id: "game",  name: "Make a game",     sub: "Coming soon",                 category: "Games",   color: "#7A4FE0", handlerName: "onMakeGame", soon: true },
+  { id: "story", name: "Make a story",    sub: "Your tale, your pictures",    category: "Stories", color: "#E0578F", handlerName: "onStories", soon: true, gated: true },
+  { id: "game",  name: "Make a game",     sub: "Build your own world",        category: "Games",   color: "#7A4FE0", handlerName: "onMakeGame", soon: true },
 ];
 
 // ===========================================================================
@@ -3852,9 +3852,10 @@ function PlayScreen(props) {
 // NV3 — the Make section page. Same page shape as Play: back arrow to Home,
 // count of live studios, category filter chips across the top, wrapping grid
 // of every studio in MAKE_CATALOG. Live studios first, Coming Soon last, with
-// the same 1111 preview gate the Home shelf uses. The tile face mirrors the
-// Play grid (colored panel with a drawn white glyph, name + subtitle), so a
-// kid reads a studio and a game the same way.
+// the same 1111 preview gate the Home shelf uses. MK2 — the tiles are wide
+// "studio doorway" cards (Mike's pick from the make-tiles-options mock):
+// painted kind=make key art on the left, name + fun subtitle + an Open studio
+// pill on the right, one per row on phones and two-up from 700px.
 // ---------------------------------------------------------------------------
 // Drawn glyphs (no emoji anywhere — product guardrail). Each renders in white
 // on the tile's colored gradient panel, exactly like the Play grid's art tile.
@@ -3930,18 +3931,24 @@ function MakeScreen(props) {
     background: HOME_CARD, color: HOME_INK, cursor: "pointer", fontFamily: NUN,
     overflow: "hidden", boxShadow: HOME_SHADOW, width: "100%",
   };
-  const MakeGridCard = ({ m }) => (
-    <button data-make-id={m.id} data-soon={m.soon ? "1" : "0"} onClick={() => openStudio(m)} style={{ ...cardStyle, opacity: m.soon ? 0.72 : 1 }}>
-      <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${m.color}, ${m.color}99)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 62, height: 62, borderRadius: 18, background: "rgba(255,255,255,0.18)" }}>{MAKE_GLYPH[m.id] || <MakeGlyphSong />}</span>
+  // MK2 — "studio doorways". Each studio is a wide doorway card: painted key art
+  // (kind=make, warmed since MK1) on the left, name + fun subtitle + an
+  // "Open studio" pill on the right. The drawn glyph sits BEHIND the art as the
+  // fallback face, so a 503 from the image cache never leaves a blank panel.
+  const MakeDoorCard = ({ m }) => (
+    <button data-make-id={m.id} data-soon={m.soon ? "1" : "0"} onClick={() => openStudio(m)} style={{ ...cardStyle, opacity: m.soon ? 0.72 : 1, display: "flex", alignItems: "stretch", minHeight: phone ? 118 : 132 }}>
+      <div style={{ position: "relative", flex: "0 0 45%", overflow: "hidden", background: `linear-gradient(160deg, ${m.color}, ${m.color}99)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ display: "inline-flex" }}>{MAKE_GLYPH[m.id] || <MakeGlyphSong />}</span>
+        <img src={`/api/images?kind=make&id=${m.id}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         {m.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
       </div>
-      <div style={{ padding: "9px 11px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+      <div style={{ flex: 1, minWidth: 0, padding: phone ? "12px 14px" : "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 5 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
           <span style={{ width: 9, height: 9, borderRadius: 3, background: m.color, flex: "0 0 auto" }} />
-          <div style={{ fontFamily: FRED, fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+          <div style={{ fontFamily: FRED, fontSize: phone ? 17 : 19, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
         </div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: HOME_SUB, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.3px" }}>{m.category}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: HOME_SUB, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.sub}</div>
+        <span style={{ alignSelf: "flex-start", marginTop: 4, fontWeight: 900, fontSize: 12, color: "#fff", padding: "7px 14px", borderRadius: 999, background: m.soon ? "#B9B2C8" : m.color, boxShadow: "0 4px 10px rgba(58,46,77,0.2)" }}>{m.soon ? "Coming soon" : "Open studio"}</span>
       </div>
     </button>
   );
@@ -3976,8 +3983,8 @@ function MakeScreen(props) {
             );
           })}
         </div>
-        <div data-nv3-make-grid style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
-          {sorted.map((m) => <MakeGridCard key={m.id} m={m} />)}
+        <div data-nv3-make-grid style={{ display: "grid", gridTemplateColumns: `repeat(${phone ? 1 : 2}, 1fr)`, gap: 12 }}>
+          {sorted.map((m) => <MakeDoorCard key={m.id} m={m} />)}
         </div>
       </div>
 

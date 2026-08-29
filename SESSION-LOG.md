@@ -1,3 +1,22 @@
+## 2026-08-29 — MK2: the Make page gets studio doorways
+
+Mike: "the make section navigation tiles lacks any sort of excitement." Four tile
+options were mocked (project doc claude/make-tiles-options-mock.html); Mike picked
+the studio doorways.
+
+**What changed (all in MakeScreen, src/BuildableKids.jsx):**
+- The 4:3 grid tiles became wide DOORWAY cards: painted kind=make key art (live
+  since MK1) fills the left 45%, name + fun subtitle + an "Open studio" pill sit
+  on the right. One per row on phones, two-up from 700px.
+- The drawn white glyph now sits BEHIND the art as the fallback face, so an image
+  503 shows the old tile look instead of a blank panel.
+- The cards finally show MAKE_CATALOG's fun `sub` line ("Silly sounds &
+  explosions") instead of the dry category word. story/game got real subs
+  ("Your tale, your pictures" / "Build your own world") — the Soon badge and a
+  gray "Coming soon" pill carry the gating message now.
+- Chips, sort order, the 1111 Coming Soon gate and every data-nv3-make-* QA hook
+  are unchanged. qa-nv1 + qa-nv2 + qa-nv3 all pass.
+
 ## 2026-08-29 — CP2: chess pieces you can actually read, and the hi-def worlds turned on
 
 Mike: "the chess pieces are kinda weird and hard to see... hard to see with the
