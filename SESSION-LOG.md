@@ -1,3 +1,25 @@
+## 2026-08-29 - SL-NEXT: Sling Squad now goes to the next level when you tap
+
+Mike, from his iPhone: "sling squad doesnt go forward after beating the first level."
+
+Nothing was crashing. Driving the real flow in his Chrome (Home -> Sling Squad ->
+Play -> stop 1) showed the win card reading **"Level cleared! Tap for the next one"**
+and the tap doing something else entirely: session 7J made a level opened from the
+Journey post `nav:exit` after EVERY clear, so the kid was thrown back to the winding
+map. Stars saved, level 2 unlocked -- and the game still looked like it refused to
+go on, because it had just promised the next level and then walked away from it.
+
+**Fix.** `onDown`'s win branch now advances first: `startLevel(level+1)` whenever
+there is a next level, in the app exactly as when standalone. Only the LAST level
+falls back to the map (new `IN_JOURNEY` flag, the old `?level=` test given a name),
+and its card now says "Tap to see your map" there instead of "Tap to play again".
+Progress still writes to `bk_sling_prefs[_kid]` on every clear, so the map lights up
+whenever the kid does go back to it.
+
+Same bounce-back shape lives in tumble, memory and mahjong -- not touched here.
+
+qa-sling.mjs: ALL CHECKS PASS.
+
 ## 2026-08-29 - SL1: the sign-in that forgot itself, and guest stops asking for a child
 
 Mike, on his iPad: "I logged in under OAuth, and its asking me to create an account

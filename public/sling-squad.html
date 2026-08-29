@@ -201,6 +201,9 @@ var botMode = false, started = false;
 // landing demo box. Input is ignored, audio never unlocks, no win/lose banners --
 // the bot plays level 1 forever (restart ~1.2s after each win/lose).
 var SLING_DEMO=false; try{ SLING_DEMO=(typeof location!=="undefined") && /[?&]screen=demo(&|$)/.test(location.search); }catch(e){}
+// True when the shell deep-linked us into one level from the winding Journey map.
+var IN_JOURNEY = false;
+try{ IN_JOURNEY = (typeof location!=="undefined") && /[?&]level=/.test(location.search||""); }catch(e){}
 var EFF_G = 0.45;               // per-frame gravity accel (auto-calibrated below)
 
 // ---- progress (best-effort localStorage; headless-safe) ----
@@ -1325,7 +1328,7 @@ function draw(){
     }); }catch(e){}
   } else if(_hud){ _hud.hide(); }
   // banners
-  if(state==="win" && !SLING_DEMO){ banner("Level cleared!", (level+1<GAME_CONFIG.levels.length)?"Tap for the next one":"Tap to play again"); }
+  if(state==="win" && !SLING_DEMO){ banner("Level cleared!", (level+1<GAME_CONFIG.levels.length)?"Tap for the next one":(IN_JOURNEY?"Tap to see your map":"Tap to play again")); }
   if(state==="lose" && !SLING_DEMO){ banner("Out of slings!","Tap to try again"); }
   if(SLING_DEMO) drawDemoHand();
   ctx.textAlign="left"; ctx.textBaseline="alphabetic";
@@ -1346,7 +1349,16 @@ function pt(ev){ var r=canvas.getBoundingClientRect();
 function clampDrag(p){ var dx=p.x-AX, dy=p.y-AY, d=Math.hypot(dx,dy);
   if(d>MAXPULL){ var k=MAXPULL/d; dx*=k; dy*=k; } return { x:AX+dx, y:AY+dy }; }
 function onDown(ev){ if(SLING_DEMO) return; if(BA){BA.unlock&&BA.unlock();} ensureMusic();
-  if(state==="win"){ ev.preventDefault&&ev.preventDefault(); if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else if(level+1<GAME_CONFIG.levels.length) startLevel(level+1); else showMenu(); return; }  // 7J: from the Journey -> bounce back after EVERY level (star already saved); standalone still auto-advances
+  // SL-NEXT: the win card promises "Tap for the next one", so give the kid exactly
+  // that -- in the app too. Before this, a level opened from the Journey bounced
+  // back to the map after EVERY clear, which reads as "the game will not go on".
+  // Progress is already saved, so the map still lights up whenever they go back;
+  // only the LAST level bounces out to it (there is nothing further to open).
+  if(state==="win"){ ev.preventDefault&&ev.preventDefault();
+    if(level+1<GAME_CONFIG.levels.length){ startLevel(level+1); }
+    else if(IN_JOURNEY){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} }
+    else showMenu();
+    return; }
   if(state==="lose"){ ev.preventDefault&&ev.preventDefault(); startLevel(level); return; }
   if(state==="flying"){ ev.preventDefault&&ev.preventDefault(); tryPower(); return; }  // tap mid-air = fire the power
   if(state==="ready"){ ev.preventDefault&&ev.preventDefault(); state="aiming"; G.drag=clampDrag(pt(ev)); sfx("stretch"); }
