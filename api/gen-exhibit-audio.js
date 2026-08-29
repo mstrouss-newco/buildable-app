@@ -77,10 +77,18 @@ function collectItems(data){
   (Array.isArray(data.pages)?data.pages:[]).forEach((p)=>{
     if(!p||!p.id) return;
     const facts=Array.isArray(p.facts)?p.facts:[];
-    const first=facts[0];
-    const text=typeof first==="string"?first:(first&&first.text)||"";
-    if(!text.trim()) return;
-    push({ id:p.id, name:p.title||"", fact:((p.title?p.title+". ":"")+text) });
+    facts.forEach((f,n)=>{
+      const text=typeof f==="string"?f:(f&&f.text)||"";
+      if(!text.trim()) return;
+      // RP7: a composed page shows EVERY fact at once, each with its own speaker
+      // button, so every fact needs its own clip or one page would be read by two
+      // different voices. Fact 1 keeps the page's own id (that is what factAudio
+      // already says in all 20 books) and is spoken as "<page title>. <fact>";
+      // later facts get "<pageId>-2", "-3" and are spoken on their own.
+      push({ id: n===0 ? p.id : (p.id+"-"+(n+1)),
+             name: p.title||"",
+             fact: ((n===0 && p.title) ? p.title+". " : "")+text });
+    });
   });
   return out.slice(0,MAX_ITEMS);
 }
