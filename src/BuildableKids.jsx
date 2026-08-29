@@ -301,7 +301,7 @@ function screenForPath(pathname) {
 // against the live JSON file, so this list is a display-only convenience, not the
 // source of truth).
 const EXHIBIT_CATALOG = [
-  { id: "solar-system", title: "Our Solar System", topic: "space", color: "#4C6FE0", heroArt: "explore-solar-system-hero", status: "approved" },
+  { id: "solar-system", title: "Our Solar System", topic: "space", color: "#4C6FE0", heroArt: "/explore/solar-system/hero.webp", status: "approved" },
   // Journey to the Deep (layers-cutaway dive template). Stays hidden from kids until
   // Mike fact-checks the roster and flips BOTH this status and ocean-deep.json to "approved".
   { id: "ocean-deep", title: "Journey to the Deep", topic: "ocean", color: "#1173B4", heroArt: "/api/asset-studio?asset=explore/scene/ocean-photo/reef", status: "approved" },
