@@ -539,6 +539,10 @@
       "dest": "/survival-engine.html"
     },
     {
+      "src": "/audio-check.html",
+      "dest": "/audio-check.html"
+    },
+    {
       "src": "/breaker-engine.html",
       "dest": "/breaker-engine.html"
     },

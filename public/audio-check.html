@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Buildable sound check</title>
+<link rel="icon" href="/favicon-16.png" sizes="16x16">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:20px 16px 60px;background:#151327;color:#f2f0ff;
+       font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  h1{font-size:24px;margin:0 0 4px}
+  .sub{color:#a9a3c9;margin:0 0 22px}
+  .step{background:#211d3d;border-radius:16px;padding:16px;margin:0 0 14px;border:2px solid transparent}
+  .step.on{border-color:#7c6cff}
+  .step.pass{border-color:#3fce8a}
+  .step.fail{border-color:#ff6b8a}
+  .step h2{font-size:17px;margin:0 0 6px}
+  .step p{margin:0 0 12px;color:#c8c3e4;font-size:15px}
+  button{font:600 17px/1 inherit;border:0;border-radius:12px;padding:15px 18px;margin:0 8px 8px 0;
+         background:#7c6cff;color:#fff;cursor:pointer;min-width:120px}
+  button.ghost{background:#3a3462}
+  button:disabled{opacity:.4}
+  .big{display:block;width:100%;font-size:20px;padding:20px;margin:0 0 22px}
+  .verdict{background:#0f0d1f;border-radius:16px;padding:16px;margin-top:22px;white-space:pre-wrap;
+           font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#bdb7dd;display:none}
+  .verdict.on{display:block}
+  .hd{color:#3fce8a}.bd{color:#ff6b8a}
+</style>
+</head>
+<body>
+<h1>Buildable sound check</h1>
+<p class="sub">Turn the volume up first. Then tap the button and answer each question honestly, even if the answer is silence.</p>
+
+<button class="big" id="go">Start the check</button>
+
+<div class="step" id="s1" hidden>
+  <h2>1. A plain beep</h2>
+  <p>This uses the same channel as every game sound effect.</p>
+  <button data-a="1" data-v="yes">I heard it</button>
+  <button data-a="1" data-v="no" class="ghost">Silence</button>
+</div>
+
+<div class="step" id="s2" hidden>
+  <h2>2. A short tune</h2>
+  <p>This uses the same channel as the game music.</p>
+  <button data-a="2" data-v="yes">I heard it</button>
+  <button data-a="2" data-v="no" class="ghost">Silence</button>
+</div>
+
+<div class="step" id="s3" hidden>
+  <h2>3. A real game sound</h2>
+  <p>This is an actual Breaker brick-smash, played the way the game plays it.</p>
+  <button data-a="3" data-v="yes">I heard it</button>
+  <button data-a="3" data-v="no" class="ghost">Silence</button>
+</div>
+
+<div class="step" id="s4" hidden>
+  <h2>4. The same beep, with the fix turned on</h2>
+  <p>If this one comes back after step 1 was silent, we have our answer.</p>
+  <button data-a="4" data-v="yes">I heard it</button>
+  <button data-a="4" data-v="no" class="ghost">Silence</button>
+</div>
+
+<div class="verdict" id="out"></div>
+
+<script>
+(function(){
+  var A={}, ctx=null, facts=[], answers={};
+  var $=function(id){return document.getElementById(id);};
+  function show(id){ var e=$(id); e.hidden=false; e.className="step on"; e.scrollIntoView({block:"center",behavior:"smooth"}); }
+  function mark(id,ok){ $(id).className = "step " + (ok?"pass":"fail"); }
+  function note(k,v){ facts.push(k+": "+v); }
+
+  function tone(){
+    try{
+      var o=ctx.createOscillator(), g=ctx.createGain();
+      o.type="sine"; o.frequency.value=660;
+      g.gain.setValueAtTime(0.0001,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.6,ctx.currentTime+0.03);
+      g.gain.setValueAtTime(0.6,ctx.currentTime+1.0);
+      g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+1.3);
+      o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime+1.4);
+      return true;
+    }catch(e){ note("beep error",e.message); return false; }
+  }
+
+  function tune(){
+    try{
+      var a=new Audio("/api/sfx?s=tennis_win"); a.volume=1;
+      var p=a.play(); if(p&&p.catch) p.catch(function(e){ note("music blocked",e.name||String(e)); });
+      A.musicEl=a; return true;
+    }catch(e){ note("music error",e.message); return false; }
+  }
+
+  function realClip(){
+    return fetch("/api/sfx?s=breaker_smash").then(function(r){ note("clip download","HTTP "+r.status); return r.arrayBuffer(); })
+      .then(function(ab){ return new Promise(function(res,rej){ ctx.decodeAudioData(ab,res,rej); }); })
+      .then(function(buf){
+        note("clip decoded", buf.duration.toFixed(2)+"s");
+        for(var i=0;i<3;i++){
+          var s=ctx.createBufferSource(), g=ctx.createGain();
+          s.buffer=buf; g.gain.value=1; s.connect(g); g.connect(ctx.destination);
+          s.start(ctx.currentTime + i*0.45);
+        }
+      })
+      .catch(function(e){ note("clip FAILED", e && (e.message||e.name) || "unknown"); });
+  }
+
+  $("go").addEventListener("click", function(){
+    this.disabled=true; this.textContent="Listening...";
+    try{
+      var AC=window.AudioContext||window.webkitAudioContext;
+      note("Web Audio available", AC?"yes":"NO");
+      ctx=new AC();
+      note("state on creation", ctx.state);
+      if(ctx.state==="suspended"){ ctx.resume(); }
+      setTimeout(function(){ note("state after tap", ctx.state); }, 300);
+      note("sample rate", ctx.sampleRate);
+    }catch(e){ note("could not start Web Audio", e.message); }
+    try{ note("saved sound setting (bk_muted)", String(localStorage.getItem("bk_muted"))); }catch(e){ note("storage","blocked"); }
+    note("audioSession supported", (navigator.audioSession ? "yes ("+navigator.audioSession.type+")" : "no"));
+    note("device", navigator.userAgent.slice(0,110));
+    setTimeout(function(){ tone(); show("s1"); }, 350);
+  });
+
+  document.addEventListener("click", function(ev){
+    var b=ev.target.closest && ev.target.closest("button[data-a]"); if(!b) return;
+    var step=b.getAttribute("data-a"), val=b.getAttribute("data-v")==="yes";
+    answers[step]=val; mark("s"+step, val);
+    Array.prototype.forEach.call(document.querySelectorAll('#s'+step+' button'), function(x){ x.disabled=true; });
+
+    if(step==="1"){ tune(); show("s2"); }
+    else if(step==="2"){ realClip().then(function(){ show("s3"); }); }
+    else if(step==="3"){
+      if(navigator.audioSession){
+        try{ navigator.audioSession.type="playback"; note("fix applied","navigator.audioSession.type = playback"); }
+        catch(e){ note("fix rejected", e.message); }
+        try{ ctx.close(); }catch(e){}
+        var AC=window.AudioContext||window.webkitAudioContext; ctx=new AC();
+        if(ctx.state==="suspended") ctx.resume();
+        setTimeout(function(){ tone(); show("s4"); }, 300);
+      } else {
+        note("fix unavailable","this browser has no audioSession, needs the silent-audio workaround instead");
+        finish();
+      }
+    }
+    else if(step==="4"){ finish(); }
+  });
+
+  function finish(){
+    var lines=[];
+    lines.push("RESULT");
+    lines.push("  1 beep (sound effect channel): " + (answers["1"]?"HEARD":"SILENT"));
+    lines.push("  2 tune (music channel):        " + (answers["2"]?"HEARD":"SILENT"));
+    lines.push("  3 real game sound:             " + (answers["3"]?"HEARD":"SILENT"));
+    if("4" in answers) lines.push("  4 beep with the fix on:        " + (answers["4"]?"HEARD":"SILENT"));
+    lines.push("");
+    if(!answers["1"] && answers["2"] && answers["4"]) lines.push("VERDICT: confirmed. The device is silencing Web Audio, and the one-line fix brings it back. Ship it.");
+    else if(!answers["1"] && answers["2"] && ("4" in answers) && !answers["4"]) lines.push("VERDICT: the device is silencing Web Audio, but that fix alone is not enough. Needs the silent-audio-element workaround too.");
+    else if(!answers["1"] && !answers["2"]) lines.push("VERDICT: nothing plays at all, so this is the device volume or a system mute, not our code.");
+    else if(answers["1"] && !answers["3"]) lines.push("VERDICT: the channel works but the real clip does not, so this is about our sound files, not the device.");
+    else if(answers["1"] && answers["2"] && answers["3"]) lines.push("VERDICT: everything works on this page, so the problem is inside the games rather than the sound system.");
+    else lines.push("VERDICT: mixed result, send Mike the lines below.");
+    lines.push("");
+    lines.push("DETAILS");
+    facts.forEach(function(f){ lines.push("  "+f); });
+    var o=$("out"); o.className="verdict on"; o.textContent=lines.join("\n");
+    o.scrollIntoView({block:"start",behavior:"smooth"});
+  }
+})();
+</script>
+</body>
+</html>
