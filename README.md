@@ -6,6 +6,19 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## The bar reaches the lobby, and invites cancel clean (GN2, August 29 2026)
+`src/BottomBar.jsx` (new), `src/GameLobby.jsx`, `src/HelperReactions.jsx`, `qa-gn2.mjs` (new).
+
+The bar moved into its own module so the lobby could show it without an import
+cycle, and now rides the lobby's mode-select, friends-list and waiting screens
+with Play lit — never the live board. Every tab handler awaits a cleanup first:
+a pending invite is cancelled and any realtime channel closed before the shell
+navigates, so a friend can never accept into a match nobody is in. The bar also
+publishes its height on `<html>` as `--bk-bottom-bar` while mounted, which is how
+the globally-mounted buddy toast lifts itself clear without knowing what screen
+is up. `qa-gn2.mjs` mounts the real lobby in jsdom against a mock transport and
+reads the actual call order back.
+
 ## The bottom bar reaches the game front door (GN1, August 29 2026)
 `src/BuildableKids.jsx`, `qa-gn1.mjs` (new), `HUD-AND-NAV-RULES.md`.
 

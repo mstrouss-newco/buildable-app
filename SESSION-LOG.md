@@ -1,3 +1,84 @@
+## 2026-08-29 — GN2: the bar in the lobby, and invites that cancel before they leave
+
+The multiplayer lobby is the truest waiting room in the app and it was a locked
+box. Once a kid was in the friends list or sitting on "Waiting for Jack…", the
+only way anywhere else was the corner Back arrow.
+
+**Groundwork — the bar moved house (`src/BottomBar.jsx`, new).** The lobby is its
+own module, and importing the bar back out of `BuildableKids.jsx` would have made
+an import cycle (the shell already imports the lobby). So `BottomBar`, its four
+drawn glyphs, `NAV_TAB_COLORS`, the Me-tab avatar helpers and GN1's
+`NAV_BAR_H` / `navBarClear` all moved to one module both sides import. Moved
+verbatim; the two font stacks are mirrored with a comment, the same "move one and
+you must move the other" rule the `--bk-nav-*` numbers already follow.
+
+**The lobby (`src/GameLobby.jsx`).** Its first three screens — mode select,
+friends list, waiting — now show the bar with **Play** lit. The fourth, PLAYING,
+does not: a live board is a doing screen, and the corner Back stays the only way
+out. All seven shell call sites hand it the same `bottomBarProps` every other bar
+is built from, and the three screens pad clear of the bar.
+
+**The rule that keeps multiplayer honest.** Every tab handler goes through
+`leaveForTab`, which **awaits** `cancelPendingWork` before it navigates: a pending
+outgoing invite is cancelled (and dropped from state before the await, so the
+waiting-screen poll cannot re-enter a match mid-cancel) and any open realtime
+channel is closed. Without it, a kid taps Explore and their friend accepts into a
+match nobody is sitting in. A cancel that fails still lets the kid leave — being
+trapped is worse than a stale row.
+
+**The buddy toast (`src/HelperReactions.jsx`).** It was pinned at `bottom:24`,
+inside the bar strip. It is mounted once in `main.jsx` and has no idea which
+screen is showing, so the bar now **publishes its own height on `<html>` as
+`--bk-bottom-bar`** while it is mounted and removes it on unmount; the toast
+anchors off that with a `0px` fallback. Same trick as the `--bk-nav-*` variables
+the in-game HUD reads.
+
+**QA — `qa-gn2.mjs` (new), 41 checks, all pass.** Source checks would only have
+proved the code reads right, and this card is about an ORDER at runtime, so the
+harness really mounts `GameLobby` in jsdom with esbuild swapping every
+`src/lib/*` import for a recorder:
+- *Run 1 (realtime):* friends list → tap Invite → waiting screen, bar present with
+  Play the only lit tab on both, `--bk-bottom-bar` published. Then it taps Explore
+  with the invite pending and reads back
+  `cancelInvite:start, cancelInvite:done, navigate:explore`. The mock cancel is a
+  deliberate delayed round trip, so a handler that forgot to `await` would land the
+  navigation first and fail this check.
+- *Run 2 (turn-based):* the invite goes straight into a match; PLAYING renders an
+  iframe, **no** bar, and the corner Back.
+- *Run 3:* opens a live realtime match and leaves by Back, proving the channel is
+  really closed — the waiting screen has no channel open yet, so asserting it there
+  would have proved nothing.
+
+Two things the harness caught in its own first draft, worth recording: the mock
+modules captured the recorder array once at import time, so reassigning the global
+later split the recording in two and hid the cancel; and the original
+"channel closed on tab tap" check was asserting something that cannot happen on the
+waiting screen. Both fixed rather than papered over.
+
+Also green: qa-gn1, qa-nv1..nv4 (now reading both `BuildableKids.jsx` and the new
+`BottomBar.jsx`, since their assertions are about the bar and not which file holds
+it), qa-chess, qa-tennis, qa-tictactoe, qa-connectfour, qa-dotsandboxes,
+qa-checkers, qa-invite, qa-quickgame.
+
+**Small fix on the way past:** `C.pad` and `C.center` moved from the `padding`
+shorthand to longhands. React warns — and can mis-apply — when a style mixes
+`padding` with a `paddingBottom` override, which is exactly what the bar clearance
+does. The live mount surfaced it.
+
+**Flagged for GN3.** The lobby's mode-select tiles and Back arrows use four
+dingbat characters as icons (`←`, `↗`, `▣`, `☆`) rather than drawn SVG. That
+predates this card and is the same class of thing the no-emoji guardrail is about.
+qa-gn2 names them explicitly so a NEW one still fails the scan, and a note is on
+the GN3 card to replace them during its sweep.
+
+**Still flagged:** `scripts/planner.mjs` cannot run from this session — the sandbox
+network policy refuses `buildablekids.com` (403 on CONNECT) — so the planner was
+updated through its Supabase table instead.
+
+**What remains in this phase:** GN3 (sweep every remaining deciding screen — studio
+landings and the rest — and make the bottom strip a law with a qa-gn3 sweep), and
+GN4, which is marked LATER by design.
+
 ## 2026-08-29 — GN1: the bottom bar on the game front door
 
 The first card of the game-navigation phase. A kid who tapped into a game and
