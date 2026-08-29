@@ -1,3 +1,41 @@
+## 2026-08-29 — ONB1: the new-user onboarding QA + fix
+
+QA'd the first run in a cleared browser and against last night's auth records.
+Four real faults, all fixed here:
+
+1. **The Back button did nothing on every step.** It called `onBack()`, which in
+   BuildableKids resolves to `setScreen(SCREEN_GROWNUP)` when no kid is chosen --
+   the screen you are already on. Replaced with a step-aware `backFromStep()`
+   (auth -> choose, gate/parents -> picker, projects -> parents, picker -> Home
+   or choose) and hidden on the first step, where there is nowhere back to.
+2. **Every placeholder was white on white.** `src/index.css` paints all
+   placeholders `rgba(255,255,255,.4)` for dark inputs, but the grown-ups flow
+   uses WHITE boxes -- so email, password, child name, PIN and family code all
+   looked like empty rectangles. Added a `.bk-light` placeholder colour and put
+   the class on all six inputs, plus real labels above the name field.
+3. **Google sign-in could be silently thrown away.** The token comes back in the
+   URL hash; if it landed on `/` (the marketing page) rather than `/app`,
+   `public/landing.html` bailed out on `if (loc.hash) return;` and did nothing.
+   alexandra's account shows THREE full Google sign-ins in 40 minutes on
+   2026-08-29 because of this. landing.html now forwards `#access_token` to
+   `/app` with the hash intact.
+4. **First run was an admin wall.** "Add your first child" opened the whole
+   Parents page: name, avatar, grade, PIN, Learning Mode, buddy moments, skills
+   progress, badge shelf, family code -- before one child existed. Everything
+   except name + face + optional grade is now gated on `kids.length > 0`, and
+   adding the FIRST child drops straight into that child's Home instead of
+   clearing the form and leaving the grown-up on the admin page.
+
+Also: the friend-invite poll ran every 5s and each tick makes the server
+re-verify the token with Supabase Auth (`/api/friends` -> `/auth/v1/user`).
+Moved to 15s.
+
+Not changed, worth knowing: the Supabase redirect allowlist could not be read or
+edited from a session (no auth-config tool). Fix 3 makes the app work either
+way, but adding both `https://buildablekids.com/app` and
+`https://www.buildablekids.com/app` to the Supabase Auth redirect list is still
+the belt-and-braces move.
+
 # Buildable Kids — Session Log
 
 ## 2026-08-25 (MM-FIX): the Music Maker was handing kids a 3-second beep

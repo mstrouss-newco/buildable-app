@@ -371,12 +371,18 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
     if (!newName.trim()) return;
     setBusy(true); setError(null);
     try {
-      await createKidProfile(newName.trim(), newAvatar, { grade: newGrade || null, pin: /^[0-9]{4}$/.test(newPin) ? newPin : null });
+      const created = await createKidProfile(newName.trim(), newAvatar, { grade: newGrade || null, pin: /^[0-9]{4}$/.test(newPin) ? newPin : null });
+      const wasFirst = kids.length === 0;
       setNewName("");
       setNewAvatar(DEFAULT_AVATAR);
       setNewGrade("");
       setNewPin("");
       await refreshKids();
+      // The first child is the end of setup, not the middle of it. Go straight
+      // into that child's Home instead of leaving a grown-up staring at a
+      // cleared form wondering whether anything happened.
+      if (wasFirst && created && created.id) { chooseKid(created); return; }
+      setStep("picker");
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -442,14 +448,29 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
     finally { setBusy(false); }
   }
 
+  // Back means "one step back in THIS flow", not "leave the flow". The old
+  // handler sent nearly every step to onBack(), and onBack() lands on this very
+  // screen while no kid is chosen -- so the button did nothing at all, on every
+  // screen. On the first step there is nowhere back to, so it is hidden.
+  function backFromStep() {
+    setError(null); setNotice(null);
+    if (step === "auth") return setStep("choose");
+    if (step === "gate") return setStep("picker");
+    if (step === "projects") return setStep("parents");
+    if (step === "parents") return setStep(signedIn || kids.length ? "picker" : "choose");
+    if (step === "picker") return active ? onBack() : setStep("choose");
+    return onBack();
+  }
+
   // -------------------------------------------------------------
   // RENDER
   // -------------------------------------------------------------
   return (
     <div style={S.container}>
       <div style={S.topRow}>
-        <button onClick={(step === "choose" || step === "picker" || !signedIn) ? onBack : () => setStep("picker")}
-          style={S.backBtn}>← Back</button>
+        {step === "choose"
+          ? <span />
+          : <button onClick={backFromStep} style={S.backBtn}>← Back</button>}
         {signedIn && <button onClick={handleSignOut} style={S.backBtn}>Sign out</button>}
       </div>
 
@@ -497,12 +518,12 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             <div style={S.divider}><span style={S.dividerText}>or use email</span></div>
             <form onSubmit={handleAuth} style={S.form}>
               <label style={S.label}>Email
-                <input style={S.input} type="email" autoComplete="email" required
+                <input className="bk-light" style={S.input} type="email" autoComplete="email" required
                   value={email} onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com" />
               </label>
               <label style={S.label}>Password
-                <input style={S.input} type="password"
+                <input className="bk-light" style={S.input} type="password"
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   required minLength={6} value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -563,7 +584,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
           <div style={S.card}>
             <p style={S.lead}>Quick check — what is {gateA} × {gateB}?</p>
             <form onSubmit={submitGate} style={S.form}>
-              <input style={S.input} type="number" inputMode="numeric" autoFocus
+              <input className="bk-light" style={S.input} type="number" inputMode="numeric" autoFocus
                 value={gateInput} onChange={(e) => setGateInput(e.target.value)}
                 placeholder="Type the answer" />
               {gateError && <p style={S.error}>{gateError}</p>}
@@ -577,9 +598,11 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
       {/* STEP: parents management (add/edit kids + organize) ----- */}
       {step === "parents" && (
         <>
-          <h1 style={S.title}>Parents</h1>
+          <h1 style={S.title}>{kids.length ? "Parents" : "Add your child"}</h1>
           <div style={S.card}>
-            <p style={S.lead}>Add or edit your kids, and organize what they've made.</p>
+            <p style={S.lead}>{kids.length
+              ? "Add or edit your kids, and organize what they've made."
+              : "Just a first name and a face. Everything else can wait."}</p>
 
             {kids.length > 0 && (
               <div style={S.kidGrid}>
@@ -599,8 +622,10 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             )}
 
             <form onSubmit={handleAddKid} style={S.addRow}>
-              <input style={S.input} value={newName} maxLength={40}
-                onChange={(e) => setNewName(e.target.value)} placeholder="Add a child's name" />
+              <div style={S.fieldLabel}>Child's first name</div>
+              <input className="bk-light" style={S.input} value={newName} maxLength={40} autoFocus
+                onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Riley" />
+              <div style={S.fieldLabel}>Pick a face</div>
               <div style={S.avatarRow}>
                 {AVATARS.map((a) => (
                   <button type="button" key={a.key} onClick={() => setNewAvatar(a.key)}
@@ -610,7 +635,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   </button>
                 ))}
               </div>
-              <div style={S.fieldLabel}>Grade (sets the learning level)</div>
+              <div style={S.fieldLabel}>Grade (optional — sets the learning level)</div>
               <div style={S.avatarRow}>
                 {learningGradeOptions().map((g) => (
                   <button type="button" key={g} onClick={() => setNewGrade(newGrade === g ? "" : g)}
@@ -619,10 +644,14 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   </button>
                 ))}
               </div>
-              <input style={S.input} value={newPin} inputMode="numeric" maxLength={4}
-                onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
-                placeholder="Optional 4-digit PIN (for snoopy siblings)" />
-              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>Add child</button>
+              {kids.length > 0 && (
+                <input className="bk-light" style={S.input} value={newPin} inputMode="numeric" maxLength={4}
+                  onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                  placeholder="Optional 4-digit PIN (for snoopy siblings)" />
+              )}
+              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>
+                {kids.length ? "Add child" : "Start playing"}
+              </button>
             </form>
 
             {error && <p style={S.error}>{error}</p>}
@@ -647,7 +676,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               </div>
             )}
 
-            {signedIn && (
+            {signedIn && kids.length > 0 && (
               <div style={{ marginTop: 20, paddingTop: 18, borderTop: CARD_BORDER }}>
                 <h2 style={{ ...S.title, fontSize: 20, margin: "0 0 4px" }}>Add another parent</h2>
                 <p style={S.lead}>
@@ -678,7 +707,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   Joining another parent's family? Enter their code:
                 </p>
                 <form onSubmit={handleJoinFamily} style={S.addRow}>
-                  <input style={S.input} value={joinCode} maxLength={12}
+                  <input className="bk-light" style={S.input} value={joinCode} maxLength={12}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     placeholder="Family code (e.g. ABC234)" />
                   <button type="submit" style={S.primaryBig} disabled={familyBusy || !joinCode.trim()}>
@@ -691,19 +720,24 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               </div>
             )}
 
-            <LearningModeCard />
+            {/* Learning Mode, buddy moments, progress and badges are settings FOR a
+                child. Showing them before one exists is what made the first run feel
+                like a hundred questions. */}
+            {kids.length > 0 && <LearningModeCard />}
 
-            <BuddyMomentsCard />
+            {kids.length > 0 && <BuddyMomentsCard />}
 
-            <LearningProgressCard />
+            {kids.length > 0 && <LearningProgressCard />}
 
-            {signedIn && (
+            {signedIn && kids.length > 0 && (
               <button style={S.linkBtn} onClick={goProjects}>Organize creations by child →</button>
             )}
-            {signedIn && onOpenFriends && (
+            {signedIn && kids.length > 0 && onOpenFriends && (
               <button style={S.linkBtn} onClick={onOpenFriends}>Manage friends & friend code →</button>
             )}
-            <button style={S.ghostBig} onClick={() => setStep("picker")}>← Done</button>
+            {kids.length > 0 && (
+              <button style={S.ghostBig} onClick={() => setStep("picker")}>← Done</button>
+            )}
           </div>
         </>
       )}

@@ -2761,7 +2761,7 @@ function GlobalInviteAlert({ activeKid, hidden, onOpenFriendInvite, onOpenRtInvi
       } catch (e) { /* ignore */ }
     }
     check();
-    const iv = setInterval(check, 5000);
+    const iv = setInterval(check, 15000);
     return () => { alive = false; clearInterval(iv); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeKid, hidden]);
