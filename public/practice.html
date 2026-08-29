@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FDFAF5">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Practice - Buildable Kids</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* Session PT1 - Practice. Same cream brand tokens as lessons.html / dive.html.
+     No emojis anywhere: every icon is drawn SVG geometry. Nothing on this page
+     is a score, a timer or a life. */
+  :root{
+    --ink:#0F0E17; --cream:#FDFAF5; --gold:#FFC542; --mint:#2FAE68; --sky:#37B6F5;
+    --card:#FFFFFF; --sub:#6E6684; --line:#EDE5D6; --purple:#7C5CFC; --coral:#FF6B6B;
+    --grad:linear-gradient(90deg,#7C5CFC 0%,#FF6B6B 100%);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{background:var(--cream);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;
+       font-weight:800;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .wrap{max-width:460px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
+        padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+
+  /* top bar */
+  .top{display:flex;align-items:center;gap:10px;padding:12px 16px 6px}
+  .top h1{font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;margin:0;flex:1;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #back{width:40px;height:40px;flex:none;border-radius:13px;background:#fff;border:2px solid var(--line);
+        display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  /* Inside the shell the Home button belongs to the shell, so the page's own
+     Back only appears once there is somewhere to step back TO. */
+  body.in-app #back{display:none}
+  body.in-app.canback #back{display:flex}
+  body.in-app .top{padding-left:96px}
+  .coins{background:#fff;border:2px solid var(--line);border-radius:999px;padding:6px 13px;font-size:15px;
+         display:flex;align-items:center;gap:7px;flex:none}
+  .coindot{width:17px;height:17px;border-radius:50%;background:radial-gradient(circle at 34% 32%,#FFE39A,#FFC542);
+           border:2px solid #D99B12;display:inline-block}
+
+  /* how far through the sitting. Dots, never a number and never a clock. */
+  .steps{display:flex;gap:4px;padding:6px 16px 12px;flex-wrap:wrap}
+  .steps i{flex:1;min-width:6px;height:8px;border-radius:5px;background:#EBE3D3;transition:background .25s}
+  .steps i.done{background:var(--grad)}
+  .steps.hide{visibility:hidden}
+
+  main{flex:1;padding:0 16px 30px}
+
+  .card{background:var(--card);border:2px solid var(--line);border-radius:24px;padding:20px 18px;text-align:center;
+        box-shadow:0 6px 18px rgba(15,14,23,.05)}
+  .card h2{font-family:'Fredoka',sans-serif;font-weight:600;font-size:22px;margin:0 0 8px;line-height:1.2}
+  .card p{font-size:16px;line-height:1.45;margin:8px 0;font-weight:700}
+  .sub{color:var(--sub);font-size:13.5px;font-weight:800;margin-top:11px}
+  .kicker{font-size:11.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin-bottom:7px}
+
+  /* the deck list (same path vocabulary as the lessons map) */
+  .node{position:relative;display:flex;align-items:center;gap:12px;background:#fff;border:2px solid var(--line);
+        border-radius:18px;padding:11px 12px;margin:10px 0;width:100%;text-align:left;font:inherit;color:inherit;
+        cursor:pointer;box-shadow:0 5px 14px rgba(15,14,23,.05)}
+  .node:active{transform:scale(.99)}
+  .dot{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+       font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:#fff;background:var(--grad)}
+  .node.full .dot{background:linear-gradient(90deg,#FFC542,#F2A50C)}
+  .nodetext{flex:1;min-width:0}
+  .nm{display:block;font-weight:900;font-size:15.5px}
+  .ds{display:block;font-size:12.5px;color:var(--sub);font-weight:800;margin-top:1px}
+  .bar{height:7px;border-radius:4px;background:#EBE3D3;margin-top:6px;overflow:hidden}
+  .bar span{display:block;height:100%;border-radius:4px;background:var(--grad)}
+
+  /* buttons */
+  .btn{font:inherit;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;border:none;border-radius:18px;
+       padding:15px 22px;background:var(--grad);color:#fff;cursor:pointer;width:100%;margin-top:12px;
+       box-shadow:0 7px 16px rgba(124,92,252,.28)}
+  .btn:active{transform:scale(.985)}
+  .btn.ghost{background:#fff;border:2px solid var(--line);color:var(--sub);box-shadow:none}
+  .btnrow{display:flex;gap:10px}
+  .btnrow .btn{margin-top:12px}
+
+  /* the mode picker */
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .mode{background:#fff;border:2px solid var(--line);border-radius:22px;padding:16px 12px;text-align:center;
+        cursor:pointer;font:inherit;color:inherit;box-shadow:0 6px 18px rgba(15,14,23,.05)}
+  .mode:active{transform:scale(.97)}
+  .mode svg{display:block;margin:0 auto 8px}
+  .mode h3{font-family:'Fredoka',sans-serif;font-weight:600;margin:0 0 2px;font-size:18px}
+  .mode p{margin:0;font-size:12.5px;color:var(--sub);font-weight:800;line-height:1.35}
+
+  /* the word itself - drawn TYPE, the way the lessons reading cards do it */
+  .word{font-family:'Fredoka',sans-serif;font-weight:600;font-size:56px;line-height:1.1;letter-spacing:.02em;
+        margin:6px 0 2px;word-break:break-word}
+  .word .heart{color:var(--coral);position:relative;display:inline-block;
+               animation:glow 1.5s ease-in-out infinite}
+  @keyframes glow{0%,100%{text-shadow:0 0 0 rgba(255,107,107,0)}50%{text-shadow:0 0 16px rgba(255,107,107,.65)}}
+  .flashbox{min-height:132px;display:flex;align-items:center;justify-content:center;margin:6px 0}
+  .flashbox.gone .word{visibility:hidden}
+  .heartnote{font-size:12.5px;font-weight:800;color:var(--sub);margin-top:2px}
+
+  /* the big speaker - the whole question in Find It */
+  .say{width:126px;height:126px;border-radius:50%;border:none;margin:8px auto 4px;display:flex;
+       align-items:center;justify-content:center;background:var(--grad);cursor:pointer;
+       box-shadow:0 10px 24px rgba(124,92,252,.32)}
+  .say:active{transform:scale(.96)}
+  .say.small{width:64px;height:64px;box-shadow:0 6px 14px rgba(124,92,252,.28)}
+  .say.pulse{animation:sayp 1.4s ease-in-out infinite}
+  @keyframes sayp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+  /* four big word cards */
+  .picks{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px}
+  .pick{background:#fff;border:3px solid var(--line);border-radius:20px;min-height:86px;
+        display:flex;align-items:center;justify-content:center;cursor:pointer;
+        font-family:'Fredoka',sans-serif;font-weight:600;font-size:29px;color:var(--ink);
+        padding:10px 8px;word-break:break-word;box-shadow:0 6px 16px rgba(15,14,23,.05);
+        transition:border-color .15s,background .15s,opacity .15s}
+  .pick:active{transform:scale(.98)}
+  .pick.right{border-color:var(--mint);background:#F1FBF5}
+  .pick.miss{border-color:#E8DFF0;background:#FAF7FC;opacity:.55}
+  .picks.locked .pick{cursor:default}
+
+  /* the end of a sitting - a warm finish, never a mark out of ten */
+  .grew{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:12px}
+  .grew b{font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;background:#FFF7E3;
+          border:2px solid #F3E2B6;border-radius:999px;padding:5px 13px;color:#7A5400}
+  .newone{background:#F1FBF5;border-color:#BFE6D8;color:#1D7A50}
+
+  .loading{text-align:center;color:var(--sub);padding:60px 0;font-weight:800}
+  .oops{text-align:center;color:var(--sub);padding:40px 0;font-weight:800;line-height:1.5}
+  @media (min-width:520px){ .wrap{max-width:520px} .card{padding:26px 24px} .word{font-size:64px} }
+  @media (prefers-reduced-motion:reduce){ *{animation:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button id="back" aria-label="Back">
+      <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 5 L8 12 L15 19" fill="none" stroke="#6E6684" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <h1 id="title">Practice</h1>
+    <div class="coins"><span class="coindot"></span><span id="coinN">0</span></div>
+  </div>
+  <div class="steps hide" id="stepbar"></div>
+  <main id="stage"><div class="loading">Getting your words ready...</div></main>
+</div>
+
+<script src="/buildable-wallet.js"></script>
+<script src="/buildable-practice.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------
+   Session PT1 - Practice, on the shared deck engine.
+   Pick a step -> pick a way to practise -> about 20 turns of due words
+   with at most three new ones, each new word introduced before it is
+   ever asked. Right AND fast climbs a box; wrong or slow drops one and
+   the word simply comes back sooner. There is no timer on screen, no
+   score, no lives and no way to fail.
+--------------------------------------------------------------- */
+
+var DECK_DIR = "/practice/decks/";
+var AUDIO_DIR = "/practice/audio/";
+var ENGINE = window.BuildablePractice;
+
+/* ---- shell awareness (lessons.html pattern) ---- */
+function iframed(){ try{ return window.parent && window.parent !== window; }catch(e){ return false; } }
+var IN_SHELL = iframed();
+function postToShell(msg){ if(IN_SHELL){ try{ window.parent.postMessage(msg,"*"); }catch(e){} } }
+if(IN_SHELL) document.body.classList.add("in-app");
+
+/* ---- who is practising ---- */
+function activeKid(){
+  try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return (k&&k.id)?k:null; }
+  catch(e){ return null; }
+}
+var KID = activeKid();
+var KID_ID = KID ? KID.id : null;
+var KID_GRADE = (KID && KID.grade) ? String(KID.grade) : null;
+var STORE = ENGINE.store(KID_ID);
+
+/* ---- coins (shared wallet, same as every other page) ---- */
+function paintCoins(){
+  var w = window.BuildableWallet; if(!w) return;
+  try{ document.getElementById("coinN").textContent = w.balance(); }catch(e){}
+}
+window.addEventListener("bk-wallet", paintCoins);
+paintCoins();
+
+/* ---- read aloud ---------------------------------------------------------
+   Three ways to hear a word, in order of how good it sounds:
+     1. a pre-generated file in /practice/audio (the ElevenLabs voice, baked)
+     2. /api/say - the SAME ElevenLabs pipeline, generated once and then
+        cached server side, so a word missing from (1) still sounds right
+     3. the device voice, so a kid with no network still gets practice
+   A word that fails at one level is remembered, so we never stall twice on
+   the same miss.                                                           */
+var AUDIO_MISS = {};
+var CUR_AUDIO = null;
+function slug(w){ return String(w||"").toLowerCase().replace(/[^a-z]/g,""); }
+
+function stopAudio(){
+  if(CUR_AUDIO){ try{ CUR_AUDIO.pause(); }catch(e){} CUR_AUDIO = null; }
+  try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){}
+}
+function deviceVoice(word){
+  try{
+    if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+    var u = new SpeechSynthesisUtterance(String(word));
+    u.rate = 0.85; u.pitch = 1.05; u.lang = "en-US";
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function playSrc(src, onFail){
+  var a = new Audio(src);
+  a.preload = "auto";
+  CUR_AUDIO = a;
+  var failed = false;
+  var fail = function(){ if(failed) return; failed = true; if(onFail) onFail(); };
+  a.addEventListener("error", fail);
+  var p = null;
+  try{ p = a.play(); }catch(e){ fail(); return; }
+  if(p && p.catch) p.catch(function(){ fail(); });
+}
+function speak(word){
+  stopAudio();
+  var s = slug(word);
+  if(!s){ return; }
+  if(AUDIO_MISS[s] === 2){ deviceVoice(word); return; }
+  if(AUDIO_MISS[s] === 1){ playSrc("/api/say?t=" + encodeURIComponent(word), function(){ AUDIO_MISS[s] = 2; deviceVoice(word); }); return; }
+  playSrc(AUDIO_DIR + s + ".mp3", function(){
+    AUDIO_MISS[s] = 1;
+    playSrc("/api/say?t=" + encodeURIComponent(word), function(){ AUDIO_MISS[s] = 2; deviceVoice(word); });
+  });
+}
+/* Warm the next word up while the kid is still looking at this one. */
+function preload(word){
+  var s = slug(word); if(!s || AUDIO_MISS[s]) return;
+  try{ var a = new Audio(AUDIO_DIR + s + ".mp3"); a.preload = "auto"; a.load(); }catch(e){}
+}
+
+/* ---- the learning ledger (Session 8B) -----------------------------------
+   ONE event per finished sitting, not one per tap: practice is a drill, and
+   220 rows an evening would drown the dashboard. In the shell we hand the
+   cartridge `skill` message up and let the shell attach the kid; standalone
+   we POST it ourselves. Never both. Fire and forget.                       */
+function logSession(sum){
+  var good = sum.asked > 0 && sum.right * 2 >= sum.asked;
+  var msg = {
+    source:"buildable", kind:"skill",
+    subject: sum.subject || "words",
+    skill: sum.skill || "sight-words",
+    correct: good,
+    quizType: "practice",
+    questionId: sum.deckId ? (sum.deckId + ":" + sum.right + "/" + sum.asked) : null,
+    game: "practice"
+  };
+  if(IN_SHELL){ postToShell(msg); return; }
+  try{
+    fetch("/api/log-learning-event", {
+      method:"POST", headers:{"Content-Type":"application/json"}, keepalive:true,
+      body: JSON.stringify({
+        kidProfileId: KID_ID, grade: KID_GRADE || null,
+        subject: msg.subject, skill: msg.skill, quizType: msg.quizType,
+        correct: msg.correct, questionId: msg.questionId, game: "practice"
+      })
+    }).catch(function(){});
+  }catch(e){}
+}
+
+/* ---- drawn icons: SVG geometry only, never an emoji ---- */
+var SPEAKER = '<svg width="58" height="58" viewBox="0 0 48 48" aria-hidden="true">'+
+  '<path d="M11 19h7l9-7v24l-9-7h-7z" fill="#fff"/>'+
+  '<path d="M32 17a10 10 0 010 14" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round"/>'+
+  '<path d="M37 12a17 17 0 010 24" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".75"/></svg>';
+var SPEAKER_SM = SPEAKER.replace('width="58" height="58"','width="30" height="30"');
+var EAR_ART = '<svg width="52" height="52" viewBox="0 0 48 48" aria-hidden="true">'+
+  '<circle cx="24" cy="24" r="19" fill="#7C5CFC"/>'+
+  '<path d="M17 22a7 7 0 0114 0c0 5-5 5-5 9a3 3 0 01-6 0" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round"/>'+
+  '<circle cx="23" cy="22" r="2.4" fill="#fff"/></svg>';
+var FLASH_ART = '<svg width="52" height="52" viewBox="0 0 48 48" aria-hidden="true">'+
+  '<circle cx="24" cy="24" r="19" fill="#FF6B6B"/>'+
+  '<rect x="13" y="17" width="22" height="14" rx="4" fill="#fff"/>'+
+  '<path d="M18 24h12" stroke="#FF6B6B" stroke-width="3" stroke-linecap="round"/></svg>';
+var STAR = '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.2 6.6.8-4.9 4.6 1.3 6.5L12 16.9 6.1 20l1.3-6.5L2.5 9l6.6-.8z" fill="#FFC542"/></svg>';
+
+/* ---- word drawing: the heart part glows ---------------------------------
+   A heart word is one where some letters do not say what a new reader
+   expects, so those letters have to be learned BY HEART. The deck names that
+   part; we light it and say nothing negative about the rest.               */
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function drawWord(item, glow){
+  var w = String(item.word || item.text || "");
+  if(!glow || !item.heart) return esc(w);
+  var at = w.indexOf(item.heart);
+  if(at === -1) return esc(w);
+  return esc(w.slice(0, at)) + '<span class="heart">' + esc(item.heart) + '</span>' + esc(w.slice(at + item.heart.length));
+}
+
+/* ---- screens ------------------------------------------------------------ */
+var stage = document.getElementById("stage");
+var stepbar = document.getElementById("stepbar");
+var titleEl = document.getElementById("title");
+var backBtn = document.getElementById("back");
+
+var CAME_FROM_LEARN = /\/lessons(\.html)?(\?|$)/.test(document.referrer || "");
+var INDEX = null;      // practice/decks/index.json
+var DECK = null;       // the loaded deck
+var SESSION = null;    // the live sitting
+var MODE = "find";
+var VIEW = "decks";
+
+function setSteps(total, done){
+  if(!total){ stepbar.className = "steps hide"; stepbar.innerHTML = ""; return; }
+  stepbar.className = "steps";
+  var h = "";
+  for(var i=0;i<total;i++) h += '<i class="' + (i < done ? "done" : "") + '"></i>';
+  stepbar.innerHTML = h;
+}
+function setBack(fn){
+  if(fn){ document.body.classList.add("canback"); backBtn.onclick = fn; backBtn.style.display = "flex"; }
+  else { document.body.classList.remove("canback"); backBtn.onclick = null; backBtn.style.display = IN_SHELL ? "none" : "none"; }
+}
+function on(sel, fn){
+  var els = stage.querySelectorAll(sel);
+  for(var i=0;i<els.length;i++) els[i].addEventListener("click", fn);
+}
+
+/* --- 1. which step of words --- */
+function showDecks(){
+  VIEW = "decks"; SESSION = null; DECK = null;
+  stopAudio(); setSteps(0); titleEl.textContent = "Practice";
+  // Practice is opened from the Learn section, and inside the shell that is the
+  // SAME frame, so without this a kid landing on the deck list has no way back
+  // to Lessons but the shell's Home button.
+  setBack(CAME_FROM_LEARN ? function(){ try{ history.back(); }catch(e){ location.href = "/lessons"; } } : null);
+  var decks = (INDEX && INDEX.decks) || [];
+  if(!decks.length){ stage.innerHTML = '<div class="oops">Practice is having a quiet moment.<br>Try again in a minute.</div>'; return; }
+
+  var h = '<div class="card" style="text-align:left">' +
+          '<div class="kicker" style="text-align:center">Practice</div>' +
+          '<h2 style="text-align:center">Words you will see everywhere</h2>' +
+          '<p class="sub" style="text-align:center;margin-bottom:2px">A few minutes is plenty. Pick a step to practise.</p></div>';
+  for(var i=0;i<decks.length;i++){
+    var d = decks[i];
+    var p = DECK_PROGRESS[d.id] || { mastered:0, total:d.count||0 };
+    var pct = p.total ? Math.round(p.mastered / p.total * 100) : 0;
+    h += '<button class="node' + (pct >= 100 ? " full" : "") + '" data-deck="' + esc(d.id) + '">' +
+           '<span class="dot">' + (i + 1) + '</span>' +
+           '<span class="nodetext">' +
+             '<span class="nm">' + esc(d.title) + '</span>' +
+             '<span class="ds">' + p.mastered + ' of ' + p.total + ' known by heart</span>' +
+             '<span class="bar"><span style="width:' + pct + '%"></span></span>' +
+           '</span>' +
+           (pct >= 100 ? STAR : '') +
+         '</button>';
+  }
+  stage.innerHTML = h;
+  on("[data-deck]", function(e){ loadDeck(e.currentTarget.getAttribute("data-deck")); });
+}
+
+/* --- 2. how do you want to practise --- */
+function showModes(){
+  VIEW = "modes";
+  stopAudio(); setSteps(0); setBack(showDecks); titleEl.textContent = DECK.title || "Practice";
+  var pr = STORE.progress(DECK);
+  stage.innerHTML =
+    '<div class="card">' +
+      '<div class="kicker">' + esc(DECK.short || "Practice") + '</div>' +
+      '<h2>' + esc(DECK.title) + '</h2>' +
+      '<p>' + esc(DECK.blurb || "") + '</p>' +
+      '<p class="sub">' + pr.mastered + ' of ' + pr.total + ' known by heart</p>' +
+      '<div class="modes">' +
+        '<button class="mode" data-mode="find">' + EAR_ART + '<h3>Hear it</h3><p>Listen, then find the word</p></button>' +
+        '<button class="mode" data-mode="flash">' + FLASH_ART + '<h3>Quick look</h3><p>The word blinks. Which one was it?</p></button>' +
+      '</div>' +
+    '</div>';
+  on("[data-mode]", function(e){ startSession(e.currentTarget.getAttribute("data-mode")); });
+}
+
+/* --- 3. the sitting --- */
+function startSession(mode){
+  MODE = mode || "find";
+  SESSION = ENGINE.session({ kidId: KID_ID, deck: DECK, store: STORE });
+  VIEW = "play";
+  setBack(function(){ if(confirmLeave()) showModes(); });
+  if(!SESSION.next()){ showDone(SESSION.close()); return; }
+  turn();
+}
+/* Leaving early is always allowed and costs nothing - there is no fail state,
+   so there is nothing to warn about. */
+function confirmLeave(){ stopAudio(); return true; }
+
+function turn(){
+  var t = SESSION.next();
+  if(!t){ showDone(SESSION.close()); return; }
+  setSteps(SESSION.turns, SESSION.done);
+  if(t.needsIntro) showIntro(t); else showAsk(t);
+}
+
+/* The intro moment. A new word is MET before it is ever asked: shown big,
+   said out loud, with the by-heart letters lit. */
+function showIntro(t){
+  var item = t.item;
+  stage.innerHTML =
+    '<div class="card">' +
+      '<div class="kicker">A new word</div>' +
+      '<div class="word">' + drawWord(item, true) + '</div>' +
+      (item.heart ? '<div class="heartnote">Those letters are a surprise. Learn them by heart.</div>' : '<div class="heartnote">Say it with me.</div>') +
+      '<button class="say small" id="sayit" aria-label="Say it again">' + SPEAKER_SM + '</button>' +
+      '<button class="btn" id="got">Got it</button>' +
+    '</div>';
+  speak(item.word);
+  document.getElementById("sayit").addEventListener("click", function(){ speak(item.word); });
+  document.getElementById("got").addEventListener("click", function(){
+    SESSION.markIntro(item.id);
+    showAsk(SESSION.next() || t);
+  });
+}
+
+/* One question. The clock starts when the choices become tappable and is
+   never, ever drawn. */
+function showAsk(t){
+  var item = t.item;
+  var picks = SESSION.choices(item, 4);
+  var answered = false;
+  var startedAt = 0;
+
+  var cards = "";
+  for(var i=0;i<picks.length;i++){
+    cards += '<button class="pick" data-id="' + esc(picks[i].id) + '">' + esc(picks[i].word || picks[i].text || "") + '</button>';
+  }
+
+  if(MODE === "flash"){
+    stage.innerHTML =
+      '<div class="card">' +
+        '<div class="kicker">Quick look</div>' +
+        '<div class="flashbox" id="flash"><div class="word">' + esc(item.word) + '</div></div>' +
+        '<div class="sub" id="hint">Which word was it?</div>' +
+        '<div class="picks" id="picks" style="visibility:hidden">' + cards + '</div>' +
+      '</div>';
+    speak(item.word);
+    setTimeout(function(){
+      var f = document.getElementById("flash"); if(f) f.className = "flashbox gone";
+      var p = document.getElementById("picks"); if(p) p.style.visibility = "visible";
+      startedAt = Date.now();
+    }, 1000);
+  } else {
+    stage.innerHTML =
+      '<div class="card">' +
+        '<div class="kicker">Hear it</div>' +
+        '<button class="say pulse" id="sayit" aria-label="Say the word">' + SPEAKER + '</button>' +
+        '<div class="sub" id="hint">Tap the word you heard</div>' +
+        '<div class="picks" id="picks">' + cards + '</div>' +
+      '</div>';
+    speak(item.word);
+    startedAt = Date.now();
+    document.getElementById("sayit").addEventListener("click", function(){ speak(item.word); });
+  }
+
+  // warm the NEXT word's audio while this one is still on screen
+  try{
+    var q = SESSION.upcoming();
+    for(var k=0;k<q.length;k++){
+      if(q[k] === item.id) continue;
+      var nx = findItem(q[k]);
+      if(nx){ preload(nx.word); break; }
+    }
+  }catch(e){}
+
+  on(".pick", function(e){
+    if(answered) return;
+    if(MODE === "flash" && !startedAt) return;      // choices are not live yet
+    answered = true;
+    var chosenId = e.currentTarget.getAttribute("data-id");
+    var correct = chosenId === item.id;
+    var ms = startedAt ? (Date.now() - startedAt) : 99999;
+    settle(item, correct, chosenId, ms);
+  });
+}
+
+/* What the kid sees after a tap. Right: the card goes green. Wrong: the card
+   they picked steps back and the right one lights up and says itself again.
+   Nothing is taken away and nothing counts against them. */
+function settle(item, correct, chosenId, ms){
+  var box = document.getElementById("picks");
+  if(box) box.className = "picks locked";
+  var all = stage.querySelectorAll(".pick");
+  for(var i=0;i<all.length;i++){
+    var id = all[i].getAttribute("data-id");
+    if(id === item.id) all[i].className = "pick right";
+    else if(id === chosenId) all[i].className = "pick miss";
+  }
+  var hint = document.getElementById("hint");
+  if(hint) hint.textContent = correct ? "That is the one." : ("This one says " + item.word + ".");
+  var f = document.getElementById("flash");
+  if(f) f.className = "flashbox";
+
+  SESSION.answer(item.id, correct, ms);
+  if(!correct) speak(item.word);
+  setTimeout(turn, correct ? 700 : 1500);
+}
+
+/* --- 4. the finish. A warm ending, never a mark out of ten. --- */
+function showDone(sum){
+  VIEW = "done";
+  stopAudio(); setSteps(0); setBack(showDecks);
+  logSession(sum);
+
+  var grew = "";
+  if(sum.mastered && sum.mastered.length){
+    for(var i=0;i<sum.mastered.length;i++){
+      var it = findItem(sum.mastered[i]);
+      if(it) grew += '<b>' + esc(it.word) + '</b>';
+    }
+  }
+  var fresh = "";
+  if(sum.newIds && sum.newIds.length){
+    for(var j=0;j<sum.newIds.length;j++){
+      var nit = findItem(sum.newIds[j]);
+      if(nit) fresh += '<b class="newone">' + esc(nit.word) + '</b>';
+    }
+  }
+  stage.innerHTML =
+    '<div class="card">' +
+      '<div class="kicker">Nice practice</div>' +
+      '<h2>' + (grew ? "You know these by heart now" : "That was good practice") + '</h2>' +
+      (grew ? '<div class="grew">' + grew + '</div>' : '') +
+      (fresh ? '<p class="sub" style="margin-top:16px">New words you met today</p><div class="grew">' + fresh + '</div>' : '') +
+      '<p class="sub">' + sum.progress.mastered + ' of ' + sum.progress.total + ' words in ' + esc(DECK.title) + '</p>' +
+      '<div class="btnrow">' +
+        '<button class="btn ghost" id="pick">Other words</button>' +
+        '<button class="btn" id="again">Go again</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById("again").addEventListener("click", function(){ startSession(MODE); });
+  document.getElementById("pick").addEventListener("click", showDecks);
+}
+function findItem(id){
+  var items = (DECK && DECK.items) || [];
+  for(var i=0;i<items.length;i++) if(items[i].id === id) return items[i];
+  return null;
+}
+
+/* ---- loading ------------------------------------------------------------ */
+var DECK_PROGRESS = {};
+
+function loadDeck(id){
+  stage.innerHTML = '<div class="loading">Getting your words ready...</div>';
+  fetch(DECK_DIR + id + ".json", { cache:"no-cache" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(!d || !d.items || !d.items.length){ stage.innerHTML = '<div class="oops">Those words are not ready yet.</div>'; return; }
+      DECK = d;
+      setUrl("deck=" + encodeURIComponent(id));
+      showModes();
+    })
+    .catch(function(){ stage.innerHTML = '<div class="oops">Could not fetch those words. Check the internet and try again.</div>'; });
+}
+
+/* The picker needs a mastered count per deck, which means every deck's items.
+   Five small files, fetched once, in parallel. */
+function loadIndex(){
+  return fetch(DECK_DIR + "index.json", { cache:"no-cache" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(ix){
+      INDEX = ix;
+      var decks = (ix && ix.decks) || [];
+      return Promise.all(decks.map(function(d){
+        return fetch(DECK_DIR + d.file, { cache:"no-cache" })
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(full){ if(full) DECK_PROGRESS[d.id] = STORE.progress(full); })
+          .catch(function(){});
+      }));
+    });
+}
+
+function setUrl(q){
+  try{ history.replaceState(null, "", location.pathname + (q ? "?" + q : "")); }catch(e){}
+}
+function params(){
+  var out = {}, s = location.search.replace(/^\?/,"");
+  s.split("&").forEach(function(bit){
+    if(!bit) return; var kv = bit.split("="); out[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]||"");
+  });
+  return out;
+}
+
+loadIndex().then(function(){
+  var p = params();
+  if(p.deck) loadDeck(p.deck); else showDecks();
+  postToShell({ source:"buildable", kind:"ready", game:"practice" });
+}).catch(function(){
+  stage.innerHTML = '<div class="oops">Practice could not start.<br>Check the internet and try again.</div>';
+});
+
+})();
+</script>
+</body>
+</html>

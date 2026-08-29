@@ -1,3 +1,56 @@
+## 2026-08-29 - PT1: Practice, the shared drill engine, with sight words on it
+
+Card **PT1** ("Practice engine + sight words, playable end to end"), phase PT.
+
+**What shipped.** `public/buildable-practice.js` (the engine), `public/practice.html`
+(the page), five Dolch decks plus an index in `public/practice/decks/`,
+`scripts/gen-practice-audio.mjs` + `public/practice/audio/README.md`,
+`qa-practice.mjs` (119 checks), a Practice tile in the Learn section of
+`public/lessons.html` behind the 1111 gate, three `sessionStorage` one-liners in
+`src/BuildableKids.jsx` so the gate is only asked once per visit, and five routes
+in `vercel.json`.
+
+**The engine is deliberately subject-blind.** A deck item needs an `id` and
+nothing else; the page reads the rest. PT3's maths decks must ride this file, and
+`qa-practice.mjs` asserts the engine has no sight-word special case in it, so a
+fork would show up as a red check rather than as a surprise in three weeks.
+
+**The rules, as the card wrote them.** Boxes 1-5 starting at 1; right AND fast
+climbs; wrong OR slow drops; fast is under 3000ms and is never drawn. A sitting is
+about 20 turns of due reviews with at most 3 new words mixed in, each new word
+introduced (word big, said aloud, tricky letters glowing) before it is ever asked.
+Box 1 is due immediately, so a missed word comes back in the same sitting - which
+is the whole of "a wrong answer is not punished".
+
+**QA: passed.** 119 checks green, exit 0. The box maths and a full sitting are run
+in jsdom against the shipped engine; the page is loaded headless, played to its
+end, and its single ledger event inspected. Also opened it in real Chromium at
+390x844 and looked at five screens - which caught two layout bugs on the deck list
+(the step label overflowing its dot, and the title running into the count because
+they were inline spans). Both fixed before commit.
+
+**What remains in the phase.** PT2 (placement warm-up, the bird collection, parent
+level control, and removing the 1111 gate) and PT3 (maths decks + Sprint mode).
+
+**Flagged honestly.**
+1. **The 220 word mp3s are not baked.** This sandbox cannot reach
+   buildablekids.com (the network policy answers 403 to the host), so
+   `scripts/gen-practice-audio.mjs` could not be run. Nothing is broken - the page
+   falls back to `/api/say`, the same voice through the same pipeline, cached
+   server-side after the first play. Running the script from a networked machine
+   turns those into static files.
+2. **`qa-lessons.mjs` has four failures that pre-date this session.** Verified by
+   stashing: they fail identically on clean `main`. They look for a Home tile
+   `id: "lessons", title: "Lessons"` that NV2 replaced with the `learn` door. Stale
+   checks, not a broken product. Not fixed here because it is not this card.
+3. **Pushed to `claude/planner-pt1-59ko36`, not `main`,** per this session's branch
+   instruction. The planner card is therefore NOT ticked `done`: `planner.mjs done`
+   runs the RN1 git gate, which requires HEAD to be an ancestor of `origin/main`,
+   and it is not. Merge the branch, then tick it.
+4. **The planner could not be read or written from the CLI** for the same network
+   reason (`planner: read failed (http 403)`). The card was read straight out of
+   `planner_meta` through the Supabase MCP instead.
+
 ## 2026-08-29 — CP2: chess pieces you can actually read, and the hi-def worlds turned on
 
 Mike: "the chess pieces are kinda weird and hard to see... hard to see with the

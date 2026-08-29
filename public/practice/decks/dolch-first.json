@@ -1,0 +1,237 @@
+{
+  "id": "dolch-first",
+  "subject": "words",
+  "kind": "sight-words",
+  "skill": "sight-words",
+  "title": "Growing Words",
+  "short": "Step 3",
+  "blurb": "Words a first grader meets on every page",
+  "order": 3,
+  "source": "Dolch sight word list",
+  "modes": [
+    "find",
+    "flash"
+  ],
+  "items": [
+    {
+      "id": "g1-after",
+      "word": "after",
+      "say": "after"
+    },
+    {
+      "id": "g1-again",
+      "word": "again",
+      "say": "again",
+      "heart": "ai"
+    },
+    {
+      "id": "g1-an",
+      "word": "an",
+      "say": "an"
+    },
+    {
+      "id": "g1-any",
+      "word": "any",
+      "say": "any",
+      "heart": "a"
+    },
+    {
+      "id": "g1-as",
+      "word": "as",
+      "say": "as",
+      "heart": "s"
+    },
+    {
+      "id": "g1-ask",
+      "word": "ask",
+      "say": "ask"
+    },
+    {
+      "id": "g1-by",
+      "word": "by",
+      "say": "by"
+    },
+    {
+      "id": "g1-could",
+      "word": "could",
+      "say": "could",
+      "heart": "oul"
+    },
+    {
+      "id": "g1-every",
+      "word": "every",
+      "say": "every"
+    },
+    {
+      "id": "g1-fly",
+      "word": "fly",
+      "say": "fly"
+    },
+    {
+      "id": "g1-from",
+      "word": "from",
+      "say": "from"
+    },
+    {
+      "id": "g1-give",
+      "word": "give",
+      "say": "give",
+      "heart": "ve"
+    },
+    {
+      "id": "g1-going",
+      "word": "going",
+      "say": "going"
+    },
+    {
+      "id": "g1-had",
+      "word": "had",
+      "say": "had"
+    },
+    {
+      "id": "g1-has",
+      "word": "has",
+      "say": "has",
+      "heart": "s"
+    },
+    {
+      "id": "g1-her",
+      "word": "her",
+      "say": "her"
+    },
+    {
+      "id": "g1-him",
+      "word": "him",
+      "say": "him"
+    },
+    {
+      "id": "g1-his",
+      "word": "his",
+      "say": "his",
+      "heart": "s"
+    },
+    {
+      "id": "g1-how",
+      "word": "how",
+      "say": "how"
+    },
+    {
+      "id": "g1-just",
+      "word": "just",
+      "say": "just"
+    },
+    {
+      "id": "g1-know",
+      "word": "know",
+      "say": "know",
+      "heart": "kn"
+    },
+    {
+      "id": "g1-let",
+      "word": "let",
+      "say": "let"
+    },
+    {
+      "id": "g1-live",
+      "word": "live",
+      "say": "live",
+      "heart": "ve"
+    },
+    {
+      "id": "g1-may",
+      "word": "may",
+      "say": "may"
+    },
+    {
+      "id": "g1-of",
+      "word": "of",
+      "say": "of",
+      "heart": "f"
+    },
+    {
+      "id": "g1-old",
+      "word": "old",
+      "say": "old"
+    },
+    {
+      "id": "g1-once",
+      "word": "once",
+      "say": "once",
+      "heart": "on"
+    },
+    {
+      "id": "g1-open",
+      "word": "open",
+      "say": "open"
+    },
+    {
+      "id": "g1-over",
+      "word": "over",
+      "say": "over"
+    },
+    {
+      "id": "g1-put",
+      "word": "put",
+      "say": "put",
+      "heart": "u"
+    },
+    {
+      "id": "g1-round",
+      "word": "round",
+      "say": "round"
+    },
+    {
+      "id": "g1-some",
+      "word": "some",
+      "say": "some",
+      "heart": "ome"
+    },
+    {
+      "id": "g1-stop",
+      "word": "stop",
+      "say": "stop"
+    },
+    {
+      "id": "g1-take",
+      "word": "take",
+      "say": "take"
+    },
+    {
+      "id": "g1-thank",
+      "word": "thank",
+      "say": "thank"
+    },
+    {
+      "id": "g1-them",
+      "word": "them",
+      "say": "them"
+    },
+    {
+      "id": "g1-then",
+      "word": "then",
+      "say": "then"
+    },
+    {
+      "id": "g1-think",
+      "word": "think",
+      "say": "think"
+    },
+    {
+      "id": "g1-walk",
+      "word": "walk",
+      "say": "walk",
+      "heart": "al"
+    },
+    {
+      "id": "g1-were",
+      "word": "were",
+      "say": "were",
+      "heart": "ere"
+    },
+    {
+      "id": "g1-when",
+      "word": "when",
+      "say": "when"
+    }
+  ]
+}

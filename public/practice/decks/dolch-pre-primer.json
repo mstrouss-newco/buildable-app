@@ -1,0 +1,230 @@
+{
+  "id": "dolch-pre-primer",
+  "subject": "words",
+  "kind": "sight-words",
+  "skill": "sight-words",
+  "title": "First Words",
+  "short": "Step 1",
+  "blurb": "The very first words to know on sight",
+  "order": 1,
+  "source": "Dolch sight word list",
+  "modes": [
+    "find",
+    "flash"
+  ],
+  "items": [
+    {
+      "id": "pp-a",
+      "word": "a",
+      "say": "a"
+    },
+    {
+      "id": "pp-and",
+      "word": "and",
+      "say": "and"
+    },
+    {
+      "id": "pp-away",
+      "word": "away",
+      "say": "away"
+    },
+    {
+      "id": "pp-big",
+      "word": "big",
+      "say": "big"
+    },
+    {
+      "id": "pp-blue",
+      "word": "blue",
+      "say": "blue",
+      "heart": "ue"
+    },
+    {
+      "id": "pp-can",
+      "word": "can",
+      "say": "can"
+    },
+    {
+      "id": "pp-come",
+      "word": "come",
+      "say": "come",
+      "heart": "ome"
+    },
+    {
+      "id": "pp-down",
+      "word": "down",
+      "say": "down"
+    },
+    {
+      "id": "pp-find",
+      "word": "find",
+      "say": "find"
+    },
+    {
+      "id": "pp-for",
+      "word": "for",
+      "say": "for"
+    },
+    {
+      "id": "pp-funny",
+      "word": "funny",
+      "say": "funny"
+    },
+    {
+      "id": "pp-go",
+      "word": "go",
+      "say": "go"
+    },
+    {
+      "id": "pp-help",
+      "word": "help",
+      "say": "help"
+    },
+    {
+      "id": "pp-here",
+      "word": "here",
+      "say": "here",
+      "heart": "ere"
+    },
+    {
+      "id": "pp-i",
+      "word": "I",
+      "say": "I",
+      "heart": "I"
+    },
+    {
+      "id": "pp-in",
+      "word": "in",
+      "say": "in"
+    },
+    {
+      "id": "pp-is",
+      "word": "is",
+      "say": "is",
+      "heart": "s"
+    },
+    {
+      "id": "pp-it",
+      "word": "it",
+      "say": "it"
+    },
+    {
+      "id": "pp-jump",
+      "word": "jump",
+      "say": "jump"
+    },
+    {
+      "id": "pp-little",
+      "word": "little",
+      "say": "little",
+      "heart": "le"
+    },
+    {
+      "id": "pp-look",
+      "word": "look",
+      "say": "look"
+    },
+    {
+      "id": "pp-make",
+      "word": "make",
+      "say": "make"
+    },
+    {
+      "id": "pp-me",
+      "word": "me",
+      "say": "me"
+    },
+    {
+      "id": "pp-my",
+      "word": "my",
+      "say": "my"
+    },
+    {
+      "id": "pp-not",
+      "word": "not",
+      "say": "not"
+    },
+    {
+      "id": "pp-one",
+      "word": "one",
+      "say": "one",
+      "heart": "one"
+    },
+    {
+      "id": "pp-play",
+      "word": "play",
+      "say": "play"
+    },
+    {
+      "id": "pp-red",
+      "word": "red",
+      "say": "red"
+    },
+    {
+      "id": "pp-run",
+      "word": "run",
+      "say": "run"
+    },
+    {
+      "id": "pp-said",
+      "word": "said",
+      "say": "said",
+      "heart": "ai"
+    },
+    {
+      "id": "pp-see",
+      "word": "see",
+      "say": "see"
+    },
+    {
+      "id": "pp-the",
+      "word": "the",
+      "say": "the",
+      "heart": "e"
+    },
+    {
+      "id": "pp-three",
+      "word": "three",
+      "say": "three"
+    },
+    {
+      "id": "pp-to",
+      "word": "to",
+      "say": "to",
+      "heart": "o"
+    },
+    {
+      "id": "pp-two",
+      "word": "two",
+      "say": "two",
+      "heart": "wo"
+    },
+    {
+      "id": "pp-up",
+      "word": "up",
+      "say": "up"
+    },
+    {
+      "id": "pp-we",
+      "word": "we",
+      "say": "we"
+    },
+    {
+      "id": "pp-where",
+      "word": "where",
+      "say": "where",
+      "heart": "ere"
+    },
+    {
+      "id": "pp-yellow",
+      "word": "yellow",
+      "say": "yellow"
+    },
+    {
+      "id": "pp-you",
+      "word": "you",
+      "say": "you",
+      "heart": "ou"
+    }
+  ]
+}

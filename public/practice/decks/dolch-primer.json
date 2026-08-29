@@ -1,0 +1,291 @@
+{
+  "id": "dolch-primer",
+  "subject": "words",
+  "kind": "sight-words",
+  "skill": "sight-words",
+  "title": "Next Words",
+  "short": "Step 2",
+  "blurb": "The words that turn first words into sentences",
+  "order": 2,
+  "source": "Dolch sight word list",
+  "modes": [
+    "find",
+    "flash"
+  ],
+  "items": [
+    {
+      "id": "pr-all",
+      "word": "all",
+      "say": "all",
+      "heart": "a"
+    },
+    {
+      "id": "pr-am",
+      "word": "am",
+      "say": "am"
+    },
+    {
+      "id": "pr-are",
+      "word": "are",
+      "say": "are",
+      "heart": "re"
+    },
+    {
+      "id": "pr-at",
+      "word": "at",
+      "say": "at"
+    },
+    {
+      "id": "pr-ate",
+      "word": "ate",
+      "say": "ate"
+    },
+    {
+      "id": "pr-be",
+      "word": "be",
+      "say": "be"
+    },
+    {
+      "id": "pr-black",
+      "word": "black",
+      "say": "black"
+    },
+    {
+      "id": "pr-brown",
+      "word": "brown",
+      "say": "brown"
+    },
+    {
+      "id": "pr-but",
+      "word": "but",
+      "say": "but"
+    },
+    {
+      "id": "pr-came",
+      "word": "came",
+      "say": "came"
+    },
+    {
+      "id": "pr-did",
+      "word": "did",
+      "say": "did"
+    },
+    {
+      "id": "pr-do",
+      "word": "do",
+      "say": "do",
+      "heart": "o"
+    },
+    {
+      "id": "pr-eat",
+      "word": "eat",
+      "say": "eat"
+    },
+    {
+      "id": "pr-four",
+      "word": "four",
+      "say": "four",
+      "heart": "ou"
+    },
+    {
+      "id": "pr-get",
+      "word": "get",
+      "say": "get"
+    },
+    {
+      "id": "pr-good",
+      "word": "good",
+      "say": "good",
+      "heart": "oo"
+    },
+    {
+      "id": "pr-have",
+      "word": "have",
+      "say": "have",
+      "heart": "ve"
+    },
+    {
+      "id": "pr-he",
+      "word": "he",
+      "say": "he"
+    },
+    {
+      "id": "pr-into",
+      "word": "into",
+      "say": "into"
+    },
+    {
+      "id": "pr-like",
+      "word": "like",
+      "say": "like"
+    },
+    {
+      "id": "pr-must",
+      "word": "must",
+      "say": "must"
+    },
+    {
+      "id": "pr-new",
+      "word": "new",
+      "say": "new"
+    },
+    {
+      "id": "pr-no",
+      "word": "no",
+      "say": "no"
+    },
+    {
+      "id": "pr-now",
+      "word": "now",
+      "say": "now"
+    },
+    {
+      "id": "pr-on",
+      "word": "on",
+      "say": "on"
+    },
+    {
+      "id": "pr-our",
+      "word": "our",
+      "say": "our"
+    },
+    {
+      "id": "pr-out",
+      "word": "out",
+      "say": "out"
+    },
+    {
+      "id": "pr-please",
+      "word": "please",
+      "say": "please",
+      "heart": "se"
+    },
+    {
+      "id": "pr-pretty",
+      "word": "pretty",
+      "say": "pretty",
+      "heart": "e"
+    },
+    {
+      "id": "pr-ran",
+      "word": "ran",
+      "say": "ran"
+    },
+    {
+      "id": "pr-ride",
+      "word": "ride",
+      "say": "ride"
+    },
+    {
+      "id": "pr-saw",
+      "word": "saw",
+      "say": "saw"
+    },
+    {
+      "id": "pr-say",
+      "word": "say",
+      "say": "say"
+    },
+    {
+      "id": "pr-she",
+      "word": "she",
+      "say": "she"
+    },
+    {
+      "id": "pr-so",
+      "word": "so",
+      "say": "so"
+    },
+    {
+      "id": "pr-soon",
+      "word": "soon",
+      "say": "soon"
+    },
+    {
+      "id": "pr-that",
+      "word": "that",
+      "say": "that"
+    },
+    {
+      "id": "pr-there",
+      "word": "there",
+      "say": "there",
+      "heart": "ere"
+    },
+    {
+      "id": "pr-they",
+      "word": "they",
+      "say": "they",
+      "heart": "ey"
+    },
+    {
+      "id": "pr-this",
+      "word": "this",
+      "say": "this"
+    },
+    {
+      "id": "pr-too",
+      "word": "too",
+      "say": "too"
+    },
+    {
+      "id": "pr-under",
+      "word": "under",
+      "say": "under"
+    },
+    {
+      "id": "pr-want",
+      "word": "want",
+      "say": "want",
+      "heart": "a"
+    },
+    {
+      "id": "pr-was",
+      "word": "was",
+      "say": "was",
+      "heart": "as"
+    },
+    {
+      "id": "pr-well",
+      "word": "well",
+      "say": "well"
+    },
+    {
+      "id": "pr-went",
+      "word": "went",
+      "say": "went"
+    },
+    {
+      "id": "pr-what",
+      "word": "what",
+      "say": "what",
+      "heart": "a"
+    },
+    {
+      "id": "pr-white",
+      "word": "white",
+      "say": "white"
+    },
+    {
+      "id": "pr-who",
+      "word": "who",
+      "say": "who",
+      "heart": "wh"
+    },
+    {
+      "id": "pr-will",
+      "word": "will",
+      "say": "will"
+    },
+    {
+      "id": "pr-with",
+      "word": "with",
+      "say": "with"
+    },
+    {
+      "id": "pr-yes",
+      "word": "yes",
+      "say": "yes"
+    }
+  ]
+}

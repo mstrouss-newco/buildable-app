@@ -206,6 +206,25 @@
   .findme button.ghost{background:#fff;border-color:var(--line);color:var(--sub)}
   .placenote{font-size:12.5px;font-weight:800;color:var(--sub);text-align:center;margin:2px 0 0}
 
+  /* Session PT1 - the owner gate on a Coming Soon tile. Same 1111 code and the
+     same words as the shell's gate, drawn in this page's own cream tokens so a
+     kid who taps Practice by accident just sees "Coming soon". */
+  .gate{position:fixed;inset:0;background:rgba(58,46,77,.35);display:flex;align-items:center;justify-content:center;
+        padding:20px;z-index:9500}
+  .gate .box{width:100%;max-width:340px;background:#fff;border:2px solid var(--line);border-radius:24px;
+             padding:26px 22px;box-shadow:0 18px 50px rgba(58,46,77,.30)}
+  .gate h3{font-family:'Fredoka',sans-serif;font-weight:600;font-size:22px;margin:0;text-align:center}
+  .gate p{font-size:14px;color:var(--sub);text-align:center;margin:8px 0 0;font-weight:800}
+  .gate input{width:100%;box-sizing:border-box;margin-top:16px;padding:12px 14px;border-radius:14px;
+              border:2px solid var(--line);background:#FFF8EE;color:var(--ink);font:inherit;font-size:18px;
+              text-align:center;letter-spacing:4px}
+  .gate input.bad{border-color:#E0578F}
+  .gate .err{color:#C23E72;font-size:13px;text-align:center;margin-top:8px;font-weight:800}
+  .gate .row{display:flex;gap:10px;margin-top:18px}
+  .gate .row button{flex:1;padding:12px;border-radius:14px;font:inherit;font-weight:900;font-size:15px;cursor:pointer;
+                    border:2px solid var(--line);background:#fff;color:var(--sub)}
+  .gate .row button.go{border-color:transparent;background:var(--grad);color:#fff}
+
   .loading{text-align:center;color:var(--sub);padding:60px 0;font-weight:800}
   @media (min-width:520px){ .wrap{max-width:520px} .card{padding:26px 24px} }
   @media (prefers-reduced-motion:reduce){ *{animation:none !important} }
@@ -883,8 +902,58 @@ function showSubjects(){
               '<h3>'+esc(s.title)+'</h3><p>'+esc(s.blurb||"")+'</p>'+tag +
             '</button>';
   }
+  // Session PT1 - Practice sits in the Learn section beside the subjects. It is
+  // the drill, not a lesson path, so it is its own tile and opens its own page.
+  // Coming Soon behind the 1111 owner gate until PT2 opens it to everyone.
+  html += '<button type="button" class="subject soon" id="practiceTile">' +
+            '<div class="art">'+PRACTICE_ART+'</div>' +
+            '<h3>Practice</h3><p>Words you know on sight</p>' +
+            '<span class="tag gray">Coming soon</span>' +
+          '</button>';
+
   render(idxBuddy("Time for school, my way. What should we learn today?") +
          '<div class="subgrid">'+html+'</div>');
+  var pt = document.getElementById("practiceTile");
+  if(pt) pt.addEventListener("click", function(){ openSoon("/practice"); });
+}
+
+/* ---- Session PT1: the Coming Soon owner gate ---------------------------
+   The shell asks for 1111 on its own Coming Soon tiles; this is the same gate
+   for a tile that lives inside a page. Passing it once is remembered for the
+   visit (sessionStorage), so a grown-up who already typed 1111 at the Learn
+   door is not asked a second time.                                          */
+var SOON_OK = "bk_soon_ok";
+var PRACTICE_ART = '<svg width="70" height="70" viewBox="0 0 70 70" aria-hidden="true">'+
+  '<rect x="8" y="14" width="54" height="42" rx="12" fill="#7C5CFC"/>'+
+  '<rect x="15" y="22" width="13" height="16" rx="4" fill="#fff"/>'+
+  '<rect x="31" y="22" width="13" height="16" rx="4" fill="#fff" opacity=".82"/>'+
+  '<rect x="47" y="22" width="8" height="16" rx="4" fill="#fff" opacity=".62"/>'+
+  '<path d="M17 46h36" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".9"/></svg>';
+function soonUnlocked(){ try{ return sessionStorage.getItem(SOON_OK) === "1"; }catch(e){ return false; } }
+function markSoonUnlocked(){ try{ sessionStorage.setItem(SOON_OK, "1"); }catch(e){} }
+function openSoon(href){
+  if(soonUnlocked()){ location.href = href; return; }
+  var g = document.createElement("div");
+  g.className = "gate";
+  g.innerHTML = '<div class="box">' +
+      '<h3>Coming soon</h3>' +
+      '<p>Enter the password to preview this.</p>' +
+      '<input type="password" inputmode="numeric" placeholder="Password" aria-label="Password">' +
+      '<div class="err" style="display:none">Wrong password. Try again.</div>' +
+      '<div class="row"><button type="button" class="no">Cancel</button><button type="button" class="go">Enter</button></div>' +
+    '</div>';
+  document.body.appendChild(g);
+  var input = g.querySelector("input"), err = g.querySelector(".err");
+  function close(){ try{ document.body.removeChild(g); }catch(e){} }
+  function submit(){
+    if(input.value === "1111"){ markSoonUnlocked(); close(); location.href = href; }
+    else { err.style.display = "block"; input.className = "bad"; input.value = ""; input.focus(); }
+  }
+  g.addEventListener("click", function(e){ if(e.target === g) close(); });
+  g.querySelector(".no").addEventListener("click", close);
+  g.querySelector(".go").addEventListener("click", submit);
+  input.addEventListener("keydown", function(e){ if(e.key === "Enter") submit(); });
+  input.focus();
 }
 window.__pickSubject = function(id){
   var g = startGradeFor(id);

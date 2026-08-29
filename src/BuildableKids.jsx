@@ -218,6 +218,12 @@ const GAME_CATALOG = [
   { id: "bingo",       name: "Bingo",            category: "Classic",  color: "#FFD23F", type: "game", imgId: "bingo",       handler: "onBingo",       desc: "The device calls — daub a line to win, 2-4!", soon: true },
 ];
 
+// Session PT1 — passing a Coming Soon gate is remembered for the visit, so a
+// grown-up who typed 1111 at a section door is not asked again by a Coming Soon
+// tile INSIDE that section (Practice, in the Learn section). Session-scoped on
+// purpose: it is gone the moment the tab closes, so a kid never inherits it.
+const markSoonUnlocked = () => { try { sessionStorage.setItem("bk_soon_ok", "1"); } catch (e) {} };
+
 // NV2 — MAKE_CATALOG lives at module scope so the Home "Make" door can count
 // live studios without rendering the shelf. `handlerName` names the shell prop
 // that opens the studio; `soon` gates the coming-soon 1111 preview. Removing a
@@ -3165,7 +3171,7 @@ function HomeScreen(props) {
     fn();
   };
   const submitCatalogPw = () => {
-    if (catalogPw === "1111") { const go = catalogGate; setCatalogGate(null); setCatalogPw(""); setCatalogErr(false); if (go) go(); }
+    if (catalogPw === "1111") { markSoonUnlocked(); const go = catalogGate; setCatalogGate(null); setCatalogPw(""); setCatalogErr(false); if (go) go(); }
     else setCatalogErr(true);
   };
 
@@ -3778,7 +3784,7 @@ function PlayScreen(props) {
     fn();
   };
   const submitPw = () => {
-    if (pw === "1111") { const go = gate; setGate(null); setPw(""); setPwErr(false); if (go) go(); }
+    if (pw === "1111") { markSoonUnlocked(); const go = gate; setGate(null); setPw(""); setPwErr(false); if (go) go(); }
     else setPwErr(true);
   };
 
@@ -3921,7 +3927,7 @@ function MakeScreen(props) {
     fn();
   };
   const submitPw = () => {
-    if (pw === "1111") { const go = gate; setGate(null); setPw(""); setPwErr(false); if (go) go(); }
+    if (pw === "1111") { markSoonUnlocked(); const go = gate; setGate(null); setPw(""); setPwErr(false); if (go) go(); }
     else setPwErr(true);
   };
 

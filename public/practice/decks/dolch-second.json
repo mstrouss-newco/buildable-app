@@ -1,0 +1,264 @@
+{
+  "id": "dolch-second",
+  "subject": "words",
+  "kind": "sight-words",
+  "skill": "sight-words",
+  "title": "Storybook Words",
+  "short": "Step 4",
+  "blurb": "The words that carry a whole story",
+  "order": 4,
+  "source": "Dolch sight word list",
+  "modes": [
+    "find",
+    "flash"
+  ],
+  "items": [
+    {
+      "id": "g2-always",
+      "word": "always",
+      "say": "always"
+    },
+    {
+      "id": "g2-around",
+      "word": "around",
+      "say": "around"
+    },
+    {
+      "id": "g2-because",
+      "word": "because",
+      "say": "because",
+      "heart": "au"
+    },
+    {
+      "id": "g2-been",
+      "word": "been",
+      "say": "been",
+      "heart": "ee"
+    },
+    {
+      "id": "g2-before",
+      "word": "before",
+      "say": "before"
+    },
+    {
+      "id": "g2-best",
+      "word": "best",
+      "say": "best"
+    },
+    {
+      "id": "g2-both",
+      "word": "both",
+      "say": "both",
+      "heart": "o"
+    },
+    {
+      "id": "g2-buy",
+      "word": "buy",
+      "say": "buy",
+      "heart": "uy"
+    },
+    {
+      "id": "g2-call",
+      "word": "call",
+      "say": "call",
+      "heart": "a"
+    },
+    {
+      "id": "g2-cold",
+      "word": "cold",
+      "say": "cold"
+    },
+    {
+      "id": "g2-does",
+      "word": "does",
+      "say": "does",
+      "heart": "oes"
+    },
+    {
+      "id": "g2-dont",
+      "word": "don't",
+      "say": "don't"
+    },
+    {
+      "id": "g2-fast",
+      "word": "fast",
+      "say": "fast"
+    },
+    {
+      "id": "g2-first",
+      "word": "first",
+      "say": "first",
+      "heart": "ir"
+    },
+    {
+      "id": "g2-five",
+      "word": "five",
+      "say": "five"
+    },
+    {
+      "id": "g2-found",
+      "word": "found",
+      "say": "found"
+    },
+    {
+      "id": "g2-gave",
+      "word": "gave",
+      "say": "gave"
+    },
+    {
+      "id": "g2-goes",
+      "word": "goes",
+      "say": "goes",
+      "heart": "oes"
+    },
+    {
+      "id": "g2-green",
+      "word": "green",
+      "say": "green"
+    },
+    {
+      "id": "g2-its",
+      "word": "its",
+      "say": "its"
+    },
+    {
+      "id": "g2-made",
+      "word": "made",
+      "say": "made"
+    },
+    {
+      "id": "g2-many",
+      "word": "many",
+      "say": "many",
+      "heart": "a"
+    },
+    {
+      "id": "g2-off",
+      "word": "off",
+      "say": "off"
+    },
+    {
+      "id": "g2-or",
+      "word": "or",
+      "say": "or"
+    },
+    {
+      "id": "g2-pull",
+      "word": "pull",
+      "say": "pull",
+      "heart": "u"
+    },
+    {
+      "id": "g2-read",
+      "word": "read",
+      "say": "read"
+    },
+    {
+      "id": "g2-right",
+      "word": "right",
+      "say": "right",
+      "heart": "igh"
+    },
+    {
+      "id": "g2-sing",
+      "word": "sing",
+      "say": "sing"
+    },
+    {
+      "id": "g2-sit",
+      "word": "sit",
+      "say": "sit"
+    },
+    {
+      "id": "g2-sleep",
+      "word": "sleep",
+      "say": "sleep"
+    },
+    {
+      "id": "g2-tell",
+      "word": "tell",
+      "say": "tell"
+    },
+    {
+      "id": "g2-their",
+      "word": "their",
+      "say": "their",
+      "heart": "eir"
+    },
+    {
+      "id": "g2-these",
+      "word": "these",
+      "say": "these"
+    },
+    {
+      "id": "g2-those",
+      "word": "those",
+      "say": "those"
+    },
+    {
+      "id": "g2-upon",
+      "word": "upon",
+      "say": "upon"
+    },
+    {
+      "id": "g2-us",
+      "word": "us",
+      "say": "us"
+    },
+    {
+      "id": "g2-use",
+      "word": "use",
+      "say": "use"
+    },
+    {
+      "id": "g2-very",
+      "word": "very",
+      "say": "very"
+    },
+    {
+      "id": "g2-wash",
+      "word": "wash",
+      "say": "wash",
+      "heart": "a"
+    },
+    {
+      "id": "g2-which",
+      "word": "which",
+      "say": "which"
+    },
+    {
+      "id": "g2-why",
+      "word": "why",
+      "say": "why"
+    },
+    {
+      "id": "g2-wish",
+      "word": "wish",
+      "say": "wish"
+    },
+    {
+      "id": "g2-work",
+      "word": "work",
+      "say": "work",
+      "heart": "or"
+    },
+    {
+      "id": "g2-would",
+      "word": "would",
+      "say": "would",
+      "heart": "oul"
+    },
+    {
+      "id": "g2-write",
+      "word": "write",
+      "say": "write",
+      "heart": "wr"
+    },
+    {
+      "id": "g2-your",
+      "word": "your",
+      "say": "your",
+      "heart": "our"
+    }
+  ]
+}

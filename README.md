@@ -6,6 +6,59 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Practice: the shared drill engine, and 220 sight words on it (August 29 2026)
+`public/buildable-practice.js` (new), `public/practice.html` (new),
+`public/practice/decks/*.json` (new, 6 files), `public/practice/audio/README.md` (new),
+`scripts/gen-practice-audio.mjs` (new), `qa-practice.mjs` (new),
+`public/lessons.html`, `src/BuildableKids.jsx`, `vercel.json`.
+Phase **PT**, card **PT1.** The first half of Practice: a shared deck engine, and
+sight words shipped on top of it, playable end to end.
+
+**`buildable-practice.js` is the engine, and it knows nothing about words.** An
+item only has to carry a stable `id`; everything else in a deck is the page's
+business. That is the whole point — PT3's maths decks ride this file rather than
+forking it, and the QA asserts the engine contains no sight-word special case.
+It owns the boxes (1-5, start 1), the rule (right AND fast climbs, wrong OR slow
+drops, fast being under 3000ms measured silently), the due dates (box 1 due
+immediately so a shaky word comes back in the SAME sitting, box 5 resting 8
+days), and the shape of a sitting: about 20 turns, due reviews first, at most 3
+new words **mixed in** rather than stacked at the front, each new word given an
+intro moment before it is ever asked. A wrong answer is not punished anywhere in
+the code: it drops a box and is spliced back into the queue two turns later.
+Nothing in the engine returns a score, a life or a fail.
+
+**The decks are data, in `public/practice/decks/`:** the five Dolch lists at
+their real lengths (40 / 52 / 41 / 46 / 41 = 220), each word carrying an optional
+`heart` — the letters that do not say what a new reader expects, which is what
+glows on the intro card (the heart-word method). 68 of the 220 carry one.
+
+**`practice.html` has two ways in.** *Hear it*: the word is spoken, the kid picks
+from four big word cards. *Quick look*: the word flashes for a second with audio,
+then hides and the same four cards appear. Drawn SVG only, no emojis, one card
+per screen, built for a phone in portrait. There is no timer, no countdown and no
+number on screen anywhere — the clock is real but it lives in the engine.
+
+**Word audio falls back three deep:** a baked file in `/practice/audio`, then
+`/api/say` (the SAME ElevenLabs pipeline, generated once and cached server-side
+forever), then the device voice. `scripts/gen-practice-audio.mjs` bakes the 220
+files by asking the deployed `/api/say`, so it never sees a key. **The files are
+not baked yet** — this sandbox cannot reach buildablekids.com — so today every
+word comes through `/api/say` live, which sounds identical and costs the same
+once. Run the script from a machine with network to bake them.
+
+**One learning event per finished sitting**, not one per tap: 220 rows an evening
+would drown the 8B dashboard. In the shell it goes up as the cartridge `skill`
+message; standalone it POSTs itself. Per-kid boxes live in `localStorage` under
+`bk_practice_v1`, keyed by kid id, so two kids on one iPad never share progress.
+
+**The tile is in the Learn section, Coming Soon behind 1111 until PT2.** It sits
+in the `/lessons` subject grid with a gate that matches the shell's, and passing
+either gate now sets `sessionStorage.bk_soon_ok` so a grown-up is not asked twice
+in one visit. `qa-practice.mjs`: 119 checks green — the box maths and a whole
+sitting driven through jsdom against the shipped engine, the page loaded headless
+and played to its finish, the single ledger event, the routes, and the no-emoji
+guardrail. Screenshots taken on a 390px phone and looked at.
+
 ## Stop parking cards Mike never asked to see (RN4, August 16 2026)
 `scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
 Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16

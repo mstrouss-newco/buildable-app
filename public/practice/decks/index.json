@@ -1,0 +1,56 @@
+{
+  "v": 1,
+  "subject": "words",
+  "decks": [
+    {
+      "id": "dolch-pre-primer",
+      "subject": "words",
+      "title": "First Words",
+      "short": "Step 1",
+      "blurb": "The very first words to know on sight",
+      "order": 1,
+      "file": "dolch-pre-primer.json",
+      "count": 40
+    },
+    {
+      "id": "dolch-primer",
+      "subject": "words",
+      "title": "Next Words",
+      "short": "Step 2",
+      "blurb": "The words that turn first words into sentences",
+      "order": 2,
+      "file": "dolch-primer.json",
+      "count": 52
+    },
+    {
+      "id": "dolch-first",
+      "subject": "words",
+      "title": "Growing Words",
+      "short": "Step 3",
+      "blurb": "Words a first grader meets on every page",
+      "order": 3,
+      "file": "dolch-first.json",
+      "count": 41
+    },
+    {
+      "id": "dolch-second",
+      "subject": "words",
+      "title": "Storybook Words",
+      "short": "Step 4",
+      "blurb": "The words that carry a whole story",
+      "order": 4,
+      "file": "dolch-second.json",
+      "count": 46
+    },
+    {
+      "id": "dolch-third",
+      "subject": "words",
+      "title": "Big Kid Words",
+      "short": "Step 5",
+      "blurb": "The last of the sight words, and the trickiest",
+      "order": 5,
+      "file": "dolch-third.json",
+      "count": 41
+    }
+  ]
+}

@@ -1,0 +1,231 @@
+{
+  "id": "dolch-third",
+  "subject": "words",
+  "kind": "sight-words",
+  "skill": "sight-words",
+  "title": "Big Kid Words",
+  "short": "Step 5",
+  "blurb": "The last of the sight words, and the trickiest",
+  "order": 5,
+  "source": "Dolch sight word list",
+  "modes": [
+    "find",
+    "flash"
+  ],
+  "items": [
+    {
+      "id": "g3-about",
+      "word": "about",
+      "say": "about"
+    },
+    {
+      "id": "g3-better",
+      "word": "better",
+      "say": "better"
+    },
+    {
+      "id": "g3-bring",
+      "word": "bring",
+      "say": "bring"
+    },
+    {
+      "id": "g3-carry",
+      "word": "carry",
+      "say": "carry"
+    },
+    {
+      "id": "g3-clean",
+      "word": "clean",
+      "say": "clean"
+    },
+    {
+      "id": "g3-cut",
+      "word": "cut",
+      "say": "cut"
+    },
+    {
+      "id": "g3-done",
+      "word": "done",
+      "say": "done",
+      "heart": "one"
+    },
+    {
+      "id": "g3-draw",
+      "word": "draw",
+      "say": "draw"
+    },
+    {
+      "id": "g3-drink",
+      "word": "drink",
+      "say": "drink"
+    },
+    {
+      "id": "g3-eight",
+      "word": "eight",
+      "say": "eight",
+      "heart": "eigh"
+    },
+    {
+      "id": "g3-fall",
+      "word": "fall",
+      "say": "fall",
+      "heart": "a"
+    },
+    {
+      "id": "g3-far",
+      "word": "far",
+      "say": "far"
+    },
+    {
+      "id": "g3-full",
+      "word": "full",
+      "say": "full",
+      "heart": "u"
+    },
+    {
+      "id": "g3-got",
+      "word": "got",
+      "say": "got"
+    },
+    {
+      "id": "g3-grow",
+      "word": "grow",
+      "say": "grow"
+    },
+    {
+      "id": "g3-hold",
+      "word": "hold",
+      "say": "hold"
+    },
+    {
+      "id": "g3-hot",
+      "word": "hot",
+      "say": "hot"
+    },
+    {
+      "id": "g3-hurt",
+      "word": "hurt",
+      "say": "hurt"
+    },
+    {
+      "id": "g3-if",
+      "word": "if",
+      "say": "if"
+    },
+    {
+      "id": "g3-keep",
+      "word": "keep",
+      "say": "keep"
+    },
+    {
+      "id": "g3-kind",
+      "word": "kind",
+      "say": "kind"
+    },
+    {
+      "id": "g3-laugh",
+      "word": "laugh",
+      "say": "laugh",
+      "heart": "augh"
+    },
+    {
+      "id": "g3-light",
+      "word": "light",
+      "say": "light",
+      "heart": "igh"
+    },
+    {
+      "id": "g3-long",
+      "word": "long",
+      "say": "long"
+    },
+    {
+      "id": "g3-much",
+      "word": "much",
+      "say": "much"
+    },
+    {
+      "id": "g3-myself",
+      "word": "myself",
+      "say": "myself"
+    },
+    {
+      "id": "g3-never",
+      "word": "never",
+      "say": "never"
+    },
+    {
+      "id": "g3-only",
+      "word": "only",
+      "say": "only",
+      "heart": "o"
+    },
+    {
+      "id": "g3-own",
+      "word": "own",
+      "say": "own"
+    },
+    {
+      "id": "g3-pick",
+      "word": "pick",
+      "say": "pick"
+    },
+    {
+      "id": "g3-seven",
+      "word": "seven",
+      "say": "seven"
+    },
+    {
+      "id": "g3-shall",
+      "word": "shall",
+      "say": "shall"
+    },
+    {
+      "id": "g3-show",
+      "word": "show",
+      "say": "show"
+    },
+    {
+      "id": "g3-six",
+      "word": "six",
+      "say": "six"
+    },
+    {
+      "id": "g3-small",
+      "word": "small",
+      "say": "small",
+      "heart": "a"
+    },
+    {
+      "id": "g3-start",
+      "word": "start",
+      "say": "start"
+    },
+    {
+      "id": "g3-ten",
+      "word": "ten",
+      "say": "ten"
+    },
+    {
+      "id": "g3-today",
+      "word": "today",
+      "say": "today"
+    },
+    {
+      "id": "g3-together",
+      "word": "together",
+      "say": "together"
+    },
+    {
+      "id": "g3-try",
+      "word": "try",
+      "say": "try"
+    },
+    {
+      "id": "g3-warm",
+      "word": "warm",
+      "say": "warm",
+      "heart": "ar"
+    }
+  ]
+}

@@ -880,6 +880,32 @@
       "dest": "/lessons.html"
     },
     {
+      "src": "/practice/decks/([A-Za-z0-9_-]+).json",
+      "dest": "/practice/decks/$1.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/practice/audio/(.*)",
+      "dest": "/practice/audio/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice.html",
+      "dest": "/practice.html"
+    },
+    {
+      "src": "/practice",
+      "dest": "/practice.html"
+    },
+    {
+      "src": "/buildable-practice.js",
+      "dest": "/buildable-practice.js"
+    },
+    {
       "src": "/sling/(.*)",
       "dest": "/sling/$1",
       "headers": {
