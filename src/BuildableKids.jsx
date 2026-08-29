@@ -94,6 +94,7 @@ const SCREEN_EXPLORE = "explore"; // Session 8G: Kidspedia exhibit viewer (orbit
 const SCREEN_EXPLORE_HUB = "explore_hub"; // NV3: the Explore section page (Labs + Picture books grid with topic chips)
 const SCREEN_MAKE_HUB = "make_hub"; // NV3: the Make section page (studios + coming-soon, same shape as Play)
 const SCREEN_LESSONS = "lessons"; // Session LS2: the Lessons section (subject picker, path map, player)
+const SCREEN_PRACTICE = "practice"; // Session PT1: Practice — the shared deck engine (sight words first)
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
 // log under the base game; SCREEN_PLAY = a generated "Make a game" creation.
@@ -263,6 +264,7 @@ function viewToPath(screen, landingId, exploreId) {
   if (screen === SCREEN_MY_STUFF) return "/app/me";
   if (screen === SCREEN_EXPLORE) return "/app/explore" + (exploreId ? "/" + exploreId : "");
   if (screen === SCREEN_LESSONS) return "/app/lessons";
+  if (screen === SCREEN_PRACTICE) return "/app/practice";
   if (URL_STABLE_LANDINGS[screen]) return "/app/" + URL_STABLE_LANDINGS[screen];
   if (screen === SCREEN_GAME_LANDING && landingId) return "/app/" + landingId;
   return null;
@@ -279,6 +281,7 @@ function screenForPath(pathname) {
   if (seg === "me") return { screen: SCREEN_MY_STUFF }; // NV4 — /app/me matches the Me tab label
   if (seg === "creations") return { screen: SCREEN_MY_STUFF }; // NV4 — kept as an alias for old links
   if (seg === "lessons") return { screen: SCREEN_LESSONS };
+  if (seg === "practice") return { screen: SCREEN_PRACTICE };
   if (seg === "explore") return { screen: SCREEN_EXPLORE_HUB }; // NV3 — the section page
   if (seg.indexOf("explore/") === 0) {
     const id = seg.split("/")[1];
@@ -527,6 +530,13 @@ function ExploreScreen({ onHome, exhibitId }) {
 // treatment. Answers reach the 8B ledger through GameFrame's `skill` relay.
 function LessonsScreen({ onHome }) {
   return <GameFrame title="Lessons" src="/lessons" onHome={onHome} bg="#FDFAF5" light />;
+}
+// Session PT1 — Practice. The shared deck engine (public/buildable-practice.js),
+// carrying the five Dolch sight-word lists today and the four maths operations
+// from PT3. It reports one `skill` message per finished session, which GameFrame
+// already relays into the 8B learning ledger — no wiring of its own needed.
+function PracticeScreen({ onHome }) {
+  return <GameFrame title="Practice" src="/practice" onHome={onHome} bg="#FDFAF5" light />;
 }
 // Session 7F: the shared landing hands Tennis its mode ("solo" | "local") and the
 // equipped court from the shared loadout, so the engine skips its own start screen
@@ -2064,6 +2074,7 @@ export default function BuildableKids() {
           onExploreHub={() => setScreen(SCREEN_EXPLORE_HUB)}
           onMakeHub={() => setScreen(SCREEN_MAKE_HUB)}
           onLessons={() => setScreen(SCREEN_LESSONS)}
+          onPractice={() => setScreen(SCREEN_PRACTICE)}
         />
         <BottomBar current="home" {...bottomBarProps} />
       </>
@@ -2410,6 +2421,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_LESSONS) {
     return <LessonsScreen onHome={() => setScreen(SCREEN_HOME)} />;
+  }
+  if (screen === SCREEN_PRACTICE) {
+    return <PracticeScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
@@ -2829,7 +2843,7 @@ function TopNav({ onBack, onHome, onMyStuff }) {
 // The new front door. Segments the three experiences (Music live, Games in
 // beta, Stories coming soon) and surfaces the Grown-ups portal + My Stuff.
 function HomeScreen(props) {
-  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onSwitchPlayer, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch, onLessons, onMakeHub, onExploreHub } = props;
+  const { activeKid, onMusic, onGames, onMakeGame, onStories, onArt, onTyping, onChess, onChessResume, onMyStuff, onGrownUp, onSwitchPlayer, onAdmin, onTop, onHelper, onSounds, onJoinInvite, onJoinFriendInvite, onOpenFriendMatch, onLessons, onPractice, onMakeHub, onExploreHub } = props;
   // ---------------------------------------------------------------------------
   // Session 3E — Home screen redesign. Cream/light theme ONLY on this screen
   // (no dark mode toggle, no dark palette). Everything below re-presents data
@@ -2873,6 +2887,15 @@ function HomeScreen(props) {
       <rect x="13.5" y="22" width="5" height="5" rx="1.2" fill="#8A6BFF" opacity="0.75" />
       <rect x="29.5" y="22" width="5" height="5" rx="1.2" fill="#8A6BFF" opacity="0.75" />
       <rect x="22.8" y="2.5" width="2.4" height="5" rx="1.2" fill="#fff" />
+    </svg>
+  );
+  // Session PT1 — Practice. Two stacked word cards (drawn SVG, no emoji).
+  const PracticeGlyph = () => (
+    <svg width="40" height="40" viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="7" y="14" width="27" height="19" rx="4" fill="#fff" opacity="0.55" transform="rotate(-9 20.5 23.5)" />
+      <rect x="14" y="16" width="27" height="19" rx="4" fill="#fff" />
+      <rect x="19" y="22.5" width="17" height="3" rx="1.5" fill="#5F3FD6" />
+      <rect x="19" y="28" width="11" height="3" rx="1.5" fill="#5F3FD6" opacity="0.65" />
     </svg>
   );
   const TrophyGlyph = () => (
@@ -3173,8 +3196,8 @@ function HomeScreen(props) {
 
   // -------------------------------------------------------------------------
   // NV2 — the new above-the-fold layout: slim header, one big Keep-playing
-  // card, five picture doors with LIVE counts (Play/Make/Explore/Learn/My
-  // Stuff), then four suggested games deliberately clipped by the right edge
+  // card, six picture doors with LIVE counts (Play/Make/Explore/Learn/Practice/
+  // My Stuff), then four suggested games deliberately clipped by the right edge
   // as the scroll cue. Counts come from the catalogs and RESPECT the soon
   // flag — never hardcoded — so a game or a book flipping from "soon" or
   // "in-review" to live updates the door count without a code change.
@@ -3294,6 +3317,11 @@ function HomeScreen(props) {
     { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", art: "/api/images?kind=make&id=art", glyph: <NavMakeGlyph />,     onClick: onMakeHub || onMusic },
     { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", art: nv2ExploreArt, glyph: <NavExploreGlyph />, onClick: onExploreHub || (() => props.onExplore && props.onExplore("kidspedia")) },
     { id: "learn",   label: "Learn",    count: lessonsLive ? "Math & reading" : "Coming soon", color: "#8A6BFF", grad: "linear-gradient(160deg,#B197FF,#8A6BFF)", art: "/api/images?kind=game&id=mathcannon", glyph: <SchoolGlyph />, soon: !lessonsLive, onClick: lessonsLive ? onLessons : () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
+    // Session PT1 — Practice sits beside Learn: the same shared deck engine that
+    // carries the maths operations from PT3. It stays Coming Soon behind the
+    // 1111 owner gate until PT2 opens it to every kid; flipping `soon` to false
+    // is the whole of that change.
+    { id: "practice", label: "Practice", count: "Coming soon", color: "#6F4FE8", grad: "linear-gradient(160deg,#9B86FF,#6F4FE8)", art: "/api/images?kind=game&id=typing", glyph: <PracticeGlyph />, soon: true, onClick: () => { setCatalogGate(() => onPractice); setCatalogPw(""); setCatalogErr(false); } },
     { id: "mystuff", label: "My Stuff", count: (jumpItems.length ? jumpItems.length + " recent" : "Your creations"), color: NAV_TAB_COLORS.me, grad: "linear-gradient(160deg,#9F86FF,#6A4FE0)", art: "/api/images?kind=make&id=song", glyph: <StuffGlyph />, onClick: onMyStuff },
   ];
 
@@ -3302,19 +3330,20 @@ function HomeScreen(props) {
   // survives as the gradient underneath (visible while the art loads, and the
   // permanent look if the art 404s) plus a small tinted glyph chip that ties the
   // door to its bottom-bar tab. On phone: Play is full width, the other four
-  // pair up two-across. On tablet/desktop all five sit in one row.
+  // pair up two-across, and My Stuff bookends the run full width. On
+  // tablet/desktop all six sit in one row.
   const DoorTile = ({ d }) => (
     <button
       data-nv2-door={d.id}
       data-soon={d.soon ? "1" : "0"}
       onClick={d.onClick}
       style={{
-        gridColumn: phone ? (d.id === "play" ? "span 2" : "span 1") : "span 1",
+        gridColumn: phone ? ((d.id === "play" || d.id === "mystuff") ? "span 2" : "span 1") : "span 1",
         position: "relative", overflow: "hidden", padding: 0, border: "none",
         borderRadius: 20, background: d.grad, color: "#fff",
         cursor: "pointer", fontFamily: NUN, textAlign: "left",
         boxShadow: "0 8px 18px rgba(58,46,77,0.16)", opacity: d.soon ? 0.9 : 1,
-        minHeight: phone ? (d.id === "play" ? 104 : 118) : 124,
+        minHeight: phone ? ((d.id === "play" || d.id === "mystuff") ? 104 : 118) : 124,
       }}
     >
       {d.art && (
@@ -3390,9 +3419,9 @@ function HomeScreen(props) {
           </button>
         )}
 
-        {/* ---- NV2 C. Five picture doors with LIVE counts. Counts come from
+        {/* ---- NV2 C. Six picture doors with LIVE counts. Counts come from
                  the catalogs and respect the soon flag — never hardcoded. ---- */}
-        <div data-nv2-doors style={{ display: "grid", gridTemplateColumns: phone ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: 10, marginBottom: 18 }}>
+        <div data-nv2-doors style={{ display: "grid", gridTemplateColumns: phone ? "repeat(2, 1fr)" : "repeat(6, 1fr)", gap: 10, marginBottom: 18 }}>
           {NV2_DOORS.map((d) => <DoorTile key={d.id} d={d} />)}
         </div>
 
