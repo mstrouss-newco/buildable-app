@@ -6,6 +6,49 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## One list of everything on the site: QA-MAP.md (QA1, August 29 2026)
+`QA-MAP.md` (new), `SESSION-LOG.md`. Phase **QA**, card **QA1** — the find-only half
+of the whole-site QA phase. Nothing was fixed and no product code was touched.
+
+`QA-MAP.md` lists every page, Home tile, Make tile, Kidspedia book, lab, lesson and
+harness in one place, so QA2 (`scripts/qa-all.mjs`, the coming release gate) and the
+five QA3 journey sweeps work from one checklist. Every row answers the same three
+questions with no blanks: which of the four shared building blocks the page loads
+(`buildable-startscreen` / `-hud` / `-gamenav` / `-manifest`), which `qa-*.mjs` names
+it, and whether the tile sits behind the coming-soon 1111 gate. A counts table at the
+top — 53 pages, 27 Play tiles, 5 Make tiles, 20 books, 51 harnesses, 87 API functions
+— is the drift check: if a count stops matching the repo, the map is stale.
+
+It was built by reading the repo, not the live site: `vercel.json`,
+`src/BuildableKids.jsx` (`GAME_CATALOG`, `MAKE_CATALOG`, `LANDING_WRAP`, the `SCREEN_`
+table), all 53 `public/**/*.html`, `public/explore/*.json`, `api/*.js` and all 51
+harnesses.
+
+Six things it turned up, recorded in §8 and left alone: **`public/feedback.html` is
+unreachable in production** (the only page with no `vercel.json` route, and there is no
+`handle: filesystem` phase, so the `"/(.*)" → /landing.html` catch-all eats it);
+**Snakes and Ladders is orphaned** (the engine works and `qa-snakes.mjs` guards it, but
+`onSnakes` is passed to Home at `src/BuildableKids.jsx:2053` and never consumed, and
+there is no `GAME_CATALOG` entry, so no tile exists); **`croc-engine.html` is dead but
+still routed**; **`play.html` is titled "Buildable Runner" while serving the Hop Heroes
+tile**; **Kidspedia shelves 14 of 20 books** (six are `in-review` and correctly hidden —
+QA3d should count 14); and **16 public pages plus most shell components have no harness
+at all**. The shared-blocks columns also re-derive the consistency work: five games
+carry the full set, and **ten live games have no shared `buildable-gamenav.js`**, the
+likeliest source of the "Back lands somewhere odd" findings QA3b/QA3c are hunting.
+
+`GAME-CONSISTENCY-AUDIT.md`, which the card asks to fold in, **is not in this repo and
+never has been** — absent from main, every branch and the whole git history; the only
+trace is the prose reference further down this file. It lives in the Claude project's
+knowledge next to `claude/QA-whole-site-plan.md`, neither readable from this session, so
+§8b re-derives the same ground from source rather than guessing. §8d says so and says
+what to do if the file ever lands here.
+
+One environment note for the next session: `scripts/planner.mjs` could not run. It talks
+to `https://buildablekids.com/api/planner`, and this session's network policy refused the
+CONNECT tunnel to that host (403), so the card was read straight from `planner_meta`
+through the connected Supabase MCP instead.
+
 ## Stop parking cards Mike never asked to see (RN4, August 16 2026)
 `scripts/autopilot.mjs`, `scripts/planner.mjs`, `AGENTS.md`, `AUTOPILOT.md`.
 Phase **RN**, card **RN4.** Three cards landed in `review` on 2026-08-15/16

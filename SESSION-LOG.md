@@ -1,3 +1,57 @@
+## 2026-08-29 — QA1: QA-MAP.md, one list of everything on the site
+
+Phase **QA**, card **QA1**. The find-only half of the whole-site QA phase: a single
+`QA-MAP.md` on main that lists every page, tile, book, lab, lesson and harness, so
+QA2 (`qa-all.mjs`) and the QA3a-QA3e journey sweeps work from one checklist instead
+of re-deriving the site each time.
+
+Built entirely by reading the repo, not the live site: `vercel.json` (every route),
+`src/BuildableKids.jsx` (GAME_CATALOG, MAKE_CATALOG, LANDING_WRAP, the SCREEN_ table),
+all 53 `public/**/*.html`, `public/explore/*.json`, `api/*.js` and all 51 `qa-*.mjs`.
+Every row answers QA1's three questions with no blanks: which of the four shared
+building blocks the page loads (buildable-startscreen / -hud / -gamenav / -manifest),
+which harness names it, and whether the tile is soon-gated. A counts table at the top
+(53 pages, 27 Play tiles, 5 Make tiles, 20 books, 51 harnesses, 87 API functions) is
+the drift check.
+
+Six things the map turned up, all recorded and none fixed -- QA1 is find-only:
+
+1. **`public/feedback.html` is unreachable in production.** It is the only page under
+   `public/` with no `vercel.json` route, and `vercel.json` uses legacy `routes` with
+   no `handle: filesystem` phase, so the final `"/(.*)" -> /landing.html` catch-all
+   swallows it. Nothing in the repo links to it either.
+2. **Snakes and Ladders is orphaned.** `public/snakes-engine.html` works and is guarded
+   by `qa-snakes.mjs`; `SCREEN_SNAKES` and `SnakesScreen` exist; `onSnakes` is passed
+   to the Home screen at `src/BuildableKids.jsx:2053` and is never consumed. No
+   GAME_CATALOG entry, so no tile, so no kid can reach it.
+3. **`public/croc-engine.html` is dead but still routed** -- Croc Tot ships from
+   `croctot.html`.
+4. **`public/play.html` is titled "Buildable Runner - engine"** but is mounted as the
+   Hop Heroes platformer tile, while `runner-engine.html` is the actual runner.
+5. **Kidspedia shows 14 of 20 books** -- six are `status: "in-review"` and correctly
+   hidden. QA3d should count 14.
+6. **Sixteen public pages have no harness at all**, and no shell component outside
+   BuildableKids/MyStuff/MusicMaker/QuickGame does either -- including AdminDashboard,
+   GrownUpScreen, CreatorScreen, StoryMaker, GameLobby and the four Family wrappers.
+
+The shared-blocks columns also re-derive the consistency work first-hand: five games
+carry the full set (Breaker, Sling Squad, Survival, Croc Tot, Math Cannon); ten have
+no shared `buildable-gamenav.js`, which is the likeliest source of the "Back lands
+somewhere odd" findings QA3b/QA3c are hunting.
+
+`GAME-CONSISTENCY-AUDIT.md`, which QA1 asks to fold in, **is not in this repo** and
+never has been -- absent from main, every branch, and the whole git history. The only
+trace is the prose reference at `README.md:2268`. It lives in the Claude project's
+knowledge alongside `claude/QA-whole-site-plan.md`, neither of which this session
+could read, so section 8b re-derives the same ground from the source rather than
+guessing at its contents. Section 8d says so plainly and says what to do if the file
+ever lands in the repo.
+
+Not run in this session: the planner CLI. `scripts/planner.mjs` talks to
+`https://buildablekids.com/api/planner`, and this session's network policy refuses the
+CONNECT tunnel to that host (403), so the card was read from `planner_meta` through the
+connected Supabase MCP instead. The card write is noted separately.
+
 ## 2026-08-29 — ONB1: the new-user onboarding QA + fix
 
 QA'd the first run in a cleared browser and against last night's auth records.
