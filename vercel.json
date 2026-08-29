@@ -10,6 +10,10 @@
       "dest": "/chess-look-mock.html"
     },
     {
+      "src": "/chess-pieces-mock.html",
+      "dest": "/chess-pieces-mock.html"
+    },
+    {
       "src": "/demo/site.webmanifest",
       "dest": "/site.webmanifest"
     },

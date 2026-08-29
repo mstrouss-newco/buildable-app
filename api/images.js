@@ -432,6 +432,116 @@ function build(q) {
       transparent:true, quality:"medium",
     };
   }
+  if (kind === "chesspiece2") {
+    // v2 chess pieces (phase CP2). Two things were wrong with kind=chesspiece:
+    //  1. THEME was a surface texture ("covered in leaves and vines"), so the art
+    //     smothered the silhouette and a kid could not tell a bishop from a queen.
+    //  2. Classic statue shapes + kawaii eyes fought each other.
+    // So the theme now lives in ONE accent (style a) or in the CHARACTER itself
+    // (style b), and the role read is carried by the headpiece + height, always.
+    // kind=chesspiece is deliberately left alone so today's board cannot break.
+    const V = "v1";
+    const NAME = {p:"pawn",n:"knight",b:"bishop",r:"rook",q:"queen",k:"king"};
+    // Height ramp is a huge part of the read at board size.
+    const TALL = {p:"the SHORTEST piece on the board, small and stubby",
+                  n:"medium height",
+                  b:"tall and slender",
+                  r:"medium height but wide, stocky and heavy",
+                  q:"very tall",
+                  k:"the TALLEST piece on the board"};
+    // ---- style a: classic chess shapes, theme as one small accent ----
+    const SHAPE = {
+      p:"a chess PAWN: one simple round ball head on a short round base, no hat",
+      n:"a chess KNIGHT: a horse's head and arched neck on a round base",
+      b:"a chess BISHOP: a smooth tall pointed mitre hat with one vertical slit, on a round base",
+      r:"a chess ROOK: a square castle tower with four clear square battlements on top, on a round base",
+      q:"a chess QUEEN: a tall body wearing a wide crown of many sharp points, on a round base",
+      k:"a chess KING: a tall body wearing a rounded crown topped with a small upright cross, on a round base",
+    };
+    const ACCENT = {
+      jungle:"one single small green leaf tucked into the very top of the piece",
+      ocean:"one single small spiral seashell tucked into the very top of the piece",
+      space:"one single small yellow star tucked into the very top of the piece",
+      candy:"one single small red-and-white candy swirl tucked into the very top of the piece",
+      castle:"one single small triangular flag tucked into the very top of the piece",
+      desert:"one single small orange sun tucked into the very top of the piece",
+    };
+    // ---- style b: the world's own character, wearing the chess role ----
+    const HERO = {
+      jungle:{
+        p:"a little cheeky monkey standing upright, wearing a tiny round helmet",
+        n:"a striped zebra standing upright, its long horse head and neck unmistakable",
+        b:"a toucan with a big colourful beak standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad-shouldered gorilla standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful jaguar standing upright, wearing a tall crown of many sharp points",
+        k:"a big proud lion with a full mane standing upright, wearing a rounded crown topped with a small cross",
+      },
+      ocean:{
+        p:"a little round clownfish standing upright on its tail, wearing a tiny round helmet",
+        n:"a seahorse standing upright, its long curved horse head unmistakable",
+        b:"a tall squid standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad crab standing upright, wearing a square castle-tower crown with battlements",
+        q:"an elegant dolphin standing upright on its tail, wearing a tall crown of many sharp points",
+        k:"a big friendly whale standing upright on its tail, wearing a rounded crown topped with a small cross",
+      },
+      space:{
+        p:"a tiny round astronaut standing upright, wearing a small round space helmet",
+        n:"a rocket-riding space horse standing upright, its long horse head unmistakable",
+        b:"a tall friendly green alien standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky boxy robot standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful star-fairy standing upright, wearing a tall crown of many sharp points",
+        k:"a big round planet-bellied space captain standing upright, wearing a rounded crown topped with a small cross",
+      },
+      candy:{
+        p:"a little round gumdrop character standing upright, wearing a tiny round helmet",
+        n:"a candy-cane-striped horse standing upright, its long horse head and neck unmistakable",
+        b:"a tall lollipop character standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky square chocolate-block character standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful swirled ice-cream character standing upright, wearing a tall crown of many sharp points",
+        k:"a big frosted layer-cake character standing upright, wearing a rounded crown topped with a small cross",
+      },
+      castle:{
+        p:"a little round squire boy standing upright, wearing a tiny round helmet",
+        n:"a noble horse standing upright, its long horse head and arched neck unmistakable",
+        b:"a tall wise wizard standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad armoured guard standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful princess standing upright, wearing a tall crown of many sharp points",
+        k:"a big bearded king standing upright, wearing a rounded crown topped with a small cross",
+      },
+      desert:{
+        p:"a little round cactus character standing upright, wearing a tiny round helmet",
+        n:"a camel standing upright, its long head and curved neck unmistakable",
+        b:"a tall meerkat standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad tortoise standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful desert fox standing upright, wearing a tall crown of many sharp points",
+        k:"a big proud eagle standing upright, wearing a rounded crown topped with a small cross",
+      },
+    };
+    const SIDE2 = {
+      w:"BOLD BRIGHT BLUE: the whole character, its clothes, its hat and its base are painted in one strong vivid royal blue",
+      b:"BOLD BRIGHT ORANGE: the whole character, its clothes, its hat and its base are painted in one strong vivid pumpkin orange",
+    };
+    // The rules that make it readable on a small square, and the reason v1 failed.
+    const CP2_STYLE = "Bold soft 3D cartoon style like a modern animated kids film, thick clean dark outline all the way around, big simple confident shapes, smooth glossy finish, two big friendly eyes and a happy smile, standing upright and facing forward, full body, centred, soft even studio lighting, child-friendly ages 4-8. CRITICAL: the outline must be instantly readable when the image is shrunk to the size of a thumbnail. NOTHING may cover, overlap or blur the shape: no leaves, no vines, no plants, no flowers, no sprinkles, no bubbles, no stars, no scenery, no ground, no shadow, no background, no extra props, no second character. No text, no words, no letters, no numbers. Transparent background";
+    const piece2 = (q.piece || "").toString();
+    const world2 = (q.world || "").toString();
+    const side2  = (q.side || "w").toString();
+    const style2 = (q.style || "a").toString();
+    if (!NAME[piece2] || !SIDE2[side2]) return null;
+    let subject2;
+    if (style2 === "b") {
+      if (!HERO[world2]) return null;
+      subject2 = `${HERO[world2][piece2]}. It is a chess ${NAME[piece2].toUpperCase()} and its hat makes that obvious. It is ${TALL[piece2]}. It stands on a simple round pedestal base`;
+    } else if (style2 === "a") {
+      if (!ACCENT[world2]) return null;
+      subject2 = `${SHAPE[piece2]}. It is ${TALL[piece2]}. ${ACCENT[world2]} — and that accent is the ONLY decoration anywhere on the piece`;
+    } else return null;
+    return {
+      descriptor: `chesspiece2|${style2}|${world2}|${piece2}|${side2}|${V}`,
+      prompt: `${subject2}. Color: ${SIDE2[side2]}; the colour must be obvious at a glance even when the piece is very small. ${CP2_STYLE}`,
+      transparent: true, quality: "medium",
+    };
+  }
   if (kind === "chessworld") {
     // The scenery BEHIND the chess board. The board is a big square parked in the
     // middle of the screen, so the centre is deliberately calm and open and all the

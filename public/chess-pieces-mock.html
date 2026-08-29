@@ -1,0 +1,156 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chess pieces: new look + movement</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1420;color:#eef2ff;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:28px;margin:0 0 6px}
+h2{font-size:20px;margin:44px 0 6px}
+p.sub{color:#9fb0d0;margin:0 0 18px;max-width:760px}
+.card{background:#182238;border-radius:16px;padding:18px;margin-top:14px}
+.card{border:1px solid #2b3852}
+.cols{display:grid;grid-template-columns:120px repeat(3,1fr);gap:10px;align-items:center}
+.colhead{font-weight:700;text-align:center;padding:8px 4px;border-radius:10px;background:#22304c}
+.colhead.a{background:#1e4536}.colhead.b{background:#43301e}
+.rowlab{font-weight:700;color:#9fb0d0}
+.cell{display:flex;align-items:center;justify-content:center;gap:14px;background:#0d1421;border-radius:12px;padding:10px;min-height:118px}
+.cell img{width:84px;height:84px;object-fit:contain;image-rendering:auto}
+.cell .sm{width:38px;height:38px;object-fit:contain;opacity:.95}
+.smwrap{display:flex;flex-direction:column;align-items:center;gap:4px;color:#7f90ad;font-size:11px}
+.note{color:#7f90ad;font-size:13px;margin-top:10px}
+.pill{display:inline-block;background:#22304c;border-radius:999px;padding:4px 12px;font-size:13px;margin-right:8px}
+
+/* ---- movement demo ---- */
+.demo{display:flex;flex-wrap:wrap;gap:26px;align-items:flex-start}
+.board{position:relative;width:320px;height:320px;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px #0008;flex:0 0 auto}
+.board .sq{position:absolute;width:80px;height:80px}
+.pc{position:absolute;width:80px;height:80px;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;
+    transition:transform .42s cubic-bezier(.34,1.3,.5,1);z-index:2}
+.pc img{width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 4px 4px #0007);animation:bob 2.6s ease-in-out infinite}
+.pc.up{z-index:9}
+.pc.up img{animation:none;transform:translateY(-10px) scale(1.14) rotate(-7deg);filter:drop-shadow(0 14px 10px #0009);transition:transform .18s}
+.pc.land img{animation:land .34s ease-out}
+.pc.gone img{animation:gone .45s ease-in forwards}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes land{0%{transform:translateY(-14px) scale(1.1,.92)}55%{transform:translateY(0) scale(1.18,.8)}100%{transform:translateY(0) scale(1,1)}}
+@keyframes gone{0%{transform:scale(1) rotate(0)}100%{transform:scale(.2) rotate(140deg);opacity:0}}
+.ctrls{display:flex;flex-direction:column;gap:10px;min-width:230px}
+button{font:600 15px system-ui;background:#3b6df5;color:#fff;border:0;border-radius:10px;padding:11px 16px;cursor:pointer}
+button.ghost{background:#22304c}
+button.on{background:#2fa46b}
+.q{background:#1b2a1f;border:1px solid #2f6b47;border-radius:14px;padding:16px 18px;margin-top:34px}
+.q b{color:#7ee2ab}
+</style></head><body><div class="wrap">
+
+<h1>Chess pieces: pick a look, and see them move</h1>
+<p class="sub">Two candidate looks for the pieces, next to what is on the board today. Both fix the two things that made today's pieces hard to read: the theme was painted <i>over</i> the piece as leaves and vines, and every piece was roughly the same height. Below that, the same pieces with movement turned on.</p>
+
+<div class="card">
+  <span class="pill">World shown: Jungle</span><span class="pill">Blue team</span><span class="pill">Big + real board size</span>
+</div>
+
+<h2>The six pieces</h2>
+<p class="sub">Big picture, then the same art shrunk to the size it actually appears on a board. The small one is the real test.</p>
+<div class="card">
+  <div class="cols" id="grid">
+    <div></div>
+    <div class="colhead">Today</div>
+    <div class="colhead a">A &middot; Clean chess</div>
+    <div class="colhead b">B &middot; Jungle characters</div>
+  </div>
+  <div class="note">A keeps the classic chess shapes so the role is never in doubt, with the world showing up as one small accent on top. B turns each piece into a jungle animal wearing the chess role's hat, with a clear height ramp from pawn to king.</div>
+</div>
+
+<h2>How they move</h2>
+<p class="sub">Nothing here is new art. The gentle idle bob, the lift and tilt when a piece is picked up, the little squash when it lands, and the spin-away on a capture are all movement added in code.</p>
+<div class="card demo">
+  <div class="board" id="board"></div>
+  <div class="ctrls">
+    <button id="playBtn">Play a move</button>
+    <button id="capBtn" class="ghost">Capture something</button>
+    <button id="bobBtn" class="ghost on">Idle bob: on</button>
+    <div style="height:8px"></div>
+    <button class="ghost" data-set="old">Show: today</button>
+    <button class="ghost on" data-set="a">Show: A</button>
+    <button class="ghost" data-set="b">Show: B</button>
+  </div>
+</div>
+
+<div class="q">
+  <b>What I need from you:</b> A or B (or "A but taller", "B but no hats", whatever) — and thumbs up or down on the movement. Once you pick, I paint all six worlds in that style and turn it on for real, along with the six hi-def backgrounds that are already made and waiting at <a href="/chess-look-mock.html" style="color:#7ee2ab">chess-look-mock.html</a>.
+</div>
+</div>
+<script>
+var API='/api/images';
+var P=[['k','King'],['q','Queen'],['r','Rook'],['b','Bishop'],['n','Knight'],['p','Pawn']];
+function url(set,pc){
+  if(set==='old') return API+'?kind=chesspiece&world=jungle&piece='+pc+'&side=w';
+  return API+'?kind=chesspiece2&style='+set+'&world=jungle&piece='+pc+'&side=w';
+}
+var g=document.getElementById('grid');
+P.forEach(function(p){
+  var lab=document.createElement('div'); lab.className='rowlab'; lab.textContent=p[1]; g.appendChild(lab);
+  ['old','a','b'].forEach(function(s){
+    var d=document.createElement('div'); d.className='cell';
+    d.innerHTML='<img loading="lazy" src="'+url(s,p[0])+'" alt=""><div class="smwrap"><img class="sm" loading="lazy" src="'+url(s,p[0])+'" alt=""><span>board size</span></div>';
+    g.appendChild(d);
+  });
+});
+
+/* board */
+var SET='a', BOB=true;
+var board=document.getElementById('board');
+var LIGHT='#f0e2c4', DARK='#8a6a4a';
+for(var r=0;r<4;r++)for(var c=0;c<4;c++){
+  var s=document.createElement('div'); s.className='sq';
+  s.style.left=(c*80)+'px'; s.style.top=(r*80)+'px';
+  s.style.background=((r+c)%2?DARK:LIGHT); board.appendChild(s);
+}
+var pieces=[{t:'k',r:3,c:1},{t:'n',r:3,c:2},{t:'p',r:2,c:0},{t:'q',r:0,c:3}];
+var els=[];
+function draw(){
+  els.forEach(function(e){e.remove()}); els=[];
+  pieces.forEach(function(p,i){
+    var d=document.createElement('div'); d.className='pc';
+    d.style.transform='translate('+(p.c*80)+'px,'+(p.r*80)+'px)';
+    d.innerHTML='<img src="'+url(SET,p.t)+'" alt="">';
+    d.querySelector('img').style.animationDelay=(i*0.35)+'s';
+    if(!BOB) d.querySelector('img').style.animation='none';
+    board.appendChild(d); els.push(d);
+  });
+}
+draw();
+function move(i,r,c,then){
+  var d=els[i], p=pieces[i];
+  d.classList.add('up');
+  setTimeout(function(){
+    p.r=r;p.c=c;
+    d.style.transform='translate('+(c*80)+'px,'+(r*80)+'px)';
+    setTimeout(function(){
+      d.classList.remove('up'); d.classList.add('land');
+      setTimeout(function(){d.classList.remove('land'); if(then)then();},360);
+    },420);
+  },260);
+}
+var flip=0;
+document.getElementById('playBtn').onclick=function(){
+  flip=1-flip;
+  move(1, flip?1:3, flip?3:2);
+};
+document.getElementById('capBtn').onclick=function(){
+  els[3].classList.add('gone');
+  setTimeout(function(){
+    move(0,0,3,function(){ els[3].classList.remove('gone'); pieces[3]={t:'q',r:0,c:0}; pieces[0]={t:'k',r:3,c:1}; draw(); });
+  },300);
+};
+document.getElementById('bobBtn').onclick=function(){
+  BOB=!BOB; this.textContent='Idle bob: '+(BOB?'on':'off'); this.className=BOB?'':'ghost'; draw();
+};
+document.querySelectorAll('[data-set]').forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll('[data-set]').forEach(function(x){x.className='ghost'});
+    b.className='on'; SET=b.dataset.set; draw();
+  };
+});
+</script></body></html>
