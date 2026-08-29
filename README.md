@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## The bottom bar reaches the game front door (GN1, August 29 2026)
+`src/BuildableKids.jsx`, `qa-gn1.mjs` (new), `HUD-AND-NAV-RULES.md`.
+
+The NV1 five-tab bar now rides `GameLanding` — the Solo / Same device / Play a
+friend screen every game and studio enters through — with Play lit and the five
+tabs wired to the same section screens the Play hub uses. The landing pads its
+bottom by the shared `navBarClear()` (bar height + the same safe-area inset the
+bar carries) so the last button never hides under it, and Survival's "Gear up"
+pill became one shared bar-aware helper instead of a pinned `bottom:14` copy.
+The rule is Rule 0 in `HUD-AND-NAV-RULES.md`: deciding screens show the bar,
+doing screens never do. `qa-gn1.mjs` really renders the component (esbuild +
+react-dom/server) and reads the DOM, rather than grepping the source.
 ## Practice Round 2: the warm-up, the birds, and numbers (PT2 + PT3, August 30 2026)
 `public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
 `api/sfx.js`, `qa-practice.mjs`, `qa-practice-shot.mjs`,

@@ -1,3 +1,60 @@
+## 2026-08-29 — GN1: the bottom bar on the game front door
+
+The first card of the game-navigation phase. A kid who tapped into a game and
+landed on its front door (the Solo / Same device / Play a friend screen) had no
+way to reach another section without backing out through Home first — the
+five-tab bar simply stopped at the edge of the shell's section pages.
+
+**What changed (src/BuildableKids.jsx):**
+- `GameLanding` — the ONE shell landing every converted game and studio shows —
+  now renders the NV1 `BottomBar` with `current="play"`, so the Play tab is lit
+  as a you-are-here sign. The handlers arrive as one `nav` prop, the same
+  `bottomBarProps` Home / Play / Make / Explore / Me are built from, and all six
+  call sites (music studio, the shared wrapped-game landing, the board-game mode
+  row, tennis, breaker, chess) pass it. A tab means the same thing on a game's
+  door as it does on Home.
+- **Content padding.** The bar is `position:fixed`, so the last button on the
+  landing (Make it mine / Make a level) would have sat under it. One shared
+  number, `NAV_BAR_H = 76`, and one helper, `navBarClear(extra)`, which adds the
+  SAME `env(safe-area-inset-bottom)` the bar itself carries — so the clearance is
+  right on a phone, not just on a desktop. The landing pads by
+  `navBarClear(18)` = 94px + inset.
+- **The Gear up pill.** Survival's upgrade-store pill sat at `bottom:14`, which
+  is inside the bar strip. It is now one shared helper,
+  `gearUpBtn(onUpgrades, overBar)`: 14px on a doing screen (where the bar never
+  shows) and `navBarClear(14)` — just above the bar — on any screen that shows
+  both. There is exactly one Gear up button in the shell now, not a copy per
+  screen.
+
+**Deciding vs doing.** The rule this card establishes is written down as Rule 0
+in `HUD-AND-NAV-RULES.md`: while a kid is still choosing HOW to play the bar
+rides along; once they are playing it is gone. Nothing inside `GameFrame`
+renders it, so the bar never covers gameplay. The doc also records the cleanup
+rule the waiting-room card will need (cancel a pending invite before a tab tap
+navigates away).
+
+**QA — `qa-gn1.mjs` (new), 33 checks, all pass.** This one does not just read the
+source: it bundles `src/BuildableKids.jsx` with esbuild, renders `GameLanding`
+through `react-dom/server`, and reads the real DOM attributes — the bar is
+present, five tabs render in order, Play is the only lit tab
+(`data-selected="1"` + `aria-current="page"`), the reserved bottom padding
+clears the bar, the Gear up offset clears the bar, and there is no emoji in the
+rendered output. Source checks stay as the first half, including that
+`GameFrame` never renders the bar. **There is no `qa-all.mjs` in the repo yet**,
+so there was nothing to wire the new harness into.
+
+Also green: qa-nv1, qa-nv2, qa-nv3, qa-nv4, qa-survival, qa-breaker, qa-chess,
+qa-tennis, and the rest of the suite. Pre-existing failures NOT caused by this
+card (verified by re-running them against a clean tree): qa-lessons, qa-maze,
+qa-snakes, qa-ap2-use-in-game, qa-kp3-add-a-kit, qa-skyflyer-hud /-look /-sky.
+
+**Flagged:** `scripts/planner.mjs` could not run from this session — the sandbox's
+network policy refuses `buildablekids.com` (proxy answers 403 to CONNECT), so the
+card was ticked through the planner's Supabase table directly instead.
+
+**What remains in this phase:** the bar still needs to reach the lobby, the
+waiting room and the studio landings, and the waiting room needs to cancel a
+pending invite before a tab tap leaves it.
 ## 2026-08-30 — PT2 + PT3: Practice Round 2 (the GROUPED batch)
 
 Both cards carried a `GROUPED 2026-08-29` note saying to run them as one
