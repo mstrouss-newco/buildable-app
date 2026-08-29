@@ -4,6 +4,39 @@ One consistent contract for every Buildable game, so the app's navigation and a
 game's own HUD/buttons never fight for the same corner. Follow this for every new
 game and when touching an existing one.
 
+## Rule 0 — Deciding shows the bar, doing never does (GN1)
+
+Every screen in the app is either a **deciding** screen or a **doing** screen, and
+that alone decides whether the five-tab bottom bar (`BottomBar`, `data-nv1-bottom-bar`)
+is on it.
+
+- **Deciding** = the kid is still choosing what to do: Home, Play, Make, Explore, Me,
+  the game front door (`GameLanding` — Solo / Same device / Play a friend), the lobby,
+  the waiting room, the studio landings. **These show the bar**, with the tab for the
+  section they are in lit as a you-are-here sign (a game's front door lights **Play**).
+  A kid who opened the wrong game should never have to hunt for a way out.
+- **Doing** = the kid is playing or making: anything inside `GameFrame` (the engine
+  iframe), the journey, the board, a studio's canvas. **These never show the bar** —
+  it would cover gameplay, and the shell already owns the top strip below for exits.
+
+Two things follow from putting a fixed bar on a screen that did not have one:
+
+1. **Pad the content.** The bar is `position:fixed`, so it floats over the page and
+   the last button on a scrolled screen ends up underneath it. Every deciding screen
+   pads its own bottom by `navBarClear(18)` (`src/BuildableKids.jsx`), which is the
+   bar's height plus `env(safe-area-inset-bottom)` — the same inset the bar carries,
+   so the padding is right on a phone as well as a desktop. `NAV_BAR_H` is the one
+   number: move it and every screen and pill moves with it.
+2. **Lift anything else pinned to the bottom.** A floating control at `bottom:14`
+   lands *in* the bar strip. The Survival "Gear up" pill is the shared example:
+   `gearUpBtn(onUpgrades, overBar)` sits at `bottom:14` on a doing screen and at
+   `navBarClear(14)` — just above the bar — on any screen that shows both.
+
+**Leaving a deciding screen must clean up after itself.** If the screen is holding
+something open on the kid's behalf — a pending invite in the waiting room is the case
+this rule was written for — cancel it before a tab tap navigates away, so nobody is
+left waiting on a game that will never start.
+
 ## The reserved top strip (who owns the corners)
 
 When a game runs inside the app (an iframe in the React shell, `GameFrame`), the
