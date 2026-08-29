@@ -82,6 +82,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js?v=2"></script>
+<script src="buildable-levelthumb.js?v=8"></script>
 <script src="buildable-manifest.js"></script>
 <script src="buildable-worlds.js"></script>
 <script src="buildable-gamenav.js"></script>
@@ -131,7 +132,7 @@ var GAME_CONFIG = window.GAME_CONFIG || {
       try{
         if(cfg && cfg.stages && cfg.stages.length){
           for(var i=0;i<GAME_CONFIG.levels.length && i<cfg.stages.length;i++){ if(cfg.stages[i].name) GAME_CONFIG.levels[i].name = cfg.stages[i].name; }
-          try{ if(typeof startUI!=="undefined" && startUI && startUI.update && typeof startConfig==="function") startUI.update(startConfig()); }catch(e){}
+          try{ refreshStart(); }catch(e){}
         }
       }catch(e){}
     }, function(){ /* missing/invalid -> keep built-in tiers */ });
@@ -183,12 +184,12 @@ function loadBg(key) {
   key = mapWorld(key);
   if (bgKey === key) return;
   bgKey = key; bgImg = null;
-  var lib = tenBg(key); if(lib){ bgImg = lib; return; }   // drop-in art wins, else the AI world
-  var th = worldTheme(key); if (!th.img) return;
+  var lib = tenBg(key); if(lib){ bgImg = lib; refreshStart(); return; }   // drop-in art wins, else the AI world
+  var th = worldTheme(key); if (!th.img) { refreshStart(); return; }
   try {
     var im = new Image();
-    im.onload = function () { if (bgKey === key) bgImg = im; };
-    im.onerror = function () { if (bgKey === key) bgImg = null; };
+    im.onload = function () { if (bgKey === key) { bgImg = im; refreshStart(); } };
+    im.onerror = function () { if (bgKey === key) { bgImg = null; refreshStart(); } };
     im.src = "/api/images?kind=tennis&id=" + key + "&v=2";   // smooth AI nature world (cached)
   } catch (e) {}
 }
@@ -746,6 +747,20 @@ function showReactBar(on) {
 
 /* ---------- 9) START SCREEN (shared BS) for solo / two-player ---------- */
 var startUI = null;
+function refreshStart() { try { if (startUI && startUI.update) startUI.update(startConfig()); } catch (e) {} }
+/* LP4: a difficulty card shows the court you are about to play on, not a flat
+   colour — drawn by the one shared helper (buildable-levelthumb.js) from the
+   equipped world's own palette, over the world scene the game has already
+   loaded once that arrives. The three cards share a court, so the ball's
+   streak length is what tells the tiers apart. */
+function courtThumb(i) {
+  var BLT = window.BuildableLevelThumb; if (!BLT) return undefined;
+  var th = worldTheme(worldKey);
+  var photo = (bgImg && (bgImg.naturalWidth || bgImg.width)) ? bgImg : null;
+  return BLT.make("court",
+    { bg: th.bg, net: th.net, me: th.me, opp: th.opp, ball: th.ball, tier: i, photo: photo },
+    "tn_" + mapWorld(worldKey) + "_" + i + (photo ? "_p" : "_c")) || undefined;
+}
 function startConfig() {
   return {
     title: GAME_CONFIG.name,
@@ -754,6 +769,7 @@ function startConfig() {
     modes: ["solo", "two", "family"], mode: mode,
     levels: GAME_CONFIG.levels.map(function (lv, i) {
       return { n: i + 1, name: lv.name, color: ["#2b6f5c", "#4a3b8c", "#6b2f4a"][i % 3],
+               img: courtThumb(i),
                state: "ready", foot: ["Easy", "Normal", "Tricky"][i] };   // difficulty picker (all playable)
     }),
     customizeLabel: "Choose your court",
@@ -802,6 +818,7 @@ function buildCourtGrid() {
     card.onclick = function () {
       worldKey = key; loadBg(worldKey); initParticles();
       if (BA) BA.unlock(); playMusic();   // preview the chosen world's music
+      refreshStart();                     // the difficulty cards now show the new court
       hideCourtPicker();
     };
     grid.appendChild(card);
