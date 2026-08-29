@@ -11,8 +11,17 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import pw from "/home/claude/.npm-global/lib/node_modules/playwright/index.js";
+// QA2: this used to import an absolute path inside one machine's global npm dir,
+// so the harness could only ever run there. Resolve from the repo instead
+// (npm i -D playwright), falling back to playwright-core.
+import { createRequire } from "node:module";
+const require_ = createRequire(import.meta.url);
+let pw = null;
+for (const m of ["playwright", "playwright-core"]) { try { pw = require_(m); break; } catch {} }
+if (!pw) { console.error("FAIL: playwright is not installed - run: npm i -D playwright"); process.exit(2); }
 const { chromium } = pw;
+// Use whatever chromium the machine already has before asking for a download.
+const CHROME = process.env.PW_CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 
 const REPO = path.resolve(process.argv[2] || ".");
 const PUB = path.join(REPO, "public");
@@ -56,7 +65,8 @@ const base = "http://127.0.0.1:" + server.address().port;
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const OWNER_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + b64({ email: "mstrouss@gmail.com", sub: "1cb8cd9e-fba0-4fcc-850a-5b6afb677b87", exp: 4102444800 }) + ".x";
 
-const browser = await chromium.launch();
+import { existsSync } from "node:fs";
+const browser = await chromium.launch(existsSync(CHROME) ? { executablePath: CHROME } : {});
 const ctx = await browser.newContext({ viewport: { width: 900, height: 1000 } });
 await ctx.addInitScript((t) => {
   try { localStorage.setItem("bk_parent_session_v1", JSON.stringify({ access_token: t, refresh_token: "r" })); } catch (e) {}

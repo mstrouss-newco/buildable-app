@@ -331,6 +331,14 @@ still open them, because a mock that throws still costs a console error.
 Plus the shared harness helpers under `qa/`: `qa/qa-map.mjs`, `qa/sim-node.mjs`,
 `qa/game-qa-harness.html`.
 
+**The runner** is `scripts/qa-all.mjs` (`npm run qa`, session QA2). It runs all 51
+harnesses, then serves `public/` and opens every page in headless Chromium, failing on
+a console error, an uncaught error or a missing file. It prints one table, writes
+`QA-SWEEP-REPORT.md`, and exits non-zero on any failure. Three harnesses are currently
+quarantined in it — `qa-ap2-use-in-game.mjs` (card **QA10**), `qa-lessons.mjs` and
+`qa-lessons-dom.mjs` (card **QA11**) — so they print `QUAR`, stay visible, and do not
+fail the gate. See AGENTS.md for the rule that no card is `done` without a green run.
+
 ---
 
 ## 8. What the map turned up

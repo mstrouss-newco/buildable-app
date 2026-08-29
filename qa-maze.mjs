@@ -4,10 +4,13 @@ import fs from 'fs'; import vm from 'vm';
 const dir=process.argv[2]||'.';
 const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
 const html=read('maze-engine.html');
-const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js'].map(read).join('\n');
+// buildable-wincard.js is loaded by maze-engine.html in the browser, so the sandbox
+// needs it too — without it the post-win render throws 'BuildableWin is not defined'
+// and the harness reports a bug that does not exist on the real page (RN5).
+const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-wincard.js'].map(read).join('\n');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
-const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:900,height:600}:(typeof k==='string'?noop:undefined))});
+const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:900,height:600}:(k==='measureText'?((t)=>({width:String(t||'').length*8})):(typeof k==='string'?noop:undefined)))});
 function elx(withAppend){ const e={ style:{setProperty:noop}, classList:{add:noop,remove:noop,contains:()=>false}, addEventListener:noop, removeEventListener:noop, getContext:()=>ctxStub, querySelectorAll:()=>[], onclick:null, textContent:'', width:900, height:600, naturalWidth:0, complete:false, getBoundingClientRect:()=>({left:0,top:0,width:900,height:600}) };
   Object.defineProperty(e,'innerHTML',{set(){},get(){return''}}); if(withAppend){ e.appendChild=noop; e.removeChild=noop; } return e; }
 class ImageStub{set src(v){this._src=v;}get src(){return this._src;}addEventListener(){}}

@@ -215,6 +215,34 @@ no jargon.
 - **Log every session in `SESSION-LOG.md`** at the end: date, block ID, what shipped,
   what remains, anything flagged. (This is in addition to the dated README log entry
   noted at the top of this file.)
+- **The release gate: `npm run qa` must be green before you tick anything done.**
+  (Session QA2.) One command, one table:
+
+  ```
+  npm run qa                        # everything: harnesses + every page in a browser
+  node scripts/qa-all.mjs --no-pages     # harnesses only, no browser needed
+  node scripts/qa-all.mjs --only maze    # one harness while you work on it
+  ```
+
+  It runs every `qa-*.mjs`, then serves `public/` and opens **every** page in headless
+  Chromium, failing on a console error, an uncaught error or a missing file. It writes
+  `QA-SWEEP-REPORT.md` and exits non-zero if anything failed. **A session may not mark
+  a card `done` without a green run**, and "I only touched one game" is not an
+  exemption — the sweep is cheap and the whole point is catching what you did not
+  think to look at.
+
+  The browser half needs `playwright` (`npm i`; it is a devDependency). Without it the
+  page sweep prints **SKIP** and the summary says *green but incomplete* rather than
+  *green* — that is not a green run. `--strict` makes a skip a failure.
+
+  Two honesty rules, because a green table nobody trusts is worse than a red one:
+  **(1)** A harness that cannot run is never quietly dropped. Fix it, or add it to
+  `QUARANTINE` in `scripts/qa-all.mjs` **with a planner card id** — it then prints as
+  `QUAR`, stays visible in the table, and the summary says how many checks are not
+  being made. **(2)** A file that is *supposed* to be missing goes in
+  `EXPECTED_MISSING` with a reason saying why the page is fine without it; those are
+  counted and printed separately, never hidden. Do not silence a real failure with
+  either list.
 - **The planner is the source of truth for progress.** `public/planner.html` (live at
   `/planner`) tracks what is done. **Update it yourself at the end of every session**
   with `scripts/planner.mjs`. No key, no browser and nobody signed in: it talks to

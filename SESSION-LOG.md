@@ -1,3 +1,71 @@
+## 2026-08-29 - QA2: `npm run qa` is the release gate
+
+Phase **QA**, card **QA2**. One command, one honest table. `scripts/qa-all.mjs` runs
+every `qa-*.mjs`, then serves `public/` and opens all 53 pages in headless Chromium,
+failing on a console error, an uncaught error or a missing file. It prints one
+pass/fail table, writes `QA-SWEEP-REPORT.md`, and exits non-zero on any failure.
+`npm run qa` is the whole interface; `--no-pages`, `--pages-only`, `--only <name>`,
+`--jobs N` and `--strict` are there for working on one thing at a time.
+
+Current state: **48 harnesses pass, 53 pages clean, 3 quarantined, exit 0.**
+
+**Six harnesses were broken and are now fixed** -- the card asked for this and it was
+the bulk of the work:
+
+1. **The RN5 maze bug, found and fixed.** `qa-maze.mjs` failed its post-win render with
+   `BuildableWin is not defined`. `public/maze-engine.html` loads
+   `buildable-wincard.js` in the browser but the harness never put it in the sandbox,
+   so the harness was reporting a bug that does not exist on the real page.
+   `qa-snakes.mjs` had the identical bug. Added the lib to both, then both failed on
+   `measureText(...).width` -- the canvas stub returned a noop for every method, so
+   `measureText` gave back `undefined`. Taught both stubs to return a real TextMetrics.
+2. **`qa-ap2-use-in-game.mjs` and `qa-kp3-add-a-kit.mjs` could only ever run on one
+   machine.** Both did `import pw from "/home/claude/.npm-global/lib/node_modules/
+   playwright/index.js"` -- an absolute path into somebody's global npm dir. Replaced
+   with a `createRequire` resolver that takes `playwright` or `playwright-core` from
+   the repo, and a `PW_CHROME` executable path so an already-installed chromium is used
+   before asking anyone to download one. kp3 now passes.
+3. **The three Sky Flyer gates needed a server nobody was starting.**
+   `qa-skyflyer-look/-sky/-hud` expect `public/` served on :8899 (they honour
+   `SKY_BASE`). The sweep now stands that server up for the duration of the machine
+   sweep and takes it down after, so all three run and pass. No harness edit needed.
+
+**Three are quarantined, loudly.** `QUARANTINE` in `scripts/qa-all.mjs` requires a
+planner card id; a quarantined harness still runs, prints `QUAR`, and the summary says
+how many checks are not being made. `qa-ap2-use-in-game.mjs` (**QA10**) now runs and
+passes everything except `expected 2 .useg buttons, got 307` -- the Browse page renders
+the built-in kits alongside the two stubbed cards. `qa-lessons.mjs` and
+`qa-lessons-dom.mjs` (**QA11**) fail four Home-shape greps written before NV2: they look
+for `id: "lessons", title: "Lessons"`, but the entry point is now the `id: "learn"` door
+at `src/BuildableKids.jsx:3296`, still routing to `onLessons` behind the same 1111 gate,
+only data-driven now. In both cases the behaviour is arguably fine and what the check
+SHOULD assert is a product call -- so they were quarantined rather than quietly
+rewritten to pass.
+
+**The page sweep needed two honesty fixes before its number meant anything.** The first
+run said 42 of 53 pages had problems. Almost all of it was double-counting: Chromium
+logs a generic `Failed to load resource` line for every failed request, and the request
+hooks already record those with the real URL, so one missing file showed up as two
+problems. Third-party fetches blocked by a sandboxed network showed up as errors too.
+With those filtered the real signal was **zero JS errors on all 53 pages** and four
+missing files.
+
+Those four turned out to be **intentional, and the sweep now says so out loud rather
+than hiding them.** `sharks.json` asks for `sharks-1a.webp` and friends, which do not
+exist -- and a repo-wide check found 131 of 283 photo refs missing across 12 books. But
+RP1 forward-declares per-fact art in the book JSON before the photo lands, exactly the
+way `bookshelf.json` lists all 20 books from day one, and `topic.html` renders every one
+through an `onerror` fallback, so a kid sees the painted panel and never a broken image.
+So `/explore/topic-photos/` is an `EXPECTED_MISSING` entry with that reason written out;
+those requests are counted and printed in their own column and section of the report,
+never silently dropped. No card filed -- this is designed behaviour, not breakage.
+
+`playwright` is now a devDependency. Without it the page sweep prints **SKIP** and the
+summary says *green but incomplete* rather than *green*; `--strict` turns that into a
+failure. AGENTS.md carries the gate rule: no session marks a card `done` without a green
+run, "I only touched one game" is not an exemption, and neither the quarantine list nor
+the expected-missing list may be used to silence a real failure.
+
 ## 2026-08-29 — QA1: QA-MAP.md, one list of everything on the site
 
 Phase **QA**, card **QA1**. The find-only half of the whole-site QA phase: a single

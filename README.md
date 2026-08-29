@@ -6,6 +6,49 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## One command, one honest table: `npm run qa` is the release gate (QA2, August 29 2026)
+`scripts/qa-all.mjs` (new), `package.json`, `AGENTS.md`, `qa-maze.mjs`, `qa-snakes.mjs`,
+`qa-ap2-use-in-game.mjs`, `qa-kp3-add-a-kit.mjs`, `QA-SWEEP-REPORT.md` (generated).
+Phase **QA**, card **QA2**.
+
+`npm run qa` runs every `qa-*.mjs`, then serves `public/` and opens all 53 pages in
+headless Chromium, failing on a console error, an uncaught error or a missing file. One
+table, one report file, non-zero exit on any failure. Today: **48 harnesses pass, 53
+pages clean, 3 quarantined.** AGENTS.md now carries the rule — no card goes `done`
+without a green run, and "I only touched one game" is not an exemption.
+
+**Six broken harnesses fixed.** The **RN5 maze bug** was real and is gone:
+`maze-engine.html` loads `buildable-wincard.js` in the browser but `qa-maze.mjs` never
+put it in the sandbox, so the post-win render blew up on `BuildableWin` — a bug the
+harness invented, not one the page had. `qa-snakes.mjs` had it identically; both then
+needed a canvas stub that returns a real `measureText`. `qa-ap2-use-in-game.mjs` and
+`qa-kp3-add-a-kit.mjs` imported playwright from `/home/claude/.npm-global/...`, an
+absolute path into one machine's global npm dir, so they could not run anywhere else.
+And the three Sky Flyer gates expect `public/` served on :8899 — the sweep now stands
+that server up for the machine sweep and takes it down after, so all three run.
+
+**Three are quarantined, loudly, each with a card.** `QUARANTINE` in `qa-all.mjs`
+requires a planner card id; the harness still runs, prints `QUAR`, and the summary says
+how many checks are not being made. `qa-ap2-use-in-game.mjs` (**QA10**) passes
+everything but `expected 2 .useg buttons, got 307`. `qa-lessons.mjs` +
+`qa-lessons-dom.mjs` (**QA11**) fail four Home greps written before NV2 — they look for
+`id: "lessons"`, but the door is now `id: "learn"` at `src/BuildableKids.jsx:3296`,
+same 1111 gate, now data-driven. In both cases what the check *should* assert is a
+product call, so they were quarantined rather than quietly rewritten to pass.
+
+**The page sweep's first number was a lie and got fixed.** It claimed 42 of 53 pages had
+problems; almost all of it was Chromium's generic `Failed to load resource` line
+double-counting requests the hooks already recorded, plus third-party fetches a
+sandboxed network blocks. Filtered, the real result is **zero JS errors across all 53
+pages**. The remaining four missing files are intentional: RP1 forward-declares per-fact
+art in the book JSON before the photo lands (131 of 283 photo refs across 12 books), and
+`topic.html` renders every one through an `onerror` fallback, so a kid sees the painted
+panel, never a broken image. That is an `EXPECTED_MISSING` entry with the reason written
+out, counted and printed in its own column — visible, not hidden. No card: designed
+behaviour, not breakage.
+
+---
+
 ## One list of everything on the site: QA-MAP.md (QA1, August 29 2026)
 `QA-MAP.md` (new), `SESSION-LOG.md`. Phase **QA**, card **QA1** — the find-only half
 of the whole-site QA phase. Nothing was fixed and no product code was touched.

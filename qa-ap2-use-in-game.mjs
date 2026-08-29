@@ -5,8 +5,17 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import pw from "/home/claude/.npm-global/lib/node_modules/playwright/index.js";
+// QA2: this used to import an absolute path inside one machine's global npm dir,
+// so the harness could only ever run there. Resolve from the repo instead
+// (npm i -D playwright), falling back to playwright-core.
+import { createRequire } from "node:module";
+const require_ = createRequire(import.meta.url);
+let pw = null;
+for (const m of ["playwright", "playwright-core"]) { try { pw = require_(m); break; } catch {} }
+if (!pw) { console.error("FAIL: playwright is not installed - run: npm i -D playwright"); process.exit(2); }
 const { chromium } = pw;
+// Use whatever chromium the machine already has before asking for a download.
+const CHROME = process.env.PW_CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 
 const ROOT = path.resolve("public");
 const TYPES = { ".html":"text/html", ".js":"text/javascript", ".json":"application/json", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".ico":"image/x-icon" };
@@ -27,7 +36,8 @@ const port = server.address().port;
 const fail = (m) => { console.error("FAIL: " + m); process.exitCode = 1; };
 const ok = (m) => console.log("PASS: " + m);
 
-const browser = await chromium.launch();
+import { existsSync } from "node:fs";
+const browser = await chromium.launch(existsSync(CHROME) ? { executablePath: CHROME } : {});
 const page = await browser.newPage();
 const errors = [];
 page.on("pageerror", e => errors.push(String(e)));
