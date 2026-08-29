@@ -2468,6 +2468,7 @@ export default function BuildableKids() {
     if (!spec) return null; // never happens: openFriend* only route known games
     return (
       <GameLobby
+        nav={bottomBarProps}
         game={spec}
         activeKid={activeKid}
         entry="friends"
@@ -2481,6 +2482,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_TTT_LOBBY) {
     return (
       <GameLobby
+        nav={bottomBarProps}
         game={gameSpecFor("tictactoe")}
         activeKid={activeKid}
         entry="friends"
@@ -2495,6 +2497,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_C4_LOBBY) {
     return (
       <GameLobby
+        nav={bottomBarProps}
         game={gameSpecFor("connectfour")}
         activeKid={activeKid}
         entry="friends"
@@ -2506,6 +2509,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_DOTS_LOBBY) {
     return (
       <GameLobby
+        nav={bottomBarProps}
         game={gameSpecFor("dotsboxes")}
         activeKid={activeKid}
         entry="friends"
@@ -2583,6 +2587,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_TENNIS_LOBBY) {
     return (
       <GameLobby
+        nav={bottomBarProps}
         game={{ slug: "tennis", title: "Buildable Tennis", url: "/tennis.html?online=1&v=4", transport: "realtime" }}
         activeKid={activeKid}
         entry="friends"
@@ -2632,6 +2637,7 @@ export default function BuildableKids() {
   if (screen === SCREEN_CHESS_LOBBY) {
     return (
       <GameLobby
+        nav={bottomBarProps}
         game={{ slug: "chess", title: "Buildable Chess", url: "/buildable-chess.html?online=1&v=6", transport: "turns" }}
         activeKid={activeKid}
         entry="friends"
@@ -2662,6 +2668,7 @@ export default function BuildableKids() {
     })();
     return (
       <GameLobby
+        nav={bottomBarProps}
         game={{ slug: "checkers", title: "Buildable Checkers", url: "/buildable-checkers.html?online=1&v=3", transport: "turns", msg: "checkers", initialState: checkersInitial }}
         activeKid={activeKid}
         entry="friends"

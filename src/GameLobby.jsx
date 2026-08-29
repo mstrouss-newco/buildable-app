@@ -17,8 +17,21 @@
 // New games inherit ALL of this by rendering <GameLobby game={...}/>.
 // The friends/invite/online system behind it lives in src/lib/friends.js
 // + api/friends.js (shared, not per-game). No free-text chat -- ever.
+//
+// GN2 -- deciding vs doing (HUD-AND-NAV-RULES.md Rule 0). The first three of
+// those screens are DECIDING screens: the kid is choosing who to play with, so
+// the five-tab bottom bar rides along with Play lit and they can leave for any
+// section in one tap. PLAYING is a DOING screen: the bar is gone and the corner
+// Back is the only way out, so nothing floats over the board.
+//
+// The rule that keeps multiplayer honest: leaving by a tab while an invite is
+// still pending CANCELS THE INVITE FIRST and only then navigates. Without that,
+// a friend could accept into a match nobody is sitting in and stare at a board
+// waiting for a player who has gone to Explore. The same cleanup closes an open
+// realtime channel. See leaveForTab() below.
 // ==================================================================
 import { useEffect, useRef, useState } from "react";
+import BottomBar, { navBarClear } from "./BottomBar.jsx";
 import { isSignedIn, getActiveKid, getSession } from "./lib/accounts";
 import {
   listFriends, sendInvite, cancelInvite, pollInvite, acceptInvite,
@@ -40,7 +53,10 @@ function initialBoard() {
 
 const C = {
   wrap: { position: "fixed", inset: 0, background: "#0F0E17", color: "#fff", fontFamily: "'Nunito',sans-serif", overflow: "auto", zIndex: 50 },
-  pad: { maxWidth: 620, margin: "0 auto", padding: "64px 20px 40px" },
+  // GN2: longhand paddings, not the "64px 20px 40px" shorthand. padWithBar
+  // overrides paddingBottom, and React warns (and can mis-apply) when a
+  // shorthand and a longhand for the same property are mixed in one style.
+  pad: { maxWidth: 620, margin: "0 auto", paddingTop: 64, paddingRight: 20, paddingBottom: 40, paddingLeft: 20 },
   back: { position: "absolute", top: 14, left: 14, zIndex: 6, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" },
   h1: { fontWeight: 900, fontSize: 28, margin: "0 0 4px" },
   sub: { color: "#cfc9e6", margin: "0 0 22px", fontSize: 15 },
@@ -54,7 +70,7 @@ const C = {
   btn: { fontFamily: "'Fredoka',sans-serif", fontWeight: 700, fontSize: 15, color: "#fff", border: "none", cursor: "pointer", borderRadius: 12, padding: "10px 16px", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)" },
   ghost: { fontWeight: 800, fontSize: 15, color: "#fff", background: "rgba(255,255,255,0.06)", border: "1px dashed rgba(255,255,255,0.3)", borderRadius: 14, padding: "14px 16px", width: "100%", cursor: "pointer", marginTop: 6 },
   note: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 18, color: "#cfc9e6", lineHeight: 1.5 },
-  center: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24 },
+  center: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", paddingTop: 24, paddingRight: 24, paddingBottom: 24, paddingLeft: 24 },
   ava: { width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, flex: "0 0 auto" },
 };
 
@@ -62,7 +78,7 @@ const avatarText = (name) => (name || "?").trim().charAt(0).toUpperCase();
 
 const ALLOWED_REACTIONS = new Set(["Nice shot!","So close!","Good game!","Wow!","Let's go!","Haha!","Too slow!","You got this!","Great game!","Boop!","Bonk!","Wheee!","Is that all?","Wibble wobble!"]);
 
-export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, onGuestLink, entry, autoJoin }) {
+export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAddFriend, onGuestLink, entry, autoJoin, nav }) {
   const me = activeKid || getActiveKid();
   const signedIn = isSignedIn();
   const transport = (game && game.transport) || "turns";
@@ -319,7 +335,48 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
     matchRef.current = null; setMatch(null); setPhase("friends"); setRtConnecting(false);
   }
 
+  // ---- GN2: leaving the lobby by a bottom-bar tab ----------------------------
+  // A tab tap is a real exit, not a screen change, so everything this lobby is
+  // holding open on the kid's behalf has to be let go BEFORE we navigate:
+  //   1. a pending outgoing invite is cancelled (awaited, so the row is really
+  //      gone before the shell swaps the screen) -- otherwise the friend accepts
+  //      into a match nobody is in;
+  //   2. any open realtime channel is closed.
+  // The order is the whole point and qa-gn2.mjs asserts it. A failed cancel must
+  // never trap a kid on this screen, so the error is swallowed and we still go.
+  async function cancelPendingWork() {
+    const iv = outInvite;
+    // Drop it from state first so the waiting-screen poll cannot re-enter a
+    // match while the cancel is in flight.
+    if (iv) { setOutInvite(null); try { await cancelInvite(iv.id); } catch (e) {} }
+    teardownRealtime();
+  }
+  async function leaveForTab(go) {
+    await cancelPendingWork();
+    if (go) go();
+  }
+  // The bar the three deciding screens share. Play is lit: a lobby is still part
+  // of getting into a game. Every handler goes through leaveForTab, so there is
+  // no way to leave by a tab without the cleanup running first.
+  const bar = nav ? (
+    <BottomBar
+      current="play"
+      activeKid={nav.activeKid}
+      onHome={() => leaveForTab(nav.onHome)}
+      onPlay={() => leaveForTab(nav.onPlay)}
+      onMake={() => leaveForTab(nav.onMake)}
+      onExplore={() => leaveForTab(nav.onExplore)}
+      onMe={() => leaveForTab(nav.onMe)}
+    />
+  ) : null;
+  // Content padding for the screens that show the bar, so the last thing on the
+  // page (Add a friend / the Cancel button) never hides under it.
+  const padWithBar = { ...C.pad, paddingBottom: navBarClear(18) };
+  const centerWithBar = { ...C.center, paddingBottom: navBarClear(18) };
+
   // ============================ RENDER ============================
+  // DOING screen (Rule 0): no bottom bar over a live board. The corner Back is
+  // the only way out, and leaveGame() already does the channel/poll cleanup.
   if (phase === "playing" && match) {
     return (
       <div style={C.wrap}>
@@ -348,7 +405,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
     return (
       <div style={C.wrap}>
         <button style={C.back} onClick={cancelWaiting}>&larr; Back</button>
-        <div style={C.center}>
+        <div style={centerWithBar}>
           <div style={{ width: 66, height: 66, borderRadius: 999, border: "4px solid rgba(167,139,255,0.35)", borderTopColor: "#A78BFF", animation: "bkspin 1s linear infinite" }} />
           <style>{"@keyframes bkspin{to{transform:rotate(360deg)}}"}</style>
           <h1 style={{ ...C.h1, marginTop: 22 }}>Waiting for {outInvite && outInvite.toName}&hellip;</h1>
@@ -359,6 +416,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
           </p>
           <button style={{ ...C.btn, background: "rgba(255,255,255,0.12)" }} onClick={cancelWaiting}>Cancel</button>
         </div>
+        {bar}
       </div>
     );
   }
@@ -382,7 +440,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
     return (
       <div style={C.wrap}>
         <button style={C.back} onClick={() => (entry === "friends" ? onHome() : setPhase("mode"))}>&larr; Back</button>
-        <div style={C.pad}>
+        <div style={padWithBar}>
           <h1 style={C.h1}>Family &amp; friends</h1>
           <p style={C.sub}>Pick who to play with. Family is always here &mdash; green dot means they're online right now.</p>
 
@@ -435,6 +493,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
             </>
           )}
         </div>
+        {bar}
       </div>
     );
   }
@@ -443,7 +502,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   return (
     <div style={C.wrap}>
       <button style={C.back} onClick={onHome}>&larr; Home</button>
-      <div style={C.pad}>
+      <div style={padWithBar}>
         <h1 style={C.h1}>{game.title}</h1>
         <p style={C.sub}>How do you want to play with 2 players?</p>
 
@@ -473,6 +532,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
           </button>
         )}
       </div>
+      {bar}
     </div>
   );
 }
