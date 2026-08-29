@@ -73,10 +73,15 @@ body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-heigh
 /* ===== world cards ===== */
 .worlds{display:flex;flex-direction:column;gap:10px;max-width:440px;margin:0 auto}
 .world-card{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);
-  border-radius:18px;padding:13px 16px;cursor:pointer;transition:all .15s;text-align:left;width:100%}
+  border-radius:18px;padding:13px 16px;cursor:pointer;transition:all .15s;text-align:left;width:100%;
+  font-family:'Fredoka',sans-serif;color:#fff}   /* a <button> does not inherit the page's font or colour */
 .world-card:hover{transform:translateY(-2px);border-color:var(--accent2);background:rgba(124,92,252,.12)}
-.world-card .wswatch{width:46px;height:46px;flex-shrink:0;border-radius:13px;display:flex;align-items:center;justify-content:center;
-  font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:#fff}
+.world-card .wpic{width:116px;aspect-ratio:15/7;flex-shrink:0;border-radius:12px;overflow:hidden;
+  background-size:cover;background-position:center;background-color:rgba(255,255,255,.07)}
+.world-card .wnum{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 5px;
+  border-radius:7px;margin-right:8px;vertical-align:1px;font-family:'Nunito',sans-serif;font-weight:900;font-size:12px;
+  color:#fff;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.18)}
+@media(max-width:420px){.world-card .wpic{width:94px}}
 .world-card .wname{font-weight:700;font-size:17px}
 .world-card .wsub{font-size:13px;color:rgba(255,255,255,.5)}
 .world-card .wgo{margin-left:auto;font-weight:900;font-size:16px;color:rgba(255,255,255,.4)}
@@ -327,6 +332,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 </div>
 
 <script src="/buildable-manifest.js"></script>
+<script src="/buildable-levelthumb.js?v=8"></script>
 <script>
 (function(){
   const ART_BASE='typing-art/';
@@ -345,37 +351,37 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     {id:'knight',name:'Sir Pim',emoji:'',accent:'#F59E0B',accent2:'#FFD479',unlock:42,art:'hero_knight'}
   ];
   const WORLDS=[
-    {id:'space',name:'Space',sub:'Zap the alien invaders',tint:'#7C5CFC',
+    {id:'space',foe:'ufo',name:'Space',sub:'Zap the alien invaders',tint:'#7C5CFC',
      body:'radial-gradient(900px 600px at 20% 0%,#3b1d6e,transparent 60%),radial-gradient(800px 600px at 80% 100%,#10233f,transparent 60%),#150d2e',
      lane:'linear-gradient(180deg,#241456,#10233f)',
      mobs:[{w:'sun',type:'normal',emoji:'',art:'foe_space_1'},{w:'jet',type:'fast',emoji:'',art:'foe_space_2'},
            {w:'bug',type:'normal',emoji:'',art:'foe_space_3'},{w:'star',type:'big',emoji:'',art:'foe_space_4'}],
      boss:{words:['comet','rocket'],emoji:'',name:'Mega UFO',art:'boss_space'}},
-    {id:'jungle',name:'Jungle',sub:'Tame the wild beasts',tint:'#2bb673',
+    {id:'jungle',foe:'gorilla',name:'Jungle',sub:'Tame the wild beasts',tint:'#2bb673',
      body:'radial-gradient(900px 600px at 20% 0%,#1d6e3b,transparent 60%),radial-gradient(800px 600px at 80% 100%,#0f3a23,transparent 60%),#0c2a1a',
      lane:'linear-gradient(180deg,#1d6e3b,#0f3a23)',
      mobs:[{w:'cat',type:'normal',emoji:'',art:'foe_jungle_1'},{w:'fox',type:'fast',emoji:'',art:'foe_jungle_2'},
            {w:'frog',type:'normal',emoji:'',art:'foe_jungle_3'},{w:'bug',type:'big',emoji:'',art:'foe_jungle_4'}],
      boss:{words:['tiger','vines'],emoji:'',name:'King Gorilla',art:'boss_jungle'}},
-    {id:'sea',name:'Sea',sub:'Splash the deep-sea crew',tint:'#2a9fd6',
+    {id:'sea',foe:'whale',name:'Sea',sub:'Splash the deep-sea crew',tint:'#2a9fd6',
      body:'radial-gradient(900px 600px at 20% 0%,#11507e,transparent 60%),radial-gradient(800px 600px at 80% 100%,#06283d,transparent 60%),#06223a',
      lane:'linear-gradient(180deg,#11507e,#06283d)',
      mobs:[{w:'fish',type:'normal',emoji:'',art:'foe_sea_1'},{w:'crab',type:'fast',emoji:'',art:'foe_sea_2'},
            {w:'eel',type:'normal',emoji:'',art:'foe_sea_3'},{w:'shark',type:'big',emoji:'',art:'foe_sea_4'}],
      boss:{words:['whale','wave'],emoji:'',name:'Big Blue',art:'boss_sea'}},
-    {id:'candy',name:'Candy Land',sub:'Tickle the sweet treats',tint:'#e85aa8',
+    {id:'candy',foe:'lolly',name:'Candy Land',sub:'Tickle the sweet treats',tint:'#e85aa8',
      body:'radial-gradient(900px 600px at 20% 0%,#a8327f,transparent 60%),radial-gradient(800px 600px at 80% 100%,#5a1e6e,transparent 60%),#3d1340',
      lane:'linear-gradient(180deg,#a8327f,#5a1e6e)',
      mobs:[{w:'gum',type:'normal',emoji:'',art:'foe_candy_1'},{w:'pie',type:'fast',emoji:'',art:'foe_candy_2'},
            {w:'jam',type:'normal',emoji:'',art:'foe_candy_3'},{w:'cake',type:'big',emoji:'',art:'foe_candy_4'}],
      boss:{words:['candy','sweet'],emoji:'',name:'Lolly King',art:'boss_candy'}},
-    {id:'ice',name:'Ice World',sub:'Chill the frosty friends',tint:'#5cc0f0',
+    {id:'ice',foe:'yeti',name:'Ice World',sub:'Chill the frosty friends',tint:'#5cc0f0',
      body:'radial-gradient(900px 600px at 20% 0%,#2a6f9e,transparent 60%),radial-gradient(800px 600px at 80% 100%,#163a52,transparent 60%),#0e2535',
      lane:'linear-gradient(180deg,#2a6f9e,#163a52)',
      mobs:[{w:'ice',type:'normal',emoji:'',art:'foe_ice_1'},{w:'owl',type:'fast',emoji:'',art:'foe_ice_2'},
            {w:'seal',type:'normal',emoji:'',art:'foe_ice_3'},{w:'bear',type:'big',emoji:'',art:'foe_ice_4'}],
      boss:{words:['frost','snow'],emoji:'',name:'Frosty King',art:'boss_ice'}},
-    {id:'volcano',name:'Volcano',sub:'Cool down the hot heads',tint:'#f0703c',
+    {id:'volcano',foe:'lava',name:'Volcano',sub:'Cool down the hot heads',tint:'#f0703c',
      body:'radial-gradient(900px 600px at 20% 0%,#a83a1d,transparent 60%),radial-gradient(800px 600px at 80% 100%,#5a1410,transparent 60%),#3d0f0c',
      lane:'linear-gradient(180deg,#a83a1d,#5a1410)',
      mobs:[{w:'hot',type:'normal',emoji:'',art:'foe_volcano_1'},{w:'bat',type:'fast',emoji:'',art:'foe_volcano_2'},
@@ -532,9 +538,24 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   function applyHero(){document.documentElement.style.setProperty('--accent',hero.accent);
     document.documentElement.style.setProperty('--accent2',hero.accent2);setSprite(elDef,hero.emoji,hero.art);}
 
+  /* LP3: every world card carries a drawn picture of the world it opens, painted by
+     the one shared helper (buildable-levelthumb.js). The colours are read back out of
+     the world's own backdrop CSS and the word off its own boss, so a card can never
+     drift from the world behind it. No helper (or no canvas) -> the tint shows through. */
+  function hexesIn(css){return String(css||'').match(/#[0-9a-f]{6}/gi)||[];}
+  function worldPic(w,i){const BLT=window.BuildableLevelThumb;if(!BLT)return'';
+    const sky=hexesIn(w.body),lane=hexesIn(w.lane);
+    return BLT.make('letters',{tint:w.tint,accent:'#FFD479',
+      sky:[sky[0]||w.tint,sky[sky.length-1]||'#150d2e'],
+      lane:[lane[0]||w.tint,lane[lane.length-1]||'#10233f'],
+      word:(w.boss&&w.boss.words&&w.boss.words[0])||w.name,
+      foe:w.foe},'ty1_'+w.id);}
   function renderWorlds(){const list=$('worldList');list.innerHTML='';
     WORLDS.forEach((w,i)=>{const card=document.createElement('button');card.className='world-card';
-      card.innerHTML='<div class="wswatch" style="background:'+w.tint+'">'+(i+1)+'</div><div><div class="wname">'+w.name+'</div><div class="wsub">'+w.sub+'</div></div><div class="wgo">&#9654;</div>';
+      const pic=worldPic(w,i);
+      card.innerHTML='<div class="wpic" style="background-color:'+w.tint+(pic?';background-image:url('+pic+')':'')+'"></div>'
+        +'<div><div class="wname"><span class="wnum">'+(i+1)+'</span>'+w.name+'</div><div class="wsub">'+w.sub+'</div></div>'
+        +'<div class="wgo">&#9654;</div>';
       card.addEventListener('click',()=>{audio();startWorld(i);});list.appendChild(card);});fit();}
 
   function curWord(){return enc.boss?bossQueue[0]:enc.w;}
