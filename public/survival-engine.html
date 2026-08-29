@@ -184,7 +184,7 @@ function sdGet(k){ var c=worldCustom(k); if(c) return c; if(LIB_ENEMIES[k]) retu
 SD_ENEMY_KEYS.forEach(sdGet);                              // warm all foe cutouts up front
 // New helper "orbi tools" (double as power-ups): spinning star, spark bee, robo-dog, healer
 const HELPER_KEYS=["helper_star","helper_bee","helper_dog","helper_healer"];
-HELPER_KEYS.forEach(sdGet);
+HELPER_KEYS.forEach(sdGet); sdGet("hero");
 // ---- library world reskin: swap sky/hero/enemies for a world made in Asset Studio ----
 if(window.BuildableWorlds) BuildableWorlds.load("survival", function(p){   // shared world loader
   LIB_PACK=p;
@@ -198,13 +198,20 @@ if(window.BuildableWorlds) BuildableWorlds.load("survival", function(p){   // sh
 const animCache={};
 function animGet(k){ if(!(k in animCache)) animCache[k]=mkImg(SD+k+"_anim.webp"); return animCache[k]; }
 ["hero"].concat(SD_ENEMY_KEYS,HELPER_KEYS).forEach(animGet);   // warm every character's animation
-function drawAnimSprite(key,x,y,size,opts){ opts=opts||{};
-  var _cust=worldCustom(key); if(_cust && (_cust.naturalWidth||_cust.width)){ BR.sprite(ctx,_cust,x,y,size,opts); return true; }
-  const im=animGet(key), h=im&&(im.naturalHeight||im.height), w=im&&(im.naturalWidth||im.width);
-  if(im && h && w){ const n=Math.max(1,Math.round(w/h)), fps=opts.fps||5;   // gentle idle speed
-    const f=Math.floor(Date.now()/(1000/fps)+(opts.phase||0))%n;
-    ctx.drawImage(im, f*h,0,h,h, x-size/2,y-size/2,size,size); return true; }   // (no drop shadow)
-  const st=sdGet(key); if(st && (st.naturalWidth||st.width)){ BR.sprite(ctx,st,x,y,size,opts); return true; }
+// FRAME STRIPS ARE OFF. The generated cells differ from each other by 30-55% of their
+// pixels, so flipping through them read as a strobe, not an idle loop. We hold the clean
+// still cutout and add a gentle code-driven float instead: calm, and obviously on purpose.
+// Flip this back to true if the strips are ever regenerated consistently.
+const USE_ANIM_STRIPS=false;
+function bobOf(size,opts){ return opts.bob===false ? 0 : Math.sin(Date.now()/430+(opts.phase||0))*(size*0.024); }
+function drawAnimSprite(key,x,y,size,opts){ opts=opts||{}; const b=bobOf(size,opts);
+  var _cust=worldCustom(key); if(_cust && (_cust.naturalWidth||_cust.width)){ BR.sprite(ctx,_cust,x,y+b,size,opts); return true; }
+  if(USE_ANIM_STRIPS){
+    const im=animGet(key), h=im&&(im.naturalHeight||im.height), w=im&&(im.naturalWidth||im.width);
+    if(im && h && w){ const n=Math.max(1,Math.round(w/h)), fps=opts.fps||5;   // gentle idle speed
+      const f=Math.floor(Date.now()/(1000/fps)+(opts.phase||0))%n;
+      ctx.drawImage(im, f*h,0,h,h, x-size/2,y-size/2,size,size); return true; } }   // (no drop shadow)
+  const st=sdGet(key); if(st && (st.naturalWidth||st.width)){ BR.sprite(ctx,st,x,y+b,size,opts); return true; }
   return false; }
 // New per-level background skies (bg1..bg4 map across the six levels via level.bgKey)
 const sdBg={};
@@ -570,12 +577,16 @@ function rrect(x,y,w,h,r){ BR.rrect(ctx,x,y,w,h,r); }
 function spark(x,y,r,rot){ BR.sparkle(ctx,x,y,r,rot); }
 function heart(x,y,s){ BR.heart(ctx,x,y,s); }
 function blob(x,y,r,col,wob,boss){ BR.enemy(ctx,x,y,r,col,wob,boss); }
+// the hero, held on one clean frame, floating and leaning gently under its own power
+function drawHeroStill(){ const st=sdGet("hero"); if(!(st && (st.naturalWidth||st.width))) return false;
+  const t=Date.now(); ctx.save(); ctx.translate(hero.x, hero.y+Math.sin(t/430)*3.0); ctx.rotate(Math.sin(t/810)*0.045);
+  BR.sprite(ctx, st, 0, 0, hero.r*3.1, {}); ctx.restore(); return true; }
 function drawHero(){ const blink=(invuln>0 && Math.floor(invuln/5)%2===0);
   // animated jetpack hero; on i-frames we blink (skip a beat) and fall back to the drawn hero
   if(!blink && LIB_HERO && LIB_HERO.complete && LIB_HERO.naturalWidth){ const s=hero.r*3.1; ctx.drawImage(LIB_HERO, hero.x-s/2, hero.y-s/2, s, s);
     if(stats.shield){ ctx.strokeStyle="rgba(122,208,255,.85)"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(hero.x,hero.y,hero.r*1.55,0,7); ctx.stroke(); }
     return; }
-  if(!blink && drawAnimSprite("hero", hero.x, hero.y, hero.r*3.1, {fps:6})){
+  if(!blink && drawHeroStill()){
     if(stats.shield){ ctx.strokeStyle="rgba(122,208,255,.85)"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(hero.x,hero.y,hero.r*1.55,0,7); ctx.stroke(); }
     return; }
   const usingArt=GAME_CONFIG.heroUrl && heroImg.complete && heroImg.naturalWidth;
@@ -592,7 +603,7 @@ function puArt(id){ if(!(id in puArtCache)) puArtCache[id]=mkImg(PU_ART_BASE+id+
 (GAME_CONFIG.powerups||[]).concat(["bomb"]).forEach(puArt);   // warm every icon up front
 function puReady(im){ return im && (im.complete||im.width) && (im.naturalWidth||im.width); }
 function drawPUicon(id,x,y,size){ const s=size||70; const im=puArt(id); if(puReady(im)){ ctx.drawImage(im,x-s/2,y-s/2,s,s); return; }
-  const key=PU_IMG[id]; if(key && drawAnimSprite(key,x,y,s-2,{})) return; BR.puIcon(ctx,id,x,y,P); }
+  const key=PU_IMG[id]; if(key && drawAnimSprite(key,x,y,s-2,{bob:false})) return; BR.puIcon(ctx,id,x,y,P); }
 function banner(t,s){ ctx.fillStyle="rgba(5,8,24,.6)";ctx.fillRect(0,0,W,H); ctx.textAlign="center"; ctx.fillStyle="#fff";ctx.font="bold 46px Fredoka,sans-serif";ctx.fillText(t,W/2,H/2-8); ctx.font="22px Fredoka,sans-serif";ctx.fillText(s,W/2,H/2+34); }
 // wordless how-to-play demo (for kids who can't read): animated hand dragging,
 // hero following, plus three picture cues, and a pulsing PLAY button.
@@ -699,7 +710,7 @@ function draw(){
   // orbiting helper "orbi tools" — the new star / bee / dog sprites spin around the hero
   if(stats.orbit>0){ for(let k=0;k<stats.orbit;k++){ const a=orbAngle+k*6.28/stats.orbit, ox=hero.x+Math.cos(a)*54, oy=hero.y+Math.sin(a)*54;
       const hk=["helper_star","helper_bee","helper_dog"][k%3];
-      if(!drawAnimSprite(hk,ox,oy,46,{phase:k*4})) BR.orbiter(ctx,ox,oy,P.spark); } }
+      if(!drawAnimSprite(hk,ox,oy,46,{phase:k*4,bob:false})) BR.orbiter(ctx,ox,oy,P.spark); } }
   ctx.restore();                                  // end shake layer
   if(BM&&fx) BM.draw(ctx, fx, { W, H });          // shared FX particles + flash overlay
   // (push-circle joystick ring removed — you just drag to move, no on-screen ring)
