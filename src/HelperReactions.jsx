@@ -99,8 +99,13 @@ export default function HelperReactions() {
   const helper = getKidHelper(getActiveKid());
   const img = helper && helper.image;
   const accent = state.tone === "win" ? "#7CF6B0" : "#FFD66B";
+  // GN2 — the toast floats at the bottom of the page, which is exactly where the
+  // five-tab bottom bar sits on every deciding screen. The bar publishes its own
+  // height on <html> as --bk-bottom-bar while it is mounted (src/BottomBar.jsx),
+  // so the toast raises itself clear whenever the bar is up and falls back to a
+  // plain 24px on every screen without one. No screen knowledge needed here.
   return (
-    <div style={{ position: "fixed", left: 0, right: 0, bottom: 24, zIndex: 100000, display: "flex", justifyContent: "center", pointerEvents: "none", fontFamily: NUN }}>
+    <div style={{ position: "fixed", left: 0, right: 0, bottom: "calc(var(--bk-bottom-bar, 0px) + 24px)", zIndex: 100000, display: "flex", justifyContent: "center", pointerEvents: "none", fontFamily: NUN }}>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 12, maxWidth: "92%" }}>
         <div className="bk-pop" style={{ maxWidth: 260, background: "#1b1830", border: "1px solid " + accent + "88", borderRadius: "16px 16px 16px 4px", padding: "12px 16px", color: "#fff", boxShadow: "0 12px 34px rgba(0,0,0,0.55)", fontWeight: 800, fontSize: 16, lineHeight: 1.35 }}>{state.text}</div>
         <div className="bk-bounce" style={{ width: 84, height: 84, flexShrink: 0, borderRadius: "50%", border: "3px solid " + accent, overflow: "hidden", background: img ? ("center/cover no-repeat url(" + img + ")") : "linear-gradient(135deg,#9b7edd,#6f5bd6)", boxShadow: "0 10px 30px rgba(155,126,221,0.6)" }} />
