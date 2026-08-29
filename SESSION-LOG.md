@@ -1,3 +1,51 @@
+## 2026-08-29 — CP2: chess pieces you can actually read, and the hi-def worlds turned on
+
+Mike: "the chess pieces are kinda weird and hard to see... hard to see with the
+plants and stuff on them, doesnt make sense either."
+
+**Why they were unreadable, and it was in the prompt all along.** `kind=chesspiece`
+treats the world theme as a SURFACE TEXTURE painted over the piece -- jungle was
+literally "covered in leaves, vines and little flowers", ocean "made of coral,
+pearl and seashells". The art smothers the silhouette. On top of that no piece had
+a height, so a pawn and a queen occupied the same footprint and the only thing
+telling them apart was a tiny hat.
+
+**New `kind=chesspiece2`.** Two candidate directions were painted for jungle and
+mocked side by side against today's art, big and shrunk to real board size; Mike
+picked **style a, "clean chess"**: the classic chess silhouette, a hard height
+ramp (`TALL`, "the SHORTEST piece on the board" through "the TALLEST"), and the
+world reduced to ONE small accent on top. Style b (each piece a character from
+the world wearing the chess role's hat, full 6x6 `HERO` map for all six worlds)
+stays in the file behind `&style=b` if he ever wants it. The shared `CP2_STYLE`
+string carries the rule that actually fixed this and belongs in any future piece
+prompt: nothing may cover, overlap or blur the shape, and it must read when
+shrunk to a thumbnail. `kind=chesspiece` is deliberately untouched, so the
+switch is one string and the rollback is free.
+
+All 72 pieces (6 worlds x 6 pieces x 2 sides) generated and cached, ~$5. Four
+came back missing on the first pass and were re-fired; ALWAYS re-read
+`?manifest=1&kind=` and diff against the full set rather than trusting the batch.
+
+**The white rank dots are gone.** `withBadge`/`rankBadge`/`RANKGL` are deleted.
+They were only ever drawn on the BACKUP vector pieces, so a dot on screen meant
+"the real art did not load" -- never a feature.
+
+**Movement.** The game already had per-piece idle animations and a lift on
+pick-up; added the tilt on the lift, a `landsquash` when a piece sets down on its
+new square (`!important`, because the idle animation is written inline), and a
+spin on the capture shrink.
+
+**The hi-def backgrounds finally turned on.** `kind=chessworld` was generated for
+all six worlds back on 2026-08-16 and then never wired into the board -- the game
+was still loading the old upscaled parallax jpgs. `buildWorld` now preloads the
+new scene and only swaps it in once it has decoded (a missing one leaves the old
+background in place instead of an empty board), and adds `.hidef` to drop the
+scene blur from 2px to 0.6px and hide the old foreground layer, whose recycled
+leaves fought the new art.
+
+Both chess mocks and their vercel.json routes are deleted. qa-chess grew ten
+checks covering all of the above; ALL CHECKS PASSED.
+
 ## 2026-08-29 — ONB1: the new-user onboarding QA + fix
 
 QA'd the first run in a cleared browser and against last night's auth records.

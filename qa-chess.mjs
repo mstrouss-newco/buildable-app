@@ -8,6 +8,7 @@
 import fs from 'fs'; import vm from 'vm';
 const dir = process.argv[2] || '.';
 const read = f => fs.readFileSync(dir + '/' + f, 'utf8');
+const exists = f => fs.existsSync(dir + '/' + f);
 let ok = true;
 const chk = (name, cond, extra='') => { console.log((cond?'PASS':'FAIL') + '  ' + name + (extra?'  ::  '+extra:'')); if(!cond) ok=false; };
 
@@ -95,6 +96,25 @@ chk('the two team colours are far apart on the colour wheel (>=90 degrees)', apa
     mains.join(' / ')+' -> '+Math.round(apart)+' degrees');
 chk('each side asks for its own piece art (&side=)', /kind=chesspiece[\s\S]{0,120}?&side='\+p\.c/.test(html));
 chk('the art API paints each side its own colour', /chesspiece\|\$\{world\}\|\$\{piece\}\|\$\{side\}/.test(read('api/images.js')));
+// ---- CP2: the clean-chess piece set, the dots, the movement, the hi-def worlds ----
+const imgs = read('api/images.js');
+chk('the board asks for the CLEAN CHESS set, not the leaf-covered one',
+    /kind=chesspiece2&style=a&world='\+sceneKey/.test(html));
+chk('the clean-chess prompt forbids anything covering the shape',
+    /no leaves, no vines, no plants/.test(imgs) && /readable when the image is shrunk/.test(imgs));
+chk('every piece has a height in its prompt, so a pawn is not a queen',
+    /the SHORTEST piece on the board/.test(imgs) && /the TALLEST piece on the board/.test(imgs));
+chk('the white rank dots are gone for good', !/withBadge|rankBadge|RANKGL/.test(html));
+chk('a picked-up piece lifts AND tilts', /\.piece\.lift\{transform:scale\(1\.14\) rotate\(-6deg\)/.test(html));
+chk('a piece squashes when it lands', /@keyframes landsquash/.test(html) && /classList\.add\('landing'\)/.test(html));
+chk('a captured piece spins away', /scale\(0\) rotate\(150deg\)/.test(html));
+chk('the hi-def world scenes are wired in and un-blurred when they load',
+    /kind=chessworld&world='\+key/.test(html) && /\.world\.hidef \.scene-bg\{filter:blur\(\.6px\)/.test(html));
+chk('a hi-def scene only replaces the old one once it has decoded',
+    /im\.onload=function\(\)\{ if\(sceneKey!==key\)return;/.test(html));
+chk('the chess mocks are gone from public/ and from vercel.json',
+    !exists('public/chess-look-mock.html') && !exists('public/chess-pieces-mock.html')
+    && !/chess-(look|pieces)-mock/.test(read('vercel.json')));
 chk('pieces carry their side onto shared art (team class + pad + outline)',
     /el\.className='piece team-'\+p\.c/.test(html) && /\.piece\.team-w\{--team:/.test(html) && /\.piece\.team-b\{--team:/.test(html)
     && /drop-shadow\(2px 0 0 var\(--team\)\)/.test(html));
