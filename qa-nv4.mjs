@@ -37,7 +37,11 @@ const chk = (name, cond, extra = '') => {
 };
 const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
 
-const S = read('src/BuildableKids.jsx');
+// GN2 moved the BottomBar (and its glyphs, colours and clearance number) out of
+// BuildableKids.jsx into its own module so GameLobby could show it too. The NV
+// assertions below are about the bar as a whole, not which file it sits in, so
+// this harness reads both and checks them together.
+const S = read('src/BuildableKids.jsx') + '\n' + read('src/BottomBar.jsx');
 
 // -------------------------------------------------------- 1) Feel Kit + squash
 console.log('--- Bottom-bar tap fires Feel.tap + squashes the pressed pill ---');

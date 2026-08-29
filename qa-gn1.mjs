@@ -28,7 +28,10 @@ const chk = (name, cond, extra = '') => {
 };
 const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
 
-const S = read('src/BuildableKids.jsx');
+// GN2 moved the bar and its clearance number into src/BottomBar.jsx. GN1's
+// assertions are about the bar as a whole, not which file it sits in, so read
+// both. (The render half below still bundles the shell, which imports it.)
+const S = read('src/BuildableKids.jsx') + '\n' + read('src/BottomBar.jsx');
 
 // ------------------------------------------------------- 1) the shared clearance
 console.log('--- One bar-clearance number, shared by every screen that shows the bar ---');
@@ -108,7 +111,9 @@ if (esbuild && React && renderToStaticMarkup) {
     // GameLanding is internal to the shell module, so bundle a throwaway copy of
     // the file with the three symbols re-exported. The copy lives beside the
     // original so every relative import still resolves, and is deleted after.
-    fs.writeFileSync(tmpEntry, S + '\nexport { GameLanding, gearUpBtn, NAV_BAR_H as BAR_H };\n');
+    fs.writeFileSync(tmpEntry, read('src/BuildableKids.jsx')
+      + '\nexport { GameLanding, gearUpBtn };'
+      + '\nexport { NAV_BAR_H as BAR_H } from "./BottomBar.jsx";\n');
     await esbuild.build({
       entryPoints: [tmpEntry], bundle: true, format: 'esm', platform: 'node',
       outfile: tmpOut, jsx: 'automatic', logLevel: 'silent',

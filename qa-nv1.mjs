@@ -23,7 +23,11 @@ const chk = (name, cond, extra = '') => {
 };
 const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
 
-const S = read('src/BuildableKids.jsx');
+// GN2 moved the BottomBar (and its glyphs, colours and clearance number) out of
+// BuildableKids.jsx into its own module so GameLobby could show it too. The NV
+// assertions below are about the bar as a whole, not which file it sits in, so
+// this harness reads both and checks them together.
+const S = read('src/BuildableKids.jsx') + '\n' + read('src/BottomBar.jsx');
 
 // ---------------------------------------------------------------- 1) constants
 console.log('--- NV1 constants + URL routing ---');
@@ -144,12 +148,15 @@ chk('Home Games tile now opens the new Play page',
 
 // ---------------------------------------------------------------- 6) guardrails
 console.log('--- Guardrails: no emoji anywhere in the NV1 additions ---');
-// Extract the whole NV1 addition block (from the NV1 marker comment down to
-// just before HELPER_VOICES — everything BottomBar and PlayScreen add).
-const nv1Match = /\/\/ NV1 — the always-visible[\s\S]*?(?=\nconst HELPER_VOICES\b)/.exec(S);
-chk('NV1 addition block extracted for emoji scan', !!nv1Match);
-chk('no emoji in the NV1 addition block (product guardrail)',
-  !!nv1Match && !emoji.test(nv1Match[0]));
+// NV1 added two things and GN2 split them across two files, so scan both:
+// src/BottomBar.jsx IS the bar addition end to end, and the Play page runs from
+// its marker comment down to just before HELPER_VOICES in the shell.
+const BAR_FILE = read('src/BottomBar.jsx');
+const playMatch = /\/\/ NV1 — the Play page[\s\S]*?(?=\nconst HELPER_VOICES\b)/.exec(read('src/BuildableKids.jsx'));
+chk('NV1 Play-page block extracted for emoji scan', !!playMatch);
+chk('no emoji in the bottom bar (product guardrail)', !emoji.test(BAR_FILE));
+chk('no emoji in the NV1 Play page (product guardrail)',
+  !!playMatch && !emoji.test(playMatch[0]));
 
 // ---------------------------------------------------------------- summary
 console.log('---');
