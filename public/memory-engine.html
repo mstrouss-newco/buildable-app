@@ -477,6 +477,11 @@ window.BUILDABLE_GAME = {
   _draw:()=>{ try{ return draw(); }catch(e){ return "ERR: "+(e&&e.message||e); } },
   _step:(n)=>{ for(let i=0;i<(n||1);i++) update(1/60); },
   _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS,
+  // SL-NEXT QA hooks: force a clear, then feed the tap that follows it, so the
+  // "next board" path can be checked without playing a whole board by hand.
+  _win:()=>{ deck.forEach(c=>{c.matched=true;}); match.finish(); state="win"; return state; },
+  _tap:()=>{ tapAt(-999,-999); return state; },
+  _state:()=>state,
 };
 window.MEMORY_GAME = window.BUILDABLE_GAME;
 </script>

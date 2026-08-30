@@ -1237,6 +1237,11 @@ const API = {
   _begin: (i) => startLevel(i || 0),
   _step: (frames) => { for (let k = 0; k < (frames || 1); k++) { if (state === "play") step(1 / 60); else tickNonPlay(1 / 60); } },
   _draw: () => { try { render(); return "ok"; } catch (e) { return "ERR:" + e.message; } },
+  // SL-NEXT QA hooks: force a clear, then feed the tap that follows it, so the
+  // "next level" path can be checked without playing a whole level by hand.
+  _win: () => { winLevel(); return state; },
+  _tap: () => { onTap(-999, -999); return state; },
+  _idx: () => (S ? S.idx : null),
 };
 if (typeof window !== "undefined") { window.BUILDABLE_GAME = API; window.CASTLEGUARD_GAME = API; }
 </script>
