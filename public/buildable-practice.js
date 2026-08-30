@@ -287,6 +287,223 @@
     return rec;
   }
 
+  // ---- placement (Session PT2) --------------------------------------------
+  // A first visit runs a short warm-up spanning every deck — "let's see what you
+  // already know" — and lands the kid on the right list instead of making a
+  // reader start at "a". It is NOT a test: there is no pass mark, no score, and
+  // getting one wrong costs nothing. Two probes per deck, easiest deck first.
+  //
+  // What it seeds is deliberately modest. Decks BELOW the landing deck get every
+  // item PLACED at box 3, which says "you already know these, we will just keep
+  // them ticking over" — never box 5, so placement can never mint a mastered
+  // word or a bird the kid did not earn. Mastery is only ever earned by answering.
+  var PLACEMENT_PER_DECK = 2;
+  var PLACED_BOX = 3;
+
+  function buildPlacement(decks, opts) {
+    opts = opts || {};
+    var per = opts.perDeck || PLACEMENT_PER_DECK;
+    var rng = opts.rng || Math.random;
+    var out = [];
+    (decks || []).forEach(function (deck) {
+      var items = (deck.items || []).slice();
+      shuffle(items, rng);
+      items.slice(0, per).forEach(function (it) {
+        out.push({ deckId: deck.id, item: it, intro: false, itemId: it.id });
+      });
+    });
+    return out;
+  }
+
+  // Where the warm-up lands the kid: the LAST deck they got at least half of
+  // right. Nothing right anywhere lands them on the first deck, which is the
+  // gentle answer, not a verdict.
+  function placementResult(decks, answers) {
+    var per = {};
+    (answers || []).forEach(function (a) {
+      if (!a || !a.deckId) return;
+      var row = per[a.deckId] || (per[a.deckId] = { right: 0, total: 0 });
+      row.total += 1;
+      if (a.correct) row.right += 1;
+    });
+    var landing = (decks && decks[0] && decks[0].id) || null;
+    (decks || []).forEach(function (deck) {
+      var row = per[deck.id];
+      if (row && row.total && row.right * 2 >= row.total) landing = deck.id;
+    });
+    // The landing deck is the one they are ready to WORK on, so it is the deck
+    // after the last one they knew — unless they knew none, or knew them all.
+    var ids = (decks || []).map(function (d) { return d.id; });
+    var at = ids.indexOf(landing);
+    var knewFirst = per[ids[0]] && per[ids[0]].right > 0;
+    var next = (at >= 0 && knewFirst) ? Math.min(ids.length - 1, at + 1) : Math.max(0, at);
+    return { landingDeckId: ids[next] || landing, knownThrough: at >= 0 && knewFirst ? ids[at] : null, perDeck: per };
+  }
+
+  // Seed the boxes and remember that the warm-up has been done. Returns how many
+  // items were placed, so the page can say something true about it.
+  function applyPlacement(kidId, decks, answers, opts) {
+    opts = opts || {};
+    var now = typeof opts.now === "number" ? opts.now : Date.now();
+    var res = placementResult(decks, answers);
+    var s = loadState();
+    var kid = kidState(s, kidId);
+    var placed = 0;
+    var stop = false;
+    (decks || []).forEach(function (deck) {
+      if (stop) return;
+      if (deck.id === res.landingDeckId) { stop = true; return; }
+      var ds = deckState(s, kidId, deck.id);
+      (deck.items || []).forEach(function (it, i) {
+        var rec = ds.items[it.id];
+        if (rec && rec.seen) return;                 // never overwrite real work
+        ds.items[it.id] = {
+          box: PLACED_BOX, due: now + (i % 4) * DAY, seen: 0,
+          right: 0, wrong: 0, last: 0, placed: true,
+        };
+        placed += 1;
+      });
+    });
+    kid.placement = { done: true, at: now, landingDeckId: res.landingDeckId, knownThrough: res.knownThrough };
+    if (!kid.level) kid.level = res.landingDeckId;
+    saveState(s);
+    return { placed: placed, landingDeckId: res.landingDeckId, knownThrough: res.knownThrough };
+  }
+  function placement(state, kidId) {
+    var kid = kidState(state || loadState(), kidId);
+    return kid.placement || null;
+  }
+  // The Parents area can send a kid back through the warm-up. It clears only the
+  // placement record and the seeded (never-answered) items — everything the kid
+  // actually earned stays exactly where it is.
+  function clearPlacement(kidId) {
+    var s = loadState();
+    var kid = kidState(s, kidId);
+    delete kid.placement;
+    Object.keys(kid.decks || {}).forEach(function (d) {
+      var items = kid.decks[d].items || {};
+      Object.keys(items).forEach(function (id) {
+        if (items[id] && items[id].placed && !items[id].seen) delete items[id];
+      });
+    });
+    saveState(s);
+    return true;
+  }
+
+  // ---- the level a kid is working at (parent override) --------------------
+  // Placement picks it; a grown-up can bump it up or down from the Parents area
+  // and their choice wins from then on.
+  function level(state, kidId) {
+    var kid = kidState(state || loadState(), kidId);
+    return kid.level || (kid.placement && kid.placement.landingDeckId) || null;
+  }
+  function setLevel(kidId, deckId) {
+    var s = loadState();
+    kidState(s, kidId).level = deckId || null;
+    saveState(s);
+    return deckId;
+  }
+
+  // ---- the collection (Session PT2) ---------------------------------------
+  // One bird per MASTERED item — box 5, earned by answering, never by placement.
+  // Counted straight off the saved state so the Parents area can report it
+  // without loading a single deck file.
+  function masteredByDeck(state, kidId) {
+    var kid = kidState(state || loadState(), kidId);
+    var out = {};
+    Object.keys(kid.decks || {}).forEach(function (d) {
+      var items = (kid.decks[d] || {}).items || {};
+      var n = 0;
+      Object.keys(items).forEach(function (id) {
+        var r = items[id];
+        if (r && r.seen && clampBox(r.box) >= MAX_BOX) n += 1;
+      });
+      out[d] = n;
+    });
+    return out;
+  }
+  function masteredTotal(state, kidId) {
+    var by = masteredByDeck(state, kidId), n = 0;
+    Object.keys(by).forEach(function (d) { n += by[d]; });
+    return n;
+  }
+  // A whole deck finished — the big moment where every bird sings.
+  function deckComplete(deck, ds) {
+    var p = progress(deck, ds);
+    return p.total > 0 && p.mastered === p.total;
+  }
+
+  // ---- sprint readiness (Session PT3) -------------------------------------
+  // Sprint is a victory lap, not a wall: it opens for a deck only once practice
+  // shows the kid is already fluent — about 80% of the facts they have actually
+  // MET sitting at box 3 or better. Facts never introduced do not count against
+  // them, so a kid is never blocked by work they have not been given yet.
+  var SPRINT_READY_PCT = 0.8;
+  var SPRINT_MIN_INTRODUCED = 12;
+  function sprintReadiness(deck, ds, opts) {
+    opts = opts || {};
+    var need = typeof opts.pct === "number" ? opts.pct : SPRINT_READY_PCT;
+    var min = typeof opts.min === "number" ? opts.min : SPRINT_MIN_INTRODUCED;
+    var recs = (ds && ds.items) || {};
+    var introduced = 0, solid = 0;
+    ((deck && deck.items) || []).forEach(function (it) {
+      var r = recs[it.id];
+      if (!r || !r.seen) return;                    // never met = not counted
+      introduced += 1;
+      if (clampBox(r.box) >= 3) solid += 1;
+    });
+    var pct = introduced ? solid / introduced : 0;
+    return {
+      ready: introduced >= min && pct >= need,
+      introduced: introduced, solid: solid, pct: pct,
+      needIntroduced: min, needPct: need,
+    };
+  }
+
+  // ---- sprint bests + parent settings -------------------------------------
+  // Personal best only. Nothing here is ever compared between kids, and the
+  // shape deliberately has nowhere to put another kid's number.
+  var DEFAULT_SETTINGS = { sprintSeconds: 60, sprintTarget: 40 };
+  function settings(state, kidId) {
+    var kid = kidState(state || loadState(), kidId);
+    var s = kid.settings || {};
+    return {
+      sprintSeconds: s.sprintSeconds || DEFAULT_SETTINGS.sprintSeconds,
+      sprintTarget: s.sprintTarget || DEFAULT_SETTINGS.sprintTarget,
+    };
+  }
+  function setSettings(kidId, patch) {
+    var s = loadState();
+    var kid = kidState(s, kidId);
+    kid.settings = kid.settings || {};
+    if (patch && patch.sprintSeconds) kid.settings.sprintSeconds = Math.max(15, Math.min(300, Math.round(patch.sprintSeconds)));
+    if (patch && patch.sprintTarget) kid.settings.sprintTarget = Math.max(5, Math.min(200, Math.round(patch.sprintTarget)));
+    saveState(s);
+    return settings(s, kidId);
+  }
+  function sprintBest(state, kidId, deckId) {
+    var kid = kidState(state || loadState(), kidId);
+    return (kid.sprints || {})[deckId] || null;
+  }
+  function recordSprint(kidId, deckId, run) {
+    run = run || {};
+    var s = loadState();
+    var kid = kidState(s, kidId);
+    kid.sprints = kid.sprints || {};
+    var prev = kid.sprints[deckId] || { best: 0, runs: 0 };
+    var score = Math.max(0, Math.round(run.score || 0));
+    var beat = score > (prev.best || 0);
+    kid.sprints[deckId] = {
+      best: Math.max(prev.best || 0, score),
+      last: score,
+      runs: (prev.runs || 0) + 1,
+      seconds: run.seconds || DEFAULT_SETTINGS.sprintSeconds,
+      at: typeof run.now === "number" ? run.now : Date.now(),
+    };
+    saveState(s);
+    return { best: kid.sprints[deckId].best, score: score, beat: beat, runs: kid.sprints[deckId].runs };
+  }
+
   // ---- reporting ----------------------------------------------------------
   function summarize(answers) {
     var a = answers || [], right = 0, fast = 0;
@@ -339,6 +556,14 @@
     answerOf: answerOf, sayOf: sayOf,
     loadState: loadState, saveState: saveState, kidState: kidState, deckState: deckState,
     recordAnswer: recordAnswer,
+    PLACED_BOX: PLACED_BOX, PLACEMENT_PER_DECK: PLACEMENT_PER_DECK,
+    buildPlacement: buildPlacement, placementResult: placementResult,
+    applyPlacement: applyPlacement, placement: placement, clearPlacement: clearPlacement,
+    level: level, setLevel: setLevel,
+    masteredByDeck: masteredByDeck, masteredTotal: masteredTotal, deckComplete: deckComplete,
+    SPRINT_READY_PCT: SPRINT_READY_PCT, SPRINT_MIN_INTRODUCED: SPRINT_MIN_INTRODUCED,
+    sprintReadiness: sprintReadiness, DEFAULT_SETTINGS: DEFAULT_SETTINGS,
+    settings: settings, setSettings: setSettings, sprintBest: sprintBest, recordSprint: recordSprint,
     summarize: summarize, progress: progress, sessionEvent: sessionEvent,
   };
 
