@@ -44,12 +44,17 @@
   <div class="row"><span class="k">sounds downloaded</span><span class="v" id="v6">-</span></div>
   <div class="row"><span class="k">music</span><span class="v" id="v7">-</span></div>
   <div class="row"><span class="k">sound effects asked for</span><span class="v" id="v8">0</span></div>
+  <div class="row"><span class="k">engines on the page</span><span class="v" id="v9">-</span></div>
+  <div class="row"><span class="k">reading from</span><span class="v" id="v10">-</span></div>
+  <div class="row"><span class="k">spare engine slots</span><span class="v" id="v11">tap test</span></div>
+  <button id="slot" style="margin-top:10px">Test how many sound engines this device still allows</button>
   <div id="log">waiting...</div>
 </div>
 <script>
 (function(){
   var GAMES=[["Survival","/survival-engine.html"],["Breaker","/breaker-engine.html"],
-              ["Sling","/sling-squad.html"],["Tumble","/tumble-engine.html"],["Maze","/maze-engine.html"]];
+              ["Sling","/sling-squad.html"],["Tumble","/tumble-engine.html"],["Maze","/maze-engine.html"],
+              ["IN APP","/app"]];
   var f=document.getElementById("f"), log=document.getElementById("log");
   var lines=[], plays=0, hooked=false, last={};
   function $(i){return document.getElementById("v"+i);}
@@ -70,8 +75,22 @@
   });
 
   setInterval(function(){
-    var BA=null;
-    try{ BA=f.contentWindow && f.contentWindow.BuildableAudio; }catch(e){}
+    var BA=null, where="page";
+    try{
+      var w=f.contentWindow;
+      var inner=null;
+      try{ var ifr=w.document.querySelector("iframe"); if(ifr&&ifr.contentWindow) inner=ifr.contentWindow; }catch(e){}
+      if(inner && inner.BuildableAudio && inner.BuildableAudio.sfxBase){ BA=inner.BuildableAudio; where="game frame"; }
+      else if(w.BuildableAudio){ BA=w.BuildableAudio; where=inner?"app shell (no game yet)":"page"; }
+      if(inner && inner.BuildableAudio && !BA) BA=inner.BuildableAudio;
+      // how many sound engines exist across the shell and the game
+      var live=[];
+      try{ if(w.BuildableAudio) live.push("shell:"+(w.BuildableAudio.ctx?w.BuildableAudio.ctx.state:"none")); }catch(e){}
+      try{ if(inner&&inner.BuildableAudio) live.push("game:"+(inner.BuildableAudio.ctx?inner.BuildableAudio.ctx.state:"none")); }catch(e){}
+      document.getElementById("v9").textContent = live.join("   ") || "-";
+      document.getElementById("v9").className = "v " + (live.join(" ").indexOf("none")>-1 ? "bad" : "ok");
+      document.getElementById("v10").textContent = where;
+    }catch(e){}
     if(!BA){ set(0,"no","bad"); return; }
     set(0,"yes","ok");
 
@@ -113,6 +132,21 @@
 
     set(8,String(plays), plays>0?"ok":"warn");
   }, 400);
+
+  document.getElementById("slot").onclick=function(){
+    var AC=window.AudioContext||window.webkitAudioContext, err=null;
+    window.__held = window.__held || [];
+    for(var i=0;i<12;i++){
+      try{ var c=new AC(); window.__held.push(c); }
+      catch(e){ err=(e&&(e.name+": "+e.message))||"refused"; break; }
+    }
+    var made=window.__held.map(function(c){ return c.state; });
+    var e11=document.getElementById("v11");
+    e11.textContent = made.length + " more" + (err?"  then REFUSED":"  (no limit hit)");
+    e11.className = "v " + (err?"bad":(made.length<4?"warn":"ok"));
+    say("slot test: made "+made.length+" extra engines"+(err?", then the device refused: "+err:", device did not refuse"));
+    say("their states: "+made.join(", "));
+  };
 })();
 </script>
 </body>
