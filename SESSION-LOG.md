@@ -1,3 +1,87 @@
+## 2026-08-29 — GN4: the bar over a game's own level picker
+
+The last place a kid could still be stuck. GN1-GN3 covered every screen the shell
+draws; this one crosses the iframe boundary. An engine's own title or level screen
+— reached by the shell's Menu button, or when a game ends — is a deciding screen
+that happens to be drawn inside the game, and the corner Home was the only way off
+it. Rule 0 was never about which side of an iframe a screen sits on.
+
+**The shell half (`GameFrame`, src/BuildableKids.jsx).** The nav bridge already
+reports `inGame`, so the frame now floats the five-tab bar over the game while the
+engine says it is NOT playing, and drops it the instant play starts. An engine that
+never reports `inGame` defaults to true, so this is opt-in by construction — a game
+that says nothing never grows a bar, and neither does a frame handed no nav
+handlers. All 26 GameFrame wrappers take and pass `nav` now; Kidspedia and Lessons
+get it too but report `inGame: true` always, so they are unaffected by
+construction. (Housekeeping: GameFrame's bridge state was itself called `nav`,
+which the new prop would have shadowed. It is `bridge` now — what the GAME reported
+about itself, as against the SHELL's tab handlers.)
+
+**The in-game half (`public/buildable-gamenav.js`), three additions:**
+1. **Watch `inGame` instead of trusting `update()`.** Engines were meant to call
+   `BuildableGameNav.update()` on every state change. Four never did — so the shell
+   only ever saw the state at registration and the bar would have been stuck on.
+   Rather than wire a call into twenty transitions across twenty files, the bridge
+   reads the value four times a second and posts only when it flips. One file,
+   every engine, nothing for the next engine author to remember.
+2. **Reserve the bottom strip inside the game.** When the shell posts
+   `nav:bar {on, h}` the bridge publishes `--bk-nav-bottombar` and marks the page
+   `.bk-barup`; `buildable-startscreen.js` pads its last level card by it. It is
+   `0px` when the bar is down and unset standalone, so gameplay never loses space.
+   **Finding:** every engine's picker goes through that one shared start screen —
+   the board games reach it via `buildable-boardgame.js` — so there was no
+   hand-rolled picker left to fix, contrary to what the card expected.
+3. **Catch the tap.** Same fault as the Home pill: on iOS a touch on a shell element
+   overlapping an iframe is routed INTO the iframe, so the bar would look tappable
+   and do nothing on a phone while working fine with a mouse. An invisible catcher
+   over the bar's strip inside the game forwards the tap's **viewport coordinates**
+   — deliberately not a tab name, because the shell owns the bar's layout and a
+   second copy of the five-tab geometry is a second thing to drift. The shell
+   hit-tests its own DOM at that point and clicks the real button. The catcher
+   exists only while the bar is up, which is only while the engine says it is not
+   playing, so it can never swallow a gameplay tap.
+
+**The engine roll-through.** All 20 engines that load the bridge were checked.
+Sixteen already reported `inGame`; four registered without it despite having their
+own title/menu state (**bubble, mathcannon, runner, tank**) and now report it. The
+other four are excused with reasons recorded in the harness: survival loads the
+bridge but never registers (its homemade menus were retired in 5A and it is always
+deep-linked to a level), and connect four / dots and boxes / tic-tac-toe register
+through `buildable-boardgame.js`, which already reports `inGame`.
+
+**QA — `qa-gn4.mjs` (new), 38 checks, all pass.** Both halves are driven against a
+real DOM, not read from source. The bridge is evaluated in jsdom with a recording
+parent: registering reports "not playing"; "bar up" publishes the variable at 76px,
+marks the class and places the catcher exactly over the strip; a tap forwards the
+coordinates; **play starting reaches the shell with no `update()` call from the
+engine** — the whole point of the watcher; dropping the bar returns the strip to
+`0px` and removes the catcher. Then GameFrame is mounted and driven by engine
+messages: no bar before the engine speaks, bar with Play lit when it reports its
+picker (iframe still underneath), a forwarded tap pressing the real tab, bar gone
+the instant play starts, and never a bar on a frame with no nav prop.
+
+**Two earlier harnesses corrected.** qa-gn1 and qa-gn3 both asserted a blanket
+"GameFrame never renders a bar". That was GN1's reading, and GN4 narrows it
+properly: what must never happen is a bar over live *play*. Both now pin the
+`barUp` condition — still failing if a bar is ever rendered unconditionally — and
+leave the live proof to qa-gn4. `HUD-AND-NAV-RULES.md` Rule 0 gains an "Inside the
+frame" section and exemption 1 now reads "while it is being played" rather than
+exempting every iframe on sight.
+
+Also green: qa-gn1, qa-gn2, qa-gn3, qa-nv1..nv4, and every engine touched —
+bubble, mathcannon, runner, tank, sling, breaker, tumble, castleguard, croc,
+tictactoe, connectfour, dotsandboxes, skyflyer, tennis. **qa-maze fails on
+`BuildableWin is not defined` in its post-win render smoke; that is pre-existing
+(it fails the same way on a clean tree) and is not from this card.**
+
+**Still flagged:** `scripts/planner.mjs` cannot run from this session — the sandbox
+network policy refuses `buildablekids.com` (403 on CONNECT) — so the planner was
+updated through its Supabase table. All four GN cards sit on one branch,
+`claude/gn1-bottom-bar-landing-ktohxj`, not merged.
+
+**What remains in this phase: nothing.** GN1-GN4 are all built. GN4 was the card
+marked LATER; Mike gave the go for it in this session.
+
 ## 2026-08-29 — GN3: the bar becomes a law, not a feature of two screens
 
 GN1 put the bar on the game front door and GN2 on the lobby. GN3 audited every

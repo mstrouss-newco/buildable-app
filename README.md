@@ -6,6 +6,20 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## The bar reaches inside the game (GN4, August 29 2026)
+`public/buildable-gamenav.js`, `public/buildable-startscreen.js`, four engines, `src/BuildableKids.jsx`, `HUD-AND-NAV-RULES.md`, `qa-gn4.mjs` (new).
+
+An engine's own title/level screen is a deciding screen that happens to live
+inside the iframe, so the shell now floats the five-tab bar over the frame while
+the nav bridge reports `inGame: false`, and drops it the instant play starts.
+Opt-in by construction: an engine that never reports `inGame` never grows a bar.
+The bridge watches the value itself rather than trusting engines to call
+`update()` (four never did), reserves the bottom strip inside the game as
+`--bk-nav-bottombar`, and catches the tap that iOS would otherwise route into the
+iframe — forwarding coordinates so the shell hit-tests its own bar rather than
+duplicating the tab geometry. bubble, mathcannon, runner and tank now report
+`inGame`. `qa-gn4.mjs` drives both halves against a real DOM.
+
 ## The bottom bar becomes a law (GN3, August 29 2026)
 `src/BuildableKids.jsx`, the four `Family*.jsx`, `src/TopBoard.jsx`, `src/GameLobby.jsx`, `HUD-AND-NAV-RULES.md`, `qa-gn3.mjs` (new).
 
