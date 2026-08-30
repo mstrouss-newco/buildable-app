@@ -25,6 +25,11 @@ world only unlocks through the quiz gate (`quizRequest` -> `bk:quizDone` ->
 `markUnlockNext`). If that modal is dismissed without finishing, the unlock is silently
 dropped. Not touched here; needs a decision about what "clearing a world" even means.
 
+qa-bubble now stubs localStorage and asserts the save for real -- and it immediately
+earned its keep: the first cut of `bbLoadPrefs` only overwrote fields when a stored
+value existed, so switching kids inherited the previous kid's `unlocked`. It resets to
+`{unlocked:0, stars:{}}` first now. New `_win()` hook on Bubble's QA API drives a clear.
+
 qa-memory, qa-mahjong, qa-castleguard, qa-bubble, qa-tumble, qa-sling: ALL CHECKS PASS.
 
 ## 2026-08-29 - SL-NEXT: Sling Squad now goes to the next level when you tap

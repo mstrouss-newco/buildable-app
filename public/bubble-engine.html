@@ -83,7 +83,8 @@ try{ var _bq=new URLSearchParams(location.search); BB_DEMO=_bq.get("screen")==="
 var BB_PREFS = { unlocked:0, stars:{} };
 function bbKey(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");
   return "bk_bubble_prefs"+((k&&k.id)?("_"+k.id):""); }catch(e){ return "bk_bubble_prefs"; } }
-function bbLoadPrefs(){ try{ var s=localStorage.getItem(bbKey()); if(!s) return;
+function bbLoadPrefs(){ BB_PREFS={ unlocked:0, stars:{} };   // reset first: switching kids must not inherit the last kid's progress
+  try{ var s=localStorage.getItem(bbKey()); if(!s) return;
   var p=JSON.parse(s); BB_PREFS.unlocked=p.unlocked||0;
   BB_PREFS.stars=(p.stars&&typeof p.stars==="object")?p.stars:{}; }catch(e){} }
 function bbSaveClear(idx){ if(BB_DEMO) return; try{
@@ -661,7 +662,8 @@ var API={
   _begin:function(idx){ buildLevel(idx,7); state="play"; },
   _draw:function(){ try{ return draw(); }catch(e){ return "ERR: "+(e&&e.message||e); } },
   _remaining:function(){ return G?countLeft():0; },
-  _state:function(){ return state; }
+  _state:function(){ return state; },
+  _win:function(){ return endGame(true); }   // SL-NEXT: lets QA (and a live check) prove a clear really saves progress
 };
 window.BUBBLE_GAME=API; window.BUILDABLE_GAME=API;
 

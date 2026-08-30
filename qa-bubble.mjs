@@ -13,7 +13,10 @@ function el(withAppend){ const e={ style:{setProperty:noop}, classList:{add:noop
   Object.defineProperty(e,'innerHTML',{set(){},get(){return''}}); if(withAppend){ e.appendChild=noop; e.removeChild=noop; } return e; }
 class ImageStub{set src(v){this._src=v;}get src(){return this._src;}addEventListener(){}}
 const documentStub={ getElementById:(id)=> el(true), querySelector:()=>el(true), addEventListener:noop, createElement:()=>el(true), head:el(true), documentElement:el(true) };
-const sandbox={ document:documentStub, Image:ImageStub, requestAnimationFrame:noop, cancelAnimationFrame:noop, addEventListener:noop, removeEventListener:noop, setTimeout:()=>0, clearTimeout:noop, alert:noop, performance:{now:()=>Date.now()}, Date, Math, console };
+// SL-NEXT: a real localStorage stub, so the progress save below is actually exercised.
+const lsStore={};
+const lsStub={ getItem:k=>(k in lsStore?lsStore[k]:null), setItem:(k,v)=>{lsStore[k]=String(v);}, removeItem:k=>{delete lsStore[k];} };
+const sandbox={ document:documentStub, Image:ImageStub, requestAnimationFrame:noop, cancelAnimationFrame:noop, addEventListener:noop, removeEventListener:noop, setTimeout:()=>0, clearTimeout:noop, alert:noop, performance:{now:()=>Date.now()}, Date, Math, console, localStorage:lsStub };
 sandbox.window=sandbox; sandbox.globalThis=sandbox;
 vm.createContext(sandbox); vm.runInContext(libs+'\n'+engine, sandbox, {filename:'bubble'});
 const G=sandbox.BUBBLE_GAME; if(!G){ console.error('FAIL: BUBBLE_GAME not exposed'); process.exit(2); }
@@ -52,5 +55,28 @@ const lineUp = mcfg.stages.length===6 && mcfg.stages.every((s,i)=>s.name===manif
 console.log(`${lineUp?'PASS':'FAIL'}  6 levels line up  ::  ${mcfg.stages.map(s=>s.name).join(', ')}`); if(!lineUp)ok=false;
 console.log(`${mcfg.multiplayer==='off'?'PASS':'FAIL'}  single-player (multiplayer off)`); if(mcfg.multiplayer!=='off')ok=false;
 console.log(`${/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("bubble"/.test(html)?'PASS':'FAIL'}  engine loads the shared manifest`); if(!(/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("bubble"/.test(html)))ok=false;
+
+
+// --- SL-NEXT: clearing a level must light up the next stop on the shell's Journey map ---
+// Bubble used to save nothing at all, so the map read {unlocked:0} forever and every
+// level after the first stayed padlocked. The shell reads bk_bubble_prefs[_<kidId>].
+console.log("--- clearing a level saves progress for the Journey map ---");
+lsStore['bk_active_kid_v1']=JSON.stringify({id:'kidQA'});
+G._begin(0); G._win();
+let saved=null; try{ saved=JSON.parse(lsStore['bk_bubble_prefs_kidQA']||'null'); }catch(e){}
+const okL1 = !!saved && saved.unlocked===1 && saved.stars && saved.stars[0]===3;
+console.log(`${okL1?'PASS':'FAIL'}  clearing L1 writes bk_bubble_prefs_kidQA :: ${JSON.stringify(saved)}`); if(!okL1)ok=false;
+G._begin(3); G._win();
+try{ saved=JSON.parse(lsStore['bk_bubble_prefs_kidQA']||'null'); }catch(e){}
+const okL4 = !!saved && saved.unlocked===4;
+console.log(`${okL4?'PASS':'FAIL'}  clearing L4 unlocks stop 5  :: unlocked=${saved&&saved.unlocked}`); if(!okL4)ok=false;
+G._begin(0); G._win();
+try{ saved=JSON.parse(lsStore['bk_bubble_prefs_kidQA']||'null'); }catch(e){}
+const okBack = !!saved && saved.unlocked===4;
+console.log(`${okBack?'PASS':'FAIL'}  replaying an early level never takes progress away  :: unlocked=${saved&&saved.unlocked}`); if(!okBack)ok=false;
+const okNoKid = (()=>{ delete lsStore['bk_active_kid_v1']; G._begin(1); G._win();
+  let d=null; try{ d=JSON.parse(lsStore['bk_bubble_prefs']||'null'); }catch(e){}
+  return !!d && d.unlocked===2; })();
+console.log(`${okNoKid?'PASS':'FAIL'}  with no kid chosen it falls back to the unsuffixed key`); if(!okNoKid)ok=false;
 
 console.log(ok?'ALL CHECKS PASS':'SOME CHECKS FAILED'); process.exit(ok?0:1);
