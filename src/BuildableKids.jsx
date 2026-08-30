@@ -3317,11 +3317,10 @@ function HomeScreen(props) {
     { id: "make",    label: "Make",     count: nv2LiveStudios + " studios", color: NAV_TAB_COLORS.make, grad: "linear-gradient(160deg,#F489B2,#E0578F)", art: "/api/images?kind=make&id=art", glyph: <NavMakeGlyph />,     onClick: onMakeHub || onMusic },
     { id: "explore", label: "Explore",  count: nv2ApprovedLabs + " labs + " + nv2ApprovedBooks + " books", color: NAV_TAB_COLORS.explore, grad: "linear-gradient(160deg,#4CAE6E,#2E7D4F)", art: nv2ExploreArt, glyph: <NavExploreGlyph />, onClick: onExploreHub || (() => props.onExplore && props.onExplore("kidspedia")) },
     { id: "learn",   label: "Learn",    count: lessonsLive ? "Math & reading" : "Coming soon", color: "#8A6BFF", grad: "linear-gradient(160deg,#B197FF,#8A6BFF)", art: "/api/images?kind=game&id=mathcannon", glyph: <SchoolGlyph />, soon: !lessonsLive, onClick: lessonsLive ? onLessons : () => { setCatalogGate(() => onLessons); setCatalogPw(""); setCatalogErr(false); } },
-    // Session PT1 — Practice sits beside Learn: the same shared deck engine that
-    // carries the maths operations from PT3. It stays Coming Soon behind the
-    // 1111 owner gate until PT2 opens it to every kid; flipping `soon` to false
-    // is the whole of that change.
-    { id: "practice", label: "Practice", count: "Coming soon", color: "#6F4FE8", grad: "linear-gradient(160deg,#9B86FF,#6F4FE8)", art: "/api/images?kind=game&id=typing", glyph: <PracticeGlyph />, soon: true, onClick: () => { setCatalogGate(() => onPractice); setCatalogPw(""); setCatalogErr(false); } },
+    // Session PT1 built it behind the 1111 owner gate; PT2 opened it to every
+    // kid. It sits beside Learn and carries both subjects on one deck engine:
+    // the Dolch sight words and the four maths operations.
+    { id: "practice", label: "Practice", count: "Words & numbers", color: "#6F4FE8", grad: "linear-gradient(160deg,#9B86FF,#6F4FE8)", art: "/api/images?kind=game&id=typing", glyph: <PracticeGlyph />, onClick: onPractice },
     { id: "mystuff", label: "My Stuff", count: (jumpItems.length ? jumpItems.length + " recent" : "Your creations"), color: NAV_TAB_COLORS.me, grad: "linear-gradient(160deg,#9F86FF,#6A4FE0)", art: "/api/images?kind=make&id=song", glyph: <StuffGlyph />, onClick: onMyStuff },
   ];
 
