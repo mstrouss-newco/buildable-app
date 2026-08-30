@@ -543,6 +543,10 @@
       "dest": "/audio-check.html"
     },
     {
+      "src": "/audio-watch.html",
+      "dest": "/audio-watch.html"
+    },
+    {
       "src": "/breaker-engine.html",
       "dest": "/breaker-engine.html"
     },

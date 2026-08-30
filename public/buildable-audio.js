@@ -23,16 +23,30 @@
 
   try { BA.muted = localStorage.getItem("bk_muted") === "1"; } catch (e) {}
 
+  // iOS/Safari caps how many AudioContexts one page may hold at a time, and a
+  // game that is left open in a discarded iframe keeps holding its slot. Once
+  // the cap is reached `new AudioContext()` THROWS, which used to escape into
+  // whatever game code asked for a sound. So: never throw, remember the miss,
+  // and retry on the next tap (a slot may have been freed by then). See the
+  // pagehide/unload release at the bottom of this file, which is what frees them.
   function ctx() {
     if (!BA.ctx) {
       const AC = g.AudioContext || g.webkitAudioContext; if (!AC) return null;
-      BA.ctx = new AC();
-      BA.master = BA.ctx.createGain(); BA.master.gain.value = 0.9; BA.master.connect(BA.ctx.destination);
+      const now = (typeof Date !== "undefined") ? Date.now() : 0;
+      if (BA._ctxFailedAt && now - BA._ctxFailedAt < 900) return null;   // don't hammer it every frame
+      try {
+        BA.ctx = new AC();
+        BA.master = BA.ctx.createGain(); BA.master.gain.value = BA.muted ? 0 : 0.9; BA.master.connect(BA.ctx.destination);
+        BA._ctxFailedAt = 0;
+      } catch (e) {
+        BA.ctx = null; BA.master = null; BA._ctxFailedAt = now || 1;
+        return null;
+      }
     }
     return BA.ctx;
   }
 
-  BA.configure = function (o) { o = o || {}; if (o.sfxBase != null) BA.sfxBase = o.sfxBase; if (o.map) BA.map = o.map; if (BA._unlocked) BA.preload(); };
+  BA.configure = function (o) { o = o || {}; if (o.sfxBase != null) BA.sfxBase = o.sfxBase; if (o.map) BA.map = o.map; BA._wantsAudio = true; if (BA._unlocked) BA.preload(); };
 
   // Canonical shared one-shots (real ElevenLabs sounds in /api/sfx). Any game that
   // triggers one of these bare event names resolves to the created sound even if it
@@ -114,11 +128,17 @@
     }
   }
 
-  BA.setMusic = function (url) { if (typeof Audio !== "undefined" && url) { try { BA.music = new Audio(url); BA.music.loop = true; BA.music.crossOrigin = "anonymous"; BA.music.volume = 0; BA.music.preload = "auto"; } catch (e) {} } };
+  BA.setMusic = function (url) { BA._wantsAudio = true; if (typeof Audio !== "undefined" && url) { try { BA.music = new Audio(url); BA.music.loop = true; BA.music.crossOrigin = "anonymous"; BA.music.volume = 0; BA.music.preload = "auto"; } catch (e) {} } };
 
   BA.unlock = function () {
-    const ac = ctx(); if (ac && ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
-    if (!BA._unlocked) { BA._unlocked = true; BA.preload(); }
+    // Only reach for a context on a page that actually makes sounds. A page that
+    // never configures one (the app shell) stays out of the way, so the game in
+    // its iframe gets the slot instead. A page with no map still gets its synth
+    // fallback, because BA.sfx builds the context itself when a sound is asked for.
+    if (BA._wantsAudio || BA.ctx) {
+      const ac = ctx(); if (ac && ac.state === "suspended") { try { ac.resume(); } catch (e) {} }
+      if (!BA._unlocked) { BA._unlocked = true; BA.preload(); }
+    } else if (!BA._unlocked) { BA._unlocked = true; }
     BA.playMusic();
   };
   BA.playMusic = function () { if (!BA.music || BA.muted || !BA._unlocked) return; try { BA.music.volume = 0.4; const p = BA.music.play(); if (p && p.catch) p.catch(()=>{}); } catch (e) {} };
@@ -167,9 +187,26 @@
       if (BA._bgWasPlaying && !BA.muted && BA._unlocked) BA.playMusic();
       BA._bgWasPlaying = false;
     };
+    // Leaving for good is different from being hidden for a moment: CLOSE the
+    // context so the device gets its slot back. The app swaps one game iframe for
+    // the next all session long, and every engine that never released its context
+    // used up one of the handful iOS allows — after a few games the next engine
+    // was refused one and its sound effects went silent while the music, which is
+    // a plain audio element with no such limit, carried on. That is the bug.
+    const release = function () {
+      onHide();
+      try { if (BA.ctx && BA.ctx.close && BA.ctx.state !== "closed") BA.ctx.close(); } catch (e) {}
+      BA.ctx = null; BA.master = null; BA.buffers = {}; BA._loading = {}; BA._last = {};
+      BA._unlocked = false; BA._ctxFailedAt = 0;
+    };
+    BA.release = release;
     try {
       g.document.addEventListener("visibilitychange", function () { if (g.document.hidden) onHide(); else onShow(); });
-      g.addEventListener("pagehide", onHide);
+      g.addEventListener("pagehide", release);
+      // `unload` is what fires when the app drops this game's iframe, but adding it
+      // costs a top-level page its back-forward cache — so only inside a frame.
+      let framed = false; try { framed = (g.top !== g.self); } catch (e) { framed = true; }
+      if (framed) g.addEventListener("unload", release);
     } catch (e) {}
   }
 
