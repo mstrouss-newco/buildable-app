@@ -1,3 +1,32 @@
+## 2026-08-29 - SL-NEXT (part 2): every Journey game now goes forward
+
+Mike: "yes check everything and fix if its broken." Audited all 14 games that have a
+winding Journey map, on two axes: does the win tap open the next level, and does the
+map actually LEARN the level was cleared.
+
+**Bubble Buddies was the worst one, and nobody had noticed.** The engine wrote no
+progress at all -- zero localStorage calls in the file -- so the shell's
+`readBreakerProgress("bubble")` read `{unlocked:0}` forever. A kid could clear level 1,
+leave, come back, and find levels 2-6 still padlocked. Every time. It now writes the
+shared per-kid shape `bk_bubble_prefs[_<kidId>]` = `{unlocked, stars}` on every clear.
+
+**Four more had Sling's bounce-back**: memory, mahjong, tumble and castle-guard all
+posted `nav:exit` after EVERY clear when opened from the map. All four now open the
+next level and only exit to the map on the last one. Castle Guard's card said "Tap to
+choose another level" and Mahjong's and Memory's said "Tap to play again"; all three
+now say "Tap for the next one" when there is one.
+
+Clean already: survival, croctot, string-match, rileys-garden, typing, mathcannon and
+breaker all advance in-engine, and their maps read a key the engine really writes.
+
+**Sky Flyer is the open question** -- it has no level-clear state at all. A finished job
+shows a fact card that auto-closes back into free flight in the same world, and the
+world only unlocks through the quiz gate (`quizRequest` -> `bk:quizDone` ->
+`markUnlockNext`). If that modal is dismissed without finishing, the unlock is silently
+dropped. Not touched here; needs a decision about what "clearing a world" even means.
+
+qa-memory, qa-mahjong, qa-castleguard, qa-bubble, qa-tumble, qa-sling: ALL CHECKS PASS.
+
 ## 2026-08-29 - SL-NEXT: Sling Squad now goes to the next level when you tap
 
 Mike, from his iPhone: "sling squad doesnt go forward after beating the first level."

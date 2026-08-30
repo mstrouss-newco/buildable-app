@@ -74,6 +74,26 @@ var BB_DEMO=false, BB_LEVEL=null;
 try{ var _bq=new URLSearchParams(location.search); BB_DEMO=_bq.get("screen")==="demo";
   var _bl=_bq.get("level"); if(_bl!=null&&_bl!==""&&!isNaN(+_bl)) BB_LEVEL=Math.floor(+_bl); }catch(e){}
 
+// ---------- progress (SL-NEXT) ----------
+// Bubble used to save NOTHING, so the shell's winding Journey map read
+// {unlocked:0} forever: a kid could clear level 1 and still find level 2
+// padlocked, every time. The map reads the shared per-kid shape
+// "bk_bubble_prefs[_<kidId>]" = {unlocked, stars}, so write exactly that on
+// every clear. Best-effort and headless-safe: QA runs this file with no DOM.
+var BB_PREFS = { unlocked:0, stars:{} };
+function bbKey(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");
+  return "bk_bubble_prefs"+((k&&k.id)?("_"+k.id):""); }catch(e){ return "bk_bubble_prefs"; } }
+function bbLoadPrefs(){ try{ var s=localStorage.getItem(bbKey()); if(!s) return;
+  var p=JSON.parse(s); BB_PREFS.unlocked=p.unlocked||0;
+  BB_PREFS.stars=(p.stars&&typeof p.stars==="object")?p.stars:{}; }catch(e){} }
+function bbSaveClear(idx){ if(BB_DEMO) return; try{
+  bbLoadPrefs();                                  // never clobber another kid's later progress
+  if(!BB_PREFS.stars[idx]) BB_PREFS.stars[idx]=3;
+  var next=Math.min(idx+1, GAME_CONFIG.levels.length);
+  if(BB_PREFS.unlocked<next) BB_PREFS.unlocked=next;
+  localStorage.setItem(bbKey(), JSON.stringify({ unlocked:BB_PREFS.unlocked, stars:BB_PREFS.stars }));
+}catch(e){} }
+
 // ---------- colours (Kenney Shape Characters, CC0) ----------
 var COLORS = {
   R:{name:"red",    css:"#e8543d", body:"/kenney/shapechars/red_body_circle.png"},
@@ -473,6 +493,7 @@ function endGame(won){
   var last = G.level>=GAME_CONFIG.levels.length-1;
   // gentle chime between levels; save the big celebration for finishing the last one
   if(won) sfx(last?"celebrate":"coin"); else sfx("lose");
+  if(won) bbSaveClear(G.level);   // SL-NEXT: light up the next stop on the Journey map
   signal(won?"win":"lose");
   if(HAS_DOM){
     var ov=document.getElementById("overlay"); ov.classList.remove("hide");
