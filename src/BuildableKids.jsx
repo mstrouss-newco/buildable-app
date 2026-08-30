@@ -14,7 +14,7 @@ import LoadingGames from "./LoadingGames";
 import QuickGame from "./QuickGame";
 import FamilyChess from "./FamilyChess";
 import GameLobby from "./GameLobby";
-import BottomBar, { navBarClear, navTabFor } from "./BottomBar.jsx";
+import BottomBar, { navBarClear, navTabFor, NAV_BAR_H } from "./BottomBar.jsx";
 import GrownUpFriends from "./GrownUpFriends";
 import FamilyTown from "./FamilyTown";
 import FamilyCheckers from "./FamilyCheckers";
@@ -431,14 +431,38 @@ function NavBtn({ kind, muted, top, onClick }) {
 // shared nav bridge (buildable-gamenav.js -> posts "nav:state"), the shell also renders
 // its Sound/Menu/Help cluster top-right and the game draws NO nav buttons of its own
 // (nothing per-game to drift or overlap). Games that don't opt in render exactly as before.
-function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = null, iframeProps = {}, onChildMessage = null, overlay = null }) {
+//
+// GN4 -- the bottom bar over an engine's OWN picker. Rule 0 is about deciding vs
+// doing, not about which side of an iframe a screen lives on: a kid staring at an
+// engine's level picker is deciding, and until now the corner Home was their only
+// way out. The bridge already tells us which it is (nav:state -> inGame), so while
+// an engine reports it is NOT playing we float the five-tab bar over the frame, and
+// drop it the instant play starts. Engines that never report inGame default to
+// true, so this is opt-in by construction and no existing game changes.
+function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = null, iframeProps = {}, onChildMessage = null, overlay = null, nav, navTab = "play" }) {
   const ref = useRef(null);
-  const [nav, setNav] = useState(null);
+  // What the GAME reported about itself through buildable-gamenav.js (sound state,
+  // which buttons it wants, whether it is playing). Distinct from the `nav` prop,
+  // which is the SHELL's five tab handlers.
+  const [bridge, setBridge] = useState(null);
   useEffect(() => {
     const h = (e) => {
       const d = e && e.data;
       if (d === "nav:exit" || d === "bk:home" || (d && d.type === "nav:exit")) { onHome(); return; }
-      if (d && d.type === "nav:state") setNav({ sound: !!d.sound, hasMenu: !!d.hasMenu, hasHelp: !!d.hasHelp, inGame: d.inGame !== false });
+      if (d && d.type === "nav:state") setBridge({ sound: !!d.sound, hasMenu: !!d.hasMenu, hasHelp: !!d.hasHelp, inGame: d.inGame !== false });
+      // GN4: on iOS a touch on a shell element overlapping an iframe is routed INTO
+      // the iframe, so the bar would be dead to a finger. The bridge catches that
+      // tap inside the game and forwards its viewport coordinates; the iframe fills
+      // this frame exactly, so those coordinates are OUR coordinates. Hit-test the
+      // real bar and press the real button -- no duplicated tab geometry to drift.
+      if (d && d.type === "nav:barTap") {
+        try {
+          const hit = document.elementFromPoint(d.x, d.y);
+          const btn = hit && hit.closest && hit.closest("[data-nv1-bottom-bar] button[data-tab]");
+          if (btn) btn.click();
+        } catch (e) {}
+        return;
+      }
       // CARTRIDGE-CONTRACT `skill`: any embedded game reports a practiced skill; the
       // shell relays it into the shared learning_events ledger (one record per kid,
       // same source the quiz gates write to). Best-effort, never blocks play.
@@ -463,19 +487,30 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
     window.addEventListener("pagehide", onHide);
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", onHide); };
   }, []);
+  // GN4: the bar is up only when this engine says it is not playing AND the shell
+  // was handed nav handlers. Tell the game, so its picker can pad clear of the bar
+  // and the touch catcher can go up (and come down) with it.
+  const barUp = !!(nav && bridge && bridge.inGame === false);
+  useEffect(() => {
+    try {
+      const w = ref.current && ref.current.contentWindow;
+      if (w) w.postMessage({ type: "nav:bar", on: barUp, h: NAV_BAR_H }, "*");
+    } catch (e) {}
+  }, [barUp]);
   const send = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
   const homeStyle = light
     ? { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }
     : { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
-  const showMenuBtn = nav && nav.hasMenu && nav.inGame;
+  const showMenuBtn = bridge && bridge.hasMenu && bridge.inGame;
   return (
     <div style={{ position: "fixed", inset: 0, background: bg, zIndex: 50 }}>
       <button onClick={onHome} style={homeStyle} aria-label="Home">Home</button>
       {right}
-      {nav && <NavBtn kind="sound" muted={!nav.sound} top={14} onClick={() => send("nav:sound")} />}
+      {bridge && <NavBtn kind="sound" muted={!bridge.sound} top={14} onClick={() => send("nav:sound")} />}
       {showMenuBtn && <NavBtn kind="menu" top={58} onClick={() => send("nav:menu")} />}
-      {nav && nav.hasHelp && <NavBtn kind="help" top={showMenuBtn ? 102 : 58} onClick={() => send("nav:help")} />}
+      {bridge && bridge.hasHelp && <NavBtn kind="help" top={showMenuBtn ? 102 : 58} onClick={() => send("nav:help")} />}
       <iframe ref={ref} title={title} src={src} {...iframeProps} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      {barUp && <BottomBar current={navTab} {...nav} />}
       {overlay}
     </div>
   );
@@ -517,13 +552,13 @@ function survivalUpParam() {
     .filter(Boolean);
   return pairs.length ? "&up=" + encodeURIComponent(pairs.join(",")) : "";
 }
-function SurvivalScreen({ onHome, onUpgrades, level }) {
+function SurvivalScreen({ onHome, onUpgrades, level, nav }) {
   const src = "/survival-engine.html?v=9c" + survivalUpParam() + (level != null ? "&level=" + level : "");
   // This is a DOING screen — the bottom bar never shows over play — so the pill
   // keeps its normal 14px offset. Any deciding screen that grows a Gear up pill
   // passes overBar so it clears the bar (GN1).
   const right = gearUpBtn(onUpgrades, false);
-  return <GameFrame title="Buildable Survival" src={src} onHome={onHome} right={right} />;
+  return <GameFrame nav={nav} title="Buildable Survival" src={src} onHome={onHome} right={right} />;
 }
 
 // Kidspedia exhibit viewer (Session 8G). One shell wrapper for every orbit-explorer
@@ -536,21 +571,21 @@ function SurvivalScreen({ onHome, onUpgrades, level }) {
 // weather.html / orbit-explorer.html. This handler stays only to un-stick any
 // stale cached exhibit that still posts quizRequest: it immediately answers
 // "done" so the page never freezes. Quizzes belong in games and tools, not here.
-function ExploreScreen({ onHome, exhibitId }) {
+function ExploreScreen({ onHome, exhibitId, nav }) {
   const onChildMessage = (d, post) => {
     if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
     post({ type: "resume" });
     post({ type: "bk:quizDone" });
   };
-  return <GameFrame title="Kidspedia" src={`/explore/${encodeURIComponent(exhibitId)}`} onHome={onHome} onChildMessage={onChildMessage} bg="#0B0A18" />;
+  return <GameFrame nav={nav} title="Kidspedia" src={`/explore/${encodeURIComponent(exhibitId)}`} onHome={onHome} onChildMessage={onChildMessage} bg="#0B0A18" />;
 }
 
 // Session LS2 — the Lessons section. The page owns all three screens (pick a
 // subject, climb the unit path, play the lesson) exactly like the approved mock,
 // so the shell just frames it. Cream page, so the shared nav uses its light
 // treatment. Answers reach the 8B ledger through GameFrame's `skill` relay.
-function LessonsScreen({ onHome }) {
-  return <GameFrame title="Lessons" src="/lessons" onHome={onHome} bg="#FDFAF5" light />;
+function LessonsScreen({ onHome, nav }) {
+  return <GameFrame nav={nav} title="Lessons" src="/lessons" onHome={onHome} bg="#FDFAF5" light />;
 }
 // Session PT1 — Practice. The shared deck engine (public/buildable-practice.js),
 // carrying the five Dolch sight-word lists today and the four maths operations
@@ -564,7 +599,7 @@ function PracticeScreen({ onHome }) {
 // and court picker. TENNIS_COURTS mirrors the manifest "World" slot order. With no
 // mode (opened directly) the engine still falls back to its built-in menu.
 const TENNIS_COURTS = ["beach", "space", "jungle", "ocean", "candy", "snow", "volcano", "city"];
-function TennisScreen({ onHome, onPlayFriend, start }) {
+function TennisScreen({ onHome, onPlayFriend, start, nav }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "tennisPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
@@ -575,9 +610,9 @@ function TennisScreen({ onHome, onPlayFriend, start }) {
     const court = TENNIS_COURTS[(readEquipped("tennis").World) || 0] || "beach";
     src += "&mode=" + (start === "local" ? "two" : "solo") + "&world=" + court;
   }
-  return <GameFrame title="Buildable Tennis" src={src} onHome={onHome} />;
+  return <GameFrame nav={nav} title="Buildable Tennis" src={src} onHome={onHome} />;
 }
-function BreakerScreen({ onHome, entry = "journey" }) {
+function BreakerScreen({ onHome, entry = "journey", nav }) {
   const [quiz, setQuiz] = useState(null); // { reply } while a learning gate is showing
   const onChildMessage = (d, post) => {
     if (!d || d.source !== "buildable" || d.kind !== "quizRequest") return;
@@ -609,7 +644,7 @@ function BreakerScreen({ onHome, entry = "journey" }) {
   } else {
     src = `/breaker-engine.html?v=3c&screen=${entry}`;
   }
-  return <GameFrame title="Buildable Breaker" src={src} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
+  return <GameFrame nav={nav} title="Buildable Breaker" src={src} onHome={onHome} onChildMessage={onChildMessage} overlay={overlay} />;
 }
 
 // Shell-generated game landing (Session 3A) — a converted game's front door.
@@ -1471,29 +1506,29 @@ function UpgradeStore({ game, onBack, onPlay, nav }) {
   );
 }
 
-function CastleGuardScreen({ onHome, level }) { return <GameFrame title="Castle Guard" src={"/castle-guard.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#2e7d32" />; }
-function TumbleScreen({ onHome, level }) { return <GameFrame title="Tumble Blocks" src={"/tumble-engine.html?v=1" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0c1230" />; }
-function BoardGameScreen({ onHome, title, src, onPlayFriend }) {
+function CastleGuardScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Castle Guard" src={"/castle-guard.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#2e7d32" />; }
+function TumbleScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Tumble Blocks" src={"/tumble-engine.html?v=1" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0c1230" />; }
+function BoardGameScreen({ onHome, title, src, onPlayFriend, nav }) {
   useEffect(() => {
     if (!onPlayFriend) return;
     function onMsg(e) { if (e && e.data && e.data.type === "bgPlayFriend") onPlayFriend(); }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onPlayFriend]);
-  return <GameFrame title={title} src={src} onHome={onHome} bg="#0b1030" />;
+  return <GameFrame nav={nav} title={title} src={src} onHome={onHome} bg="#0b1030" />;
 }
-function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/maze-engine.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function SlingScreen({ onHome, level }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame title="Sling Squad" src={`/sling-squad.html?v=hud3${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function CrocScreen({ onHome, level }) { return <GameFrame title="Croc Tot" src={"/croctot.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#7fc7ff" />; }
-function MathCannonScreen({ onHome, level }) { return <GameFrame title="Math Cannon" src={"/mathcannon-engine.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#12102a" />; }
-function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Garden" src={"/rileys-garden.html?v=art2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#87CEEB" />; }
-function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
-function BubbleScreen({ onHome, level }) { return <GameFrame title="Bubble Buddies" src={"/bubble-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0e1830" />; }
+function MazeScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Maze Munchers" src="/maze-engine.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function SlingScreen({ onHome, level, nav }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame nav={nav} title="Sling Squad" src={`/sling-squad.html?v=hud3${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function TankScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function CrocScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Croc Tot" src={"/croctot.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#7fc7ff" />; }
+function MathCannonScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Math Cannon" src={"/mathcannon-engine.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#12102a" />; }
+function RileysScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Riley's Garden" src={"/rileys-garden.html?v=art2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#87CEEB" />; }
+function StringMatchScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
+function BubbleScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Bubble Buddies" src={"/bubble-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0e1830" />; }
 // Sky Flyer (FL2). The journey picks the world (?level=), the shell hangar picks the
 // plane (?ride= from the Make-it-mine loadout). The engine reads both on load, so a
 // refresh keeps the same world and the same ride.
-function SkyFlyerScreen({ onHome, level }) {
+function SkyFlyerScreen({ onHome, level, nav }) {
   const eq = readEquipped("skyflyer");
   // FL3 renamed the hangar slot from "Plane" to "Ride" (it holds a copter and a
   // jetpack kid now, not three planes). Read the new name first and fall back to
@@ -1523,18 +1558,18 @@ function SkyFlyerScreen({ onHome, level }) {
       <QuickGame goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="skyflyer" title="Quick game to unlock the next world!" onPass={finish} />
     </div>
   ) : null;
-  return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light
+  return <GameFrame nav={nav} title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light
     onChildMessage={onChildMessage} overlay={overlay} />;
 }
-function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
-function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
-function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
-function MemoryScreen({ onHome, level }) { return <GameFrame title="Buildable Memory Match" src={"/memory-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#131229" />; }
-function MahjongScreen({ onHome, level }) { return <GameFrame title="Buildable Mahjong" src={"/mahjong-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#101a2e" />; }
-function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
-function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
-function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function TownScreen({ onHome, onFamily }) { return <GameFrame title="Family Town" src="/family-town.html?v=1" onHome={onHome} right={familyBtn(onFamily)} />; }
+function SunnyTownScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
+function SoundboardScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
+function ArtStudioScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
+function MemoryScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Buildable Memory Match" src={"/memory-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#131229" />; }
+function MahjongScreen({ onHome, level, nav }) { return <GameFrame nav={nav} title="Buildable Mahjong" src={"/mahjong-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#101a2e" />; }
+function BingoScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Buildable Bingo" src="/bingo-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
+function SnakesScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
+function PlatformerScreen({ onHome, nav }) { return <GameFrame nav={nav} title="Buildable Platformer" src="/play.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
+function TownScreen({ onHome, onFamily, nav }) { return <GameFrame nav={nav} title="Family Town" src="/family-town.html?v=1" onHome={onHome} right={familyBtn(onFamily)} />; }
 
 // Shared slim icon-button style for the home top-nav (My Stuff / Grown-ups /
 // Friends). Keeping one style object here is what makes the three controls look
@@ -2421,10 +2456,10 @@ export default function BuildableKids() {
       onPlay={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }} />;
   }
   if (screen === SCREEN_PLATFORMER) {
-    return <PlatformerScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <PlatformerScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SURVIVAL) {
-    return <SurvivalScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
+    return <SurvivalScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} onUpgrades={() => setScreen(SCREEN_SURVIVAL_UPGRADES)} />;
   }
   if (screen === SCREEN_SURVIVAL_UPGRADES) {
     const sv = GAME_CATALOG.find((g) => g.id === "survival");
@@ -2454,25 +2489,25 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER) {
     const backToJourney = typeof breakerEntry === "string" && breakerEntry.indexOf("play:") === 0;
-    return <BreakerScreen entry={breakerEntry} onHome={() => setScreen(backToJourney ? SCREEN_BREAKER_JOURNEY : SCREEN_BREAKER_LANDING)} />;
+    return <BreakerScreen nav={bottomBarProps} entry={breakerEntry} onHome={() => setScreen(backToJourney ? SCREEN_BREAKER_JOURNEY : SCREEN_BREAKER_LANDING)} />;
   }
   if (screen === SCREEN_EXPLORE) {
-    return <ExploreScreen exhibitId={exploreId} onHome={() => setScreen(SCREEN_HOME)} />;
+    return <ExploreScreen nav={bottomBarProps} exhibitId={exploreId} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_LESSONS) {
-    return <LessonsScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <LessonsScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_PRACTICE) {
     return <PracticeScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CASTLE) {
-    return <CastleGuardScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <CastleGuardScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TUMBLE) {
-    return <TumbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <TumbleScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
+    return <BoardGameScreen nav={bottomBarProps} title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -2531,13 +2566,13 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CONNECTFOUR) {
-    return <BoardGameScreen title="Buildable Connect Four" src={"/connectfour-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
+    return <BoardGameScreen nav={bottomBarProps} title="Buildable Connect Four" src={"/connectfour-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_DOTSBOXES) {
-    return <BoardGameScreen title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
+    return <BoardGameScreen nav={bottomBarProps} title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAZE) {
-    return <MazeScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <MazeScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SLING_JOURNEY) {
     const sl = GAME_CATALOG.find((g) => g.id === "sling");
@@ -2547,53 +2582,53 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_SLING) {
     const slv = wrapLevel != null ? wrapLevel : slingLevel;
-    return <SlingScreen level={slv}
+    return <SlingScreen nav={bottomBarProps} level={slv}
       onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : (slingLevel != null ? SCREEN_SLING_JOURNEY : SCREEN_HOME)); }} />;
   }
   if (screen === SCREEN_TANK) {
-    return <TankScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <TankScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CROC) {
-    return <CrocScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <CrocScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MATHCANNON) {
-    return <MathCannonScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <MathCannonScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_SKYFLYER) {
-    return <SkyFlyerScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <SkyFlyerScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_RILEYS) {
-    return <RileysScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <RileysScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_STRINGMATCH) {
-    return <StringMatchScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <StringMatchScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_BUBBLE) {
-    return <BubbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <BubbleScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_RUNNER) {
-    return <SunnyTownScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <SunnyTownScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_MEMORY) {
-    return <MemoryScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <MemoryScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAHJONG) {
-    return <MahjongScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+    return <MahjongScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_BINGO) {
-    return <BingoScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <BingoScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SNAKES) {
-    return <SnakesScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <SnakesScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_SOUNDS) {
-    return <SoundboardScreen onHome={() => setScreen(returnTo || SCREEN_HOME)} />;
+    return <SoundboardScreen nav={bottomBarProps} onHome={() => setScreen(returnTo || SCREEN_HOME)} />;
   }
   if (screen === SCREEN_ART) {
-    return <ArtStudioScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <ArtStudioScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_TENNIS) {
-    return <TennisScreen start={tennisStart} onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
+    return <TennisScreen nav={bottomBarProps} start={tennisStart} onHome={() => setScreen(SCREEN_HOME)} onPlayFriend={() => setScreen(SCREEN_TENNIS_LOBBY)} />;
   }
   if (screen === SCREEN_TENNIS_LOBBY) {
     return (
@@ -2612,7 +2647,7 @@ export default function BuildableKids() {
     return <FamilyRealtime nav={bottomBarProps} game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TOWN) {
-    return <TownScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
+    return <TownScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
   }
   if (screen === SCREEN_TOWN_FAMILY) {
     return <FamilyTown nav={bottomBarProps} activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
