@@ -4,7 +4,7 @@ One consistent contract for every Buildable game, so the app's navigation and a
 game's own HUD/buttons never fight for the same corner. Follow this for every new
 game and when touching an existing one.
 
-## Rule 0 — Deciding shows the bar, doing never does (GN1, GN2)
+## Rule 0 — Deciding shows the bar, doing never does (GN1, GN2, GN3)
 
 Every screen in the app is either a **deciding** screen or a **doing** screen, and
 that alone decides whether the five-tab bottom bar (`BottomBar`, `data-nv1-bottom-bar`)
@@ -55,8 +55,41 @@ is worse than a stale row. `qa-gn2.mjs` mounts the lobby against a mock transpor
 and asserts that order.
 
 **The bar owns the bottom strip.** Where the bar shows, nothing else may sit within
-`navBarClear()` of the bottom edge — the same deal the shell's reserved top strip
-has with a game's HUD.
+`navBarClear()` of the bottom edge — currently ~76px plus the phone's safe-area
+inset. This is the same deal the shell's reserved top strip has with a game's HUD:
+that band belongs to navigation, and a control placed in it is a control the kid
+taps by accident.
+
+### Which tab lights
+
+Never hardcoded per screen. `navTabFor(game)` (`src/BottomBar.jsx`) reads the
+catalog/manifest `type`: a **studio's** front door and loadout light **Make**,
+everything on the way into a **game** lights **Play**. A new studio is right for
+free. The five section pages light their own tab; the Top Creations board lights
+**Home**, because it is a Home shelf opened out rather than a section of its own.
+
+### The four things that never carry the bar
+
+Everything a kid can stand on between Home and play is a deciding screen and gets
+the bar. A screen is exempt only if it is one of these, and the reason is always
+one of these four:
+
+1. **A live engine iframe or an active studio canvas.** Every `GameFrame` screen,
+   the lobby's PLAYING screen, the family lane's match views, the sound/art/music/
+   story studios, the Kidspedia exhibit and Lessons viewers. The bar would sit on
+   top of the thing the kid is doing.
+2. **An active making canvas mid-flow.** The character creator and the level
+   creator: leaving half-way loses the kid's work, and both already carry their own
+   Home and My Stuff. (The *chooser* in front of them — pick a game type — is a
+   deciding screen and does carry the bar.)
+3. **A first-run gate.** The helper picker. A gate has exactly one job, and a bar
+   is an invitation to skip it.
+4. **A grown-up screen.** The Grown-ups portal, the friends admin, the dashboard.
+   Different audience — kid navigation does not belong in a parent area.
+
+`qa-gn3.mjs` holds the register of every screen in the shell with its
+classification, and fails if a new `SCREEN_` constant is added without one. That
+is deliberate: the next person to add a screen has to answer the question.
 
 ## The reserved top strip (who owns the corners)
 
