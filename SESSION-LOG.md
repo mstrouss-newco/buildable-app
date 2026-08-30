@@ -1,3 +1,96 @@
+## 2026-08-30 — PT2 + PT3: Practice Round 2 (the GROUPED batch)
+
+Both cards carried a `GROUPED 2026-08-29` note saying to run them as one
+session, and Mike confirmed the batch. So: the warm-up, the birds, the parent
+controls and the open gate (PT2), plus the four maths operations and Sprint
+(PT3), all on the one engine PT1 built. **No fork of `buildable-practice.js`** —
+the maths decks are data files and the engine still has no idea what a times
+table is (qa-practice fails the build if that ever changes).
+
+**The placement warm-up.** A kid's first visit opens on "Let's see what you
+already know" — ten words spanning the five Dolch lists, two from each. Nothing
+is marked right or wrong on screen: a tap gets a neutral acknowledgement, never
+green or red, because the kid is not being marked. The only outcome is a
+friendlier starting point. Lists below where they land are seeded at **box 3
+and flagged `placed`, never box 5** — the warm-up can put a kid in the right
+place but can never hand them a word, or a bird, they did not earn. Seeded due
+dates are staggered so they trickle back instead of all landing on one day.
+Re-running it (from the Parents area) drops only the seeded items; work a kid
+actually did is never touched.
+
+**The bird collection.** Birds on telephone wires across the top of Practice,
+one per word or fact known by heart. **No text anywhere in it**, so a
+non-reader still understands their flock got bigger. Every bird is really
+drawn — the number on screen IS the mastered count, not a rounded-off
+decoration — and as the flock grows the birds shrink and more wires appear, so
+a big flock reads as a big flock. A new bird flies in with a soft sound;
+finishing a whole list makes every bird sing.
+
+**Practice is open to everyone.** The 1111 owner gate is off the Home door. It
+reads "Words & numbers" now.
+
+**The Parents Practice row.** One per kid under the skills dashboard: where
+they are, how much they know by heart, per-list bars, sprint bests. Grown-ups
+can bump the word list Easier or Harder, send a kid back through the quick
+check, and set the sprint length and question goal (60s / 40 by default, the
+common school format). It reads and writes the *same* state the kid's page
+uses, through the shared engine — one set of box rules, not a parent-side copy.
+
+**The four maths decks — and the ordering is the whole point.** Adding 66,
+taking away 121, times 66, sharing 100. School fact practice usually marches
+1+1, 1+2, 1+3, which teaches a child to count up rather than to *know*. These
+group facts by the trick they share (zeros and ones, doubles, make ten, tens,
+almost doubles, then the genuinely hard middle last), and item order IS
+introduction order. Within a family the facts are then **spread**: sorting by
+size alone produced `0x0, 0x1, 0x2 …` — ten cards in a row all answering zero,
+the same failure wearing a family badge. Multiplication now opens
+`0x0, 1x1, 0x2, 1x3`. Dividing by zero is out (not a fact); so is dividing zero
+by things (eleven cards answering zero teach nothing).
+
+**The keypad.** Maths answers on a big drawn keypad — digits, a rub-out, a go
+key, all SVG. An explicit go key rather than auto-submit, which would leak how
+many digits the answer has.
+
+**Sprint.** Sixty seconds, answer as many as you can, big friendly count at the
+end. It is the **only timed screen in the product and the only clock**, and even
+there the time is a draining bar with no digits chasing the kid. It unlocks only
+once practice shows about 80% of the facts a kid has actually met sitting at box
+3+ — a victory lap, not a wall — and facts never introduced are never held
+against them. Beat-your-own-best only: the stored shape has nowhere to put
+another kid's number. **Sprint answers never move the practice boxes**, because
+time pressure must not knock a word back down.
+
+**Sounds.** Nine practice cues added to `api/sfx.js`, played through the shared
+ElevenLabs pipeline, every one authored at or above the 0.5s minimum. The
+wrong-answer cue is deliberately a warm neutral tap, never a buzzer.
+
+**QA: `qa-practice.mjs` is now 279 checks, all green.** It boots the page four
+times in jsdom with its real scripts and plays each mode to the end. Two real
+bugs came out of doing that rather than checking one answer:
+
+1. **The stalled run.** `answer()` locks both the card grid and the keypad so a
+   double tap cannot double-grade, but `showAsk` only reset whichever surface it
+   was about to use. The other stayed locked forever, so from the *second* card
+   onwards every tap was silently swallowed. A single-answer test would never
+   have seen it.
+2. **The collapsed deck card.** `qa-practice-shot.mjs` drives a real Chromium
+   and writes phone/iPad/numbers screenshots so a human can LOOK at the flock.
+   Looking at the first pass showed the deck name and count running together
+   ("First Words40 words") with the progress bar collapsed — the card's spans
+   were never set to `display:block`. Fixed and re-shot.
+
+`qa-nv1` through `qa-nv4` still pass after the Home change.
+
+**Flagged, unchanged from PT1: the 220 word mp3s are still not baked.** This
+sandbox has no network route to the live site. Practice speaks in the same
+ElevenLabs voice through `/api/say`, so nothing is broken for a kid — the static
+files are a speed and offline win. One command from any machine that can reach
+production: `node scripts/gen-practice-audio.mjs`.
+
+**What remains in this phase:** nothing on the roadmap. PT1, PT2 and PT3 are the
+whole PT block, and all three are now built. The phase's done-when is met except
+for that audio bake and a look at the live site once this branch merges.
+
 ## 2026-08-29 — PT1: the practice engine, and sight words playing on it
 
 The first half of the practice phase: build the shared deck engine, then ship the

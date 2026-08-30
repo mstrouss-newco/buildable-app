@@ -6,6 +6,49 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Practice Round 2: the warm-up, the birds, and numbers (PT2 + PT3, August 30 2026)
+`public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
+`api/sfx.js`, `qa-practice.mjs`, `qa-practice-shot.mjs`,
+`scripts/gen-practice-math-decks.mjs`, `src/BuildableKids.jsx`,
+`src/GrownUpScreen.jsx`. Phase **PT**, cards **PT2 + PT3** (run as one session,
+as both cards' GROUPED notes asked).
+
+**Practice is open to everyone** — the 1111 owner gate is off the Home door.
+
+**The quick check.** A kid's first visit runs a ten-word warm-up spanning the
+five Dolch lists. Nothing is marked right or wrong on screen; the only outcome
+is a friendlier starting point. Lists below where they land are seeded at box 3
+and flagged as placed, never box 5, so the warm-up can never hand a kid a word —
+or a bird — they did not earn.
+
+**The bird collection.** One drawn bird per word or fact known by heart, sitting
+on telephone wires across the top of Practice, with no text at all so a
+non-reader still gets it. Every bird is really drawn, so the number on screen is
+the mastered count. New birds fly in; finishing a whole list makes them all sing.
+
+**Numbers.** Adding, taking away, times and sharing — 353 facts on the same
+engine, answered on a big drawn keypad. Ordered by strategy family rather than
+up the number line: the facts that share a trick arrive together, easiest trick
+first, hard middle last. Within a family they are spread so consecutive cards
+never all answer the same thing.
+
+**Sprint** is the one timed screen in the product: 60 seconds, a big friendly
+count at the end, and the clock is a draining bar with no digits. It opens only
+once practice shows a kid is already fluent at that operation, it is always
+beat-your-own-best, and sprint answers never move the practice boxes.
+
+**Grown-ups** get a Practice row per kid: where they are, what they know by
+heart, sprint bests, an Easier/Harder level override, a redo of the quick check,
+and the sprint length and question goal.
+
+**QA** is `qa-practice.mjs`, now 279 checks green, booting the page four times in
+jsdom and playing every mode to the end — which is how it caught a real bug
+where the second answer in any run was silently swallowed by a stale lock.
+`qa-practice-shot.mjs` drives a real Chromium for screenshots of the flock;
+looking at those caught a collapsed deck card. The 220 word mp3s are still not
+baked (no network route to production from the build sandbox) — practice speaks
+in the same voice via `/api/say` meanwhile.
+
 ## Practice: one deck engine, sight words riding on it (PT1, August 29 2026)
 `public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
 `scripts/gen-practice-decks.mjs`, `scripts/gen-practice-audio.mjs`,
