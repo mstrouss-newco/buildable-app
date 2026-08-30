@@ -2,11 +2,12 @@
   "id": "sight-words-first",
   "name": "First Grade",
   "group": "Sight Words",
-  "blurb": "41 words for first grade",
+  "blurb": "For first grade",
   "subject": "reading",
   "skill": "sight-words-first",
   "grade": "1",
   "order": 3,
+  "answerUI": "choice",
   "audioBase": "/practice/audio/words/",
   "items": [
     {

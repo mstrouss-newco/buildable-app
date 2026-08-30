@@ -1,0 +1,743 @@
+{
+  "id": "math-division",
+  "name": "Sharing",
+  "group": "Numbers",
+  "blurb": "Times tables backwards",
+  "subject": "math",
+  "skill": "math-division",
+  "grade": "4",
+  "order": 14,
+  "answerUI": "keypad",
+  "families": [
+    {
+      "key": "zeros-ones",
+      "name": "Zeros and ones"
+    },
+    {
+      "key": "tens",
+      "name": "Tens"
+    },
+    {
+      "key": "twos",
+      "name": "Doubles"
+    },
+    {
+      "key": "fives",
+      "name": "Fives"
+    },
+    {
+      "key": "squares",
+      "name": "Squares"
+    },
+    {
+      "key": "nines",
+      "name": "Nines"
+    },
+    {
+      "key": "hard-middle",
+      "name": "The tricky ones"
+    }
+  ],
+  "items": [
+    {
+      "id": "d1b1",
+      "prompt": "1 ÷ 1",
+      "answer": "1",
+      "say": "one divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d2b1",
+      "prompt": "2 ÷ 1",
+      "answer": "2",
+      "say": "two divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d2b2",
+      "prompt": "2 ÷ 2",
+      "answer": "1",
+      "say": "two divided by two",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d3b1",
+      "prompt": "3 ÷ 1",
+      "answer": "3",
+      "say": "three divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d3b3",
+      "prompt": "3 ÷ 3",
+      "answer": "1",
+      "say": "three divided by three",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d4b1",
+      "prompt": "4 ÷ 1",
+      "answer": "4",
+      "say": "four divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d4b4",
+      "prompt": "4 ÷ 4",
+      "answer": "1",
+      "say": "four divided by four",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d5b1",
+      "prompt": "5 ÷ 1",
+      "answer": "5",
+      "say": "five divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d5b5",
+      "prompt": "5 ÷ 5",
+      "answer": "1",
+      "say": "five divided by five",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d6b1",
+      "prompt": "6 ÷ 1",
+      "answer": "6",
+      "say": "six divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d6b6",
+      "prompt": "6 ÷ 6",
+      "answer": "1",
+      "say": "six divided by six",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d7b1",
+      "prompt": "7 ÷ 1",
+      "answer": "7",
+      "say": "seven divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d7b7",
+      "prompt": "7 ÷ 7",
+      "answer": "1",
+      "say": "seven divided by seven",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d8b1",
+      "prompt": "8 ÷ 1",
+      "answer": "8",
+      "say": "eight divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d8b8",
+      "prompt": "8 ÷ 8",
+      "answer": "1",
+      "say": "eight divided by eight",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d9b1",
+      "prompt": "9 ÷ 1",
+      "answer": "9",
+      "say": "nine divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d9b9",
+      "prompt": "9 ÷ 9",
+      "answer": "1",
+      "say": "nine divided by nine",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d10b1",
+      "prompt": "10 ÷ 1",
+      "answer": "10",
+      "say": "ten divided by one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d10b10",
+      "prompt": "10 ÷ 10",
+      "answer": "1",
+      "say": "ten divided by ten",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "d20b2",
+      "prompt": "20 ÷ 2",
+      "answer": "10",
+      "say": "twenty divided by two",
+      "family": "tens"
+    },
+    {
+      "id": "d20b10",
+      "prompt": "20 ÷ 10",
+      "answer": "2",
+      "say": "twenty divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d30b3",
+      "prompt": "30 ÷ 3",
+      "answer": "10",
+      "say": "thirty divided by three",
+      "family": "tens"
+    },
+    {
+      "id": "d30b10",
+      "prompt": "30 ÷ 10",
+      "answer": "3",
+      "say": "thirty divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d40b4",
+      "prompt": "40 ÷ 4",
+      "answer": "10",
+      "say": "forty divided by four",
+      "family": "tens"
+    },
+    {
+      "id": "d40b10",
+      "prompt": "40 ÷ 10",
+      "answer": "4",
+      "say": "forty divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d50b5",
+      "prompt": "50 ÷ 5",
+      "answer": "10",
+      "say": "fifty divided by five",
+      "family": "tens"
+    },
+    {
+      "id": "d50b10",
+      "prompt": "50 ÷ 10",
+      "answer": "5",
+      "say": "fifty divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d60b6",
+      "prompt": "60 ÷ 6",
+      "answer": "10",
+      "say": "sixty divided by six",
+      "family": "tens"
+    },
+    {
+      "id": "d60b10",
+      "prompt": "60 ÷ 10",
+      "answer": "6",
+      "say": "sixty divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d70b7",
+      "prompt": "70 ÷ 7",
+      "answer": "10",
+      "say": "seventy divided by seven",
+      "family": "tens"
+    },
+    {
+      "id": "d70b10",
+      "prompt": "70 ÷ 10",
+      "answer": "7",
+      "say": "seventy divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d80b8",
+      "prompt": "80 ÷ 8",
+      "answer": "10",
+      "say": "eighty divided by eight",
+      "family": "tens"
+    },
+    {
+      "id": "d80b10",
+      "prompt": "80 ÷ 10",
+      "answer": "8",
+      "say": "eighty divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d90b9",
+      "prompt": "90 ÷ 9",
+      "answer": "10",
+      "say": "ninety divided by nine",
+      "family": "tens"
+    },
+    {
+      "id": "d90b10",
+      "prompt": "90 ÷ 10",
+      "answer": "9",
+      "say": "ninety divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d100b10",
+      "prompt": "100 ÷ 10",
+      "answer": "10",
+      "say": "100 divided by ten",
+      "family": "tens"
+    },
+    {
+      "id": "d4b2",
+      "prompt": "4 ÷ 2",
+      "answer": "2",
+      "say": "four divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d6b2",
+      "prompt": "6 ÷ 2",
+      "answer": "3",
+      "say": "six divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d6b3",
+      "prompt": "6 ÷ 3",
+      "answer": "2",
+      "say": "six divided by three",
+      "family": "twos"
+    },
+    {
+      "id": "d8b2",
+      "prompt": "8 ÷ 2",
+      "answer": "4",
+      "say": "eight divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d8b4",
+      "prompt": "8 ÷ 4",
+      "answer": "2",
+      "say": "eight divided by four",
+      "family": "twos"
+    },
+    {
+      "id": "d10b2",
+      "prompt": "10 ÷ 2",
+      "answer": "5",
+      "say": "ten divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d10b5",
+      "prompt": "10 ÷ 5",
+      "answer": "2",
+      "say": "ten divided by five",
+      "family": "twos"
+    },
+    {
+      "id": "d12b2",
+      "prompt": "12 ÷ 2",
+      "answer": "6",
+      "say": "twelve divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d12b6",
+      "prompt": "12 ÷ 6",
+      "answer": "2",
+      "say": "twelve divided by six",
+      "family": "twos"
+    },
+    {
+      "id": "d14b2",
+      "prompt": "14 ÷ 2",
+      "answer": "7",
+      "say": "fourteen divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d14b7",
+      "prompt": "14 ÷ 7",
+      "answer": "2",
+      "say": "fourteen divided by seven",
+      "family": "twos"
+    },
+    {
+      "id": "d16b2",
+      "prompt": "16 ÷ 2",
+      "answer": "8",
+      "say": "sixteen divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d16b8",
+      "prompt": "16 ÷ 8",
+      "answer": "2",
+      "say": "sixteen divided by eight",
+      "family": "twos"
+    },
+    {
+      "id": "d18b2",
+      "prompt": "18 ÷ 2",
+      "answer": "9",
+      "say": "eighteen divided by two",
+      "family": "twos"
+    },
+    {
+      "id": "d18b9",
+      "prompt": "18 ÷ 9",
+      "answer": "2",
+      "say": "eighteen divided by nine",
+      "family": "twos"
+    },
+    {
+      "id": "d15b3",
+      "prompt": "15 ÷ 3",
+      "answer": "5",
+      "say": "fifteen divided by three",
+      "family": "fives"
+    },
+    {
+      "id": "d15b5",
+      "prompt": "15 ÷ 5",
+      "answer": "3",
+      "say": "fifteen divided by five",
+      "family": "fives"
+    },
+    {
+      "id": "d20b4",
+      "prompt": "20 ÷ 4",
+      "answer": "5",
+      "say": "twenty divided by four",
+      "family": "fives"
+    },
+    {
+      "id": "d20b5",
+      "prompt": "20 ÷ 5",
+      "answer": "4",
+      "say": "twenty divided by five",
+      "family": "fives"
+    },
+    {
+      "id": "d25b5",
+      "prompt": "25 ÷ 5",
+      "answer": "5",
+      "say": "twenty five divided by five",
+      "family": "fives"
+    },
+    {
+      "id": "d30b5",
+      "prompt": "30 ÷ 5",
+      "answer": "6",
+      "say": "thirty divided by five",
+      "family": "fives"
+    },
+    {
+      "id": "d30b6",
+      "prompt": "30 ÷ 6",
+      "answer": "5",
+      "say": "thirty divided by six",
+      "family": "fives"
+    },
+    {
+      "id": "d35b5",
+      "prompt": "35 ÷ 5",
+      "answer": "7",
+      "say": "thirty five divided by five",
+      "family": "fives"
+    },
+    {
+      "id": "d35b7",
+      "prompt": "35 ÷ 7",
+      "answer": "5",
+      "say": "thirty five divided by seven",
+      "family": "fives"
+    },
+    {
+      "id": "d40b5",
+      "prompt": "40 ÷ 5",
+      "answer": "8",
+      "say": "forty divided by five",
+      "family": "fives"
+    },
+    {
+      "id": "d40b8",
+      "prompt": "40 ÷ 8",
+      "answer": "5",
+      "say": "forty divided by eight",
+      "family": "fives"
+    },
+    {
+      "id": "d45b5",
+      "prompt": "45 ÷ 5",
+      "answer": "9",
+      "say": "forty five divided by five",
+      "family": "fives"
+    },
+    {
+      "id": "d45b9",
+      "prompt": "45 ÷ 9",
+      "answer": "5",
+      "say": "forty five divided by nine",
+      "family": "fives"
+    },
+    {
+      "id": "d9b3",
+      "prompt": "9 ÷ 3",
+      "answer": "3",
+      "say": "nine divided by three",
+      "family": "squares"
+    },
+    {
+      "id": "d16b4",
+      "prompt": "16 ÷ 4",
+      "answer": "4",
+      "say": "sixteen divided by four",
+      "family": "squares"
+    },
+    {
+      "id": "d36b6",
+      "prompt": "36 ÷ 6",
+      "answer": "6",
+      "say": "thirty six divided by six",
+      "family": "squares"
+    },
+    {
+      "id": "d49b7",
+      "prompt": "49 ÷ 7",
+      "answer": "7",
+      "say": "forty nine divided by seven",
+      "family": "squares"
+    },
+    {
+      "id": "d64b8",
+      "prompt": "64 ÷ 8",
+      "answer": "8",
+      "say": "sixty four divided by eight",
+      "family": "squares"
+    },
+    {
+      "id": "d81b9",
+      "prompt": "81 ÷ 9",
+      "answer": "9",
+      "say": "eighty one divided by nine",
+      "family": "squares"
+    },
+    {
+      "id": "d27b3",
+      "prompt": "27 ÷ 3",
+      "answer": "9",
+      "say": "twenty seven divided by three",
+      "family": "nines"
+    },
+    {
+      "id": "d27b9",
+      "prompt": "27 ÷ 9",
+      "answer": "3",
+      "say": "twenty seven divided by nine",
+      "family": "nines"
+    },
+    {
+      "id": "d36b4",
+      "prompt": "36 ÷ 4",
+      "answer": "9",
+      "say": "thirty six divided by four",
+      "family": "nines"
+    },
+    {
+      "id": "d36b9",
+      "prompt": "36 ÷ 9",
+      "answer": "4",
+      "say": "thirty six divided by nine",
+      "family": "nines"
+    },
+    {
+      "id": "d54b6",
+      "prompt": "54 ÷ 6",
+      "answer": "9",
+      "say": "fifty four divided by six",
+      "family": "nines"
+    },
+    {
+      "id": "d54b9",
+      "prompt": "54 ÷ 9",
+      "answer": "6",
+      "say": "fifty four divided by nine",
+      "family": "nines"
+    },
+    {
+      "id": "d63b7",
+      "prompt": "63 ÷ 7",
+      "answer": "9",
+      "say": "sixty three divided by seven",
+      "family": "nines"
+    },
+    {
+      "id": "d63b9",
+      "prompt": "63 ÷ 9",
+      "answer": "7",
+      "say": "sixty three divided by nine",
+      "family": "nines"
+    },
+    {
+      "id": "d72b8",
+      "prompt": "72 ÷ 8",
+      "answer": "9",
+      "say": "seventy two divided by eight",
+      "family": "nines"
+    },
+    {
+      "id": "d72b9",
+      "prompt": "72 ÷ 9",
+      "answer": "8",
+      "say": "seventy two divided by nine",
+      "family": "nines"
+    },
+    {
+      "id": "d12b3",
+      "prompt": "12 ÷ 3",
+      "answer": "4",
+      "say": "twelve divided by three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d42b6",
+      "prompt": "42 ÷ 6",
+      "answer": "7",
+      "say": "forty two divided by six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d12b4",
+      "prompt": "12 ÷ 4",
+      "answer": "3",
+      "say": "twelve divided by four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d42b7",
+      "prompt": "42 ÷ 7",
+      "answer": "6",
+      "say": "forty two divided by seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d24b3",
+      "prompt": "24 ÷ 3",
+      "answer": "8",
+      "say": "twenty four divided by three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d24b4",
+      "prompt": "24 ÷ 4",
+      "answer": "6",
+      "say": "twenty four divided by four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d21b3",
+      "prompt": "21 ÷ 3",
+      "answer": "7",
+      "say": "twenty one divided by three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d24b6",
+      "prompt": "24 ÷ 6",
+      "answer": "4",
+      "say": "twenty four divided by six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d21b7",
+      "prompt": "21 ÷ 7",
+      "answer": "3",
+      "say": "twenty one divided by seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d32b4",
+      "prompt": "32 ÷ 4",
+      "answer": "8",
+      "say": "thirty two divided by four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d18b3",
+      "prompt": "18 ÷ 3",
+      "answer": "6",
+      "say": "eighteen divided by three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d28b4",
+      "prompt": "28 ÷ 4",
+      "answer": "7",
+      "say": "twenty eight divided by four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d18b6",
+      "prompt": "18 ÷ 6",
+      "answer": "3",
+      "say": "eighteen divided by six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d28b7",
+      "prompt": "28 ÷ 7",
+      "answer": "4",
+      "say": "twenty eight divided by seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d24b8",
+      "prompt": "24 ÷ 8",
+      "answer": "3",
+      "say": "twenty four divided by eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d32b8",
+      "prompt": "32 ÷ 8",
+      "answer": "4",
+      "say": "thirty two divided by eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d48b6",
+      "prompt": "48 ÷ 6",
+      "answer": "8",
+      "say": "forty eight divided by six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d48b8",
+      "prompt": "48 ÷ 8",
+      "answer": "6",
+      "say": "forty eight divided by eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d56b7",
+      "prompt": "56 ÷ 7",
+      "answer": "8",
+      "say": "fifty six divided by seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "d56b8",
+      "prompt": "56 ÷ 8",
+      "answer": "7",
+      "say": "fifty six divided by eight",
+      "family": "hard-middle"
+    }
+  ]
+}

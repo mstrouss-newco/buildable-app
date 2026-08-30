@@ -11,7 +11,7 @@ const OUT = 'public/practice/decks';
 const LISTS = [
   {
     id: 'sight-words-pre-primer', name: 'First Words', order: 1, grade: 'K',
-    blurb: 'The very first 40 words',
+    blurb: 'Where every reader starts',
     words: {
       'a': [0], 'and': [], 'away': [0], 'big': [], 'blue': [2, 3], 'can': [], 'come': [1, 3],
       'down': [], 'find': [1], 'for': [], 'funny': [], 'go': [], 'help': [], 'here': [1, 2, 3],
@@ -23,7 +23,7 @@ const LISTS = [
   },
   {
     id: 'sight-words-primer', name: 'Next Words', order: 2, grade: 'K',
-    blurb: '52 words for the end of kindergarten',
+    blurb: 'For the end of kindergarten',
     words: {
       'all': [1, 2], 'am': [], 'are': [2], 'at': [], 'ate': [], 'be': [], 'black': [],
       'brown': [], 'but': [], 'came': [], 'did': [], 'do': [1], 'eat': [], 'four': [1, 2],
@@ -37,7 +37,7 @@ const LISTS = [
   },
   {
     id: 'sight-words-first', name: 'First Grade', order: 3, grade: '1',
-    blurb: '41 words for first grade',
+    blurb: 'For first grade',
     words: {
       'after': [], 'again': [2, 3], 'an': [], 'any': [0], 'as': [1], 'ask': [], 'by': [],
       'could': [1, 2, 3], 'every': [2], 'fly': [], 'from': [2], 'give': [3], 'going': [],
@@ -50,7 +50,7 @@ const LISTS = [
   },
   {
     id: 'sight-words-second', name: 'Second Grade', order: 4, grade: '2',
-    blurb: '46 words for second grade',
+    blurb: 'For second grade',
     words: {
       'always': [0], 'around': [0], 'because': [3, 4, 6], 'been': [1, 2], 'before': [],
       'best': [], 'both': [1], 'buy': [1, 2], 'call': [1, 2], 'cold': [], 'does': [1, 2, 3],
@@ -64,7 +64,7 @@ const LISTS = [
   },
   {
     id: 'sight-words-third', name: 'Third Grade', order: 5, grade: '3',
-    blurb: '41 words for third grade',
+    blurb: 'For third grade',
     words: {
       'about': [0], 'better': [], 'bring': [], 'carry': [], 'clean': [], 'cut': [],
       'done': [1, 3], 'draw': [], 'drink': [], 'eight': [1, 2, 3], 'fall': [1, 2], 'far': [],
@@ -113,18 +113,31 @@ for (const list of LISTS) {
     skill: list.id,
     grade: list.grade,
     order: list.order,
+    // The kid picks the word off one of four big cards. The maths decks (PT3)
+    // say 'keypad' instead. The engine reads neither — the page does.
+    answerUI: 'choice',
     audioBase: '/practice/audio/words/',
     items,
   };
   fs.writeFileSync(path.join(OUT, list.id + '.json'), JSON.stringify(deck, null, 2) + '\n');
   index.push({
     id: deck.id, name: deck.name, group: deck.group, blurb: deck.blurb,
-    subject: deck.subject, grade: deck.grade, order: deck.order, count: items.length,
+    subject: deck.subject, grade: deck.grade, order: deck.order,
+    answerUI: deck.answerUI, count: items.length,
     file: '/practice/decks/' + list.id + '.json',
   });
   grand += items.length;
   console.log(`${list.id.padEnd(24)} ${String(items.length).padStart(3)} words`);
 }
 
-fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ decks: index }, null, 2) + '\n');
+// Keep any deck this generator does not own (the maths decks from
+// gen-practice-math-decks.mjs), so the two can be run in either order.
+let keep = [];
+try {
+  keep = JSON.parse(fs.readFileSync(path.join(OUT, 'index.json'), 'utf8')).decks
+    .filter((d) => d.subject !== 'reading');
+} catch (e) { /* first run */ }
+const all = index.concat(keep).sort((a, b) => (a.order || 0) - (b.order || 0));
+fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify({ decks: all }, null, 2) + '\n');
 console.log('TOTAL'.padEnd(24) + String(grand).padStart(4) + ' words across ' + index.length + ' decks');
+console.log('index.json now lists ' + all.length + ' decks');

@@ -2,11 +2,12 @@
   "id": "sight-words-primer",
   "name": "Next Words",
   "group": "Sight Words",
-  "blurb": "52 words for the end of kindergarten",
+  "blurb": "For the end of kindergarten",
   "subject": "reading",
   "skill": "sight-words-primer",
   "grade": "K",
   "order": 2,
+  "answerUI": "choice",
   "audioBase": "/practice/audio/words/",
   "items": [
     {

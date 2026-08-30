@@ -1,0 +1,501 @@
+{
+  "id": "math-addition",
+  "name": "Adding",
+  "group": "Numbers",
+  "blurb": "Facts to ten",
+  "subject": "math",
+  "skill": "math-addition",
+  "grade": "1",
+  "order": 11,
+  "answerUI": "keypad",
+  "families": [
+    {
+      "key": "zeros-ones",
+      "name": "Zeros and ones"
+    },
+    {
+      "key": "doubles",
+      "name": "Doubles"
+    },
+    {
+      "key": "make-ten",
+      "name": "Make ten"
+    },
+    {
+      "key": "tens",
+      "name": "Adding ten"
+    },
+    {
+      "key": "near-doubles",
+      "name": "Almost doubles"
+    },
+    {
+      "key": "hard-middle",
+      "name": "The tricky ones"
+    }
+  ],
+  "items": [
+    {
+      "id": "a0p0",
+      "prompt": "0 + 0",
+      "answer": "0",
+      "say": "zero plus zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p1",
+      "prompt": "1 + 1",
+      "answer": "2",
+      "say": "one plus one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p2",
+      "prompt": "0 + 2",
+      "answer": "2",
+      "say": "zero plus two",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p3",
+      "prompt": "1 + 3",
+      "answer": "4",
+      "say": "one plus three",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p4",
+      "prompt": "0 + 4",
+      "answer": "4",
+      "say": "zero plus four",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p2",
+      "prompt": "1 + 2",
+      "answer": "3",
+      "say": "one plus two",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p3",
+      "prompt": "0 + 3",
+      "answer": "3",
+      "say": "zero plus three",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p4",
+      "prompt": "1 + 4",
+      "answer": "5",
+      "say": "one plus four",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p5",
+      "prompt": "0 + 5",
+      "answer": "5",
+      "say": "zero plus five",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p6",
+      "prompt": "1 + 6",
+      "answer": "7",
+      "say": "one plus six",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p7",
+      "prompt": "0 + 7",
+      "answer": "7",
+      "say": "zero plus seven",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p5",
+      "prompt": "1 + 5",
+      "answer": "6",
+      "say": "one plus five",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p6",
+      "prompt": "0 + 6",
+      "answer": "6",
+      "say": "zero plus six",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p7",
+      "prompt": "1 + 7",
+      "answer": "8",
+      "say": "one plus seven",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p8",
+      "prompt": "0 + 8",
+      "answer": "8",
+      "say": "zero plus eight",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p9",
+      "prompt": "1 + 9",
+      "answer": "10",
+      "say": "one plus nine",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p10",
+      "prompt": "0 + 10",
+      "answer": "10",
+      "say": "zero plus ten",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p8",
+      "prompt": "1 + 8",
+      "answer": "9",
+      "say": "one plus eight",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p9",
+      "prompt": "0 + 9",
+      "answer": "9",
+      "say": "zero plus nine",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a1p10",
+      "prompt": "1 + 10",
+      "answer": "11",
+      "say": "one plus ten",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a0p1",
+      "prompt": "0 + 1",
+      "answer": "1",
+      "say": "zero plus one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "a2p2",
+      "prompt": "2 + 2",
+      "answer": "4",
+      "say": "two plus two",
+      "family": "doubles"
+    },
+    {
+      "id": "a3p3",
+      "prompt": "3 + 3",
+      "answer": "6",
+      "say": "three plus three",
+      "family": "doubles"
+    },
+    {
+      "id": "a4p4",
+      "prompt": "4 + 4",
+      "answer": "8",
+      "say": "four plus four",
+      "family": "doubles"
+    },
+    {
+      "id": "a5p5",
+      "prompt": "5 + 5",
+      "answer": "10",
+      "say": "five plus five",
+      "family": "doubles"
+    },
+    {
+      "id": "a6p6",
+      "prompt": "6 + 6",
+      "answer": "12",
+      "say": "six plus six",
+      "family": "doubles"
+    },
+    {
+      "id": "a7p7",
+      "prompt": "7 + 7",
+      "answer": "14",
+      "say": "seven plus seven",
+      "family": "doubles"
+    },
+    {
+      "id": "a8p8",
+      "prompt": "8 + 8",
+      "answer": "16",
+      "say": "eight plus eight",
+      "family": "doubles"
+    },
+    {
+      "id": "a9p9",
+      "prompt": "9 + 9",
+      "answer": "18",
+      "say": "nine plus nine",
+      "family": "doubles"
+    },
+    {
+      "id": "a10p10",
+      "prompt": "10 + 10",
+      "answer": "20",
+      "say": "ten plus ten",
+      "family": "doubles"
+    },
+    {
+      "id": "a2p8",
+      "prompt": "2 + 8",
+      "answer": "10",
+      "say": "two plus eight",
+      "family": "make-ten"
+    },
+    {
+      "id": "a3p7",
+      "prompt": "3 + 7",
+      "answer": "10",
+      "say": "three plus seven",
+      "family": "make-ten"
+    },
+    {
+      "id": "a4p6",
+      "prompt": "4 + 6",
+      "answer": "10",
+      "say": "four plus six",
+      "family": "make-ten"
+    },
+    {
+      "id": "a2p10",
+      "prompt": "2 + 10",
+      "answer": "12",
+      "say": "two plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a3p10",
+      "prompt": "3 + 10",
+      "answer": "13",
+      "say": "three plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a4p10",
+      "prompt": "4 + 10",
+      "answer": "14",
+      "say": "four plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a5p10",
+      "prompt": "5 + 10",
+      "answer": "15",
+      "say": "five plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a6p10",
+      "prompt": "6 + 10",
+      "answer": "16",
+      "say": "six plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a7p10",
+      "prompt": "7 + 10",
+      "answer": "17",
+      "say": "seven plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a8p10",
+      "prompt": "8 + 10",
+      "answer": "18",
+      "say": "eight plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a9p10",
+      "prompt": "9 + 10",
+      "answer": "19",
+      "say": "nine plus ten",
+      "family": "tens"
+    },
+    {
+      "id": "a2p3",
+      "prompt": "2 + 3",
+      "answer": "5",
+      "say": "two plus three",
+      "family": "near-doubles"
+    },
+    {
+      "id": "a4p5",
+      "prompt": "4 + 5",
+      "answer": "9",
+      "say": "four plus five",
+      "family": "near-doubles"
+    },
+    {
+      "id": "a6p7",
+      "prompt": "6 + 7",
+      "answer": "13",
+      "say": "six plus seven",
+      "family": "near-doubles"
+    },
+    {
+      "id": "a3p4",
+      "prompt": "3 + 4",
+      "answer": "7",
+      "say": "three plus four",
+      "family": "near-doubles"
+    },
+    {
+      "id": "a5p6",
+      "prompt": "5 + 6",
+      "answer": "11",
+      "say": "five plus six",
+      "family": "near-doubles"
+    },
+    {
+      "id": "a7p8",
+      "prompt": "7 + 8",
+      "answer": "15",
+      "say": "seven plus eight",
+      "family": "near-doubles"
+    },
+    {
+      "id": "a8p9",
+      "prompt": "8 + 9",
+      "answer": "17",
+      "say": "eight plus nine",
+      "family": "near-doubles"
+    },
+    {
+      "id": "a2p4",
+      "prompt": "2 + 4",
+      "answer": "6",
+      "say": "two plus four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a3p5",
+      "prompt": "3 + 5",
+      "answer": "8",
+      "say": "three plus five",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a2p6",
+      "prompt": "2 + 6",
+      "answer": "8",
+      "say": "two plus six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a3p8",
+      "prompt": "3 + 8",
+      "answer": "11",
+      "say": "three plus eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a2p5",
+      "prompt": "2 + 5",
+      "answer": "7",
+      "say": "two plus five",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a3p6",
+      "prompt": "3 + 6",
+      "answer": "9",
+      "say": "three plus six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a2p7",
+      "prompt": "2 + 7",
+      "answer": "9",
+      "say": "two plus seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a3p9",
+      "prompt": "3 + 9",
+      "answer": "12",
+      "say": "three plus nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a4p7",
+      "prompt": "4 + 7",
+      "answer": "11",
+      "say": "four plus seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a2p9",
+      "prompt": "2 + 9",
+      "answer": "11",
+      "say": "two plus nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a4p8",
+      "prompt": "4 + 8",
+      "answer": "12",
+      "say": "four plus eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a5p7",
+      "prompt": "5 + 7",
+      "answer": "12",
+      "say": "five plus seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a4p9",
+      "prompt": "4 + 9",
+      "answer": "13",
+      "say": "four plus nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a5p8",
+      "prompt": "5 + 8",
+      "answer": "13",
+      "say": "five plus eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a6p9",
+      "prompt": "6 + 9",
+      "answer": "15",
+      "say": "six plus nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a5p9",
+      "prompt": "5 + 9",
+      "answer": "14",
+      "say": "five plus nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a6p8",
+      "prompt": "6 + 8",
+      "answer": "14",
+      "say": "six plus eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "a7p9",
+      "prompt": "7 + 9",
+      "answer": "16",
+      "say": "seven plus nine",
+      "family": "hard-middle"
+    }
+  ]
+}

@@ -2,11 +2,12 @@
   "id": "sight-words-pre-primer",
   "name": "First Words",
   "group": "Sight Words",
-  "blurb": "The very first 40 words",
+  "blurb": "Where every reader starts",
   "subject": "reading",
   "skill": "sight-words-pre-primer",
   "grade": "K",
   "order": 1,
+  "answerUI": "choice",
   "audioBase": "/practice/audio/words/",
   "items": [
     {
