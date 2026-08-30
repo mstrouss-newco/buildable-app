@@ -1,3 +1,55 @@
+## 2026-08-30 — Session 9D: Retire old engine menus — STILL BLOCKED, nothing deleted
+
+Ran the session, checked the gate first, and the gate is shut. The card's own
+precondition — "Blocked until a new kid-facing level maker replaces the old Make a
+level screen" — has not been met, so **no code was deleted**. Deleting anyway would
+have broken the "Replace first, remove second" law (AGENTS.md guardrail, roadmap
+rule 5): `main` auto-deploys, so the deletions would have taken a working kid-facing
+feature off the live site with nothing in its place.
+
+**What I checked, and what it showed.**
+
+- **There is no replacement maker.** `MAKE_CATALOG` in `src/BuildableKids.jsx` still
+  carries `{ id: "game", name: "Make a game", ..., soon: true }`. The `soon` flag puts
+  it behind the 1111 owner-only password gate with a "Coming soon" pill, so no kid can
+  reach it. `onMakeGame` still routes to `SCREEN_INTRO` — the legacy AI game-generator
+  flow, not a level maker.
+- **The internal editor is not the replacement.** `public/editor.html` (Phases 4A/4B,
+  both ticked) is gated behind the owner's Buildable sign-in — "Owner-only gate ... the
+  same Google/parent sign-in the app uses". It is a grown-up tool. 4A/4B being done
+  does NOT unblock 9D.
+- **The old maker is the only kid-facing level maker in the product**, and the shell
+  actively links kids INTO it. `SCREEN_BREAKER_LANDING` renders a "Make a level" button
+  whose `onMake` sets `breakerEntry = "maker"`, which loads
+  `/breaker-engine.html?screen=maker` → `startNewLevel()` → the old `#maker` overlay.
+  So the card's line "Links already point away from them" is **true of the old start
+  menu in-app, but not true of the maker** — that link is live today.
+- **The old start menu is still a live public route.** `vercel.json` maps `/breaker` to
+  `breaker-engine.html`, which boots `showHub()` — the old Play / Make a level hub. It
+  is also the ONLY screen that renders the **"My levels" shelf** (`loadLevels()`), the
+  kid's saved custom levels. Deleting the hub strands those saved creations with no UI
+  anywhere in the product.
+- **The four delete targets are one tangled system, not four independent removals.**
+  The losing screen routes through `advanceAfterEnd()`, which for a maker-built level
+  calls `showMaker(won ? "share" : "build")`; the `‹ Menu` button and the shared
+  start-screen `onMenu`/`onBack` callbacks branch on `G.custom` into `showMaker("build")`
+  and `showHub()`. There is no subset that can be cut without cutting the maker's flow.
+  (`showLoadout()` is also stale — `/breaker/loadout` still opens the maker via
+  `startNewLevel()` rather than the 3C shell loadout — worth fixing in the same session
+  that lands the replacement.)
+
+**QA.** No game file was touched, so nothing needed re-testing — but I ran
+`node qa-breaker.mjs .` anyway to record the pre-change baseline and to prove the
+thing 9D wants deleted is genuinely working: **ALL CHECKS PASS** (manifest valid, all
+8 levels clear across 5 runs each, pong winner emerges, render smoke ok).
+
+**What remains / what unblocks this.** 9D needs a kid-facing level maker live on
+production first. Concretely: promote "Make a game" out of `soon` with a real
+level-building flow behind it, or build a kid-facing maker on top of the 4A/4B editor
+work, verify it live, migrate the "My levels" shelf onto it — and only then delete the
+Breaker hub, the worlds tab, the losing screen, and the leftover menu code. Flagged 9D
+for Mike's review in the planner rather than ticking it done.
+
 ## 2026-08-30 — PT2 + PT3: Practice Round 2 (the GROUPED batch)
 
 Both cards carried a `GROUPED 2026-08-29` note saying to run them as one
