@@ -11,3 +11,6 @@ runner-logs/
 # and one-off live-bundle snapshots that agents leave lying around.
 *.patch
 live-bundle.js
+
+# Screenshots the practice QA writes for a human to look at (qa-practice-shot.mjs).
+qa-shots/

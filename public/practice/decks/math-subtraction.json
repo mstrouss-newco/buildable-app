@@ -1,0 +1,886 @@
+{
+  "id": "math-subtraction",
+  "name": "Taking away",
+  "group": "Numbers",
+  "blurb": "The other way round",
+  "subject": "math",
+  "skill": "math-subtraction",
+  "grade": "1",
+  "order": 12,
+  "answerUI": "keypad",
+  "families": [
+    {
+      "key": "zeros-ones",
+      "name": "Zeros and ones"
+    },
+    {
+      "key": "doubles",
+      "name": "Doubles"
+    },
+    {
+      "key": "make-ten",
+      "name": "Make ten"
+    },
+    {
+      "key": "tens",
+      "name": "Adding ten"
+    },
+    {
+      "key": "near-doubles",
+      "name": "Almost doubles"
+    },
+    {
+      "key": "hard-middle",
+      "name": "The tricky ones"
+    }
+  ],
+  "items": [
+    {
+      "id": "s0m0",
+      "prompt": "0 - 0",
+      "answer": "0",
+      "say": "zero take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s2m1",
+      "prompt": "2 - 1",
+      "answer": "1",
+      "say": "two take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s2m0",
+      "prompt": "2 - 0",
+      "answer": "2",
+      "say": "two take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s4m1",
+      "prompt": "4 - 1",
+      "answer": "3",
+      "say": "four take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s2m2",
+      "prompt": "2 - 2",
+      "answer": "0",
+      "say": "two take away two",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s4m3",
+      "prompt": "4 - 3",
+      "answer": "1",
+      "say": "four take away three",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s4m0",
+      "prompt": "4 - 0",
+      "answer": "4",
+      "say": "four take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s3m1",
+      "prompt": "3 - 1",
+      "answer": "2",
+      "say": "three take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s3m0",
+      "prompt": "3 - 0",
+      "answer": "3",
+      "say": "three take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s3m2",
+      "prompt": "3 - 2",
+      "answer": "1",
+      "say": "three take away two",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s3m3",
+      "prompt": "3 - 3",
+      "answer": "0",
+      "say": "three take away three",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s5m1",
+      "prompt": "5 - 1",
+      "answer": "4",
+      "say": "five take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s5m0",
+      "prompt": "5 - 0",
+      "answer": "5",
+      "say": "five take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s5m4",
+      "prompt": "5 - 4",
+      "answer": "1",
+      "say": "five take away four",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s5m5",
+      "prompt": "5 - 5",
+      "answer": "0",
+      "say": "five take away five",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s7m1",
+      "prompt": "7 - 1",
+      "answer": "6",
+      "say": "seven take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s4m4",
+      "prompt": "4 - 4",
+      "answer": "0",
+      "say": "four take away four",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s6m1",
+      "prompt": "6 - 1",
+      "answer": "5",
+      "say": "six take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s6m0",
+      "prompt": "6 - 0",
+      "answer": "6",
+      "say": "six take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s6m5",
+      "prompt": "6 - 5",
+      "answer": "1",
+      "say": "six take away five",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s6m6",
+      "prompt": "6 - 6",
+      "answer": "0",
+      "say": "six take away six",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s8m1",
+      "prompt": "8 - 1",
+      "answer": "7",
+      "say": "eight take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s8m0",
+      "prompt": "8 - 0",
+      "answer": "8",
+      "say": "eight take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s7m6",
+      "prompt": "7 - 6",
+      "answer": "1",
+      "say": "seven take away six",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s7m0",
+      "prompt": "7 - 0",
+      "answer": "7",
+      "say": "seven take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s9m1",
+      "prompt": "9 - 1",
+      "answer": "8",
+      "say": "nine take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s7m7",
+      "prompt": "7 - 7",
+      "answer": "0",
+      "say": "seven take away seven",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s9m8",
+      "prompt": "9 - 8",
+      "answer": "1",
+      "say": "nine take away eight",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s9m0",
+      "prompt": "9 - 0",
+      "answer": "9",
+      "say": "nine take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s8m7",
+      "prompt": "8 - 7",
+      "answer": "1",
+      "say": "eight take away seven",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s8m8",
+      "prompt": "8 - 8",
+      "answer": "0",
+      "say": "eight take away eight",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s10m1",
+      "prompt": "10 - 1",
+      "answer": "9",
+      "say": "ten take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s10m0",
+      "prompt": "10 - 0",
+      "answer": "10",
+      "say": "ten take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s10m9",
+      "prompt": "10 - 9",
+      "answer": "1",
+      "say": "ten take away nine",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s10m10",
+      "prompt": "10 - 10",
+      "answer": "0",
+      "say": "ten take away ten",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s1m0",
+      "prompt": "1 - 0",
+      "answer": "1",
+      "say": "one take away zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s1m1",
+      "prompt": "1 - 1",
+      "answer": "0",
+      "say": "one take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s9m9",
+      "prompt": "9 - 9",
+      "answer": "0",
+      "say": "nine take away nine",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s11m1",
+      "prompt": "11 - 1",
+      "answer": "10",
+      "say": "eleven take away one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s11m10",
+      "prompt": "11 - 10",
+      "answer": "1",
+      "say": "eleven take away ten",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "s4m2",
+      "prompt": "4 - 2",
+      "answer": "2",
+      "say": "four take away two",
+      "family": "doubles"
+    },
+    {
+      "id": "s6m3",
+      "prompt": "6 - 3",
+      "answer": "3",
+      "say": "six take away three",
+      "family": "doubles"
+    },
+    {
+      "id": "s8m4",
+      "prompt": "8 - 4",
+      "answer": "4",
+      "say": "eight take away four",
+      "family": "doubles"
+    },
+    {
+      "id": "s10m5",
+      "prompt": "10 - 5",
+      "answer": "5",
+      "say": "ten take away five",
+      "family": "doubles"
+    },
+    {
+      "id": "s12m6",
+      "prompt": "12 - 6",
+      "answer": "6",
+      "say": "twelve take away six",
+      "family": "doubles"
+    },
+    {
+      "id": "s14m7",
+      "prompt": "14 - 7",
+      "answer": "7",
+      "say": "fourteen take away seven",
+      "family": "doubles"
+    },
+    {
+      "id": "s16m8",
+      "prompt": "16 - 8",
+      "answer": "8",
+      "say": "sixteen take away eight",
+      "family": "doubles"
+    },
+    {
+      "id": "s18m9",
+      "prompt": "18 - 9",
+      "answer": "9",
+      "say": "eighteen take away nine",
+      "family": "doubles"
+    },
+    {
+      "id": "s20m10",
+      "prompt": "20 - 10",
+      "answer": "10",
+      "say": "twenty take away ten",
+      "family": "doubles"
+    },
+    {
+      "id": "s10m2",
+      "prompt": "10 - 2",
+      "answer": "8",
+      "say": "ten take away two",
+      "family": "make-ten"
+    },
+    {
+      "id": "s10m3",
+      "prompt": "10 - 3",
+      "answer": "7",
+      "say": "ten take away three",
+      "family": "make-ten"
+    },
+    {
+      "id": "s10m8",
+      "prompt": "10 - 8",
+      "answer": "2",
+      "say": "ten take away eight",
+      "family": "make-ten"
+    },
+    {
+      "id": "s10m7",
+      "prompt": "10 - 7",
+      "answer": "3",
+      "say": "ten take away seven",
+      "family": "make-ten"
+    },
+    {
+      "id": "s10m4",
+      "prompt": "10 - 4",
+      "answer": "6",
+      "say": "ten take away four",
+      "family": "make-ten"
+    },
+    {
+      "id": "s10m6",
+      "prompt": "10 - 6",
+      "answer": "4",
+      "say": "ten take away six",
+      "family": "make-ten"
+    },
+    {
+      "id": "s12m2",
+      "prompt": "12 - 2",
+      "answer": "10",
+      "say": "twelve take away two",
+      "family": "tens"
+    },
+    {
+      "id": "s12m10",
+      "prompt": "12 - 10",
+      "answer": "2",
+      "say": "twelve take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s13m3",
+      "prompt": "13 - 3",
+      "answer": "10",
+      "say": "thirteen take away three",
+      "family": "tens"
+    },
+    {
+      "id": "s13m10",
+      "prompt": "13 - 10",
+      "answer": "3",
+      "say": "thirteen take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s14m4",
+      "prompt": "14 - 4",
+      "answer": "10",
+      "say": "fourteen take away four",
+      "family": "tens"
+    },
+    {
+      "id": "s14m10",
+      "prompt": "14 - 10",
+      "answer": "4",
+      "say": "fourteen take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s15m5",
+      "prompt": "15 - 5",
+      "answer": "10",
+      "say": "fifteen take away five",
+      "family": "tens"
+    },
+    {
+      "id": "s15m10",
+      "prompt": "15 - 10",
+      "answer": "5",
+      "say": "fifteen take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s16m6",
+      "prompt": "16 - 6",
+      "answer": "10",
+      "say": "sixteen take away six",
+      "family": "tens"
+    },
+    {
+      "id": "s16m10",
+      "prompt": "16 - 10",
+      "answer": "6",
+      "say": "sixteen take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s17m7",
+      "prompt": "17 - 7",
+      "answer": "10",
+      "say": "seventeen take away seven",
+      "family": "tens"
+    },
+    {
+      "id": "s17m10",
+      "prompt": "17 - 10",
+      "answer": "7",
+      "say": "seventeen take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s18m8",
+      "prompt": "18 - 8",
+      "answer": "10",
+      "say": "eighteen take away eight",
+      "family": "tens"
+    },
+    {
+      "id": "s18m10",
+      "prompt": "18 - 10",
+      "answer": "8",
+      "say": "eighteen take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s19m9",
+      "prompt": "19 - 9",
+      "answer": "10",
+      "say": "nineteen take away nine",
+      "family": "tens"
+    },
+    {
+      "id": "s19m10",
+      "prompt": "19 - 10",
+      "answer": "9",
+      "say": "nineteen take away ten",
+      "family": "tens"
+    },
+    {
+      "id": "s5m2",
+      "prompt": "5 - 2",
+      "answer": "3",
+      "say": "five take away two",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s9m4",
+      "prompt": "9 - 4",
+      "answer": "5",
+      "say": "nine take away four",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s5m3",
+      "prompt": "5 - 3",
+      "answer": "2",
+      "say": "five take away three",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s9m5",
+      "prompt": "9 - 5",
+      "answer": "4",
+      "say": "nine take away five",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s13m6",
+      "prompt": "13 - 6",
+      "answer": "7",
+      "say": "thirteen take away six",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s7m3",
+      "prompt": "7 - 3",
+      "answer": "4",
+      "say": "seven take away three",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s11m5",
+      "prompt": "11 - 5",
+      "answer": "6",
+      "say": "eleven take away five",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s7m4",
+      "prompt": "7 - 4",
+      "answer": "3",
+      "say": "seven take away four",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s11m6",
+      "prompt": "11 - 6",
+      "answer": "5",
+      "say": "eleven take away six",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s15m7",
+      "prompt": "15 - 7",
+      "answer": "8",
+      "say": "fifteen take away seven",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s13m7",
+      "prompt": "13 - 7",
+      "answer": "6",
+      "say": "thirteen take away seven",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s17m8",
+      "prompt": "17 - 8",
+      "answer": "9",
+      "say": "seventeen take away eight",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s15m8",
+      "prompt": "15 - 8",
+      "answer": "7",
+      "say": "fifteen take away eight",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s17m9",
+      "prompt": "17 - 9",
+      "answer": "8",
+      "say": "seventeen take away nine",
+      "family": "near-doubles"
+    },
+    {
+      "id": "s6m2",
+      "prompt": "6 - 2",
+      "answer": "4",
+      "say": "six take away two",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s8m3",
+      "prompt": "8 - 3",
+      "answer": "5",
+      "say": "eight take away three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s6m4",
+      "prompt": "6 - 4",
+      "answer": "2",
+      "say": "six take away four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s8m5",
+      "prompt": "8 - 5",
+      "answer": "3",
+      "say": "eight take away five",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s8m2",
+      "prompt": "8 - 2",
+      "answer": "6",
+      "say": "eight take away two",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s11m3",
+      "prompt": "11 - 3",
+      "answer": "8",
+      "say": "eleven take away three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s7m2",
+      "prompt": "7 - 2",
+      "answer": "5",
+      "say": "seven take away two",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s9m3",
+      "prompt": "9 - 3",
+      "answer": "6",
+      "say": "nine take away three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s7m5",
+      "prompt": "7 - 5",
+      "answer": "2",
+      "say": "seven take away five",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s9m6",
+      "prompt": "9 - 6",
+      "answer": "3",
+      "say": "nine take away six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s9m2",
+      "prompt": "9 - 2",
+      "answer": "7",
+      "say": "nine take away two",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s11m8",
+      "prompt": "11 - 8",
+      "answer": "3",
+      "say": "eleven take away eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s8m6",
+      "prompt": "8 - 6",
+      "answer": "2",
+      "say": "eight take away six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s11m4",
+      "prompt": "11 - 4",
+      "answer": "7",
+      "say": "eleven take away four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s11m2",
+      "prompt": "11 - 2",
+      "answer": "9",
+      "say": "eleven take away two",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s11m7",
+      "prompt": "11 - 7",
+      "answer": "4",
+      "say": "eleven take away seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s11m9",
+      "prompt": "11 - 9",
+      "answer": "2",
+      "say": "eleven take away nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s12m4",
+      "prompt": "12 - 4",
+      "answer": "8",
+      "say": "twelve take away four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s9m7",
+      "prompt": "9 - 7",
+      "answer": "2",
+      "say": "nine take away seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s12m3",
+      "prompt": "12 - 3",
+      "answer": "9",
+      "say": "twelve take away three",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s12m8",
+      "prompt": "12 - 8",
+      "answer": "4",
+      "say": "twelve take away eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s12m9",
+      "prompt": "12 - 9",
+      "answer": "3",
+      "say": "twelve take away nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s12m5",
+      "prompt": "12 - 5",
+      "answer": "7",
+      "say": "twelve take away five",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s13m4",
+      "prompt": "13 - 4",
+      "answer": "9",
+      "say": "thirteen take away four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s12m7",
+      "prompt": "12 - 7",
+      "answer": "5",
+      "say": "twelve take away seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s13m9",
+      "prompt": "13 - 9",
+      "answer": "4",
+      "say": "thirteen take away nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s13m5",
+      "prompt": "13 - 5",
+      "answer": "8",
+      "say": "thirteen take away five",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s15m6",
+      "prompt": "15 - 6",
+      "answer": "9",
+      "say": "fifteen take away six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s13m8",
+      "prompt": "13 - 8",
+      "answer": "5",
+      "say": "thirteen take away eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s15m9",
+      "prompt": "15 - 9",
+      "answer": "6",
+      "say": "fifteen take away nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s14m5",
+      "prompt": "14 - 5",
+      "answer": "9",
+      "say": "fourteen take away five",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s14m6",
+      "prompt": "14 - 6",
+      "answer": "8",
+      "say": "fourteen take away six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s14m9",
+      "prompt": "14 - 9",
+      "answer": "5",
+      "say": "fourteen take away nine",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s14m8",
+      "prompt": "14 - 8",
+      "answer": "6",
+      "say": "fourteen take away eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s16m7",
+      "prompt": "16 - 7",
+      "answer": "9",
+      "say": "sixteen take away seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "s16m9",
+      "prompt": "16 - 9",
+      "answer": "7",
+      "say": "sixteen take away nine",
+      "family": "hard-middle"
+    }
+  ]
+}

@@ -895,6 +895,63 @@
       "dest": "/lessons.html"
     },
     {
+      "src": "/practice/favicon.ico",
+      "dest": "/favicon.ico",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/favicon.svg",
+      "dest": "/favicon.svg",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/favicon-32.png",
+      "dest": "/favicon-32.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/favicon-16.png",
+      "dest": "/favicon-16.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/apple-touch-icon.png",
+      "dest": "/apple-touch-icon.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/audio/(.*)",
+      "dest": "/practice/audio/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/decks/([A-Za-z0-9_-]+).json",
+      "dest": "/practice/decks/$1.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/practice.html",
+      "dest": "/practice.html"
+    },
+    {
+      "src": "/practice",
+      "dest": "/practice.html"
+    },
+    {
       "src": "/sling/(.*)",
       "dest": "/sling/$1",
       "headers": {
