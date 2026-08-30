@@ -4,7 +4,7 @@ One consistent contract for every Buildable game, so the app's navigation and a
 game's own HUD/buttons never fight for the same corner. Follow this for every new
 game and when touching an existing one.
 
-## Rule 0 — Deciding shows the bar, doing never does (GN1, GN2, GN3)
+## Rule 0 — Deciding shows the bar, doing never does (GN1–GN4)
 
 Every screen in the app is either a **deciding** screen or a **doing** screen, and
 that alone decides whether the five-tab bottom bar (`BottomBar`, `data-nv1-bottom-bar`)
@@ -74,10 +74,12 @@ Everything a kid can stand on between Home and play is a deciding screen and get
 the bar. A screen is exempt only if it is one of these, and the reason is always
 one of these four:
 
-1. **A live engine iframe or an active studio canvas.** Every `GameFrame` screen,
-   the lobby's PLAYING screen, the family lane's match views, the sound/art/music/
+1. **A live engine iframe or an active studio canvas — *while it is being played*.**
+   The lobby's PLAYING screen, the family lane's match views, the sound/art/music/
    story studios, the Kidspedia exhibit and Lessons viewers. The bar would sit on
-   top of the thing the kid is doing.
+   top of the thing the kid is doing. **But see "Inside the frame" below**: a
+   `GameFrame` screen is not exempt just for being an iframe — it is exempt while
+   the game is being *played*.
 2. **An active making canvas mid-flow.** The character creator and the level
    creator: leaving half-way loses the kid's work, and both already carry their own
    Home and My Stuff. (The *chooser* in front of them — pick a game type — is a
@@ -90,6 +92,42 @@ one of these four:
 `qa-gn3.mjs` holds the register of every screen in the shell with its
 classification, and fails if a new `SCREEN_` constant is added without one. That
 is deliberate: the next person to add a screen has to answer the question.
+
+### Inside the frame — an engine's own picker (GN4)
+
+Deciding vs doing is about what the kid is doing, **not about which side of an
+iframe the screen sits on**. An engine's own title or level screen — reached by the
+shell's Menu button, or when a game ends — is a deciding screen that happens to be
+drawn inside the game. Until GN4 the corner Home was the only way off it.
+
+The bridge already knows which it is. `buildable-gamenav.js` reports `inGame`, so:
+
+- **The shell** (`GameFrame`) floats the bar over the frame while the engine reports
+  `inGame: false`, and drops it the instant play starts. An engine that never
+  reports `inGame` defaults to `true`, so this is **opt-in by construction** — a
+  game that says nothing never grows a bar.
+- **The bridge watches `inGame` itself** (every 250ms, posting only on a change)
+  rather than trusting each engine to call `BuildableGameNav.update()` on every
+  transition. Four engines never did, and twenty call sites is twenty things to
+  drift. If you add an engine, give `register()` an `inGame` — that is all.
+- **Taps must be caught inside the game.** On iOS a touch on a shell element that
+  overlaps an iframe is routed *into* the iframe, so the bar would look tappable and
+  do nothing on a phone — the same fault the Home pill hit. The bridge puts an
+  invisible catcher over the bar's strip inside the game and forwards the tap's
+  **viewport coordinates**; the shell hit-tests its own DOM and presses the real
+  button. Forward coordinates, never a tab name: the shell owns the bar's layout
+  and a second copy of the five-tab geometry would drift. The catcher exists only
+  while the bar is up — which is only while the engine says it is not playing — so
+  it can never swallow a gameplay tap.
+- **The strip is reserved inside the game too.** While the bar is up the bridge
+  publishes `--bk-nav-bottombar` and marks the page `.bk-barup`; it is `0px` when the
+  bar is down and unset standalone. Every picker pads its last row by it — today
+  that is `buildable-startscreen.js`, which every engine's picker goes through
+  (the board games reach it via `buildable-boardgame.js`), so there is no
+  hand-rolled picker left to fix.
+
+`qa-gn4.mjs` proves all of it against a real DOM, and holds the list of engines
+excused from reporting `inGame`, each with its reason.
 
 ## The reserved top strip (who owns the corners)
 
