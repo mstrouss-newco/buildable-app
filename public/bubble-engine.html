@@ -585,7 +585,10 @@ function boot(){
   window.addEventListener("pointercancel",function(){ aiming=false; });
   var sb=document.getElementById("soundBtn"); if(sb) sb.onclick=function(){ if(BA){BA.unlock();BA.toggleMute();} };
   var hb=document.getElementById("helpBtn"); if(hb) hb.onclick=function(){ alert("Drag to aim, then lift your finger to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); };
-  if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["soundBtn","helpBtn"], onSound:function(){ if(BA){ BA.unlock(); BA.toggleMute(); } }, onMenu:function(){ toMenu(); }, onHelp:function(){ alert("Drag to aim, then lift your finger to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); }, soundOn:function(){ return !muted; } }); }
+  if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["soundBtn","helpBtn"], onSound:function(){ if(BA){ BA.unlock(); BA.toggleMute(); } }, onMenu:function(){ toMenu(); }, onHelp:function(){ alert("Drag to aim, then lift your finger to shoot. Match 3 or more of the same buddy to pop them. Clear them all to win!"); }, soundOn:function(){ return !muted; },
+    // GN4: tell the shell when this engine is on its OWN title/level picker, so
+    // the five-tab bar can float over it and drop away the moment play starts.
+    inGame:function(){ return state==="play"; } }); }
   if(BB_DEMO){ if(BA)BA.muted=true; play(0); }                                   // 7I attract: level 1, silent, no menus
   else if(BB_LEVEL!=null){ play(Math.max(0,Math.min(GAME_CONFIG.levels.length-1,BB_LEVEL))); }   // 7I deep-link (levels are built-in; manifest only renames)
   else toMenu();

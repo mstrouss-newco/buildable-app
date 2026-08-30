@@ -653,7 +653,9 @@ function wireMenus(){
   const mb=el("muteBtn"); if(mb){ const upd=()=>{ mb.textContent="Sound: "+(BA&&BA.muted?"Off":"On"); }; upd(); mb.onclick=()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } upd(); }; }
   const hb=el("helpBtn"); if(hb)hb.onclick=()=>{ helpOpen=true; };
   const bb=el("backBtn"); if(bb)bb.onclick=()=>{ helpOpen=false; showMenu(); };
-  if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["backBtn","muteBtn","helpBtn"], onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } }, onMenu:()=>{ helpOpen=false; showMenu(); }, onHelp:()=>{ helpOpen=true; }, soundOn:()=>!(BA&&BA.muted) }); }
+  if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["backBtn","muteBtn","helpBtn"], onSound:()=>{ if(BA){ BA.unlock(); BA.toggleMute(); } }, onMenu:()=>{ helpOpen=false; showMenu(); }, onHelp:()=>{ helpOpen=true; }, soundOn:()=>!(BA&&BA.muted),
+    // GN4: the shell floats its five-tab bar while we are on our own title screen.
+    inGame:()=>state==="play" }); }
 }
 
 function drawNo3D(){ if(!hctx)return; hctx.clearRect(0,0,W,H);

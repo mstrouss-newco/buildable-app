@@ -476,7 +476,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     window.BuildableGameNav.register({
       onSound:function(){ BA.unlock(); BA.toggleMute(); if(startScreen) startScreen.update(buildStartCfg()); },
       onMenu:function(){ showMenu(); },
-      soundOn:function(){ return !BA.muted; }
+      soundOn:function(){ return !BA.muted; },
+      // GN4: the shell floats its five-tab bar while we are on our own menu.
+      inGame:function(){ return state === "playing"; }
     });
   }
 

@@ -462,7 +462,9 @@
     bind("muteBtn", ()=>{ BA.unlock(); const m = BA.toggleMute(); const e=$("muteBtn"); if(e) e.textContent = m ? "Sound off" : "Sound"; });
     bind("overNext", ()=>{ startLevel(state==="win" ? Math.min(GAME_CONFIG.levels.length-1, level+1) : level); });
     bind("overMenu", ()=>{ showMenu(); });
-    if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["muteBtn"], onSound:()=>{ BA.unlock(); BA.toggleMute(); }, onMenu:()=>{ showMenu(); }, soundOn:()=>!BA.muted }); }
+    if(window.BuildableGameNav){ BuildableGameNav.register({ hide:["muteBtn"], onSound:()=>{ BA.unlock(); BA.toggleMute(); }, onMenu:()=>{ showMenu(); }, soundOn:()=>!BA.muted,
+      // GN4: the shell floats its five-tab bar while we are on our own title screen.
+      inGame:()=>state!=="title" }); }
     window.addEventListener("keydown", (e)=>{
       if (e.key==="ArrowUp") adjAngle(+2); else if (e.key==="ArrowDown") adjAngle(-2);
       else if (e.key==="ArrowRight") adjPower(+3); else if (e.key==="ArrowLeft") adjPower(-3);
