@@ -74,6 +74,13 @@
 .bss{position:absolute;inset:0;overflow:auto;display:flex;justify-content:center;background:var(--bss-bg);font-family:'Nunito',system-ui,sans-serif;color:var(--bss-text);-webkit-tap-highlight-color:transparent;z-index:1}
 .bss *{box-sizing:border-box}
 .bss-inner{width:100%;max-width:420px;padding:18px 16px 28px}
+/* GN4 - when the shell floats its five-tab bottom bar over this game (which it
+   does only while the engine reports it is NOT playing, i.e. exactly when this
+   picker is up), buildable-gamenav.js publishes the bar's height as
+   --bk-nav-bottombar and marks the page .bk-barup. Pad the last level card
+   clear of it. The variable is 0px whenever the bar is down and unset when the
+   game is opened standalone, so nothing else changes. */
+.bss-inner{padding-bottom:calc(28px + var(--bk-nav-bottombar, 0px))}
 .bss-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .bss-ic{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;border:none}
 .bss-coins{display:flex;align-items:center;gap:5px;background:rgba(245,217,118,.16);color:var(--bss-gold);font-size:13px;font-weight:800;padding:6px 12px;border-radius:999px}
