@@ -6,6 +6,18 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## The bottom bar becomes a law (GN3, August 29 2026)
+`src/BuildableKids.jsx`, the four `Family*.jsx`, `src/TopBoard.jsx`, `src/GameLobby.jsx`, `HUD-AND-NAV-RULES.md`, `qa-gn3.mjs` (new).
+
+Swept every screen in the shell. The level journey, the difficulty picker, both
+loadouts, the upgrade store, the game-type chooser, all four family matchmaking
+screens and the Top Creations board now carry the bar; nothing with a live engine
+iframe or an active making canvas does. Which tab lights comes from the catalog
+type (`navTabFor`), so studios light Make and games light Play without a per-screen
+rule. `HUD-AND-NAV-RULES.md` Rule 0 now carries the whole contract, including the
+only four reasons a screen is exempt. `qa-gn3.mjs` holds a register of every
+`SCREEN_` constant and fails if a new one arrives unclassified.
+
 ## The bar reaches the lobby, and invites cancel clean (GN2, August 29 2026)
 `src/BottomBar.jsx` (new), `src/GameLobby.jsx`, `src/HelperReactions.jsx`, `qa-gn2.mjs` (new).
 

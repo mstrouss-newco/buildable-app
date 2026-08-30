@@ -1,3 +1,76 @@
+## 2026-08-29 — GN3: the bar becomes a law, not a feature of two screens
+
+GN1 put the bar on the game front door and GN2 on the lobby. GN3 audited every
+screen in the shell and made the rule enforceable.
+
+**The rule, settled.** A screen is DOING if it embeds a live engine iframe or an
+active making canvas. Everything else a kid can stand on between Home and play is
+DECIDING and carries the bar.
+
+**Newly on the bar (all in `src/BuildableKids.jsx` unless noted):**
+- `GameJourney` — the shell's winding level picker (3 screens). Picking a level is
+  choosing, not playing. The clearance goes on its inner scroller, not the
+  fixed-height outer, or it would have been clipped.
+- `BoardSoloFrame` — the difficulty picker for board games (2 screens).
+- `BreakerLoadout` — "Make it mine" (4 screens) — and `UpgradeStore`, "Gear up".
+- `GameTypeScreen` — picking what kind of game to make, with **Make** lit.
+- The family lane (`FamilyChess`, `FamilyCheckers`, `FamilyTown`,
+  `FamilyRealtime`): the bar on each matchmaking screen, none on any match view.
+  Nothing is held open while matchmaking — a match row is created only when a
+  sibling is picked — so there is no pending work for a tab tap to release, unlike
+  the lobby's waiting screen.
+- `TopBoard` — browsing other kids' work, with **Home** lit: it is a Home shelf
+  opened out, not a section of its own.
+
+**Which tab lights is now derived, not written down twice.** `navTabFor(game)`
+reads the catalog `type`: a studio's front door and loadout light **Make**,
+everything on the way into a game lights **Play**. Music Maker's landing had been
+lighting Play since GN1; it lights Make now, and a future studio is right for free.
+
+**Deliberately NOT on the bar,** and now written into `HUD-AND-NAV-RULES.md` as
+the only four reasons a screen is exempt: a live engine iframe or studio canvas;
+an active making canvas mid-flow (the character and level creators — leaving loses
+the kid's work, and the *chooser* in front of them does carry the bar); a first-run
+gate (the helper picker — one job, and a bar invites skipping it); and a grown-up
+screen (portal, friends admin, dashboard — different audience).
+
+**QA — `qa-gn3.mjs` (new), 86 checks, all pass.** The heart of it is a REGISTER:
+every `SCREEN_` constant classified, with its tab, checked against the shell both
+ways — a new screen added without a classification fails the harness, and so does a
+stale entry. That is the alarm the card asked for. On top of that: 13 real renders,
+one per component that owns its own bar, each asserting the bar is present and
+exactly the right one of five tabs is lit (the studio cases prove `navTabFor`
+really flips Play to Make); `GameFrame` rendered for real to prove the doing side
+shows no bar but does show the iframe and corner Home; a per-screen source check
+that no doing branch carries a bar; and a check that a component handed no nav
+renders no bar at all, so a half-wired screen can never show a dead one.
+
+Rather than stub the accounts and match modules — which would have swapped out the
+very code the renders are meant to exercise — Node gets the two browser bits they
+read. A cold, signed-out browser is a valid state to render in, and the bar has to
+be there in it too.
+
+**GN2's flagged finding, cleared.** The lobby's three mode tiles used dingbat
+characters as icons (a white square, a star, a north-east arrow). They are drawn
+SVG now — a tablet with two counters, two people, and a link leaving a box.
+qa-gn2's emoji allowance narrows from four characters to one: the `←` inside the
+Back button *labels*, which is text in a sentence rather than a glyph standing in
+for an icon. Replacing those across the whole app is a separate sweep and is not
+claimed here.
+
+Also green: qa-gn1, qa-gn2, qa-nv1..nv4, qa-chess, qa-tennis, qa-checkers,
+qa-tictactoe, qa-connectfour, qa-dotsandboxes, qa-invite, qa-quickgame,
+qa-family-town, qa-music, qa-breaker, qa-survival, qa-sling.
+
+**Still flagged:** `scripts/planner.mjs` cannot run from this session — the sandbox
+network policy refuses `buildablekids.com` (403 on CONNECT) — so the planner was
+updated through its Supabase table instead. And all three GN cards sit on one
+branch, `claude/gn1-bottom-bar-landing-ktohxj`, which is not merged.
+
+**What remains in this phase:** only GN4, the bar over the pickers that live
+INSIDE each engine. It is marked LATER by design and the card says not to start it
+without Mike saying go.
+
 ## 2026-08-29 — GN2: the bar in the lobby, and invites that cancel before they leave
 
 The multiplayer lobby is the truest waiting room in the app and it was a locked
