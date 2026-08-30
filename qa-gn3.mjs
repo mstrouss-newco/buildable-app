@@ -140,7 +140,15 @@ console.log('--- Doing screens: the shell never renders a bar beside them ---');
 // GameFrame is the one wrapper every engine screen goes through.
 const frame = /function\s+GameFrame\s*\([\s\S]*?\n\}\n/.exec(SHELL);
 chk('GameFrame block found', !!frame);
-chk('GameFrame renders no bar (so no engine screen can)', !!frame && !/<BottomBar/.test(frame[0]));
+// GN4 amended this: a GameFrame is exempt while the game is being PLAYED, not
+// merely for being an iframe. It now renders the bar when — and only when — the
+// engine reports through the nav bridge that it is on its own picker. The `barUp`
+// condition is the whole rule, and qa-gn4.mjs drives it for real.
+chk('GameFrame renders the bar ONLY when the engine says it is not playing',
+  !!frame && /const barUp = !!\(nav && bridge && bridge\.inGame === false\);/.test(frame[0])
+  && /\{barUp && <BottomBar/.test(frame[0]));
+chk('GameFrame renders no bar unconditionally (no bar over live play)',
+  !!frame && !/[^&] <BottomBar/.test(frame[0].replace(/\{barUp && <BottomBar/g, '')));
 // And no doing screen may be wrapped in a fragment with a bar beside it.
 for (const [screen, why] of Object.entries(DOING)) {
   const branch = new RegExp('screen === ' + screen + '\\b[\\s\\S]{0,1400}?(?=\\n  if \\(screen ===)').exec(SHELL);
@@ -234,8 +242,11 @@ if (esbuild && React && renderToStaticMarkup) {
     }
 
     // The other direction, for real: the wrapper every engine screen goes through.
-    const frameHtml = renderToStaticMarkup(React.createElement(M.GameFrame, { title: 'Breaker', src: '/breaker.html', onHome: noop }));
-    chk('GameFrame (every doing screen) renders NO bar', !/data-nv1-bottom-bar/.test(frameHtml));
+    // A GameFrame that has heard nothing from its engine shows no bar. (The GN4
+    // case -- an engine reporting it is on its own picker -- needs a live mount and
+    // is proved in qa-gn4.mjs.)
+    const frameHtml = renderToStaticMarkup(React.createElement(M.GameFrame, { title: 'Breaker', src: '/breaker.html', onHome: noop, nav }));
+    chk('GameFrame renders NO bar until the engine says otherwise', !/data-nv1-bottom-bar/.test(frameHtml));
     chk('GameFrame does render the engine iframe + corner Home',
       /<iframe/.test(frameHtml) && /aria-label="Home"/.test(frameHtml));
 

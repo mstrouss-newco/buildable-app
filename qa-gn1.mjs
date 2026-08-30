@@ -72,8 +72,16 @@ chk('nav handlers route to the five section screens',
 console.log('--- Deciding shows the bar; doing never does ---');
 const frame = /function\s+GameFrame\s*\([\s\S]*?\n\}\n/.exec(S);
 chk('GameFrame block found', !!frame);
-chk('the bar NEVER renders inside GameFrame (no bar over play)',
-  !!frame && !/<BottomBar/.test(frame[0]));
+// GN4 amended GN1's blanket "never inside GameFrame": deciding vs doing is about
+// what the kid is doing, not which side of an iframe the screen is on. A frame now
+// shows the bar when -- and ONLY when -- the engine reports through the nav bridge
+// that it is on its own picker. What must still never happen is a bar over live
+// play, which is exactly what the barUp condition guarantees. qa-gn4.mjs drives it
+// against a real DOM; this check pins the condition.
+chk('the bar renders inside GameFrame only while the engine says it is NOT playing',
+  !!frame && /const barUp = !!\(nav && bridge && bridge\.inGame === false\);/.test(frame[0]));
+chk('...and never unconditionally (no bar over live play)',
+  !!frame && !/[^&] <BottomBar/.test(frame[0].replace(/\{barUp && <BottomBar/g, '')));
 
 // ------------------------------------------------------- 4) the Gear up pill
 console.log('--- Gear up pill clears the bar on screens that show both ---');
