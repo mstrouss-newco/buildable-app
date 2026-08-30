@@ -13,17 +13,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
-  /* Session PT1 — Practice. Cream brand tokens, same family as lessons.html.
-     NO EMOJIS anywhere: every icon is drawn SVG geometry (product guardrail).
-     Built touch-first for iPad and iPhone; every tap target is >= 56px tall.
+  /* Session PT1 + PT2 + PT3 — Practice. Cream brand tokens, same family as
+     lessons.html. NO EMOJIS anywhere: every icon, every bird and every keypad
+     glyph is drawn SVG geometry (product guardrail). Touch-first for iPad and
+     iPhone; every tap target is >= 56px.
 
-     There is NO timer, NO countdown, NO clock and NO score in this page. Speed
-     is measured silently and only ever moves a word's box. A kid must never be
-     able to tell they are being timed. */
+     THE RULE THIS PAGE IS BUILT AROUND: practice is never timed. There is no
+     timer, no countdown, no clock and no score anywhere in a practice run.
+     Speed is measured silently and only ever moves a word's box.
+
+     SPRINT (PT3) is the deliberate exception and the only one: it is a 60-second
+     victory lap that mirrors a school timed test, it is clearly a different
+     screen, it only unlocks once practice shows the kid is already fluent, and
+     even there the time shows as a calm draining bar, never as counting digits. */
   :root{
     --ink:#0F0E17; --cream:#FDFAF5; --gold:#FFC542; --mint:#2FAE68; --sky:#37B6F5;
     --card:#FFFFFF; --sub:#6E6684; --line:#EDE5D6; --purple:#7C5CFC; --coral:#FF6B6B;
     --grad:linear-gradient(90deg,#7C5CFC 0%,#FF6B6B 100%);
+    --wire:#B9AF9B; --sky1:#EAF6FF; --sky2:#FDFAF5;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
@@ -32,19 +39,16 @@
   .wrap{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
         padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
 
-  /* top bar */
   .top{display:flex;align-items:center;gap:10px;padding:12px 16px 6px}
   .top h1{font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;margin:0;flex:1;
           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #back{width:44px;height:44px;flex:none;border-radius:13px;background:#fff;border:2px solid var(--line);
         display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
-  /* Inside the shell the Home button belongs to the shell, so the page's own
-     Back only appears once there is somewhere to step back TO. */
   body.in-app #back{display:none}
   body.in-app.canback #back{display:flex}
   body.in-app .top{padding-left:96px}
 
-  /* a soft progress rail — how far through this run, never a clock */
+  /* how far through this run — never a clock */
   .rail{display:flex;gap:5px;padding:4px 16px 12px;min-height:16px}
   .rail i{flex:1;height:8px;border-radius:5px;background:#EBE3D3;transition:background .25s}
   .rail i.done{background:var(--grad)}
@@ -56,21 +60,42 @@
   h2.title{font-family:'Fredoka',sans-serif;font-weight:600;font-size:23px;margin:4px 0 4px}
   p.lede{font-size:15px;color:var(--sub);margin:0 0 18px;line-height:1.4}
 
-  /* deck + mode pickers */
+  /* ---------- the collection: birds on telephone wires (PT2) ----------
+     One bird per MASTERED item. No text at all — a non-reader sees the flock
+     grow and understands it. */
+  .flock{margin:0 0 16px;border-radius:20px;overflow:hidden;border:2px solid var(--line);
+         background:linear-gradient(180deg,var(--sky1),var(--sky2))}
+  .flock svg{display:block;width:100%;height:auto}
+  .flock.empty{opacity:.75}
+  .bird{transform-box:fill-box;transform-origin:center bottom}
+  .bird.arrive{animation:flyin .75s cubic-bezier(.22,1.1,.4,1) both}
+  @keyframes flyin{
+    0%{opacity:0;transform:translate(26px,-40px) rotate(-16deg) scale(.5)}
+    70%{opacity:1;transform:translate(0,3px) rotate(3deg) scale(1.06)}
+    100%{opacity:1;transform:none}
+  }
+  .bird.sing{animation:sing .6s ease-in-out infinite}
+  @keyframes sing{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+  /* ---------- pickers ---------- */
   .picklist{display:flex;flex-direction:column;gap:11px;margin-bottom:22px}
   .pick{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;
         background:var(--card);border:2px solid var(--line);border-radius:20px;padding:14px 15px;
         font-family:'Nunito',sans-serif;font-weight:800;color:var(--ink);font-size:16px;
         box-shadow:0 5px 14px rgba(15,14,23,.05)}
   .pick[aria-pressed="true"]{border-color:var(--purple);box-shadow:0 6px 18px rgba(124,92,252,.20)}
+  .pick[disabled]{opacity:.5;cursor:default}
   .pick .chip{width:46px;height:46px;flex:none;border-radius:14px;display:flex;align-items:center;
               justify-content:center;background:linear-gradient(160deg,#B197FF,#8A6BFF)}
-  .pick .body{flex:1;min-width:0}
-  .pick .nm{font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;line-height:1.15}
-  .pick .sub{font-size:13px;color:var(--sub);font-weight:800;margin-top:2px}
-  /* the per-deck mastery bar — honest: it only fills from real box-5 words */
-  .bar{height:7px;border-radius:5px;background:#EBE3D3;overflow:hidden;margin-top:8px}
+  .pick .chip.num{background:linear-gradient(160deg,#7FD8F5,#37B6F5)}
+  .pick .body{flex:1;min-width:0;display:block}
+  .pick .nm{display:block;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;line-height:1.15}
+  .pick .sub{display:block;font-size:13px;color:var(--sub);font-weight:800;margin-top:3px}
+  .bar{display:block;height:7px;border-radius:5px;background:#EBE3D3;overflow:hidden;margin-top:8px}
   .bar span{display:block;height:100%;background:var(--grad);border-radius:5px;transition:width .3s}
+
+  .subjects{display:flex;gap:10px;margin-bottom:18px}
+  .subjects .pick{flex:1}
 
   .sectionlabel{font-size:11.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
                 color:var(--purple);margin:2px 0 9px}
@@ -82,16 +107,21 @@
   .ghost{width:100%;border:2px solid var(--line);background:#fff;color:var(--sub);cursor:pointer;
          border-radius:18px;padding:14px;font-size:16px;font-family:'Nunito',sans-serif;font-weight:800;
          margin-top:11px}
+  .sprintbtn{width:100%;margin-top:11px;border:none;cursor:pointer;border-radius:20px;padding:16px;
+             font-size:18px;font-family:'Fredoka',sans-serif;font-weight:600;color:#0F0E17;
+             background:linear-gradient(90deg,#FFC542,#FF9A3C);box-shadow:0 8px 20px rgba(255,154,60,.28)}
+  .sprintbtn.locked{background:#fff;border:2px dashed var(--line);color:var(--sub);box-shadow:none;cursor:default}
+  .lockline{font-size:13px;color:var(--sub);text-align:center;margin-top:8px;line-height:1.4}
 
-  /* ---- the intro moment (heart-word method) ---- */
-  #intro .card{background:var(--card);border:2px solid var(--line);border-radius:26px;
-               padding:30px 20px 24px;text-align:center;box-shadow:0 8px 22px rgba(15,14,23,.06)}
+  /* ---------- intro moment ---------- */
+  #intro .card,#placeintro .card,#placedone .card,#done .card,#sprintintro .card,#sprintdone .card{
+    background:var(--card);border:2px solid var(--line);border-radius:26px;padding:28px 20px 24px;
+    text-align:center;box-shadow:0 8px 22px rgba(15,14,23,.06)}
   .newflag{font-size:11.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
            color:var(--purple);margin-bottom:14px}
   .bigword{font-family:'Fredoka',sans-serif;font-weight:600;line-height:1.05;
-           font-size:clamp(46px,17vw,84px);word-break:break-word;margin:6px 0 4px}
-  /* The tricky letters GLOW — the part you have to know by heart. */
-  .bigword .heart{color:var(--coral);position:relative;display:inline-block;
+           font-size:clamp(40px,15vw,78px);word-break:break-word;margin:6px 0 4px}
+  .bigword .heart{color:var(--coral);display:inline-block;
                   text-shadow:0 0 16px rgba(255,107,107,.55),0 0 34px rgba(255,107,107,.28);
                   animation:glow 1.5s ease-in-out infinite}
   @keyframes glow{0%,100%{text-shadow:0 0 12px rgba(255,107,107,.45),0 0 28px rgba(255,107,107,.20)}
@@ -101,17 +131,15 @@
            background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .speaker:active{transform:scale(.94)}
 
-  /* ---- the question ---- */
-  .asktop{text-align:center;margin:6px 0 16px;min-height:132px;display:flex;flex-direction:column;
+  /* ---------- the question ---------- */
+  .asktop{text-align:center;margin:6px 0 16px;min-height:128px;display:flex;flex-direction:column;
           align-items:center;justify-content:center;gap:8px}
   .asklabel{font-size:14.5px;color:var(--sub);font-weight:800}
-  /* Flash mode: the word appears for about a second, then goes. */
-  .flashword{font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(44px,16vw,78px);
+  .flashword{font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(40px,15vw,72px);
              line-height:1.05;word-break:break-word;opacity:0;transition:opacity .16s}
   .flashword.on{opacity:1}
-  .flashbox{min-height:96px;display:flex;align-items:center;justify-content:center}
+  .flashbox{min-height:92px;display:flex;align-items:center;justify-content:center}
 
-  /* four big word cards */
   .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .wordcard{min-height:96px;border-radius:22px;border:2px solid var(--line);background:var(--card);
             cursor:pointer;font-family:'Fredoka',sans-serif;font-weight:600;color:var(--ink);
@@ -121,21 +149,55 @@
   .wordcard.right{border-color:var(--mint);background:#EAF8F0}
   .wordcard.wrongpick{border-color:var(--coral);background:#FFF0F0}
   .wordcard.showme{border-color:var(--mint)}
+  .wordcard.neutral{border-color:var(--purple);background:#F4F0FF}
   .cards.locked .wordcard{cursor:default}
   @media (min-width:430px){ .wordcard{min-height:110px} }
 
-  /* the gentle "here it is again" line — never a telling-off */
+  /* ---------- the drawn number keypad (PT3) ---------- */
+  .entry{min-height:66px;margin:0 auto 12px;max-width:280px;border-radius:18px;border:2px solid var(--line);
+         background:#fff;display:flex;align-items:center;justify-content:center;
+         font-family:'Fredoka',sans-serif;font-weight:600;font-size:38px;letter-spacing:2px}
+  .entry.right{border-color:var(--mint);background:#EAF8F0}
+  .entry.wrongpick{border-color:var(--coral);background:#FFF0F0}
+  .entry .caret{display:inline-block;width:3px;height:34px;background:var(--purple);margin-left:3px;
+                animation:blink 1s step-end infinite;vertical-align:-4px}
+  @keyframes blink{50%{opacity:0}}
+  .entry .placeholder{color:#CFC7BA}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .key{min-height:64px;border-radius:18px;border:2px solid var(--line);background:var(--card);cursor:pointer;
+       font-family:'Fredoka',sans-serif;font-weight:600;font-size:30px;color:var(--ink);
+       box-shadow:0 4px 12px rgba(15,14,23,.05);display:flex;align-items:center;justify-content:center}
+  .key:active{transform:scale(.96)}
+  .key.act{background:#F4F0FF;border-color:#D9CEFF}
+  .key.gokey{background:var(--grad);border:none;color:#fff}
+  .keypad.locked .key{cursor:default}
+
   .again{text-align:center;font-size:15px;color:var(--sub);margin:16px 0 0;min-height:22px}
 
-  /* ---- the end of a run ---- */
-  #done .card{background:var(--card);border:2px solid var(--line);border-radius:26px;padding:28px 20px;
-              text-align:center;box-shadow:0 8px 22px rgba(15,14,23,.06)}
-  .bignum{font-family:'Fredoka',sans-serif;font-weight:600;font-size:52px;line-height:1;margin:8px 0 2px}
+  /* ---------- sprint ---------- */
+  /* The ONLY clock in the product, and even here it is a draining bar with no
+     digits: a child sees time going without watching a number chase them. */
+  .sprintbar{height:12px;border-radius:8px;background:#F0E7D6;overflow:hidden;margin:0 0 16px;position:relative}
+  .sprintbar span{display:block;height:100%;width:100%;border-radius:8px;
+                  background:linear-gradient(90deg,#FFC542,#FF9A3C);transform-origin:left center}
+  .sprintcount{text-align:center;font-family:'Fredoka',sans-serif;font-weight:600;font-size:17px;
+               color:var(--sub);margin:0 0 10px}
+  .bignum{font-family:'Fredoka',sans-serif;font-weight:600;font-size:58px;line-height:1;margin:8px 0 2px}
+  .goalline{font-size:14.5px;color:var(--sub);margin-top:10px;line-height:1.45}
+  .pb{display:inline-block;margin-top:12px;background:#FFF4D8;border:2px solid #F3DFA8;border-radius:999px;
+      padding:8px 16px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:#8A5A00}
+
   .wordchips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0 4px}
   .wordchip{background:#F6EFE1;border-radius:999px;padding:7px 14px;font-size:16px;
             font-family:'Fredoka',sans-serif;font-weight:600}
-
   .note{font-size:13.5px;color:var(--sub);text-align:center;margin-top:16px;line-height:1.45}
+
+  /* the big moment: a whole list finished */
+  .bigmoment{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+             padding:22px;background:rgba(15,14,23,.55);animation:fade .3s both}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .bigmoment .inner{background:#fff;border-radius:28px;padding:28px 22px;text-align:center;max-width:400px;
+                    width:100%;box-shadow:0 20px 60px rgba(15,14,23,.4)}
 </style>
 </head>
 <body>
@@ -150,22 +212,52 @@
   <div class="rail hide" id="rail"></div>
 
   <main>
-    <!-- ---------- deck + mode picker ---------- -->
+    <!-- ---------- the picker ---------- -->
     <section id="home">
+      <div class="flock" id="flock" aria-label="Your birds"></div>
       <h2 class="title">What shall we practise?</h2>
-      <p class="lede">Pick a set of words, then pick a way to play. Every word you get quick moves up a box, so you see it less and less.</p>
-      <div class="sectionlabel">Word sets</div>
+      <p class="lede" id="homelede">Pick what to practise, then pick a way to play.</p>
+      <div class="subjects picklist" id="subjects"></div>
+      <div class="sectionlabel" id="decklabel">Sets</div>
       <div class="picklist" id="decks"></div>
       <div class="sectionlabel">Ways to play</div>
       <div class="picklist" id="modes"></div>
       <button class="go" id="start" disabled>Start</button>
+      <button class="sprintbtn hide" id="sprint">Sprint</button>
+      <p class="lockline hide" id="sprintlock"></p>
       <p class="note" id="homenote"></p>
     </section>
 
-    <!-- ---------- intro moment for a brand new word ---------- -->
+    <!-- ---------- the placement warm-up (PT2) ---------- -->
+    <section id="placeintro" class="hide">
+      <div class="card">
+        <svg width="78" height="78" viewBox="0 0 24 24" aria-hidden="true" style="margin-bottom:6px">
+          <circle cx="12" cy="12" r="10" fill="#7C5CFC" opacity="0.12"/>
+          <path d="M8 12.5l2.6 2.6L16 9.4" fill="none" stroke="#7C5CFC" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h2 class="title" style="margin-top:6px">Let's see what you already know</h2>
+        <p class="hearthint">A few quick words. There is nothing to get wrong here — it just helps us find the right place to start.</p>
+      </div>
+      <button class="go" id="placego" style="margin-top:16px">Let's go</button>
+    </section>
+    <section id="placedone" class="hide">
+      <div class="card">
+        <svg width="72" height="72" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" fill="#2FAE68" opacity="0.14"/>
+          <path d="M7.5 12.4l3 3 6-6.4" fill="none" stroke="#2FAE68" stroke-width="2.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h2 class="title" style="margin-top:10px" id="placedoneTitle">All done</h2>
+        <p class="hearthint" id="placedoneLine"></p>
+      </div>
+      <button class="go" id="placedonego" style="margin-top:16px">Start practising</button>
+    </section>
+
+    <!-- ---------- intro moment for a brand new item ---------- -->
     <section id="intro" class="hide">
       <div class="card">
-        <div class="newflag">A new word</div>
+        <div class="newflag" id="introFlag">A new word</div>
         <div class="bigword" id="introWord"></div>
         <button class="speaker" id="introSay" aria-label="Say it again">
           <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true">
@@ -193,10 +285,14 @@
         </button>
       </div>
       <div class="cards" id="cards"></div>
+      <div class="hide" id="pad">
+        <div class="entry" id="entry"></div>
+        <div class="keypad" id="keypad"></div>
+      </div>
       <p class="again" id="again"></p>
     </section>
 
-    <!-- ---------- end of a run ---------- -->
+    <!-- ---------- end of a practice run ---------- -->
     <section id="done" class="hide">
       <div class="card">
         <svg width="66" height="66" viewBox="0 0 24 24" aria-hidden="true" style="margin-bottom:2px">
@@ -207,21 +303,58 @@
         <div class="bignum" id="doneNum"></div>
         <div style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px" id="doneLine"></div>
         <div id="doneMovedWrap" class="hide">
-          <p class="hearthint" style="margin-top:18px">Words that moved up today</p>
+          <p class="hearthint" style="margin-top:18px">Moved up today</p>
           <div class="wordchips" id="doneMoved"></div>
         </div>
       </div>
-      <button class="go" id="againBtn" style="margin-top:16px">Practise again</button>
-      <button class="ghost" id="pickBtn">Pick another set</button>
+      <div class="flock" id="flockDone" style="margin-top:16px" aria-label="Your birds"></div>
+      <button class="go" id="againBtn">Practise again</button>
+      <button class="ghost" id="pickBtn">Pick something else</button>
+    </section>
+
+    <!-- ---------- sprint (PT3) ---------- -->
+    <section id="sprintintro" class="hide">
+      <div class="card">
+        <svg width="76" height="76" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" fill="#FFC542" opacity="0.22"/>
+          <path d="M13 5.5L8.2 12.6h3.4l-.6 5.9 4.8-7.4h-3.4l.6-5.6z" fill="#E08A00"/>
+        </svg>
+        <h2 class="title" style="margin-top:10px">Sprint</h2>
+        <p class="hearthint" id="sprintBlurb"></p>
+        <div class="pb hide" id="sprintPb"></div>
+      </div>
+      <button class="go" id="sprintgo" style="margin-top:16px">Ready</button>
+      <button class="ghost" id="sprintback">Not now</button>
+    </section>
+    <section id="sprint" class="hide">
+      <div class="sprintbar"><span id="sprintBar"></span></div>
+      <div class="sprintcount" id="sprintCount"></div>
+      <div class="asktop" style="min-height:96px">
+        <div class="flashbox"><div class="flashword on" id="sprintWord"></div></div>
+      </div>
+      <div class="entry" id="sprintEntry"></div>
+      <div class="keypad" id="sprintPad"></div>
+    </section>
+    <section id="sprintdone" class="hide">
+      <div class="card">
+        <div class="bignum" id="sprintNum"></div>
+        <div style="font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px" id="sprintLine"></div>
+        <div class="pb hide" id="sprintBest"></div>
+        <p class="goalline" id="sprintGoal"></p>
+      </div>
+      <button class="go" id="sprintAgain" style="margin-top:16px">Go again</button>
+      <button class="ghost" id="sprintHome">Back to practice</button>
     </section>
   </main>
 </div>
 
 <script src="/buildable-practice.js"></script>
+<script src="/buildable-audio.js"></script>
 <script>
 (function(){
   "use strict";
   var BP = window.BuildablePractice;
+  var BA = window.BuildableAudio || null;
 
   /* ---- shell awareness (lessons.html pattern) ---- */
   function iframed(){ try{ return window.parent && window.parent !== window; }catch(e){ return false; } }
@@ -239,27 +372,36 @@
   var KID_GRADE = (KID && KID.grade) ? String(KID.grade) : null;
 
   var $ = function(id){ return document.getElementById(id); };
-  var SECTIONS = ["home","intro","ask","done"];
+  var SECTIONS = ["home","placeintro","placedone","intro","ask","done","sprintintro","sprint","sprintdone"];
   function show(which){
     SECTIONS.forEach(function(s){ $(s).classList.toggle("hide", s !== which); });
-    $("rail").classList.toggle("hide", which === "home");
+    $("rail").classList.toggle("hide", which === "home" || which.indexOf("sprint") === 0 || which.indexOf("place") === 0);
     document.body.classList.toggle("canback", which !== "home");
     try{ window.scrollTo(0,0); }catch(e){}
   }
 
   /* -----------------------------------------------------------------------
-     AUDIO — three tiers, in order, so a kid always hears the word:
-       1. the pre-generated file in /practice/audio/words/ (baked once by
-          scripts/gen-practice-audio.mjs — instant, free, offline-friendly)
-       2. /api/say, the live ElevenLabs pipeline (warm voice, cached
-          server-side after the first play, so a missing file self-heals)
-       3. the device voice (speechSynthesis) — always there, never pretty
-     Audio unlocks on the first tap, as every game on this platform does.
+     SOUND — through the shared ElevenLabs pipeline (buildable-audio.js ->
+     /api/sfx). Every practice cue is authored at >= 0.5s in api/sfx.js because
+     ElevenLabs refuses anything shorter. If a clip is missing the shared lib
+     falls back on its own; a silent cue must never stop the run.
+  ----------------------------------------------------------------------- */
+  if(BA && BA.configure){
+    BA.configure({ sfxBase:"/api/sfx?s=", map:{
+      right:"practice_right", oops:"practice_oops", newitem:"practice_new",
+      bird:"practice_bird", flock:"practice_flock", place:"practice_place",
+      go:"practice_go", timeup:"practice_time", best:"practice_best"
+    }});
+  }
+  function cue(name){ try{ if(BA && BA.sfx) BA.sfx(name); }catch(e){} }
+
+  /* -----------------------------------------------------------------------
+     WORD AUDIO — three tiers so a kid always hears it: the baked mp3, then
+     /api/say (live ElevenLabs, cached server-side), then the device voice.
+     Maths facts have no baked file and go straight to /api/say.
   ----------------------------------------------------------------------- */
   var AUDIO = (function(){
-    var cache = {};          // url -> HTMLAudioElement that has worked before
-    var badFile = {};        // audio filenames already proved missing
-    var current = null;
+    var cache = {}, badFile = {}, current = null;
     function play(url){
       return new Promise(function(resolve, reject){
         var a = cache[url] || new Audio(url);
@@ -289,12 +431,11 @@
       try{ if(current){ current.pause(); } }catch(e){}
       try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){}
     }
-    // say(item, deck) — the whole ladder, in order.
-    function say(item, deck){
+    function say(item, d){
       stop();
       var text = BP.sayOf(item);
       var file = item && item.audio;
-      var base = (deck && deck.audioBase) || "/practice/audio/words/";
+      var base = (d && d.audioBase) || "/practice/audio/words/";
       var chain = Promise.reject();
       if(file && !badFile[file]) chain = chain.catch(function(){ return play(base + file); });
       chain
@@ -304,34 +445,202 @@
     return { say: say, stop: stop, speak: speak };
   })();
 
-  /* ---- decks ---- */
-  var MODES = [
-    { id:"find",  name:"Find It", sub:"Listen, then tap the word you heard" },
-    { id:"flash", name:"Flash",   sub:"The word blinks — tap the one you saw" },
-  ];
-  var deckIndex = [], deck = null, deckId = null, mode = "find";
+  /* -----------------------------------------------------------------------
+     THE COLLECTION (PT2) — one drawn bird per MASTERED item, sitting on
+     telephone wires. No text anywhere in it: a child who cannot read still
+     understands "my flock got bigger".
 
-  function deckGlyph(){
-    // Drawn SVG only. An open book.
-    return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4V5zm16 0h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6V5z" ' +
-      'fill="#fff"/></svg>';
+     Every bird is really drawn — the count on screen IS the mastered count,
+     never a rounded-off decoration. As the flock grows the birds shrink and
+     more wires appear, so an enormous flock reads as an enormous flock.
+  ----------------------------------------------------------------------- */
+  var VB_W = 360;
+  function birdPath(x, y, r, tint){
+    // A small side-on bird: body, head, beak, wing, tail, two legs to the wire.
+    var s = r / 6;
+    return '<g class="bird">' +
+      '<path d="M' + (x - 2*s) + ' ' + y + ' l0 ' + (2.2*s) + ' M' + (x + 1.4*s) + ' ' + y + ' l0 ' + (2.2*s) + '" ' +
+        'stroke="#8A7F6B" stroke-width="' + Math.max(0.6, 0.55*s) + '" stroke-linecap="round"/>' +
+      '<ellipse cx="' + x + '" cy="' + (y - 2.2*s) + '" rx="' + (3.4*s) + '" ry="' + (2.4*s) + '" fill="' + tint + '"/>' +
+      '<circle cx="' + (x + 2.9*s) + '" cy="' + (y - 4.1*s) + '" r="' + (1.7*s) + '" fill="' + tint + '"/>' +
+      '<path d="M' + (x + 4.4*s) + ' ' + (y - 4.2*s) + ' l' + (1.8*s) + ' ' + (0.7*s) + ' l' + (-1.8*s) + ' ' + (0.7*s) + ' z" fill="#F0A02C"/>' +
+      '<ellipse cx="' + (x - 0.2*s) + '" cy="' + (y - 2.2*s) + '" rx="' + (1.9*s) + '" ry="' + (1.2*s) + '" fill="rgba(255,255,255,.34)"/>' +
+      '<path d="M' + (x - 3.2*s) + ' ' + (y - 2.6*s) + ' l' + (-2.6*s) + ' ' + (-1.5*s) + ' l' + (0.6*s) + ' ' + (2.6*s) + ' z" fill="' + tint + '"/>' +
+      '</g>';
   }
-  function modeGlyphFind(){
+  var TINTS = ["#7C5CFC","#37B6F5","#FF6B6B","#2FAE68","#F0972A","#B06BE0"];
+
+  function renderFlock(host, n, opts){
+    opts = opts || {};
+    if(!host) return;
+    n = Math.max(0, n|0);
+    host.classList.toggle("empty", n === 0);
+    // Wires grow with the flock, up to six; then the birds pack in tighter.
+    var wires = Math.max(1, Math.min(6, Math.ceil(n / 12) || 1));
+    var perWire = n ? Math.ceil(n / wires) : 0;
+    var pad = 26, span = VB_W - pad * 2;
+    var gap = perWire > 0 ? span / (perWire + 1) : span;
+    var r = Math.max(3, Math.min(13, gap * 0.62));
+    var rowH = Math.max(20, r * 2.6);
+    var top = 16, H = top + wires * rowH + 14;
+
+    var out = '<svg viewBox="0 0 ' + VB_W + ' ' + H + '" role="img" aria-hidden="true">';
+    for(var w = 0; w < wires; w++){
+      var y = top + rowH * (w + 1) - 6;
+      // a wire strung between two points, with a gentle sag in the middle
+      out += '<path d="M' + (pad - 12) + ' ' + (y - 10) + ' Q' + (VB_W/2) + ' ' + (y + 7) + ' ' + (VB_W - pad + 12) + ' ' + (y - 10) + '" ' +
+             'fill="none" stroke="var(--wire)" stroke-width="2" stroke-linecap="round"/>';
+    }
+    var made = 0;
+    for(var wi = 0; wi < wires && made < n; wi++){
+      var yy = top + rowH * (wi + 1) - 6;
+      for(var i = 0; i < perWire && made < n; i++){
+        var x = pad + gap * (i + 1);
+        // sit the bird on the sagging wire rather than on a flat line
+        var t = (x - (pad - 12)) / ((VB_W - pad + 12) - (pad - 12));
+        var sag = (1 - Math.pow(2 * t - 1, 2)) * 8.5;
+        out += birdPath(x, (yy - 10) + sag, r, TINTS[made % TINTS.length]);
+        made++;
+      }
+    }
+    out += '</svg>';
+    host.innerHTML = out;
+
+    // The newest birds fly in; on the big moment the whole flock sings.
+    var birds = host.querySelectorAll(".bird");
+    if(opts.arrived > 0){
+      for(var b = Math.max(0, birds.length - opts.arrived); b < birds.length; b++) birds[b].classList.add("arrive");
+    }
+    if(opts.sing){ Array.prototype.forEach.call(birds, function(el, i){
+      el.classList.add("sing");
+      el.style.animationDelay = (i % 12) * 0.06 + "s";
+    }); }
+    return birds.length;
+  }
+  function masteredNow(){ return BP.masteredTotal(BP.loadState(), KID_ID); }
+  function paintFlocks(opts){
+    var n = masteredNow();
+    renderFlock($("flock"), n, opts);
+    renderFlock($("flockDone"), n, opts);
+    return n;
+  }
+
+  /* ---- decks + modes ---- */
+  var CHOICE_MODES = [
+    { id:"find",  name:"Find It", sub:"Listen, then tap the word you heard" },
+    { id:"flash", name:"Flash",   sub:"The word blinks - tap the one you saw" },
+  ];
+  var KEYPAD_MODES = [
+    { id:"solve", name:"Solve It", sub:"Tap the answer on the keypad" },
+  ];
+  var deckIndex = [], deck = null, deckId = null, mode = "find", subject = "reading";
+  var deckCache = {};
+
+  function loadDeck(meta){
+    if(deckCache[meta.id]) return Promise.resolve(deckCache[meta.id]);
+    return fetch(meta.file).then(function(r){ return r.json(); }).then(function(d){
+      deckCache[d.id] = d; return d;
+    });
+  }
+  function metaFor(id){ return deckIndex.filter(function(d){ return d.id === id; })[0] || null; }
+  function modesFor(meta){ return (meta && meta.answerUI === "keypad") ? KEYPAD_MODES : CHOICE_MODES; }
+
+  /* ---- which subjects fit this kid (PT3) --------------------------------
+     Words taper off once the third-grade list is finished; numbers open by
+     grade. A subject with nothing to offer is simply not shown, rather than
+     shown greyed out with an explanation a five-year-old cannot read.        */
+  function gradeNum(g){
+    if(g == null) return null;
+    var s = String(g).toUpperCase();
+    if(s === "K" || s === "PK") return 0;
+    var n = parseInt(s, 10);
+    return isFinite(n) ? n : null;
+  }
+  function decksFor(sub){
+    var kg = gradeNum(KID_GRADE);
+    return deckIndex.filter(function(d){
+      if(d.subject !== sub) return false;
+      if(sub !== "math") return true;
+      if(kg == null) return true;                       // no grade on file: show them all
+      var dg = gradeNum(d.grade);
+      // At or below their grade. The floor of 1 means a kindergartener still
+      // gets adding and taking away rather than an empty Numbers section, and
+      // a third grader is not handed division before times tables.
+      return dg == null || dg <= Math.max(kg, 1);
+    });
+  }
+  function wordsFinished(){
+    var state = BP.loadState();
+    var by = BP.masteredByDeck(state, KID_ID);
+    var word = deckIndex.filter(function(d){ return d.subject === "reading"; });
+    if(!word.length) return false;
+    return word.every(function(d){ return (by[d.id] || 0) >= d.count; });
+  }
+  function subjectsAvailable(){
+    var out = [];
+    if(!wordsFinished() && decksFor("reading").length) out.push({ id:"reading", name:"Words", sub:"Sight words you just know" });
+    if(decksFor("math").length) out.push({ id:"math", name:"Numbers", sub:"Facts you just know" });
+    return out;
+  }
+
+  function subjectGlyph(id){
+    if(id === "math"){
+      return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M4 8h6M7 5v6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<path d="M14 7.5h6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<path d="M4.6 15.5h5.8M14.4 14l4.4 4.4M18.8 14l-4.4 4.4" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<path d="M7.5 18.2h.01" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>';
+    }
+    return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4V5zm16 0h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6V5z" fill="#fff"/></svg>';
+  }
+  function modeGlyph(id){
+    if(id === "flash") return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z" fill="#fff"/></svg>';
+    if(id === "solve") return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<rect x="4" y="3" width="16" height="18" rx="3" fill="#fff"/>' +
+      '<rect x="6.5" y="5.5" width="11" height="3.5" rx="1" fill="#8A6BFF"/>' +
+      '<circle cx="8.5" cy="13" r="1.4" fill="#8A6BFF"/><circle cx="12" cy="13" r="1.4" fill="#8A6BFF"/>' +
+      '<circle cx="15.5" cy="13" r="1.4" fill="#8A6BFF"/><circle cx="8.5" cy="17" r="1.4" fill="#8A6BFF"/>' +
+      '<circle cx="12" cy="17" r="1.4" fill="#8A6BFF"/><circle cx="15.5" cy="17" r="1.4" fill="#8A6BFF"/></svg>';
     return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">' +
       '<path d="M5 9v6h4l5 4V5L9 9H5z" fill="#fff"/>' +
       '<path d="M16.5 8.5c1.7 1.5 1.7 5.5 0 7" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>';
   }
-  function modeGlyphFlash(){
-    return '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path d="M13 2L4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5z" fill="#fff"/></svg>';
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
+    return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]; }); }
+
+  function paintSubjects(){
+    var host = $("subjects");
+    var subs = subjectsAvailable();
+    host.innerHTML = "";
+    // One subject only? Then there is no choice to make, so do not draw one.
+    if(subs.length < 2){ host.classList.add("hide"); if(subs.length) subject = subs[0].id; return; }
+    host.classList.remove("hide");
+    subs.forEach(function(s){
+      var b = document.createElement("button");
+      b.className = "pick"; b.type = "button";
+      b.setAttribute("data-subject", s.id);
+      b.setAttribute("aria-pressed", s.id === subject ? "true" : "false");
+      b.innerHTML = '<span class="chip' + (s.id === "math" ? " num" : "") + '">' + subjectGlyph(s.id) + '</span>' +
+        '<span class="body"><span class="nm">' + esc(s.name) + '</span></span>';
+      b.addEventListener("click", function(){
+        subject = s.id;
+        var first = decksFor(subject)[0];
+        deckId = first ? first.id : null;
+        mode = modesFor(metaFor(deckId))[0].id;
+        paintAll();
+      });
+      host.appendChild(b);
+    });
   }
 
   function paintDecks(){
     var state = BP.loadState();
     var host = $("decks");
+    var list = decksFor(subject);
+    $("decklabel").textContent = subject === "math" ? "Which numbers?" : "Word sets";
     host.innerHTML = "";
-    deckIndex.forEach(function(d){
+    list.forEach(function(d){
       var ds = BP.deckState(state, KID_ID, d.id);
       var seen = 0, mastered = 0;
       Object.keys(ds.items || {}).forEach(function(k){
@@ -339,53 +648,170 @@
         seen++; if(BP.clampBox(r.box) >= BP.MAX_BOX) mastered++;
       });
       var pct = d.count ? Math.round((mastered / d.count) * 100) : 0;
+      var unit = d.subject === "math" ? "facts" : "words";
       var b = document.createElement("button");
       b.className = "pick"; b.type = "button";
       b.setAttribute("data-deck", d.id);
       b.setAttribute("aria-pressed", d.id === deckId ? "true" : "false");
       b.innerHTML =
-        '<span class="chip">' + deckGlyph() + '</span>' +
+        '<span class="chip' + (d.subject === "math" ? " num" : "") + '">' + subjectGlyph(d.subject) + '</span>' +
         '<span class="body"><span class="nm">' + esc(d.name) + '</span>' +
-        '<span class="sub">' + d.count + ' words' + (seen ? ' &middot; ' + mastered + ' known by heart' : ' &middot; ' + esc(d.blurb || "")) + '</span>' +
+        '<span class="sub">' + d.count + ' ' + unit +
+          (seen ? ' &middot; ' + mastered + ' known by heart' : ' &middot; ' + esc(d.blurb || "")) + '</span>' +
         '<span class="bar"><span style="width:' + pct + '%"></span></span></span>';
-      b.addEventListener("click", function(){ deckId = d.id; paintDecks(); paintModes(); refreshStart(); });
+      b.addEventListener("click", function(){ deckId = d.id; paintAll(); });
       host.appendChild(b);
     });
   }
   function paintModes(){
     var host = $("modes");
+    var list = modesFor(metaFor(deckId));
+    if(list.map(function(m){ return m.id; }).indexOf(mode) === -1) mode = list[0].id;
     host.innerHTML = "";
-    MODES.forEach(function(m){
+    list.forEach(function(m){
       var b = document.createElement("button");
       b.className = "pick"; b.type = "button";
       b.setAttribute("data-mode", m.id);
       b.setAttribute("aria-pressed", m.id === mode ? "true" : "false");
-      b.innerHTML =
-        '<span class="chip">' + (m.id === "find" ? modeGlyphFind() : modeGlyphFlash()) + '</span>' +
+      b.innerHTML = '<span class="chip">' + modeGlyph(m.id) + '</span>' +
         '<span class="body"><span class="nm">' + esc(m.name) + '</span>' +
         '<span class="sub">' + esc(m.sub) + '</span></span>';
-      b.addEventListener("click", function(){ mode = m.id; paintModes(); refreshStart(); });
+      b.addEventListener("click", function(){ mode = m.id; paintModes(); });
       host.appendChild(b);
     });
   }
-  function refreshStart(){ $("start").disabled = !deckId; }
-  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
-    return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[c]; }); }
 
-  /* ---- a run ---- */
-  var run = null;   // { queue, i, answers, moved, shownAt }
+  /* ---- the sprint button and its gate (PT3) ----------------------------
+     Sprint is a victory lap, never a wall: it only appears once practice
+     shows the kid is already fluent at this operation, and the locked state
+     says so kindly rather than dangling a reward.                          */
+  function paintSprint(){
+    var meta = metaFor(deckId);
+    var btn = $("sprint"), lock = $("sprintlock");
+    if(!meta || meta.answerUI !== "keypad"){ btn.classList.add("hide"); lock.classList.add("hide"); return; }
+    var d = deckCache[meta.id];
+    if(!d){
+      // Readiness needs the deck's item list, so fetch it quietly and repaint.
+      loadDeck(meta).then(function(){ if(deckId === meta.id) paintSprint(); }).catch(function(){});
+      btn.classList.add("hide"); lock.classList.add("hide");
+      return;
+    }
+    var state = BP.loadState();
+    var ready = BP.sprintReadiness(d, BP.deckState(state, KID_ID, d.id));
+    btn.classList.remove("hide");
+    if(ready.ready){
+      btn.className = "sprintbtn";
+      btn.disabled = false;
+      var best = BP.sprintBest(state, KID_ID, d.id);
+      btn.textContent = best && best.best ? "Sprint - your best is " + best.best : "Sprint";
+      lock.classList.add("hide");
+    }else{
+      btn.className = "sprintbtn locked";
+      btn.disabled = true;
+      btn.textContent = "Sprint";
+      lock.classList.remove("hide");
+      lock.textContent = "Keep practising and Sprint opens up. It is a victory lap, so it waits until these are easy.";
+    }
+  }
+  function paintAll(){
+    paintSubjects(); paintDecks(); paintModes(); paintSprint();
+    $("start").disabled = !deckId;
+  }
+
+  /* -----------------------------------------------------------------------
+     THE PLACEMENT WARM-UP (PT2)
+     Two probes from each word list, easiest list first, ten in all. It is NOT
+     a test: nothing is marked right or wrong on screen, there is no score, and
+     the only outcome is a friendlier starting point. Decks below the landing
+     list get PLACED at box 3 — never box 5, so the warm-up can never hand a
+     kid a bird they did not earn.
+  ----------------------------------------------------------------------- */
+  var place = null;   // { queue, i, answers, decks }
+
+  function needsPlacement(){
+    return !BP.placement(BP.loadState(), KID_ID) && deckIndex.some(function(d){ return d.subject === "reading"; });
+  }
+  function startPlacement(){
+    var metas = deckIndex.filter(function(d){ return d.subject === "reading"; });
+    Promise.all(metas.map(loadDeck)).then(function(decks){
+      var queue = BP.buildPlacement(decks);
+      place = { queue: queue, i: 0, answers: [], decks: decks };
+      $("h1").textContent = "Quick check";
+      askPlacement();
+    }).catch(function(){
+      // Cannot load the lists? Skip the warm-up rather than block practice.
+      place = null; show("home");
+    });
+  }
+  function askPlacement(){
+    if(!place || place.i >= place.queue.length){ finishPlacement(); return; }
+    var entry = place.queue[place.i];
+    var d = place.decks.filter(function(x){ return x.id === entry.deckId; })[0];
+    var opts = BP.choices(d, entry.item, { count: 4 });
+    $("askLabel").textContent = "Tap the word you hear";
+    $("askSay").classList.remove("hide");
+    $("flashWord").textContent = "";
+    $("pad").classList.add("hide");
+    $("cards").classList.remove("hide");
+    $("again").textContent = "";
+    var cards = $("cards");
+    cards.className = "cards";
+    cards.innerHTML = "";
+    opts.forEach(function(o){
+      var b = document.createElement("button");
+      b.className = "wordcard"; b.type = "button";
+      b.setAttribute("data-word", BP.answerOf(o));
+      b.textContent = BP.answerOf(o);
+      b.addEventListener("click", function(){ answerPlacement(entry, o, b, d); });
+      cards.appendChild(b);
+    });
+    show("ask");
+    AUDIO.say(entry.item, d);
+  }
+  function answerPlacement(entry, picked, btn, d){
+    var cards = $("cards");
+    if(cards.classList.contains("locked")) return;
+    cards.classList.add("locked");
+    var correct = BP.answerOf(picked) === BP.answerOf(entry.item);
+    place.answers.push({ deckId: entry.deckId, itemId: entry.itemId, correct: correct });
+    // Deliberately NEUTRAL: no green, no red, no sound of being wrong. The kid
+    // is not being marked, so the screen must not look like marking.
+    btn.classList.add("neutral");
+    cue("place");
+    setTimeout(function(){ place.i++; askPlacement(); }, 420);
+  }
+  function finishPlacement(){
+    var res = BP.applyPlacement(KID_ID, place.decks, place.answers);
+    var landing = place.decks.filter(function(d){ return d.id === res.landingDeckId; })[0];
+    subject = "reading";
+    deckId = res.landingDeckId;
+    mode = "find";
+    $("placedoneTitle").textContent = res.placed > 0 ? "You know lots already" : "All set";
+    $("placedoneLine").textContent = res.placed > 0
+      ? "We will start you on " + ((landing && landing.name) || "the first set") + ", and keep the easier words ticking over."
+      : "We will start at the beginning and build up from there.";
+    place = null;
+    $("h1").textContent = "Practice";
+    show("placedone");
+  }
+  $("placego").addEventListener("click", startPlacement);
+  $("placedonego").addEventListener("click", function(){ paintAll(); show("home"); });
+
+  /* ---- a practice run ---- */
+  var run = null;
 
   function startRun(){
     var state = BP.loadState();
     var ds = BP.deckState(state, KID_ID, deck.id);
     var built = BP.buildSession(deck, ds, {});
-    if(!built.plan.length){ $("homenote").textContent = "Every word in this set is resting. Try another set — they come back over the next few days."; return; }
-    run = { queue: built.plan.slice(), i: 0, answers: [], moved: [], shownAt: 0, total: built.plan.length };
+    if(!built.plan.length){
+      $("homenote").textContent = "Everything in this set is resting. Try another one - they come back over the next few days.";
+      return;
+    }
+    run = { queue: built.plan.slice(), i: 0, answers: [], moved: [], newBirds: 0, shownAt: 0, entry: "", total: built.plan.length };
     $("h1").textContent = deck.name;
-    paintRail();
     step();
   }
-
   function paintRail(){
     var rail = $("rail");
     rail.innerHTML = "";
@@ -396,29 +822,33 @@
       rail.appendChild(el);
     }
   }
-
   function step(){
     if(!run || run.i >= run.queue.length){ finish(); return; }
-    var entry = run.queue[run.i];
     paintRail();
+    var entry = run.queue[run.i];
     if(entry.intro) showIntro(entry); else showAsk(entry);
   }
 
-  /* ---- the intro moment: word big, audio says it, tricky letters glow ---- */
+  /* ---- the intro moment ---- */
   function showIntro(entry){
     var item = entry.item;
     var word = BP.answerOf(item);
-    var heart = item.heart || [];
+    var isWord = deck.subject !== "math";
+    var heart = (isWord && item.heart) || [];
+    var face = isWord ? word : item.prompt;
     var html = "";
-    for(var i=0;i<word.length;i++){
-      var ch = esc(word.charAt(i));
+    for(var i=0;i<face.length;i++){
+      var ch = esc(face.charAt(i));
       html += heart.indexOf(i) >= 0 ? '<span class="heart">' + ch + '</span>' : ch;
     }
+    $("introFlag").textContent = isWord ? "A new word" : "A new one";
     $("introWord").innerHTML = html;
-    $("introHint").textContent = heart.length
-      ? "The glowing part is the tricky bit — you learn that part by heart."
-      : "You can sound this one out, letter by letter.";
+    $("introHint").textContent = isWord
+      ? (heart.length ? "The glowing part is the tricky bit - you learn that part by heart."
+                      : "You can sound this one out, letter by letter.")
+      : "The answer is " + word + ". Have a good look, then try it.";
     show("intro");
+    cue("newitem");
     AUDIO.say(item, deck);
   }
   $("introSay").addEventListener("click", function(){
@@ -428,19 +858,45 @@
   $("introGo").addEventListener("click", function(){
     var entry = run && run.queue[run.i];
     if(!entry) return;
-    // The intro is not a question. Turn this card into the quiz for the same
-    // word, right here, so a new word is met and then immediately used.
     entry.intro = false;
     showAsk(entry);
   });
 
-  /* ---- the question: four big word cards ---- */
-  var FLASH_MS = 1000;    // "flashes about 1s"
+  /* ---- the question ---- */
+  var FLASH_MS = 1000;
   var flashTimer = null;
+  function usesKeypad(){ return deck && deck.answerUI === "keypad"; }
+
   function showAsk(entry){
     var item = entry.item;
-    var opts = BP.choices(deck, item, { count: 4 });
     $("again").textContent = entry.again ? "Here it comes again." : "";
+    if(flashTimer){ clearTimeout(flashTimer); flashTimer = null; }
+    // Unlock BOTH answer surfaces every time. answer() locks whichever ones
+    // exist so a double tap cannot double-grade; if only the one in use were
+    // cleared here, the other would stay locked forever and silently swallow
+    // every tap from the second card onwards.
+    $("cards").className = "cards";
+    $("keypad").className = "keypad";
+
+    if(usesKeypad()){
+      $("cards").classList.add("hide");
+      $("pad").classList.remove("hide");
+      $("askLabel").textContent = "What is the answer?";
+      $("askSay").classList.remove("hide");
+      $("flashWord").textContent = item.prompt;
+      $("flashWord").classList.add("on");
+      run.entry = "";
+      paintEntry(false);
+      buildKeypad($("keypad"), function(k){ onKey(k, entry); });
+      show("ask");
+      AUDIO.say(item, deck);
+      run.shownAt = Date.now();
+      return;
+    }
+
+    $("pad").classList.add("hide");
+    $("cards").classList.remove("hide");
+    var opts = BP.choices(deck, item, { count: 4 });
     var cards = $("cards");
     cards.className = "cards";
     cards.innerHTML = "";
@@ -449,11 +905,10 @@
       b.className = "wordcard"; b.type = "button";
       b.setAttribute("data-word", BP.answerOf(o));
       b.textContent = BP.answerOf(o);
-      b.addEventListener("click", function(){ answer(entry, o, b); });
+      b.addEventListener("click", function(){ answer(entry, BP.answerOf(o), b); });
       cards.appendChild(b);
     });
 
-    if(flashTimer){ clearTimeout(flashTimer); flashTimer = null; }
     var fw = $("flashWord");
     if(mode === "flash"){
       $("askLabel").textContent = "Which word did you see?";
@@ -461,19 +916,18 @@
       fw.textContent = BP.answerOf(item);
       fw.classList.remove("on");
       show("ask");
-      // paint, then flash: on next frame so the transition actually runs
       requestAnimationFrame(function(){
         fw.classList.add("on");
         AUDIO.say(item, deck);
         flashTimer = setTimeout(function(){
           fw.classList.remove("on");
-          // The clock starts when the word GOES, not when it appears — a kid is
+          // The clock starts when the word GOES, not when it appears: a kid is
           // never timed on how long the page chose to show something.
           run.shownAt = Date.now();
         }, FLASH_MS);
       });
       run.shownAt = 0;
-    } else {
+    }else{
       $("askLabel").textContent = "Tap the word you hear";
       $("askSay").classList.remove("hide");
       fw.textContent = "";
@@ -485,39 +939,91 @@
   }
   $("askSay").addEventListener("click", function(){
     var entry = run && run.queue[run.i];
-    if(entry && mode !== "flash") AUDIO.say(entry.item, deck);
+    if(entry && (mode !== "flash" || usesKeypad())) AUDIO.say(entry.item, deck);
   });
 
-  function answer(entry, picked, btn){
-    var cards = $("cards");
-    if(cards.classList.contains("locked")) return;
-    cards.classList.add("locked");
+  /* ---- the drawn number keypad (PT3) ---- */
+  var KEYS = ["1","2","3","4","5","6","7","8","9","clear","0","go"];
+  function keyFace(k){
+    if(k === "clear") return '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M9 5h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9L3 12z" fill="none" stroke="#6E6684" stroke-width="2" stroke-linejoin="round"/>' +
+      '<path d="M11.5 9.5l5 5M16.5 9.5l-5 5" stroke="#6E6684" stroke-width="2" stroke-linecap="round"/></svg>';
+    if(k === "go") return '<svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M6 12.5l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return k;
+  }
+  function buildKeypad(host, onPress){
+    host.className = "keypad";
+    host.innerHTML = "";
+    KEYS.forEach(function(k){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "key" + (k === "go" ? " gokey" : (k === "clear" ? " act" : ""));
+      b.setAttribute("data-key", k);
+      if(k === "clear") b.setAttribute("aria-label", "Rub out");
+      if(k === "go") b.setAttribute("aria-label", "Check my answer");
+      b.innerHTML = keyFace(k);
+      b.addEventListener("click", function(){ onPress(k); });
+      host.appendChild(b);
+    });
+  }
+  function paintEntry(sprintMode){
+    var host = sprintMode ? $("sprintEntry") : $("entry");
+    var val = sprintMode ? sprint.entry : run.entry;
+    host.className = "entry";
+    host.innerHTML = val
+      ? esc(val) + '<span class="caret"></span>'
+      : '<span class="placeholder">?</span>';
+  }
+  function onKey(k, entry){
+    if($("keypad").classList.contains("locked")) return;
+    if(k === "clear"){ run.entry = run.entry.slice(0, -1); paintEntry(false); return; }
+    if(k === "go"){ if(run.entry === "") return; answer(entry, run.entry, null); return; }
+    if(run.entry.length >= 3) return;
+    run.entry += k;
+    paintEntry(false);
+  }
+
+  /* ---- grading one answer ---- */
+  function answer(entry, given, btn){
+    var cards = $("cards"), keypad = $("keypad");
+    if(cards.classList.contains("locked") || keypad.classList.contains("locked")) return;
+    cards.classList.add("locked"); keypad.classList.add("locked");
     var item = entry.item;
-    var correct = BP.answerOf(picked) === BP.answerOf(item);
-    // Silently measured. Never rendered, never spoken, never stored anywhere a
-    // kid can see. shownAt of 0 (the flash has not finished) counts as slow.
+    var correct = String(given) === BP.answerOf(item);
+    // Measured silently. Never rendered, never spoken. shownAt of 0 (the flash
+    // has not finished) counts as slow.
     var ms = run.shownAt ? (Date.now() - run.shownAt) : (BP.FAST_MS + 1);
 
     var before = BP.loadState();
     var beforeBox = BP.clampBox(((BP.deckState(before, KID_ID, deck.id).items || {})[item.id] || {}).box || 1);
     var rec = BP.recordAnswer(KID_ID, deck.id, item.id, { correct: correct, ms: ms });
     if(rec.box > beforeBox && run.moved.indexOf(BP.answerOf(item)) === -1) run.moved.push(BP.answerOf(item));
+    // A brand new bird: this item just reached box 5 for the first time.
+    if(rec.box >= BP.MAX_BOX && beforeBox < BP.MAX_BOX){ run.newBirds += 1; cue("bird"); }
     run.answers.push({ itemId: item.id, correct: correct, ms: ms });
 
     if(correct){
-      btn.classList.add("right");
+      if(btn) btn.classList.add("right"); else $("entry").classList.add("right");
+      cue("right");
       AUDIO.say(item, deck);
     }else{
-      // No punishment: mark the tap, quietly light the right one, say it, and
-      // put the word back in the queue a few cards later. That is all.
-      btn.classList.add("wrongpick");
-      Array.prototype.forEach.call(cards.children, function(c){
-        if(c.getAttribute("data-word") === BP.answerOf(item)) c.classList.add("showme");
-      });
+      // No punishment: mark the tap, quietly show the right answer, say it, and
+      // put the item back a few cards later. That is the whole consequence.
+      if(btn){
+        btn.classList.add("wrongpick");
+        Array.prototype.forEach.call(cards.children, function(c){
+          if(c.getAttribute("data-word") === BP.answerOf(item)) c.classList.add("showme");
+        });
+      }else{
+        $("entry").classList.add("wrongpick");
+        $("entry").innerHTML = esc(run.entry) + '<span style="color:#6E6684;font-size:24px;margin:0 10px">&rarr;</span>' + esc(BP.answerOf(item));
+      }
+      cue("oops");
       AUDIO.say(item, deck);
       BP.requeue(run.queue, run.i, entry);
     }
-    setTimeout(function(){ run.i++; step(); }, correct ? 620 : 1250);
+    setTimeout(function(){ run.i++; step(); }, correct ? 640 : 1400);
   }
 
   /* ---- the end of a run ---- */
@@ -525,8 +1031,9 @@
     if(flashTimer){ clearTimeout(flashTimer); flashTimer = null; }
     AUDIO.stop();
     var s = BP.summarize(run.answers);
+    var unit = deck.subject === "math" ? "right" : (s.right === 1 ? "word right" : "words right");
     $("doneNum").textContent = String(s.right);
-    $("doneLine").textContent = s.right === 1 ? "word right" : "words right";
+    $("doneLine").textContent = unit;
     var wrap = $("doneMovedWrap"), chips = $("doneMoved");
     chips.innerHTML = "";
     if(run.moved.length){
@@ -538,24 +1045,48 @@
       wrap.classList.add("hide");
     }
     $("rail").classList.add("hide");
+
+    // A whole list finished is the big moment: every bird sings.
+    var state = BP.loadState();
+    var whole = BP.deckComplete(deck, BP.deckState(state, KID_ID, deck.id));
+    paintFlocks({ arrived: run.newBirds, sing: whole });
     logSession(run.answers);
     show("done");
+    if(whole) bigMoment();
+    else if(run.newBirds > 0) cue("bird");
+  }
+  function bigMoment(){
+    cue("flock");
+    var el = document.createElement("div");
+    el.className = "bigmoment";
+    el.setAttribute("data-bigmoment", "1");
+    el.innerHTML = '<div class="inner">' +
+      '<svg width="92" height="92" viewBox="0 0 24 24" aria-hidden="true">' +
+        '<circle cx="12" cy="12" r="10" fill="#FFC542" opacity="0.25"/>' +
+        '<path d="M12 5.6l1.9 3.9 4.3.6-3.1 3 .7 4.3-3.8-2-3.8 2 .7-4.3-3.1-3 4.3-.6z" fill="#F0972A"/>' +
+      '</svg>' +
+      '<div style="font-family:Fredoka,sans-serif;font-weight:600;font-size:26px;margin-top:10px">Every single one!</div>' +
+      '<div class="flock" id="bigflock" style="margin-top:16px"></div>' +
+      '<button class="go" id="bigok" style="margin-top:16px">Yes!</button></div>';
+    document.body.appendChild(el);
+    renderFlock(el.querySelector("#bigflock"), masteredNow(), { sing: true });
+    el.querySelector("#bigok").addEventListener("click", function(){ el.remove(); });
   }
 
   /* ---- the learning ledger (Session 8B) --------------------------------
-     ONE row per finished session, not one per answer — a practice run is the
-     unit. In the shell, send the cartridge `skill` message up and let the
-     shell relay it with the active kid attached (one writer). Standalone,
-     POST it straight to the ledger. Never both. Fire and forget: a logging
-     hiccup must never interrupt practice.                                  */
-  function logSession(answers){
+     ONE row per finished session, not one per answer — a run is the unit. In
+     the shell, send the cartridge `skill` message up and let the shell relay
+     it with the active kid attached (one writer). Standalone, POST it
+     straight. Never both. Fire and forget.                                 */
+  function logSession(answers, extra){
     if(!answers || !answers.length) return;
     var ev = BP.sessionEvent(deck, answers);
+    var quizType = (extra && extra.quizType) || ev.quizType;
     if(IN_SHELL){
       postToShell({
         source:"buildable", kind:"skill",
         subject: ev.subject, skill: ev.skill, correct: ev.correct,
-        quizType: ev.quizType, questionId: null, game: "practice"
+        quizType: quizType, questionId: null, game: "practice"
       });
       return;
     }
@@ -564,59 +1095,177 @@
         method:"POST", headers:{"Content-Type":"application/json"}, keepalive:true,
         body: JSON.stringify({
           kidProfileId: KID_ID, grade: ev.grade || KID_GRADE || null,
-          subject: ev.subject, skill: ev.skill, quizType: ev.quizType,
+          subject: ev.subject, skill: ev.skill, quizType: quizType,
           correct: ev.correct, questionId: null, game: "practice"
         })
       }).catch(function(){});
     }catch(e){}
   }
 
+  /* -----------------------------------------------------------------------
+     SPRINT (PT3) — 60 seconds, answer as many as you can.
+     The one timed screen in the product, and the timer is a draining bar with
+     no digits. Beat-your-own-best only: there is nowhere in the state or the
+     UI to put another kid's number. Sprint answers do NOT move the boxes —
+     it is a victory lap, and time pressure must never knock a word back down.
+  ----------------------------------------------------------------------- */
+  var sprint = null;
+  function sprintPool(d, ds){
+    var recs = (ds && ds.items) || {};
+    var met = (d.items || []).filter(function(it){ var r = recs[it.id]; return r && r.seen; });
+    return met.length ? met : (d.items || []).slice(0, 20);
+  }
+  function openSprint(){
+    var meta = metaFor(deckId); if(!meta) return;
+    loadDeck(meta).then(function(d){
+      var state = BP.loadState();
+      var set = BP.settings(state, KID_ID);
+      var best = BP.sprintBest(state, KID_ID, d.id);
+      $("sprintBlurb").textContent = "Answer as many " + d.name.toLowerCase() +
+        " as you can before the bar runs out. Just beat your own best - nobody else's.";
+      var pb = $("sprintPb");
+      if(best && best.best){ pb.classList.remove("hide"); pb.textContent = "Your best so far: " + best.best; }
+      else pb.classList.add("hide");
+      sprint = { deck: d, seconds: set.sprintSeconds, target: set.sprintTarget, score: 0, asked: 0, entry: "", item: null, pool: sprintPool(d, BP.deckState(state, KID_ID, d.id)), ends: 0, raf: 0, answers: [] };
+      $("h1").textContent = "Sprint";
+      show("sprintintro");
+    }).catch(function(){});
+  }
+  function runSprint(){
+    if(!sprint) return;
+    sprint.score = 0; sprint.asked = 0; sprint.entry = ""; sprint.answers = [];
+    sprint.ends = Date.now() + sprint.seconds * 1000;
+    buildKeypad($("sprintPad"), onSprintKey);
+    cue("go");
+    show("sprint");
+    nextSprintItem();
+    tickSprint();
+  }
+  function tickSprint(){
+    if(!sprint) return;
+    var left = Math.max(0, sprint.ends - Date.now());
+    var frac = left / (sprint.seconds * 1000);
+    $("sprintBar").style.transform = "scaleX(" + frac.toFixed(4) + ")";
+    if(left <= 0){ endSprint(); return; }
+    sprint.raf = requestAnimationFrame(tickSprint);
+  }
+  function nextSprintItem(){
+    if(!sprint) return;
+    var pool = sprint.pool;
+    sprint.item = pool[Math.floor(Math.random() * pool.length)];
+    sprint.entry = "";
+    $("sprintWord").textContent = sprint.item.prompt;
+    $("sprintEntry").className = "entry";
+    paintEntry(true);
+    $("sprintCount").textContent = sprint.score + " so far";
+  }
+  function onSprintKey(k){
+    if(!sprint) return;
+    if(k === "clear"){ sprint.entry = sprint.entry.slice(0, -1); paintEntry(true); return; }
+    if(k === "go"){
+      if(sprint.entry === "") return;
+      var correct = sprint.entry === BP.answerOf(sprint.item);
+      sprint.asked += 1;
+      sprint.answers.push({ itemId: sprint.item.id, correct: correct, ms: 0 });
+      if(correct){ sprint.score += 1; cue("right"); $("sprintEntry").className = "entry right"; }
+      else { cue("oops"); $("sprintEntry").className = "entry wrongpick"; }
+      setTimeout(function(){ if(sprint && Date.now() < sprint.ends) nextSprintItem(); }, correct ? 130 : 320);
+      return;
+    }
+    if(sprint.entry.length >= 3) return;
+    sprint.entry += k;
+    paintEntry(true);
+  }
+  function endSprint(){
+    if(!sprint) return;
+    if(sprint.raf) cancelAnimationFrame(sprint.raf);
+    cue("timeup");
+    var res = BP.recordSprint(KID_ID, sprint.deck.id, { score: sprint.score, seconds: sprint.seconds });
+    $("sprintNum").textContent = String(sprint.score);
+    $("sprintLine").textContent = sprint.score === 1 ? "right in the time" : "right in the time";
+    var pb = $("sprintBest");
+    if(res.beat && res.runs > 1){ pb.classList.remove("hide"); pb.textContent = "A new personal best!"; cue("best"); }
+    else if(res.best){ pb.classList.remove("hide"); pb.textContent = "Your best is " + res.best; }
+    else pb.classList.add("hide");
+    $("sprintGoal").textContent = sprint.score >= sprint.target
+      ? "That is past your goal of " + sprint.target + "."
+      : "Your goal is " + sprint.target + ". Every go gets you closer.";
+    // Sprints reach the ledger too, tagged apart from practice so the
+    // grown-ups dashboard can tell a victory lap from a practice run.
+    var savedDeck = deck; deck = sprint.deck;
+    logSession(sprint.answers, { quizType: "sprint" });
+    deck = savedDeck;
+    show("sprintdone");
+  }
+  $("sprint").addEventListener("click", function(){ if(!$("sprint").disabled) openSprint(); });
+  $("sprintgo").addEventListener("click", runSprint);
+  $("sprintback").addEventListener("click", function(){ sprint = null; toHome(); });
+  $("sprintAgain").addEventListener("click", runSprint);
+  $("sprintHome").addEventListener("click", function(){ sprint = null; toHome(); });
+
   /* ---- navigation ---- */
   function toHome(){
     if(flashTimer){ clearTimeout(flashTimer); flashTimer = null; }
+    if(sprint && sprint.raf) cancelAnimationFrame(sprint.raf);
     AUDIO.stop();
-    run = null;
+    run = null; place = null;
     $("h1").textContent = "Practice";
     $("homenote").textContent = "";
-    paintDecks(); paintModes(); refreshStart();
+    paintFlocks({});
+    paintAll();
     show("home");
   }
   $("back").addEventListener("click", toHome);
   $("pickBtn").addEventListener("click", toHome);
   $("againBtn").addEventListener("click", function(){ startRun(); });
   $("start").addEventListener("click", function(){
-    var meta = deckIndex.filter(function(d){ return d.id === deckId; })[0];
+    var meta = metaFor(deckId);
     if(!meta) return;
     $("start").disabled = true;
     $("homenote").textContent = "";
-    fetch(meta.file).then(function(r){ return r.json(); }).then(function(d){
+    loadDeck(meta).then(function(d){
       deck = d; $("start").disabled = false; startRun();
     }).catch(function(){
       $("start").disabled = false;
-      $("homenote").textContent = "That word set would not load. Check you are online and try again.";
+      $("homenote").textContent = "That set would not load. Check you are online and try again.";
     });
   });
 
   /* ---- boot ---- */
   fetch("/practice/decks/index.json").then(function(r){ return r.json(); }).then(function(d){
     deckIndex = (d && d.decks ? d.decks : []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
-    // Start on the set that matches the kid's grade when there is one, so a
-    // second grader is not staring at pre-primer.
-    var byGrade = deckIndex.filter(function(x){ return KID_GRADE && String(x.grade) === KID_GRADE; })[0];
-    deckId = (byGrade || deckIndex[0] || {}).id || null;
-    paintDecks(); paintModes(); refreshStart();
+    var subs = subjectsAvailable();
+    subject = (subs[0] && subs[0].id) || "reading";
+    var state = BP.loadState();
+    // Where a kid starts: the grown-ups' override wins, then wherever the
+    // warm-up landed them, then their school grade, then the first set.
+    var chosen = BP.level(state, KID_ID);
+    var mine = decksFor(subject);
+    var byGrade = mine.filter(function(x){ return KID_GRADE && String(x.grade) === KID_GRADE; })[0];
+    var pick = mine.filter(function(x){ return x.id === chosen; })[0] || byGrade || mine[0];
+    deckId = pick ? pick.id : null;
+    mode = modesFor(metaFor(deckId))[0].id;
+    paintFlocks({});
+    paintAll();
     window.PRACTICE_READY = true;
+    if(needsPlacement()){ show("placeintro"); }
   }).catch(function(){
-    $("homenote").textContent = "The word sets would not load. Check you are online and try again.";
+    $("homenote").textContent = "The sets would not load. Check you are online and try again.";
   });
 
   // Small surface for the QA harness — never used by the page itself.
   window.PRACTICE_PAGE = {
     decks: function(){ return deckIndex; },
-    modes: MODES,
     run: function(){ return run; },
+    place: function(){ return place; },
+    sprint: function(){ return sprint; },
     setMode: function(m){ mode = m; paintModes(); },
-    setDeck: function(id){ deckId = id; paintDecks(); refreshStart(); },
+    setSubject: function(s){ subject = s; paintAll(); },
+    setDeck: function(id){ deckId = id; paintAll(); },
+    flockCount: function(){ return $("flock").querySelectorAll(".bird").length; },
+    mastered: masteredNow,
+    endSprint: endSprint,
+    startPlacement: startPlacement,
   };
 })();
 </script>

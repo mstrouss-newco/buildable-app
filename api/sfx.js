@@ -400,6 +400,20 @@ const SOUNDS = {
   mm_sing_group: "A group of happy kids singing a short cheerful la-la-la melody together, about 1 second, no music",
   mm_sing_both:  "A boy and a girl singing a short cheerful la-la-la melody together, about 1 second, no music",
   mm_sing_robot: "A friendly cute robot voice singing a short cheerful la-la-la melody in a bouncy synthetic tone, about 1 second",
+
+  // ---- Practice (Session PT2/PT3) ----
+  // Nothing here is allowed to sound like a buzzer. A wrong answer in practice
+  // is not a failure, so practice_oops is warm and neutral — the sound of "here,
+  // look" rather than the sound of "no".
+  practice_right:   "Short soft warm confirming ding with a tiny sparkle, gentle and encouraging, single hit, no music, no voices",
+  practice_oops:    "Very soft low friendly wooden tap, neutral and warm, not a buzzer and not sad, single hit, no music, no voices",
+  practice_new:     "Short gentle rising two-note chime introducing something new, curious and warm, single hit, no music, no voices",
+  practice_bird:    "Short soft flutter of small wings landing, with one tiny cheerful chirp, gentle and close, single hit, no music, no voices",
+  practice_flock:   "A whole flock of small birds bursting into happy song together on a summer morning, joyful and warm, short celebration, no music, no voices",
+  practice_place:   "Short soft friendly upward whoosh with a light sparkle, settling into place, single hit, no music, no voices",
+  practice_go:      "Short bright cheerful ready-steady-go start beep, friendly and light, single hit, no music, no voices",
+  practice_time:    "Short soft gentle chime marking the end of a round, calm and friendly, never alarming, single hit, no music, no voices",
+  practice_best:    "Happy short celebratory sparkle fanfare for a new personal best, warm and proud, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -410,6 +424,8 @@ const DURATIONS = {
   mm_guitar_electric:1.1, mm_guitar_acoustic:1.1, mm_guitar_twangy:1.1, mm_guitar_bass:1.1,
   mm_strings_violin:1.2, mm_strings_cello:1.2, mm_strings_harp:1.2, mm_strings_orchestra:1.3,
   mm_sing_boy:1.2, mm_sing_girl:1.2, mm_sing_group:1.3, mm_sing_both:1.3, mm_sing_robot:1.2,
+  practice_right:0.5, practice_oops:0.5, practice_new:0.7, practice_bird:0.6, practice_flock:1.8,
+  practice_place:0.6, practice_go:0.5, practice_time:0.8, practice_best:1.4,
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,
   chess_win:1.6, chess_lose:1.0, chess_yourturn:0.5, chess_capture:0.8,
   chess_capture_space:1.0, chess_capture_castle:0.8, chess_capture_jungle:0.9,
