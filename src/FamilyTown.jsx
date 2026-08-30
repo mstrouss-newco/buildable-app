@@ -5,7 +5,16 @@
 // only. The board lives in /family-town.html?online=1 (iframe); this component picks
 // players, creates/joins a match, and syncs the whole game state through Supabase
 // (poll every 2s). Requires the email/parent account lane.
+//
+// GN3 -- deciding vs doing (HUD-AND-NAV-RULES.md Rule 0). The matchmaking screen
+// below is a DECIDING screen: the kid is picking who to play, so the five-tab
+// bottom bar rides along with Play lit. The match view is a DOING screen -- it
+// embeds the live board in an iframe -- so it shows no bar at all, and the
+// corner Back stays the only way out. Nothing is held open on the matchmaking
+// screen (a match row is only created the moment a sibling is picked), so there
+// is no pending work for a tab tap to release.
 import { useEffect, useRef, useState } from "react";
+import BottomBar, { navBarClear } from "./BottomBar.jsx";
 import { isSignedIn, listKidProfiles, getActiveKid } from "./lib/accounts";
 import { createMatch, listMyMatches, getMatch, patchMatch, seatOf } from "./lib/townMatches";
 
@@ -17,7 +26,9 @@ const LENGTHS = [
 
 const C = {
   wrap: { position: "fixed", inset: 0, background: "#0F0E17", color: "#fff", fontFamily: "'Nunito',sans-serif", overflow: "auto", zIndex: 50 },
-  pad: { maxWidth: 620, margin: "0 auto", padding: "64px 20px 40px" },
+  // GN3: longhands -- the matchmaking screen overrides paddingBottom for the
+  // bar clearance, and mixing a shorthand with a longhand is a React warning.
+  pad: { maxWidth: 620, margin: "0 auto", paddingTop: 64, paddingRight: 20, paddingBottom: 40, paddingLeft: 20 },
   back: { position: "absolute", top: 14, left: 14, zIndex: 2, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" },
   h1: { fontWeight: 900, fontSize: 28, margin: "0 0 4px" },
   sub: { color: "#cfc9e6", margin: "0 0 20px", fontSize: 15 },
@@ -31,7 +42,7 @@ const C = {
 };
 const SEAT_HEX = { purple: "#A78BFF", coral: "#FF7A9A", mint: "#2DD4A7", sky: "#38BDF8" };
 
-export default function FamilyTown({ activeKid, onHome }) {
+export default function FamilyTown({ activeKid, onHome, nav }) {
   const [kids, setKids] = useState([]);
   const [matches, setMatches] = useState([]);
   const [picked, setPicked] = useState([]);     // sibling kid ids chosen to join (besides me)
@@ -157,12 +168,18 @@ export default function FamilyTown({ activeKid, onHome }) {
     );
   }
 
+
+  // GN3: clear of the bottom bar (see the note at the top of this file).
+  const padWithBar = { ...C.pad, paddingBottom: navBarClear(18) };
+  // Play is lit: picking a sibling is still on the way into a game.
+  const bar = nav ? <BottomBar current="play" {...nav} /> : null;
+
   // ---- matchmaking ----
   const canStart = picked.length >= 1;
   return (
     <div style={C.wrap}>
       <button style={C.back} onClick={onHome}>← Home</button>
-      <div style={C.pad}>
+      <div style={padWithBar}>
         <h1 style={C.h1}>Play Family Town together</h1>
         <p style={C.sub}>Pick 1 to 3 brothers or sisters — you each play on your own device.</p>
 
@@ -232,6 +249,7 @@ export default function FamilyTown({ activeKid, onHome }) {
           </>
         )}
       </div>
+      {bar}
     </div>
   );
 }

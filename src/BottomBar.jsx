@@ -38,6 +38,11 @@ const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
 export const NAV_BAR_H = 76;
 export const navBarClear = (extra = 0) => `calc(env(safe-area-inset-bottom, 0px) + ${NAV_BAR_H + extra}px)`;
 
+// GN3 — which tab a game's own screens light. The way INTO a game lights Play;
+// a studio's front door and its loadout light Make. Driven off the catalog/
+// manifest `type`, never hardcoded per screen, so a new studio is right for free.
+export const navTabFor = (game) => ((game && game.type === "studio") ? "make" : "play");
+
 // ---------------------------------------------------------------------------
 // NV1 — the always-visible 5-tab bottom bar (Home / Play / Make / Explore / Me).
 // Set A chunky solid-shape glyphs in Set C brand colours. Resting: coloured glyph

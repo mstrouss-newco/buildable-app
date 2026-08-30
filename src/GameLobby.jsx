@@ -74,6 +74,40 @@ const C = {
   ava: { width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, flex: "0 0 auto" },
 };
 
+// GN3 — the three mode tiles used dingbat CHARACTERS as their icons (a white
+// square, a star, a north-east arrow). The product rule is drawn SVG geometry or
+// art slots, never a glyph standing in for an icon, so here they are as shapes.
+// Each is sized to sit in the same 46px C.ava circle the characters did.
+//
+// Same device = one screen, two players (two counters at the bottom of a tablet).
+const TileSameDevice = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="16" rx="2.5" />
+    <circle cx="9" cy="14.5" r="2" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="14.5" r="2" fill="currentColor" stroke="none" />
+    <path d="M3 9.5h18" />
+  </svg>
+);
+// Family & friends = two people, the taller one behind.
+const TileFriends = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3.2 19.5c0-3.2 2.6-5.3 5.8-5.3s5.8 2.1 5.8 5.3" />
+    <circle cx="17" cy="9.5" r="2.4" />
+    <path d="M16 14.4c2.7-.3 4.8 1.7 4.8 4.5" />
+  </svg>
+);
+// Play a grown-up = a link leaving the app (an arrow out of a box).
+const TileSendLink = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13.5 4.5H19.5V10.5" />
+    <path d="M19.5 4.5 12 12" />
+    <path d="M18.5 14v4.5a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2H10" />
+  </svg>
+);
+
+const avaIcon = { ...C.ava, width: 46, height: 46, color: "#fff" };
+
 const avatarText = (name) => (name || "?").trim().charAt(0).toUpperCase();
 
 const ALLOWED_REACTIONS = new Set(["Nice shot!","So close!","Good game!","Wow!","Let's go!","Haha!","Too slow!","You got this!","Great game!","Boop!","Bonk!","Wheee!","Is that all?","Wibble wobble!"]);
@@ -446,7 +480,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
 
           {onGuestLink && (
             <button style={{ ...C.bigBtn, marginBottom: 14 }} onClick={() => onGuestLink()}>
-              <span style={{ ...C.ava, width: 46, height: 46, fontSize: 22 }}>&#8599;</span>
+              <span style={avaIcon}><TileSendLink /></span>
               <span>
                 <p style={C.bigTitle}>Play a grown-up</p>
                 <p style={C.bigSub}>Send a link to a grown-up or friend. They tap it and play you, no sign-up.</p>
@@ -507,7 +541,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
         <p style={C.sub}>How do you want to play with 2 players?</p>
 
         <button style={C.bigBtn} onClick={() => (onSameDevice ? onSameDevice() : null)}>
-          <span style={{ ...C.ava, width: 46, height: 46, fontSize: 22 }}>&#9635;</span>
+          <span style={avaIcon}><TileSameDevice /></span>
           <span>
             <p style={C.bigTitle}>Same device</p>
             <p style={C.bigSub}>Take turns on this one screen. Quick and easy.</p>
@@ -515,7 +549,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
         </button>
 
         <button style={C.bigBtn} onClick={() => setPhase("friends")}>
-          <span style={{ ...C.ava, width: 46, height: 46, fontSize: 22 }}>&#9734;</span>
+          <span style={avaIcon}><TileFriends /></span>
           <span>
             <p style={C.bigTitle}>Family &amp; friends</p>
             <p style={C.bigSub}>Invite a brother, sister, or approved friend on their own device.</p>
@@ -524,7 +558,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
 
         {onGuestLink && (
           <button style={C.bigBtn} onClick={() => onGuestLink()}>
-            <span style={{ ...C.ava, width: 46, height: 46, fontSize: 22 }}>&#8599;</span>
+            <span style={avaIcon}><TileSendLink /></span>
             <span>
               <p style={C.bigTitle}>Play a grown-up</p>
               <p style={C.bigSub}>Send a link to a grown-up or friend. They tap it and play you, no sign-up.</p>

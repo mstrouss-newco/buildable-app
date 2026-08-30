@@ -7,7 +7,16 @@
 //
 //   <FamilyRealtime game={{ slug:"tennis", url:"/tennis.html", title:"Buildable Tennis" }}
 //     activeKid={activeKid} onHome={() => ...} autoJoinId={optionalMatchId} />
+//
+// GN3 -- deciding vs doing (HUD-AND-NAV-RULES.md Rule 0). The matchmaking screen
+// below is a DECIDING screen: the kid is picking who to play, so the five-tab
+// bottom bar rides along with Play lit. The match view is a DOING screen -- it
+// embeds the live board in an iframe -- so it shows no bar at all, and the
+// corner Back stays the only way out. Nothing is held open on the matchmaking
+// screen (a match row is only created the moment a sibling is picked), so there
+// is no pending work for a tab tap to release.
 import { useEffect, useRef, useState } from "react";
+import BottomBar, { navBarClear } from "./BottomBar.jsx";
 import { isSignedIn, listKidProfiles, getActiveKid, getSession } from "./lib/accounts";
 import { createMatch, listMyMatches, getMatch, patchMatch, channelTopic, roleFor } from "./lib/rtMatch";
 import { openChannel } from "./lib/realtimeChannel";
@@ -25,7 +34,9 @@ const CONNECT_TIMEOUT_MS = 20000;
 
 const C = {
   wrap: { position: "fixed", inset: 0, background: "#0F0E17", color: "#fff", fontFamily: "'Nunito',sans-serif", overflow: "auto", zIndex: 50 },
-  pad: { maxWidth: 620, margin: "0 auto", padding: "64px 20px 40px" },
+  // GN3: longhands -- the matchmaking screen overrides paddingBottom for the
+  // bar clearance, and mixing a shorthand with a longhand is a React warning.
+  pad: { maxWidth: 620, margin: "0 auto", paddingTop: 64, paddingRight: 20, paddingBottom: 40, paddingLeft: 20 },
   back: { position: "absolute", top: 14, left: 14, zIndex: 6, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" },
   h1: { fontWeight: 900, fontSize: 28, margin: "0 0 4px" },
   sub: { color: "#cfc9e6", margin: "0 0 20px", fontSize: 15 },
@@ -38,7 +49,7 @@ const C = {
   overlay: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,14,23,0.92)", color: "#fff", zIndex: 5, textAlign: "center", padding: 24 },
 };
 
-export default function FamilyRealtime({ game, activeKid, onHome, autoJoinId }) {
+export default function FamilyRealtime({ game, activeKid, onHome, autoJoinId, nav }) {
   const [kids, setKids] = useState([]);
   const [matches, setMatches] = useState([]);
   const [world, setWorld] = useState("beach");
@@ -193,14 +204,19 @@ export default function FamilyRealtime({ game, activeKid, onHome, autoJoinId }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kids]);
 
+  // GN3: clear of the bottom bar (see the note at the top of this file).
+  const padWithBar = { ...C.pad, paddingBottom: navBarClear(18) };
+  // Play is lit: picking a sibling is still on the way into a game.
+  const bar = nav ? <BottomBar current="play" {...nav} /> : null;
+
   // ---- render ----
   if (!signedIn) {
     return (
-      <div style={C.wrap}><button style={C.back} onClick={onHome}>← Home</button><div style={C.pad}>
+      <div style={C.wrap}><button style={C.back} onClick={onHome}>← Home</button><div style={padWithBar}>
         <h1 style={C.h1}>{game.title}</h1>
         <p style={C.sub}>Play a brother or sister on another device.</p>
         <div style={C.note}>Ask a grown-up to set up <b>family play</b> in the Grown-ups area first. Then you and your sibling can play across devices.</div>
-      </div></div>
+      </div>{bar}</div>
     );
   }
 
@@ -235,7 +251,7 @@ export default function FamilyRealtime({ game, activeKid, onHome, autoJoinId }) 
   const mine = matches.filter((m) => m.status !== "done" && m.host_kid === me.id);
 
   return (
-    <div style={C.wrap}><button style={C.back} onClick={onHome}>← Home</button><div style={C.pad}>
+    <div style={C.wrap}><button style={C.back} onClick={onHome}>← Home</button><div style={padWithBar}>
       <h1 style={C.h1}>{game.title}</h1>
       <p style={C.sub}>Play a brother or sister on another device.</p>
       {err && <div style={{ ...C.note, borderColor: "#ff7a7a", color: "#ffb3b3", marginBottom: 14 }}>{err}</div>}
@@ -274,6 +290,6 @@ export default function FamilyRealtime({ game, activeKid, onHome, autoJoinId }) 
             ))}
         </>
       )}
-    </div></div>
+    </div>{bar}</div>
   );
 }

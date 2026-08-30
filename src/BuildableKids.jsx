@@ -14,7 +14,7 @@ import LoadingGames from "./LoadingGames";
 import QuickGame from "./QuickGame";
 import FamilyChess from "./FamilyChess";
 import GameLobby from "./GameLobby";
-import BottomBar, { navBarClear } from "./BottomBar.jsx";
+import BottomBar, { navBarClear, navTabFor } from "./BottomBar.jsx";
 import GrownUpFriends from "./GrownUpFriends";
 import FamilyTown from "./FamilyTown";
 import FamilyCheckers from "./FamilyCheckers";
@@ -675,7 +675,7 @@ function GameLanding({ game, demoSrc, onPlay, onMake, onLoadout, onBack, multipl
           {onMake && <button onClick={onMake} style={{ flex: 1, borderRadius: 16, padding: "13px 12px", fontFamily: NUN, fontWeight: 800, fontSize: 16, color: "#fff", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", cursor: "pointer" }}>Make a level</button>}
         </div>
       </div>
-      <BottomBar current="play" {...(nav || {})} />
+      <BottomBar current={navTabFor(game)} {...(nav || {})} />
     </div>
   );
 }
@@ -767,7 +767,10 @@ function loadGameManifest(id) {
     .then((d) => (d && d.manifest ? d.manifest : Promise.reject()))
     .catch(() => fetch("/" + id + "/manifest.json" + stamp).then((r) => r.json()));
 }
-function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
+// GN3 — DECIDING: picking a level is choosing, not playing. The bar rides along
+// with Play lit. (The pickers that live INSIDE an engine are GN4's problem, not
+// this one — this journey is a shell screen.)
+function GameJourney({ game, gameId = "breaker", onBack, onPlay, nav }) {
   const accent = (game && game.color) || "#FF6B6B";
   const [manifest, setManifest] = useState(null);
   const [prog, setProg] = useState(() => readBreakerProgress(gameId));
@@ -804,7 +807,7 @@ function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
   });
 
   return (
-    <div style={{ ...styles.container, padding: "18px 14px 0", height: "100vh", overflow: "hidden" }}>
+    <div style={{ ...styles.container, paddingTop: 18, paddingRight: 14, paddingBottom: 0, paddingLeft: 14, height: "100vh", overflow: "hidden" }}>
       <div style={{ ...styles.introTopBar, justifyContent: "space-between", alignItems: "center", marginBottom: 10, maxWidth: 680 }}>
         <button onClick={onBack} style={styles.backButton}>Games</button>
         <div style={{ textAlign: "right" }}>
@@ -813,7 +816,7 @@ function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
         </div>
       </div>
 
-      <div style={{ width: "100%", maxWidth: 680, flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", paddingBottom: 40 }}>
+      <div style={{ width: "100%", maxWidth: 680, flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", paddingBottom: navBarClear(18) }}>
         {!manifest && <div style={{ textAlign: "center", opacity: 0.7, marginTop: 40, fontWeight: 700 }}>Loading your journey...</div>}
         {manifest && (
           <div style={{ position: "relative", width: "100%", height: levels.length * ROW }}>
@@ -860,6 +863,7 @@ function GameJourney({ game, gameId = "breaker", onBack, onPlay }) {
           </div>
         )}
       </div>
+      <BottomBar current="play" {...(nav || {})} />
     </div>
   );
 }
@@ -883,7 +887,8 @@ function DiffPips({ n, accent }) {
 //  manifest — no per-game content lives here. onPlay hands the chosen tier
 //  (with its difficulty + parts) back to the shell to launch the engine.
 // ============================================================================
-function BoardSoloFrame({ game, gameId, onBack, onPlay }) {
+// GN3 — DECIDING: a difficulty picker is choosing, so the bar rides along.
+function BoardSoloFrame({ game, gameId, onBack, onPlay, nav }) {
   const accent = (game && game.color) || "#F0972A";
   const [manifest, setManifest] = useState(null);
   useEffect(() => {
@@ -893,7 +898,7 @@ function BoardSoloFrame({ game, gameId, onBack, onPlay }) {
   }, [gameId]);
   const tiers = (manifest && Array.isArray(manifest.levels)) ? manifest.levels : [];
   return (
-    <div style={{ ...styles.container, justifyContent: "flex-start" }}>
+    <div style={{ ...styles.container, justifyContent: "flex-start", paddingBottom: navBarClear(18) }}>
       <div style={{ ...styles.introTopBar, justifyContent: "flex-start" }}>
         <button onClick={onBack} style={styles.backButton}>Back</button>
       </div>
@@ -914,6 +919,7 @@ function BoardSoloFrame({ game, gameId, onBack, onPlay }) {
           ))}
         </div>
       </div>
+      <BottomBar current="play" {...(nav || {})} />
     </div>
   );
 }
@@ -1118,7 +1124,9 @@ function SlotPreview({ option, accent, dimmed }) {
 //  short on coins, and a real celebration (particles + sound + haptic + a glow on
 //  the tile) when a look unlocks — see GAME-FEEL.md.
 // ============================================================================
-function BreakerLoadout({ game, onBack, onPlay }) {
+// GN3 — DECIDING: choosing a look is not playing. Lights Play for a game and
+// Make for a studio's instrument packs (navTabFor reads the catalog type).
+function BreakerLoadout({ game, onBack, onPlay, nav }) {
   const accent = (game && game.color) || "#FF6B6B";
   const gameId = (game && game.id) || "breaker";
   const [manifest, setManifest] = useState(null);
@@ -1212,7 +1220,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
   }
 
   return (
-    <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+    <div style={{ ...styles.container, paddingTop: 18, paddingRight: 14, paddingBottom: navBarClear(18), paddingLeft: 14, justifyContent: "flex-start" }}>
       <style>{"@keyframes bkUnlockPop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes bkUnlockGlow{0%{box-shadow:0 0 0 0 rgba(255,217,138,0)}40%{box-shadow:0 0 0 4px rgba(255,217,138,.9),0 0 26px rgba(255,217,138,.75)}100%{box-shadow:0 0 0 2px rgba(255,217,138,.5)}}"}</style>
       <canvas ref={fxCanvasRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9990, pointerEvents: "none" }} />
       {topUp && <TopUpGate onClose={() => { setTopUp(null); setCoins(walletBalance()); }} />}
@@ -1288,6 +1296,7 @@ function BreakerLoadout({ game, onBack, onPlay }) {
       </div>
 
       {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>{(manifest && manifest.loadoutPlayLabel) || "Play with this look"}</button>}
+      <BottomBar current={navTabFor(game)} {...(nav || {})} />
     </div>
   );
 }
@@ -1302,7 +1311,8 @@ function BreakerLoadout({ game, onBack, onPlay }) {
 //  on unlock and same practice top-up when short on coins as the loadout, so power
 //  shopping feels like the rest of Buildable, not a bare menu.
 // ============================================================================
-function UpgradeStore({ game, onBack, onPlay }) {
+// GN3 — DECIDING: the upgrade store is a shop, not a game.
+function UpgradeStore({ game, onBack, onPlay, nav }) {
   const accent = (game && game.color) || "#8A6BFF";
   const gameId = (game && game.id) || "survival";
   const [manifest, setManifest] = useState(null);
@@ -1386,7 +1396,7 @@ function UpgradeStore({ game, onBack, onPlay }) {
   }
 
   return (
-    <div style={{ ...styles.container, padding: "18px 14px 44px", justifyContent: "flex-start" }}>
+    <div style={{ ...styles.container, paddingTop: 18, paddingRight: 14, paddingBottom: navBarClear(18), paddingLeft: 14, justifyContent: "flex-start" }}>
       <style>{"@keyframes bkUnlockPop{0%{transform:scale(1)}45%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes bkUnlockGlow{0%{box-shadow:0 0 0 0 rgba(255,217,138,0)}40%{box-shadow:0 0 0 4px rgba(255,217,138,.9),0 0 26px rgba(255,217,138,.75)}100%{box-shadow:0 0 0 2px rgba(255,217,138,.5)}}"}</style>
       <canvas ref={fxCanvasRef} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9990, pointerEvents: "none" }} />
       {topUp && <TopUpGate onClose={() => { setTopUp(null); setCoins(walletBalance()); }} />}
@@ -1456,6 +1466,7 @@ function UpgradeStore({ game, onBack, onPlay }) {
       </div>
 
       {onPlay && manifest && <button onClick={() => { feelTap(); onPlay(); }} style={{ marginTop: 26, width: "100%", maxWidth: 360, border: "none", borderRadius: 18, padding: "15px 22px", fontFamily: FRED, fontWeight: 700, fontSize: 20, color: "#12102a", background: `linear-gradient(160deg, #fff, ${accent})`, boxShadow: `0 12px 28px ${accent}44, 0 6px 16px rgba(0,0,0,0.28)`, cursor: "pointer" }}>Play with this power</button>}
+      <BottomBar current="play" {...(nav || {})} />
     </div>
   );
 }
@@ -2201,7 +2212,7 @@ export default function BuildableKids() {
   // ============ GAME TYPE PICKER ============
   if (screen === SCREEN_GAME_TYPE) {
     return (
-      <GameTypeScreen
+      <GameTypeScreen nav={bottomBarProps}
         playerName={gameData.playerName}
         onGameSelected={(gameType) => {
           setGameData((prev) => ({ ...prev, gameType }));
@@ -2283,7 +2294,7 @@ export default function BuildableKids() {
   // ============ MY STUFF LIBRARY ============
   if (screen === SCREEN_TOP) {
     return (
-      <TopBoard
+      <TopBoard nav={bottomBarProps}
         onHome={() => { setRemixData(null); setScreen(SCREEN_HOME); }}
         onBack={() => { setRemixData(null); setScreen(returnTo || SCREEN_HOME); }}
         onRemix={startRemix}
@@ -2305,7 +2316,7 @@ export default function BuildableKids() {
     const st = GAME_CATALOG.find((g) => g.id === "music-maker");
     // Same shell-generated loadout as games; reads the studio manifest's
     // customization (instrument packs), spends shared-wallet coins to unlock.
-    return <BreakerLoadout game={st}
+    return <BreakerLoadout nav={bottomBarProps} game={st}
       onBack={() => setScreen(SCREEN_MUSIC_LANDING)}
       onPlay={() => { setReturnTo(SCREEN_MUSIC_LANDING); setScreen(SCREEN_MUSIC); }} />;
   }
@@ -2367,7 +2378,7 @@ export default function BuildableKids() {
     const g = GAME_CATALOG.find((x) => x.id === landingId);
     const cfg = g && LANDING_WRAP[landingId];
     if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
-    return <BreakerLoadout game={g}
+    return <BreakerLoadout nav={bottomBarProps} game={g}
       onBack={() => setScreen(SCREEN_GAME_LANDING)}
       onPlay={() => { if (cfg.journey) { setWrapLevel(null); setScreen(SCREEN_WRAP_JOURNEY); } else setScreen(cfg.play); }} />;
   }
@@ -2378,7 +2389,7 @@ export default function BuildableKids() {
     const g = GAME_CATALOG.find((x) => x.id === landingId);
     const cfg = g && LANDING_WRAP[landingId];
     if (!g || !cfg) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
-    return <GameJourney game={g} gameId={landingId}
+    return <GameJourney nav={bottomBarProps} game={g} gameId={landingId}
       onBack={() => setScreen(SCREEN_GAME_LANDING)}
       onPlay={(lv, i) => { setWrapLevel(i); setScreen(cfg.play); }} />;
   }
@@ -2386,7 +2397,7 @@ export default function BuildableKids() {
     const g = GAME_CATALOG.find((x) => x.id === landingId);
     const mp = g && BOARD_MP_LANDING[landingId];
     if (!g || !mp) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
-    return <BoardSoloFrame game={g} gameId={landingId}
+    return <BoardSoloFrame nav={bottomBarProps} game={g} gameId={landingId}
       onBack={() => setScreen(SCREEN_GAME_LANDING)}
       onPlay={(tier, i) => { setBoardDiff(i == null ? 0 : i); setScreen(mp.play); }} />;
   }
@@ -2405,7 +2416,7 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_TENNIS_LOADOUT) {
     const tn = GAME_CATALOG.find((g) => g.id === "tennis");
-    return <BreakerLoadout game={tn}
+    return <BreakerLoadout nav={bottomBarProps} game={tn}
       onBack={() => setScreen(SCREEN_TENNIS_LANDING)}
       onPlay={() => { setTennisStart("solo"); setScreen(SCREEN_TENNIS); }} />;
   }
@@ -2417,7 +2428,7 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_SURVIVAL_UPGRADES) {
     const sv = GAME_CATALOG.find((g) => g.id === "survival");
-    return <UpgradeStore game={sv}
+    return <UpgradeStore nav={bottomBarProps} game={sv}
       onBack={() => setScreen(SCREEN_SURVIVAL)}
       onPlay={() => setScreen(SCREEN_SURVIVAL)} />;
   }
@@ -2431,13 +2442,13 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_BREAKER_JOURNEY) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
-    return <GameJourney game={bk} gameId="breaker"
+    return <GameJourney nav={bottomBarProps} game={bk} gameId="breaker"
       onBack={() => setScreen(SCREEN_BREAKER_LANDING)}
       onPlay={(lv) => { setBreakerEntry("play:" + lv.id); setScreen(SCREEN_BREAKER); }} />;
   }
   if (screen === SCREEN_BREAKER_LOADOUT) {
     const bk = GAME_CATALOG.find((g) => g.id === "breaker");
-    return <BreakerLoadout game={bk}
+    return <BreakerLoadout nav={bottomBarProps} game={bk}
       onBack={() => setScreen(SCREEN_BREAKER_LANDING)}
       onPlay={() => setScreen(SCREEN_BREAKER_JOURNEY)} />;
   }
@@ -2530,7 +2541,7 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_SLING_JOURNEY) {
     const sl = GAME_CATALOG.find((g) => g.id === "sling");
-    return <GameJourney game={sl} gameId="sling"
+    return <GameJourney nav={bottomBarProps} game={sl} gameId="sling"
       onBack={() => setScreen(SCREEN_GAME_LANDING)}
       onPlay={(lv, i) => { setSlingLevel(i); setScreen(SCREEN_SLING); }} />;
   }
@@ -2598,13 +2609,13 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_TENNIS_FAMILY) {
-    return <FamilyRealtime game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_HOME); }} />;
+    return <FamilyRealtime nav={bottomBarProps} game={{ slug: "tennis", url: "/tennis.html?online=1&v=4", title: "Buildable Tennis" }} activeKid={activeKid} autoJoinId={rtAutoJoin} onHome={() => { setRtAutoJoin(null); setScreen(SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TOWN) {
     return <TownScreen onHome={() => setScreen(SCREEN_HOME)} onFamily={() => setScreen(SCREEN_TOWN_FAMILY)} />;
   }
   if (screen === SCREEN_TOWN_FAMILY) {
-    return <FamilyTown activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
+    return <FamilyTown nav={bottomBarProps} activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CHESS_LANDING) {
     // Session 7E: chess enters through the one shell landing. multiplayer is
@@ -2621,7 +2632,7 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_CHESS_SOLO) {
     const cg = GAME_CATALOG.find((g) => g.id === "chess");
-    return <BoardSoloFrame game={cg} gameId="chess"
+    return <BoardSoloFrame nav={bottomBarProps} game={cg} gameId="chess"
       onBack={() => setScreen(SCREEN_CHESS_LANDING)}
       onPlay={(tier) => {
         const bot = (tier && tier.parts && tier.parts.opponent) || "medium";
@@ -2649,7 +2660,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHESS_FAMILY) {
-    return <FamilyChess activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
+    return <FamilyChess nav={bottomBarProps} activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
   if (screen === SCREEN_CHECKERS) {
@@ -2679,7 +2690,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHECKERS_FAMILY) {
-    return <FamilyCheckers activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
+    return <FamilyCheckers nav={bottomBarProps} activeKid={activeKid} onHome={() => setScreen(SCREEN_HOME)} />;
   }
 
   if (screen === SCREEN_MY_STUFF) {
@@ -4297,7 +4308,10 @@ function GameGlyph({ id, size = 60 }) {
 }
 
 // ============ GAME TYPE PICKER COMPONENT ============
-function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
+// GN3 — DECIDING: picking what kind of game to make is a chooser, so it carries
+// the bar with Make lit. The steps AFTER it (character creator, level creator)
+// are an active making canvas and deliberately do not — see HUD-AND-NAV-RULES.md.
+function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff, nav }) {
   const games = [
     { id: "runner", name: "Runner", description: "Jump and duck through obstacles!" },
     { id: "flying", name: "Flying", description: "Blast enemies while you fly!" },
@@ -4307,7 +4321,7 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
   ];
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, paddingBottom: navBarClear(18) }}>
       <div style={styles.topBar}>
         <button onClick={onBack} style={styles.backButton}>← Back</button>
         <button onClick={onMyStuff} style={styles.myStuffButton}><StuffGlyph />My Stuff</button>
@@ -4325,6 +4339,7 @@ function GameTypeScreen({ playerName, onGameSelected, onBack, onMyStuff }) {
           </button>
         ))}
       </div>
+      <BottomBar current="make" {...(nav || {})} />
     </div>
   );
 }
@@ -4760,7 +4775,10 @@ const styles = {
   container: {
     minHeight: "100vh",
     background: PAGE_BG,
-    padding: "24px 20px 60px",
+    // GN3: longhands, not the "24px 20px 60px" shorthand — deciding screens
+    // override paddingBottom for the bar clearance, and mixing the two forms in
+    // one style object is a React warning and a real layout risk.
+    paddingTop: 24, paddingRight: 20, paddingBottom: 60, paddingLeft: 20,
     fontFamily: NUN,
     color: "#fff",
     display: "flex",

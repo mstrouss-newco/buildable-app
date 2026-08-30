@@ -1,8 +1,14 @@
 // /src/TopBoard.jsx
 // The public "Top Creations" board — a reflection of the central library.
+//
+// GN3 — a DECIDING screen (HUD-AND-NAV-RULES.md Rule 0): browsing other kids'
+// work is choosing, not doing, so it carries the five-tab bar. Home is lit —
+// this is a Home shelf opened out, not a section of its own. Playing or
+// remixing an item leaves for a doing screen, which has no bar.
 // Three tabs (Songs / Games / Stories). Real hearts + play counts from
 // /api/top-creations. Kids can heart others' work, play it, and remix it.
 import { useState, useEffect } from "react";
+import BottomBar, { navBarClear } from "./BottomBar.jsx";
 import SongPlayer from "./lib/SongPlayer";
 import CoverThumb from "./lib/CoverThumb";
 
@@ -69,7 +75,7 @@ function Thumb({ item }) {
   return art ? <ArtThumb item={item} src={art} /> : <GlyphTile item={item} />;
 }
 
-export default function TopBoard({ onHome, onBack, onRemix }) {
+export default function TopBoard({ onHome, onBack, onRemix, nav }) {
   const [tab, setTab] = useState("song");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +109,7 @@ export default function TopBoard({ onHome, onBack, onRemix }) {
   }
 
   return (
-    <div style={s.container}>
+    <div style={{ ...s.container, paddingBottom: navBarClear(18) }}>
       <div style={s.topBar}>
         <button onClick={onBack} style={s.navBtn}>← Back</button>
         <button onClick={onHome} style={s.navBtn}>Home</button>
@@ -157,12 +163,15 @@ export default function TopBoard({ onHome, onBack, onRemix }) {
           ))
         )}
       </div>
+      {nav ? <BottomBar current="home" {...nav} /> : null}
     </div>
   );
 }
 
 const s = {
-  container: { minHeight: "100vh", background: PAGE_BG, padding: "20px 16px 60px", fontFamily: NUN, display: "flex", flexDirection: "column", alignItems: "center" },
+  // GN3: longhands — the render overrides paddingBottom for the bar clearance,
+  // and mixing a shorthand with a longhand in one style object is a React warning.
+  container: { minHeight: "100vh", background: PAGE_BG, paddingTop: 20, paddingRight: 16, paddingBottom: 60, paddingLeft: 16, fontFamily: NUN, display: "flex", flexDirection: "column", alignItems: "center" },
   topBar: { width: "100%", maxWidth: 900, display: "flex", justifyContent: "space-between", marginBottom: 8 },
   navBtn: { fontFamily: NUN, fontWeight: 800, fontSize: 15, color: "#fff", background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" },
   heading: { fontFamily: FRED, fontSize: "clamp(22px, 5.5vw, 34px)", fontWeight: 700, color: "#fff", margin: "10px 0 2px", textAlign: "center" },

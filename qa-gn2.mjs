@@ -45,7 +45,7 @@ chk('the lobby imports the bar (no import cycle back into the shell)',
 chk('the lobby does NOT import from BuildableKids (that would be a cycle)',
   !/from ["']\.\/BuildableKids/.test(L));
 chk('the shell imports the bar from the same module',
-  /import BottomBar, \{ navBarClear \} from "\.\/BottomBar\.jsx"/.test(SHELL));
+  /import BottomBar, \{ navBarClear[^}]*\} from "\.\/BottomBar\.jsx"/.test(SHELL));
 
 // ------------------------------------------------------- 2) lobby wiring
 console.log('--- Lobby wiring: nav in, bar out, padding for it ---');
@@ -213,13 +213,17 @@ if (esbuild && JSDOM) {
     chk('WAITING bar still lights Play only',
       tabs.length === 5 && tabs.filter((t) => t.sel).length === 1 && tabs.find((t) => t.id === 'play').sel);
 
-    // No emoji on a deciding screen. Four dingbat glyphs predate GN2 (the Back
-    // arrows and the mode-select tile icons); they are named here so a NEW one
-    // still fails this check, and they are logged for GN3's sweep to replace
-    // with drawn SVG per the product guardrail.
-    const PRE_GN2 = ['←', '↗', '▣', '☆'];
-    const strip = (t) => PRE_GN2.reduce((acc, c) => acc.split(c).join(''), t);
-    chk('no NEW emoji on the lobby deciding screens', !emoji.test(strip(host.textContent)));
+    // No emoji on a deciding screen. GN3 replaced the three dingbat TILE ICONS
+    // (a square, a star, an arrow) with drawn SVG. What is left is the '<-'
+    // character inside the "Back"/"Home" button LABELS, which is text in a
+    // sentence, not a glyph standing in for an icon. It is named here so any
+    // other symbol still fails this check.
+    const ALLOWED = ['←'];
+    const strip = (t) => ALLOWED.reduce((acc, c) => acc.split(c).join(''), t);
+    chk('no emoji on the lobby deciding screens (only the Back-label arrow allowed)',
+      !emoji.test(strip(host.textContent)));
+    chk('the mode tiles use drawn SVG, not dingbat characters',
+      !/[▣☆↗]/.test(host.textContent));
     const navHtml = /<nav[^>]*data-nv1-bottom-bar[\s\S]*?<\/nav>/.exec(host.innerHTML);
     chk('no emoji anywhere in the bar itself', !!navHtml && !emoji.test(navHtml[0]));
 
