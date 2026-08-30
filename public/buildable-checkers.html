@@ -283,6 +283,12 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
    Headless-safe: the rules + bot + QA hook (window.CHECKERS_GAME) run with no DOM.
    ============================================================================ */
 var BA = window.BuildableAudio || null;
+// Bespoke created sounds (ElevenLabs via /api/sfx). Without this map, "move",
+// "capture" and "king" resolved to nothing at all and those three moments — the
+// only three that matter in checkers — were silent on every device.
+if (BA && BA.configure) BA.configure({ sfxBase: "/api/sfx?s=", map: {
+  select: "checkers_select", move: "checkers_move",
+  capture: "checkers_capture", king: "checkers_king" } });
 var HAS_DOM = typeof document !== "undefined" && !!document.getElementById;
 
 /* ---------------- rules (pure, no DOM) ---------------- */
