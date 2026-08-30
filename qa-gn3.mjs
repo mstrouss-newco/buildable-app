@@ -98,6 +98,7 @@ const DOING = {
   SCREEN_CHESS: 'engine iframe',      SCREEN_TENNIS: 'engine iframe',
   SCREEN_TOWN: 'engine iframe',       SCREEN_PLAY: 'engine iframe',
   SCREEN_EXPLORE: 'exhibit iframe',   SCREEN_LESSONS: 'lessons iframe',
+  SCREEN_PRACTICE: 'practice deck iframe',
   SCREEN_SOUNDS: 'studio canvas',     SCREEN_ART: 'studio canvas',
   SCREEN_MUSIC: 'studio canvas',      SCREEN_STORY: 'studio canvas',
   // Active making canvas: leaving mid-flow loses the kid's work.

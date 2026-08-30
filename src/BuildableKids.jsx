@@ -591,8 +591,8 @@ function LessonsScreen({ onHome, nav }) {
 // carrying the five Dolch sight-word lists today and the four maths operations
 // from PT3. It reports one `skill` message per finished session, which GameFrame
 // already relays into the 8B learning ledger — no wiring of its own needed.
-function PracticeScreen({ onHome }) {
-  return <GameFrame title="Practice" src="/practice" onHome={onHome} bg="#FDFAF5" light />;
+function PracticeScreen({ onHome, nav }) {
+  return <GameFrame nav={nav} title="Practice" src="/practice" onHome={onHome} bg="#FDFAF5" light />;
 }
 // Session 7F: the shared landing hands Tennis its mode ("solo" | "local") and the
 // equipped court from the shared loadout, so the engine skips its own start screen
@@ -2498,7 +2498,7 @@ export default function BuildableKids() {
     return <LessonsScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_PRACTICE) {
-    return <PracticeScreen onHome={() => setScreen(SCREEN_HOME)} />;
+    return <PracticeScreen nav={bottomBarProps} onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen nav={bottomBarProps} level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
