@@ -148,6 +148,16 @@
 
   /* ---- Session LS2: subject picker ---- */
   .subgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:4px}
+  /* Session MM1 - the Minute Math doorway. A wide card under the subjects,
+     because it is not a subject: it is the timed facts sheet school sends home. */
+  .doorway{display:flex;align-items:center;gap:14px;width:100%;margin-top:13px;text-align:left;cursor:pointer;
+           background:#fff;border:2px solid var(--line);border-radius:22px;padding:14px 16px;
+           box-shadow:0 6px 18px rgba(15,14,23,.05)}
+  .doorway:active{transform:scale(.99)}
+  .doorway .art{width:58px;height:58px;flex:none}
+  .doorway h3{font-family:'Fredoka',sans-serif;font-weight:600;margin:0 0 2px;font-size:18px}
+  .doorway p{margin:0;font-size:12.5px;color:var(--sub);font-weight:800}
+  .doorway .go{margin-left:auto;flex:none;color:var(--purple)}
   .subject{background:#fff;border:2px solid var(--line);border-radius:22px;padding:16px 13px;text-align:center;
            cursor:pointer;transition:transform .1s;font:inherit;color:inherit;box-shadow:0 6px 18px rgba(15,14,23,.05)}
   .subject:active{transform:scale(.97)}
@@ -866,6 +876,20 @@ function idxBuddy(text){
          '<div class="bubble">'+esc(text)+'</div></div>';
 }
 
+/* Session MM1 - Minute Math sits under the subjects, not among them. It is not
+   a lesson path, it is the timed facts sheet, so it gets its own wide doorway. */
+var MINUTE_MATH_DOOR =
+  '<button type="button" class="doorway" onclick="window.__minuteMath()">' +
+    '<svg class="art" viewBox="0 0 64 64" aria-hidden="true">' +
+      '<circle cx="32" cy="32" r="25" fill="#FFF3E2" stroke="#FFC542" stroke-width="3"/>' +
+      '<path d="M32 15v17l11 7" stroke="#FF6B6B" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M18 20l-4-4M46 20l4-4" stroke="#FFC542" stroke-width="4" stroke-linecap="round"/>' +
+    '</svg>' +
+    '<div><h3>Minute Math</h3><p>One minute, one sheet, as many as you can</p></div>' +
+    '<svg class="go" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>' +
+  '</button>';
+window.__minuteMath = function(){ location.href = "/minutemath"; };
+
 /* ---- Screen A: pick a subject ---- */
 function showSubjects(){
   VIEW = { name:"subjects", subject:null, grade:null };
@@ -884,7 +908,7 @@ function showSubjects(){
             '</button>';
   }
   render(idxBuddy("Time for school, my way. What should we learn today?") +
-         '<div class="subgrid">'+html+'</div>');
+         '<div class="subgrid">'+html+'</div>' + MINUTE_MATH_DOOR);
 }
 window.__pickSubject = function(id){
   var g = startGradeFor(id);
