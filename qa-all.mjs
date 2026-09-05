@@ -161,6 +161,12 @@ for (const f of chosen) {
   if (needsBrowser(f) && !WITH_BROWSER) { skipped.push(f); continue; }
   const { code, out, secs } = await run(f);
   if (code === 0) pass(f, `${secs}s`);
+  else if (/ERR_MODULE_NOT_FOUND/.test(out)) {
+    // Not a product bug: the machine is missing a devDependency (jsdom, usually).
+    // Say so plainly rather than letting it read as "the code is broken".
+    const pkg = (out.match(/Cannot find package '([^']+)'/) || [, "a package"])[1];
+    fail(f, `${pkg} is not installed here — run npm ci, then try again (this is the machine, not the code)`);
+  }
   else {
     const why = out.split("\n").filter((l) => /^FAIL|ERR:|Error/.test(l)).slice(0, 3).join(" | ");
     fail(f, `exit ${code}, ${secs}s${why ? "  ::  " + why : ""}`);
