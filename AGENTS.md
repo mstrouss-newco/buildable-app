@@ -212,6 +212,27 @@ no jargon.
 - **QA honesty.** Any session that touches a game ends by running that game's QA script
   (`qa-{game}.mjs`). If a game has no QA script, say so plainly. **Never claim QA passed
   if it did not actually run.**
+- **`qa-all.mjs` is the release gate. Run it before you call a session done.**
+
+  ```
+  node qa-all.mjs            # every harness, no browser needed, about 4 minutes
+  node qa-all.mjs --live     # ALSO check the live site serves what it should (CI only)
+  ```
+
+  It finds every `qa-*.mjs` on disk, so a new harness is in the gate the moment you
+  write one and can never be forgotten. Before the harnesses it runs a **serving
+  check**: every `public/buildable-*.js` and every `public/*.html` must have a route
+  in `vercel.json` ahead of the `/(.*)` catch-all. That check exists because Practice
+  shipped completely dead — `qa-practice.mjs` passed the whole time, but
+  `buildable-practice.js` had no route, so the server sent `landing.html` in its place
+  and the browser choked on `Unexpected token '<'`. **A passing harness does not mean
+  the thing is reachable.** `--live` fetches each file from production and fails if
+  HTML comes back where JavaScript should; it needs real network, so it is skipped
+  (loudly, never silently) on a machine that cannot reach the site.
+
+  This does not replace `scripts/editor-qa-run.mjs`, which is a different job: that one
+  play-tests the 19 manifest games in `qa/qa-map.mjs` after an editor save. `qa-all.mjs`
+  is the whole-repo gate.
 - **Log every session in `SESSION-LOG.md`** at the end: date, block ID, what shipped,
   what remains, anything flagged. (This is in addition to the dated README log entry
   noted at the top of this file.)

@@ -1,3 +1,147 @@
+## 2026-08-30 — QA-FIX: Practice is alive, Lessons is open, and there is finally a release gate
+
+The first fixing session off the QA3d/QA3e sweep. Mike picked the Practice fix plus
+test coverage, and said to open Lessons.
+
+**Practice was dead on the live site, and it was three lines.** `vercel.json` names
+every shared script one by one, and `buildable-practice.js` — shipped in the PT1–PT3
+merge — was never added, so the final `/(.*)` catch-all served `landing.html` in its
+place. The browser asked for JavaScript, got 111KB of HTML, threw
+`Unexpected token '<'`, and the page told kids *"The sets would not load."* The
+Grown-ups Practice card hung on "Loading practice progress…" for the same reason.
+`public/feedback.html` had fallen through the same hole and is routed now too.
+
+**The part that matters more: nothing could have caught it.** `qa-practice.mjs` was
+written in the same session as the feature and passes — it just was not run by
+anything, and it never asked whether the file was *reachable*. Mike asked whether a QA
+tool already existed before I built one. It does: `scripts/editor-qa-run.mjs` with a
+nightly GitHub Action. But it only covers the **19 manifest games** in
+`qa/qa-map.mjs` and only asks "is this level still beatable?". **Thirty-three other
+`qa-*.mjs` files were run by hand or not at all.**
+
+**So: `qa-all.mjs`, the release gate.** One command, about four minutes, 45 harnesses.
+Two deliberate choices. It **finds harnesses on disk** rather than reading a list, so
+writing `qa-newthing.mjs` is all it takes to be in the gate and nothing can be
+forgotten. And before any of them it runs a **serving check**: every
+`public/buildable-*.js` and every `public/*.html` must have a route ahead of the
+catch-all. Verified against the real bug — with the new route removed it reports
+*"buildable-practice.js would be served as landing.html"*; with it back in, green.
+`--live` fetches each file from production and fails when HTML comes back where
+JavaScript belongs; it needs real network, so on a machine that cannot reach the site
+it skips loudly rather than inventing fifty failures. Wired into
+`.github/workflows/editor-qa.yml` as a new `gate` job on every push to main, with the
+live check running after the deploy and never failing the build on its own.
+`play-test` now skips plain pushes so it does not re-test every game on every commit.
+Named in AGENTS.md. It does not replace the editor runner; different job.
+
+**Three harnesses were failing and none of them was a product bug.** `qa-maze` and
+`qa-snakes` both died on `BuildableWin is not defined`, then on
+`Cannot read properties of undefined (reading 'width')`: their jsdom stubs never
+loaded `buildable-wincard.js` and never stubbed `measureText`, which every other
+harness in the repo already does. `qa-lessons` was failing three checks because it
+still greps the pre-NV2 Home shape (`id: "lessons", title: "Lessons"`, `sub: "Coming
+soon"`) that NV3 replaced with the `learn` door. All three fixed to match what the
+code actually is. That closes QA11 and takes the suite to 45 of 45 green.
+
+**Lessons is open to kids.** No code, no deploy: LS4 built it as a database switch
+(`app_flags.lessons_live`) precisely so the owner could flip it without a push.
+Approved by Mike in chat, applied, and recorded as `db/ls4-lessons-live-on.sql`
+(idempotent, with the statement to close it again). Verified on the live site: the
+Learn door now reads "Math & reading", the SOON badge is gone, and it opens
+`/app/lessons`.
+
+**The Learn door had no art**, because `/api/images?kind=game&id=mathcannon` 400s —
+`mathcannon` and `rileys` were the only two ids in `GAME_CATALOG` with no prompt in
+`api/images.js`. Both prompts added, which also fixes the two art-less tiles in the
+Play grid. That is QA12.
+
+**QA before/after:** 42 of 45 passing at the start of the session, 45 of 45 at the
+end, plus a serving check that did not exist. Nine Playwright harnesses still need
+`--with-browser` and were not run here.
+
+**What remains in this phase:** 40 open finding cards. The next big one is QA42/QA43 —
+a guest kid profile under a signed-in parent means every song and drawing saves with
+no child attached and never appears, and "Start game" in Play a friend 403s in
+silence. Then the book art (QA45, QA46), the landing page (QA49), and the polish
+batches (QA51, QA52, QA53). QA50 (there is no login or sign-up page) is tagged
+`[LOGIN]` and belongs to the separate login effort.
+
+## 2026-08-30 — QA3d + QA3e: the pages sweep (books, makers, creations, friends, parent side)
+
+Run in Cowork against the live site, as one session per the `GROUPED 2026-08-29`
+note on both cards. **Find only, nothing fixed.** Thirteen findings filed as
+planner cards **QA41–QA53**.
+
+**The big one: Practice is dead on the live site.** The Home tile advertises
+"Practice — Words & numbers" with no SOON badge, and the page says *"The sets
+would not load."* One console exception explains it: `SyntaxError: Unexpected
+token '<'` from `/buildable-practice.js`, which returns **200 `text/html`,
+111,072 bytes — it is `landing.html`**. `vercel.json` lists every
+`buildable-*.js` by name and the new file from the PT1–PT3 merge (`ac2c0f4`) was
+never added, so the final `/(.*) -> /landing.html` catch-all swallows it.
+`practice.html` and `/practice/decks/index.json` both serve fine, so it is one
+missing route line. The Grown-ups Practice card is stuck on "Loading practice
+progress…" for the same reason. Filed as **QA41**, with a task to add a
+qa-all.mjs check that every `public/buildable-*.js` is served as JavaScript —
+this is the third time a file has fallen through to `landing.html`.
+
+**The second big one: nothing a kid makes ever shows up.** Made a song, saved
+it: *"Saved to My Songs!"*, and the tab still read **(0)**. Drew a picture,
+saved it: *"Saved to your gallery!"*, and Mine said *"No saved art yet"*. Both
+rows are really on the server — `list-songs?deviceId=` returns them — but with
+`kid_profile_id` null, and every gallery lists by kid. The kid playing is a
+**guest profile** (`bk_guest_kid_profiles_v1`) with no row in `kid_profiles`, so
+the insert hits a foreign key, `api/save-song.js` falls back to
+`kid_profile_id: null` and still returns `ok: true`, and the client believes it.
+The same guest-kid mismatch kills Friends: **Start game** in "Play a friend"
+does nothing at all, and the logged request is
+`POST /api/friends {action:'invite'}` → **403 `not your player`**, swallowed
+because the error box only renders on another branch. **QA42**, **QA43**.
+
+**Books.** All twenty checked by opening them and by fetching every image.
+Fourteen are open; the other six (Snakes & Reptiles, The Planets, Rockets,
+Volcanoes, Wild Weather, The Deep Ocean) have **no pictures at all** — 78 files
+404 — and are correctly gated behind "Not ready yet" (**QA45**). The first six
+open books (Sharks, Dinosaurs, The Moon, Big Cats, Penguins, Bugs & Butterflies)
+are missing their eight per-fact photos each, so the page photo and both fact
+circles are **the same picture** on every page; the TB4 books 13–20 have all
+thirteen and look right (**QA46**). Every page in a book is padded to the height
+of the tallest page, so the cover ends in ~890px of blank cream and the finish
+page in ~1,080px, with the page arrows below all of it (**QA47**).
+
+**Exhibits.** Journey to the Deep and Weather Lab both work — the dive's
+creature cards, the fact sheets, the found counter, and the Weather Lab's
+recipes all behave. Solar System was checked through the catalogue.
+
+**Lessons is finished, and no kid can reach it.** `/lessons` is live with 11
+Math and 19 Reading lessons, real routes, placement, read-aloud, ten-frames and
+a kind failure state — and the Home **Learn tile says "Coming soon"** with no
+way in (**QA48**).
+
+**Parent side and landing.** The landing page carries **45 emojis** across 24
+glyphs, against the repo's hardest rule, and claims games/music/art/stories are
+"all live today" while two of the four studios are Coming soon (**QA49**).
+There is **no login or sign-up page at all** — "Log in" and "Try it free" are
+the same `/app` link and a signed-out stranger lands in the full kid app with a
+question-mark avatar; filed **[BROKEN][LOGIN]** as **QA50** and left alone.
+`/?stay=1` and the signed-in `/` → `/app` redirect both work. Sound Machine
+batch (Home pill over the title, 1.7MB of pack icons, no save) is **QA51**;
+studio polish batch is **QA52**; the Parents/My Stuff mismatch is **QA53**.
+
+**Not verified, honestly.** The invite banner needs two accounts and was not
+reachable in one session. And a QA-tooling warning worth remembering: **both
+automated browsers keep the page hidden between calls, so `requestAnimationFrame`
+never runs** — canvas games, fade-ins and the Weather Lab's slider glide all look
+frozen or blank when they are fine. Several "missing art" scares in this sweep
+were that, not the product. Force `opacity: 1` or read the DOM before believing
+a blank screen; the headless `qa-*.mjs` harnesses are unaffected.
+
+**How this reached main.** The sandbox's git proxy refuses this repo (`not in this
+session's authorized repository set`) for both `git push` and `api.github.com`, so
+`PUSH-TOKEN.txt` is never even reached and there is no GitHub connector in the
+directory to fix that. Committed through the GitHub web UI in Mike's Chrome
+instead, with his approval, in the same session as the QA-FIX work logged above.
+
 ## 2026-08-30 — PT2 + PT3: Practice Round 2 (the GROUPED batch)
 
 Both cards carried a `GROUPED 2026-08-29` note saying to run them as one

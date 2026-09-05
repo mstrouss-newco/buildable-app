@@ -614,6 +614,10 @@
       "dest": "/buildable-feel.js"
     },
     {
+      "src": "/buildable-practice.js",
+      "dest": "/buildable-practice.js"
+    },
+    {
       "src": "/buildable-mechanics.js",
       "dest": "/buildable-mechanics.js"
     },
@@ -966,6 +970,14 @@
     {
       "src": "/practice",
       "dest": "/practice.html"
+    },
+    {
+      "src": "/feedback.html",
+      "dest": "/feedback.html"
+    },
+    {
+      "src": "/feedback",
+      "dest": "/feedback.html"
     },
     {
       "src": "/sling/(.*)",

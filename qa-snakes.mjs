@@ -4,10 +4,10 @@ import fs from 'fs'; import vm from 'vm';
 const dir=process.argv[2]||'.';
 const read=f=>fs.readFileSync(dir+'/public/'+f,'utf8');
 const html=read('snakes-engine.html');
-const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-turns.js'].map(read).join('\n');
+const libs=['buildable-renders.js','buildable-audio.js','buildable-mechanics.js','buildable-startscreen.js','buildable-turns.js','buildable-wincard.js'].map(read).join('\n');
 const engine=[...html.matchAll(/<script\b(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 const noop=()=>{};
-const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='canvas'?{width:720,height:1040}:(typeof k==='string'?noop:undefined))});
+const ctxStub=new Proxy({},{get:(_,k)=>(k==='createLinearGradient'||k==='createRadialGradient')?()=>({addColorStop:noop}):(k==='measureText'?((t)=>({width:(String(t||'').length*8)})):(k==='canvas'?{width:720,height:1040}:(typeof k==='string'?noop:undefined)))});
 function el(){ const e={ style:{setProperty:noop}, classList:{add:noop,remove:noop,contains:()=>false}, addEventListener:noop, removeEventListener:noop, getContext:()=>ctxStub, onclick:null, clientWidth:720, clientHeight:1040, width:720, height:1040, getBoundingClientRect:()=>({left:0,top:0,width:720,height:1040}), appendChild:noop, removeChild:noop }; Object.defineProperty(e,'innerHTML',{set(){},get(){return''}}); return e; }
 class ImageStub{constructor(){this.complete=false;this.naturalWidth=0;}set src(v){this._src=v;}get src(){return this._src;}}
 const documentStub={ getElementById:(id)=>el(), querySelector:()=>el(), addEventListener:noop, createElement:()=>el(), head:el(), documentElement:el() };
