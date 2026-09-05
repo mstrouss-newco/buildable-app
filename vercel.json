@@ -903,6 +903,14 @@
       "dest": "/minutemath.html"
     },
     {
+      "src": "/cobuild.html",
+      "dest": "/cobuild.html"
+    },
+    {
+      "src": "/cobuild",
+      "dest": "/cobuild.html"
+    },
+    {
       "src": "/practice/favicon.ico",
       "dest": "/favicon.ico",
       "headers": {
