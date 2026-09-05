@@ -59,6 +59,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+      # Several harnesses boot a page in jsdom, which is a devDependency. Without
+      # this they fail with ERR_MODULE_NOT_FOUND and the gate reports a red that has
+      # nothing to do with the code. (Caught the first time this job ever ran.)
+      - name: Install dependencies
+        run: npm ci
       - name: Run every harness and the serving check
         run: node qa-all.mjs
       - name: Check the live site really serves what it should
