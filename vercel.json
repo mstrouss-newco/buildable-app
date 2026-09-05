@@ -907,6 +907,13 @@
       "dest": "/minutemath.html"
     },
     {
+      "src": "/cobuild/(.*)",
+      "dest": "/cobuild/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
+    },
+    {
       "src": "/cobuild.html",
       "dest": "/cobuild.html"
     },
