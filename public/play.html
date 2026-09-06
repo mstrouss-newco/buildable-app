@@ -13,10 +13,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Buildable Runner — engine</title>
 <style>
-  html,body{margin:0;height:100%;background:#0e1020;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif}
+  html,body{margin:0;height:100%;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif;
+    background:linear-gradient(#cfeaff 0%,#dff0d6 55%,#eef6dc 100%)}   /* the sky continues past the canvas, so a portrait phone never shows black bars */
   #wrap{position:fixed;inset:0;box-sizing:border-box;display:flex;align-items:safe center;justify-content:safe center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-  canvas{background:#000;max-width:100%;max-height:100%;image-rendering:auto;border-radius:14px}
-  #hint{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;color:#fff;opacity:.7;font-size:15px;pointer-events:none}
+  canvas{display:block;background:#cfeaff;max-width:100%;max-height:100%;image-rendering:auto}
+  #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(112px + env(safe-area-inset-bottom));max-width:min(92vw,520px);text-align:center;color:#fff;font-size:14px;font-weight:600;pointer-events:none;
+    background:rgba(8,10,20,.55);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 16px;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+  @media (min-width:820px){ #hint{bottom:calc(18px + env(safe-area-inset-bottom))} }
 
   /* on-screen controls */
   #pad{position:fixed;left:18px;bottom:20px;display:flex;gap:14px;z-index:5}
@@ -30,10 +33,11 @@
   .arR{border-top:13px solid transparent;border-bottom:13px solid transparent;border-left:20px solid #fff}
   .arU{border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:22px solid #fff}
   .arD{border-left:13px solid transparent;border-right:13px solid transparent;border-top:20px solid #fff}
-  #bHelp{position:fixed;right:14px;top:102px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);color:#fff;font:700 18px Fredoka,sans-serif;cursor:pointer}
-  #bMute{position:fixed;right:14px;top:14px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .bk-inshell #bHelp,.bk-inshell #bMute,.bk-inshell #bMusic{display:none}
+  #bHelp{position:fixed;right:14px;top:150px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);color:#fff;font:700 18px Fredoka,sans-serif;cursor:pointer}
+  #bMute{position:fixed;right:14px;top:62px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   #bMute svg{width:20px;height:20px;display:block}
-  #bMusic{position:fixed;right:14px;top:58px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  #bMusic{position:fixed;right:14px;top:106px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   #bMusic svg{width:20px;height:20px;display:block}
   #howto{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:22px 0 32px;background:radial-gradient(ellipse at 50% 42%, rgba(8,12,28,.05), rgba(8,12,28,.5));-webkit-tap-highlight-color:transparent;cursor:pointer}
   #howto .ttl{color:#fff;font:700 30px Fredoka,sans-serif;text-shadow:0 2px 12px rgba(0,0,0,.55);margin-top:4px;letter-spacing:.4px}
@@ -78,6 +82,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   </div>
 <div id="hint">Move with the arrows · JUMP to hop · reach the flag</div>
 <script src="buildable-wincard.js"></script>
+<script src="buildable-hud.js"></script>
+<script src="buildable-gamenav.js"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -90,14 +96,15 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   artBase: "https://www.buildablekids.com/api/game-art",
   heroUrl: "https://www.buildablekids.com/api/story-library?img=character:bunny&style=watercolor&emo=happy",
   bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
-  palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#c0566f", flag:"#ffd23f", hud:"#ffffff" },
+  palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#b8477e", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
     { name:"Whispering Woods", speed:3.2, length:230, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, boss:true, bossHp:3 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
 
-let W=900; const H=540, TILE=60;               // world units (W widens to fill a landscape screen; H is fixed so level geometry never moves)
+let W=900, VH=540; const H=540, TILE=60;       // H is the WORLD height and never moves (every platform y is baked from it).
+                                               // W and VH are the VIEW: both follow the screen so the canvas always fills it.
 const GROUND_Y = H-110;                        // top of the ground band
 const GRAV=0.58, JUMP=-13.8, RUN_BASE=3.2; // physics
 // --- HH1: Mario feel. A short run-up to a faster top speed, then coyote time and a
@@ -113,6 +120,30 @@ const SKID_MIN = 1.6;                         // speed you must be doing for a t
 const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a full jump stays airborne
 const SLIDE_FRAMES=34;
 const c=document.getElementById('c'), ctx=c.getContext('2d');
+// ---------------------------------------------------------------------------
+//  HH2 — fill the screen the way the other engines do. The world stays 540 tall
+//  FOREVER (GROUND_Y and every platform y are baked at build time, so H must never
+//  move); only the WIDTH grows, which just shows more of the level. A landscape
+//  screen is therefore filled edge to edge with no stretching and no black box; a
+//  portrait phone keeps the full 900 width and the page's sky gradient continues
+//  past the canvas, so the letterbox reads as more sky rather than as bars.
+// ---------------------------------------------------------------------------
+function fitCanvas(){
+  if(typeof window==="undefined" || !c || !ctx || !ctx.setTransform) return;
+  const vw=window.innerWidth||0, vh=window.innerHeight||0;
+  if(!vw || !vh) return;                                  // headless QA — keep the 900x540 defaults
+  // Pick how much world WIDTH to show: a wide screen shows more of the level, a phone
+  // shows less so everything is bigger. Then make the view exactly the screen's shape,
+  // which on a tall screen simply means more SKY above the same 540-tall world.
+  W  = Math.round(Math.max(560, Math.min(1600, H*(vw/vh))));
+  VH = Math.max(H, Math.round(W*vh/vw));
+  const scale=vw/W, dpr=Math.min(2, window.devicePixelRatio||1);
+  c.width=Math.round(W*dpr); c.height=Math.round(VH*dpr);
+  c.style.width=Math.round(W*scale)+"px"; c.style.height=Math.round(VH*scale)+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);                      // draw in logical W x VH units, sharp on retina
+}
+function skyPad(){ return VH-H; }                          // sky added ABOVE the world so the ground stays on the floor
+try{ fitCanvas(); addEventListener('resize',fitCanvas); addEventListener('orientationchange',fitCanvas); }catch(e){}
 // --- sound (Web Audio; resumes on first tap, so it works on iPad) ---
 let AX=null, soundOn=true, musicOn=true;
 function actx(){ if(!AX){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC)AX=new AC(); }catch{} } if(AX&&AX.state==='suspended'){ try{AX.resume();}catch{} } return AX; }
@@ -347,7 +378,7 @@ hold('ddown', ()=>doSlide(),      null);
 c.addEventListener('pointerdown',()=>{ if(state==="win"||state==="lose"){ hearts=3; startLevel(li); } });
 // how-to overlay
 const howto=document.getElementById('howto');
-function startDemo(){ demoMode=true; botMode=false; hearts=3; startLevel(0); started=false; paused=false; demoRestartT=0; howto.style.display='flex'; }  // start screen: idle hero + finger-swipe, NO auto-play
+function startDemo(){ if(typeof hintEl!=='undefined'&&hintEl){hintEl.style.opacity='';hintGone=false;} demoMode=true; botMode=false; hearts=3; startLevel(0); started=false; paused=false; demoRestartT=0; howto.style.display='flex'; }  // start screen: idle hero + finger-swipe, NO auto-play
 function startPlay(){ demoMode=false; botMode=false; howto.style.display='none'; hearts=3; startLevel(0); started=false; paused=false; inputLeft=false; inputRight=false; try{window.focus();}catch{} actx(); if(soundOn&&musicOn) Music.start(); }
 // tap the Play button OR anywhere on the overlay to start (pre-reader friendly)
 howto.addEventListener('pointerdown',(e)=>{ e.preventDefault(); startPlay(); });
@@ -364,6 +395,15 @@ const bMusic=document.getElementById('bMusic'); bMusic.innerHTML=NOTE_ICON;
 bMusic.addEventListener('click',()=>{ actx(); if(!soundOn){ soundOn=true; musicOn=true; paintMute(); } Music.next(); });
 document.getElementById('bHelp').addEventListener('click',()=>{ startDemo(); });
 
+// --- where are the holes? Merged from the ground segments once per level, so the
+// pit art and the ground band can never disagree about where an edge is. ---
+function pitsOf(L){
+  if(L._pits) return L._pits;
+  const g=L.ground.slice().sort((a,b)=>a.x0-b.x0), out=[];
+  let end=g.length?g[0].x1:0;
+  for(let i=1;i<g.length;i++){ if(g[i].x0>end+1) out.push({x0:end, x1:g[i].x0}); end=Math.max(end,g[i].x1); }
+  L._pits=out; return out;
+}
 // --- helpers: is there solid ground under world-x? ---
 function groundUnder(wx){ for(const g of L.ground){ if(wx>=g.x0 && wx<g.x1) return g.y; } return null; }
 
@@ -538,29 +578,94 @@ function draw(){
   const spd01 = Math.min(1, Math.abs(player.vx)/(L.speed*TOP_MULT));
   const look  = (player.face||1) * spd01 * 110;
   const _ct=Math.max(0, player.x - W*0.42 + look); camX += (_ct-camX)*0.09; if(camX<0)camX=0;
-  const wantY = Math.max(0, Math.min(160, (GROUND_Y-170) - player.y));
-  camY += (wantY-camY)*0.07; if(camY<0.4) camY=0;
+  // Vertical follow is a DEAD ZONE, not a spring: the world only slides down once the
+  // hero rises past the top third of the frame (a bounce pad, the top of a two-tier
+  // climb), and it is hard-clamped so the ground band can never leave the bottom of the
+  // screen. Getting that clamp wrong once made the whole floor vanish on every bounce.
+  { const heroScreen = skyPad() + player.y + 30, topZone = VH*0.30;
+    const roomBelow = Math.max(0, VH - 46 - (skyPad()+GROUND_Y));
+    const wantY = Math.min(roomBelow, Math.max(0, topZone - heroScreen));
+    camY += (wantY-camY)*0.07; if(camY<0.4) camY=0; }
   const t=Date.now()/1000, SC=L.scene||{mid:[],near:[],fore:[],top:[],flies:[]};
   // LAYER 1 — sky gradient (drawn OUTSIDE the camera shift so the top never goes blank)
-  const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#cfeaff"); sky.addColorStop(.55,"#dff0d6"); sky.addColorStop(1,"#eef6dc"); ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-  ctx.save(); ctx.translate(0, Math.round(camY));      // <<< world layers follow the climb
-  // soft god-rays
+  // The sky covers the WHOLE view. Its stops are placed relative to the sky pad, so on a
+  // tall phone the extra space reads as real high sky rather than a stretched gradient.
+  { const p0=skyPad()/VH, sky=ctx.createLinearGradient(0,0,0,VH);
+    sky.addColorStop(0,"#bcdfff"); sky.addColorStop(Math.max(0.001,p0*0.96),"#cfeaff");
+    sky.addColorStop(Math.min(0.999,p0+(1-p0)*0.55),"#dff0d6"); sky.addColorStop(1,"#eef6dc");
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,VH); }
+  // soft god-rays — drawn over the whole view so the tall sky is never dead space
   ctx.save(); ctx.globalCompositeOperation="lighter";
-  for(let i=0;i<4;i++){ const a=0.05+0.035*Math.sin(t*0.5+i*1.7); ctx.fillStyle="rgba(255,250,205,"+a.toFixed(3)+")"; const x=((150+i*240-(camX*0.1))%1100+1100)%1100 - 100; ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+80,0);ctx.lineTo(x-10,H);ctx.lineTo(x-110,H);ctx.closePath();ctx.fill(); }
+  for(let i=0;i<4;i++){ const a=0.05+0.035*Math.sin(t*0.5+i*1.7); ctx.fillStyle="rgba(255,250,205,"+a.toFixed(3)+")"; const x=((150+i*240-(camX*0.1))%1100+1100)%1100 - 100; ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+80,0);ctx.lineTo(x-10-VH*0.2,VH);ctx.lineTo(x-110-VH*0.2,VH);ctx.closePath();ctx.fill(); }
   ctx.restore();
+  ctx.save(); ctx.translate(0, skyPad() + Math.round(camY));   // <<< world sits on the floor of the view, and follows a climb
   // LAYER 2 — far misty forest band (slow parallax, mirror-tiled)
-  { const im=pieceImg("far"); if(im){ const h=H*0.62, w=h*(im.naturalWidth/im.naturalHeight), par=camX*0.12, i0=Math.floor(par/w); ctx.globalAlpha=0.85; for(let i=i0-1;;i++){ const sx=Math.round(i*w-par); if(sx>W)break; ctx.save();ctx.translate(sx,0); if(((i%2)+2)%2!==0){ctx.translate(w,0);ctx.scale(-1,1);} ctx.drawImage(im,0,GROUND_Y-h+34,w,h); ctx.restore(); } ctx.globalAlpha=1; } }
+  { const im=pieceImg("far"); if(im){
+      // HH2: cap the tile width so a wide source image repeats across the screen instead
+      // of being blown up into one stretched band. Aspect is preserved, so nothing skews.
+      const ratio=im.naturalWidth/im.naturalHeight;
+      const w=Math.min(560, H*0.62*ratio), h=w/ratio;
+      const par=camX*0.12, i0=Math.floor(par/w); ctx.globalAlpha=0.85;
+      for(let i=i0-1;;i++){ const sx=Math.round(i*w-par); if(sx>W)break; ctx.save();ctx.translate(sx,0); if(((i%2)+2)%2!==0){ctx.translate(w,0);ctx.scale(-1,1);} ctx.drawImage(im,0,GROUND_Y-h+34,w,h); ctx.restore(); }
+      ctx.globalAlpha=1; } }
   // LAYER 3 — mid trees (parallax 0.4), rooted behind the ground band
-  for(const m of SC.mid){ const sx=m.x-camX*0.4 + Math.sin(t*0.5+m.ph)*3; if(sx<-260||sx>W+260)continue; const im=pieceImg(m.piece); if(im) drawPiece(im, sx, GROUND_Y+26, 300*m.s, m.flip); }
+  // HH2: a mid tree is SKIPPED when its trunk would stand over a hole — that is the bug
+  // where trunks grew straight through the pits and made a gap look like solid ground.
+  ctx.save();
+  for(const m of SC.mid){ const sx=m.x-camX*0.4 + Math.sin(t*0.5+m.ph)*3; if(sx<-260||sx>W+260)continue;
+    if(groundUnder(m.x)==null) continue;
+    const im=pieceImg(m.piece); if(im) drawPiece(im, sx, GROUND_Y+26, 300*m.s, m.flip); }
+  ctx.restore();
+  // a thin sky-coloured veil over the mid layer: it pushes the trees back behind the
+  // play lane so the hero, the platforms and the pit edges are the sharpest things on screen
+  { const vg=ctx.createLinearGradient(0,0,0,GROUND_Y+30);
+    vg.addColorStop(0,"rgba(207,234,255,0.34)"); vg.addColorStop(0.62,"rgba(223,240,214,0.30)"); vg.addColorStop(1,"rgba(238,246,220,0.16)");
+    ctx.fillStyle=vg; ctx.fillRect(0,-200,W,GROUND_Y+230); }
   // LAYER 4 — near bushes / mushrooms (parallax 0.66)
-  for(const nr of SC.near){ const sx=nr.x-camX*0.66 + Math.sin(t*0.8+nr.ph)*2; if(sx<-160||sx>W+160)continue; if(groundUnder(sx+camX)==null)continue; const im=pieceImg(nr.piece); if(im) drawPiece(im, sx, GROUND_Y+16, 150*nr.s, nr.flip); }
+  for(const nr of SC.near){ const sx=nr.x-camX*0.66 + Math.sin(t*0.8+nr.ph)*2; if(sx<-160||sx>W+160)continue;
+    if(groundUnder(nr.x)==null)continue;                 // never a bush hanging over a hole
+    const im=pieceImg(nr.piece); if(im) drawPiece(im, sx, GROUND_Y+16, 150*nr.s, nr.flip); }
   // fireflies drifting in the air
-  for(const f of SC.flies){ const sx=((f.x-camX*0.8)%W+W)%W; const y=f.y+Math.sin(t*f.sp+f.ph)*16; const a=0.3+0.4*Math.abs(Math.sin(t*1.6*f.sp+f.ph)); ctx.fillStyle="rgba(255,242,170,"+(a*0.25).toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,6,0,7);ctx.fill(); ctx.fillStyle="rgba(255,244,180,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,2.3,0,7);ctx.fill(); }
-  // ground segments
-  for(const g of L.ground){ const sx=g.x0-camX, ex=g.x1-camX; if(ex<-40||sx>W+40)continue;
-    ctx.fillStyle=P.dirt; ctx.fillRect(sx,g.y+14,ex-sx,H-g.y); ctx.fillStyle=P.ground; ctx.fillRect(sx,g.y,ex-sx,18); ctx.fillStyle=P.groundTop; ctx.fillRect(sx,g.y,ex-sx,6); }
+  for(const f of SC.flies){ const sx=((f.x-camX*0.8)%W+W)%W; const y=f.y-skyPad()*(f.ph/6.28)+Math.sin(t*f.sp+f.ph)*16; const a=0.3+0.4*Math.abs(Math.sin(t*1.6*f.sp+f.ph)); ctx.fillStyle="rgba(255,242,170,"+(a*0.25).toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,6,0,7);ctx.fill(); ctx.fillStyle="rgba(255,244,180,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,2.3,0,7);ctx.fill(); }
+  // HH2 PITS — a hole has to look like a hole: a dark shaft, a dirt wall down each
+  // side, and a shadow lip under each edge. Drawn BEFORE the ground band so the band
+  // always finishes the edge cleanly.
+  for(const pt of pitsOf(L)){ const sx=pt.x0-camX, ex=pt.x1-camX; if(ex<-60||sx>W+60)continue; const pw=ex-sx;
+    const sh=ctx.createLinearGradient(0,GROUND_Y,0,GROUND_Y+120);
+    sh.addColorStop(0,"#241811"); sh.addColorStop(0.45,"#120c07"); sh.addColorStop(1,"#070403");
+    ctx.fillStyle=sh; ctx.fillRect(sx,GROUND_Y,pw,H+260-GROUND_Y);   // a hole is DARK, much darker than the dirt beside it
+    const wall=Math.min(9,pw*0.16);                        // the two dirt walls facing into the hole
+    ctx.fillStyle="#6b4d34"; ctx.fillRect(sx,GROUND_Y,wall,120); ctx.fillRect(ex-wall,GROUND_Y,wall,120);
+    ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(sx+wall,GROUND_Y,4,120); ctx.fillRect(ex-wall-4,GROUND_Y,4,120);
+    { const lip=ctx.createLinearGradient(0,GROUND_Y-2,0,GROUND_Y+34);   // shadow lip fading down the shaft
+      lip.addColorStop(0,"rgba(0,0,0,.60)"); lip.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=lip; ctx.fillRect(sx,GROUND_Y-2,pw,36); }
+    ctx.fillStyle=P.groundTop;                              // grass tongues curling over each edge
+    ctx.beginPath(); ctx.moveTo(sx-2,GROUND_Y-1); ctx.quadraticCurveTo(sx+7,GROUND_Y+3,sx+4,GROUND_Y+13); ctx.lineTo(sx-2,GROUND_Y+9); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ex+2,GROUND_Y-1); ctx.quadraticCurveTo(ex-7,GROUND_Y+3,ex-4,GROUND_Y+13); ctx.lineTo(ex+2,GROUND_Y+9); ctx.closePath(); ctx.fill();
+  }
+  // ground segments — grass cap over a dirt body, with a soft shade under the lip
+  for(const g of L.ground){ const sx=g.x0-camX, ex=g.x1-camX; if(ex<-40||sx>W+40)continue; const gw=ex-sx;
+    ctx.fillStyle=P.dirt; ctx.fillRect(sx,g.y+14,gw,H+260-g.y);
+    ctx.fillStyle="rgba(0,0,0,.14)"; ctx.fillRect(sx,g.y+18,gw,7);
+    ctx.fillStyle=P.ground; ctx.fillRect(sx,g.y,gw,18);
+    ctx.fillStyle=P.groundTop; ctx.fillRect(sx,g.y,gw,6);
+    ctx.fillStyle="rgba(255,255,255,.20)"; ctx.fillRect(sx,g.y,gw,2);
+    ctx.fillStyle="rgba(0,0,0,.10)";                         // pebbles, on a fixed world grid so they never crawl
+    for(let px=Math.floor((g.x0)/70)*70; px<g.x1; px+=70){ const sxp=px-camX; if(sxp<-20||sxp>W+20)continue;
+      const j=(px*0.013)%1; ctx.beginPath(); ctx.ellipse(sxp+j*40, g.y+34+j*44, 7, 4, 0,0,7); ctx.fill(); } }
   // climbable platforms
-  for(const pf of L.platforms){ const x=pf.x-camX; if(x+pf.w<-30||x>W+30)continue; ctx.fillStyle="#6a4a2a"; rrect(x,pf.y,pf.w,18,8);ctx.fill(); ctx.fillStyle=P.ground; rrect(x,pf.y,pf.w,8,7);ctx.fill(); ctx.fillStyle=P.groundTop; ctx.fillRect(x+5,pf.y,pf.w-10,4); }
+  // HH2: platforms are grass-topped BLOCKS with a body you can see, not thin sticks —
+  // so at a glance a kid can tell a thing they can stand on from a thing in the background.
+  for(const pf of L.platforms){ const x=pf.x-camX; if(x+pf.w<-30||x>W+30)continue; const bh=30;
+    ctx.fillStyle="rgba(0,0,0,.15)"; rrect(x+3,pf.y+5,pf.w,bh,9); ctx.fill();          // drop shadow
+    ctx.fillStyle="#6b4d34"; rrect(x,pf.y,pf.w,bh,9); ctx.fill();                       // dirt body
+    ctx.fillStyle="rgba(0,0,0,.16)"; ctx.fillRect(x+4,pf.y+bh-9,pf.w-8,5);              // shade at the base
+    ctx.fillStyle=P.ground; rrect(x,pf.y,pf.w,13,8); ctx.fill();                        // grass cap
+    ctx.fillStyle=P.groundTop; rrect(x+2,pf.y,pf.w-4,6,5); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.24)"; ctx.fillRect(x+6,pf.y+1,pf.w-12,2);
+    ctx.fillStyle=P.ground;                                                              // little tufts over the front lip
+    for(let g=x+9; g<x+pf.w-6; g+=17){ ctx.beginPath(); ctx.moveTo(g,pf.y+11); ctx.quadraticCurveTo(g+4,pf.y+19,g+8,pf.y+11); ctx.closePath(); ctx.fill(); } }
   // bounce pads
   for(const bp of L.bounces){ const x=bp.x-camX; if(x+bp.w<-30||x>W+30)continue; const sq=bp.t>0?(bp.t/10):0; if(bp.t>0)bp.t--; const im=propImg("spring"); if(im){ const bw=bp.w+16, bh=48*(1-sq*0.3); ctx.drawImage(im, x-8, (bp.y+14)-bh+sq*6, bw, bh); } else { ctx.fillStyle="#3bbf95"; rrect(x, bp.y+sq*8, bp.w, 16-sq*6, 8);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.35)"; rrect(x+5, bp.y+2+sq*8, bp.w-10, 5, 4);ctx.fill(); } }
   // swinging vines (bonus toy, over solid ground)
@@ -571,7 +676,22 @@ function draw(){
     ctx.fillStyle="#4f7a32"; ctx.beginPath(); ctx.ellipse(ax,sw.ay,9,5,0,0,7); ctx.fill();
   }
   // coins
-  for(const k of L.coins){ if(k.got)continue; const x=k.x-camX; if(x<-30||x>W+30)continue; const im=propImg("coin"); if(im){ const s=28, sp=0.35+0.65*Math.abs(Math.cos(t*3+k.x*0.02)), w=s*(im.naturalWidth/im.naturalHeight)*sp; ctx.drawImage(im, x-w/2, k.y-s/2, w, s); } else { ctx.fillStyle=P.coin; ctx.beginPath();ctx.arc(x,k.y,11,0,7);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.6)";ctx.beginPath();ctx.arc(x-3,k.y-3,3,0,7);ctx.fill(); } }
+  // HH2 coins: bigger, gold rather than orange, with a rim and a moving shine so they
+  // never read as flowers. They spin on the same clock whether art or drawn.
+  for(const k of L.coins){ if(k.got)continue; const x=k.x-camX; if(x<-34||x>W+34)continue;
+    const sp=0.30+0.70*Math.abs(Math.cos(t*3+k.x*0.02));
+    const im=propImg("coin");
+    if(im){ const sz=38, w=sz*(im.naturalWidth/im.naturalHeight)*sp;
+      ctx.save(); ctx.shadowColor="rgba(255,214,80,.75)"; ctx.shadowBlur=12; ctx.drawImage(im, x-w/2, k.y-sz/2, w, sz); ctx.restore(); }
+    else { const R=15, rw=Math.max(3,R*sp);
+      ctx.save(); ctx.translate(x,k.y); ctx.scale(rw/R,1);
+      ctx.fillStyle="rgba(255,214,80,.30)"; ctx.beginPath();ctx.arc(0,0,R+5,0,7);ctx.fill();      // warm glow
+      ctx.fillStyle="#c9911a"; ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();                     // rim
+      const gg=ctx.createRadialGradient(-R*0.35,-R*0.4,1,0,0,R);
+      gg.addColorStop(0,"#fff4bd"); gg.addColorStop(0.45,"#ffd23f"); gg.addColorStop(1,"#eab21c");
+      ctx.fillStyle=gg; ctx.beginPath();ctx.arc(0,0,R-2.6,0,7);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.85)"; ctx.beginPath(); ctx.ellipse(-R*0.30,-R*0.36,R*0.30,R*0.17,-0.6,0,7); ctx.fill();
+      ctx.restore(); } }
   // hidden stars (up high, reward exploring)
   for(const st of L.stars){ if(st.got)continue; const x=st.x-camX; if(x<-30||x>W+30)continue; const yy=st.y+Math.sin(t*2+st.x*0.01)*4; ctx.save(); ctx.translate(x,yy); ctx.rotate(Math.sin(t*1.4+st.x)*0.25); ctx.fillStyle="rgba(255,225,90,.35)"; ctx.beginPath();ctx.arc(0,0,17,0,7);ctx.fill(); ctx.fillStyle="#ffd23f"; star5(0,0,13); ctx.fillStyle="#fff7cc"; star5(0,0,6.5); ctx.restore(); }
   // obstacles (crystals)
@@ -582,9 +702,20 @@ function draw(){
       ctx.fillStyle=P.enemy; ctx.beginPath(); ctx.ellipse(x, GROUND_Y-5, 26, 6+8*k, 0,0,7); ctx.fill();
       ctx.fillStyle="rgba(255,255,255,.7)"; ctx.beginPath(); ctx.ellipse(x-7, GROUND_Y-6, 4, 2.4,0,0,7); ctx.ellipse(x+7, GROUND_Y-6, 4, 2.4,0,0,7); ctx.fill();
       ctx.restore(); continue; }
-    const im=propImg("critter"); if(im){ const s=52, w=s*(im.naturalWidth/im.naturalHeight), bob=Math.sin(t*4+e.base)*2; ctx.save(); ctx.translate(x, GROUND_Y-s+bob); if(e.dir>0)ctx.scale(-1,1); ctx.drawImage(im, -w/2, 0, w, s); ctx.restore(); } else { ctx.fillStyle=P.enemy; rrect(x-20,e.y-6,40,34,16);ctx.fill(); ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(x-7,e.y+6,5,0,7);ctx.arc(x+7,e.y+6,5,0,7);ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath();ctx.arc(x-6,e.y+7,2.4,0,7);ctx.arc(x+8,e.y+7,2.4,0,7);ctx.fill(); } }
+    // HH2: every enemy gets a pale halo and a dark base shadow, so whatever art the
+    // world hands us it can never disappear into a green bush.
+    const bob=Math.sin(t*4+e.base)*2;
+    ctx.fillStyle="rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(x,GROUND_Y+2,21,6,0,0,7); ctx.fill();
+    ctx.save(); ctx.shadowColor="rgba(255,250,235,.95)"; ctx.shadowBlur=10;
+    const im=propImg("critter");
+    if(im){ const s=52, w=s*(im.naturalWidth/im.naturalHeight); ctx.save(); ctx.translate(x, GROUND_Y-s+bob); if(e.dir>0)ctx.scale(-1,1); ctx.drawImage(im, -w/2, 0, w, s); ctx.restore(); }
+    else { ctx.fillStyle=P.enemy; rrect(x-20,e.y-6+bob,40,34,16);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.22)"; rrect(x-15,e.y-2+bob,30,10,6); ctx.fill();
+      ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(x-7,e.y+6+bob,5.5,0,7);ctx.arc(x+7,e.y+6+bob,5.5,0,7);ctx.fill();
+      ctx.fillStyle="#241a22"; ctx.beginPath();ctx.arc(x-6,e.y+7+bob,2.6,0,7);ctx.arc(x+8,e.y+7+bob,2.6,0,7);ctx.fill(); }
+    ctx.restore(); }
   // low barriers (slide under)
-  for(const b of L.lowBars){ const x=b.x-camX; if(x<-40||x>W+40)continue; const im=propImg("vines"); if(im){ const h=GROUND_Y-20, w=72; ctx.drawImage(im, x-w/2, -16, w, h); } else { ctx.fillStyle=P.obstacle; rrect(x-22,-12,44,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-22,-12,12,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x-30,GROUND_Y-36);ctx.lineTo(x+30,GROUND_Y-36);ctx.lineTo(x,GROUND_Y-18);ctx.closePath();ctx.fill(); } }
+  for(const b of L.lowBars){ const x=b.x-camX; if(x<-40||x>W+40)continue; const im=propImg("vines"); if(im){ const h=GROUND_Y+240, w=72; ctx.drawImage(im, x-w/2, -240, w, h); } else { ctx.fillStyle=P.obstacle; rrect(x-22,-250,44,GROUND_Y+214,12); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-22,-250,12,GROUND_Y+214,12); ctx.fill(); ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x-30,GROUND_Y-36);ctx.lineTo(x+30,GROUND_Y-36);ctx.lineTo(x,GROUND_Y-18);ctx.closePath();ctx.fill(); } }
   // power-ups (floating bonus pickups)
   for(const u of L.powerups){ if(u.got)continue; const x=u.x-camX; if(x<-30||x>W+30)continue; drawPU(x, u.y+Math.sin(Date.now()/300+u.x)*4, u.kind, 15); }
   // friendly end-of-level boss — themed world art if available, else a drawn blob
@@ -613,6 +744,22 @@ function draw(){
   if(L.boss && !L.boss.defeated){ const bxs=L.barrierX-camX; if(bxs>-20&&bxs<W+20){ ctx.fillStyle="rgba(150,200,255,"+(0.10+0.05*Math.sin(t*4)).toFixed(3)+")"; ctx.fillRect(bxs-3,0,6,GROUND_Y+10); } }
   // goal flag
   const fx=L.goalX-camX; if(fx<W+80 && fx>-90){ const im=propImg("flag"); if(im){ const h=150, w=h*(im.naturalWidth/im.naturalHeight); ctx.drawImage(im, fx-w*0.16, GROUND_Y-h, w, h); } else { ctx.strokeStyle="#6a4a2a";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(fx,GROUND_Y);ctx.lineTo(fx,GROUND_Y-120);ctx.stroke(); ctx.fillStyle=P.flag; ctx.beginPath();ctx.moveTo(fx,GROUND_Y-120);ctx.lineTo(fx+52,GROUND_Y-104);ctx.lineTo(fx,GROUND_Y-86);ctx.closePath();ctx.fill(); } }
+  // LAYER 6 — HH2: the canopy and the foreground ferns are a FRAME, not a curtain.
+  // They are pinned to the screen edges (never the middle, where the hero plays), they
+  // are drawn BEFORE the hero so he is always on top of scenery, and they are pinned to
+  // the screen rather than the world so a climbing camera cannot open a gap at the top.
+  { const sc=L.scene||{fore:[],top:[]};
+    ctx.save(); ctx.translate(0,-camY);
+    const EDGE=Math.min(190, W*0.20);
+    for(const fo of sc.fore){ const sx=fo.x-camX*1.25 + Math.sin(t2()*0.7+fo.ph)*6;
+      if(sx>EDGE && sx<W-EDGE) continue;                      // never over the play lane
+      if(sx<-200||sx>W+200)continue; if(groundUnder(fo.x)==null)continue;
+      const im=pieceImg("fern"); if(im){ ctx.globalAlpha=0.92; drawPiece(im, sx, H+28, 230*fo.s, fo.flip); ctx.globalAlpha=1; } }
+    for(const tp of sc.top){ const sx=tp.x-camX*1.12;
+      if(sx>W*0.30 && sx<W*0.70) continue;                    // corners only
+      if(sx<-260||sx>W+260)continue; const im=pieceImg("canopy"); if(im) drawTopPiece(im, sx, 165*tp.s, tp.flip); }
+    ctx.restore();
+  }
   // landing dust
   for(const d of dust){ const x=d.x-camX; ctx.fillStyle="rgba(170,150,110,"+Math.min(0.6,d.life/26).toFixed(2)+")"; ctx.beginPath();ctx.arc(x,d.y,3,0,7);ctx.fill(); }
   // hero — HH1 animation. api/story-library can only make FACE/MOOD variants of a
@@ -654,39 +801,61 @@ function draw(){
   if(shieldOn){ ctx.strokeStyle="rgba(90,170,255,.85)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(hx+24,hy+28,34,0,7);ctx.stroke(); ctx.fillStyle="rgba(120,190,255,.16)";ctx.beginPath();ctx.arc(hx+24,hy+28,34,0,7);ctx.fill(); }
   if(starT>0){ ctx.fillStyle="rgba(255,220,90,.95)"; for(let s=0;s<3;s++){ const a=Date.now()/200+s*2.1; star5(hx+24+Math.cos(a)*30, hy+28+Math.sin(a)*30, 5); } }
   if(invuln>0 && !shieldOn && starT<=0 && Math.floor(invuln/6)%2===0){ ctx.fillStyle="rgba(255,255,255,.25)"; ctx.beginPath();ctx.arc(hx+24,hy+30,34,0,7);ctx.fill(); }
-  // LAYER 6 — foreground ferns (parallax in front) + canopy framing the top
-  { const sc=L.scene||{fore:[],top:[]};
-    for(const fo of sc.fore){ const sx=fo.x-camX*1.25 + Math.sin(t2()*0.7+fo.ph)*6; if(sx<-200||sx>W+200)continue; if(groundUnder(sx+camX)==null)continue; const im=pieceImg("fern"); if(im){ ctx.globalAlpha=0.92; drawPiece(im, sx, H+28, 230*fo.s, fo.flip); ctx.globalAlpha=1; } }
-    for(const tp of sc.top){ const sx=tp.x-camX*1.12; if(sx<-260||sx>W+260)continue; const im=pieceImg("canopy"); if(im) drawTopPiece(im, sx, 165*tp.s, tp.flip); }
-  }
   // floating pop text from stomps and smashes
   for(const q of pops){ const x=q.x-camX; if(x<-60||x>W+60)continue; const a=Math.max(0,1-q.t/44);
     ctx.save(); ctx.globalAlpha=a; ctx.font="bold 20px Fredoka,sans-serif"; ctx.textAlign="center";
     ctx.lineWidth=4; ctx.strokeStyle="rgba(30,20,10,.55)"; ctx.strokeText(q.txt,x,q.y); ctx.fillStyle=q.col; ctx.fillText(q.txt,x,q.y); ctx.restore(); }
   ctx.restore();                                       // <<< end of the camera shift
-  // HUD
-  ctx.fillStyle=P.hud; ctx.font="bold 22px Fredoka,sans-serif"; ctx.textAlign="left";
-  ctx.fillText(L.name+"   Lv "+(li+1)+"/"+LEVELS.length, 18, 34);
-  ctx.textAlign="right"; ctx.fillText(coinsGot+" / "+totalCoins, W-18, 34);
-  ctx.fillStyle=P.enemy; for(let i=0;i<hearts;i++){ heart(W-44-i*30, 48, 11); }
-  // star progress (top center)
-  for(let i=0;i<totalStars;i++){ const sx=W/2+(i-(totalStars-1)/2)*30; ctx.fillStyle = i<starsGot?"#ffd23f":"rgba(255,255,255,.28)"; star5(sx,30,11); }
-  // active power-up icons (top-left, under the level name)
+  // HUD — the shared dark strip (buildable-hud.js). White canvas text was unreadable
+  // on this pale sky; the shared chips are a dark tint over whatever is behind them and
+  // they inset themselves clear of the shell's Home pill and Sound/Menu/Help column.
+  paintHud();
+  // active power-up icons: down at the bottom-left, well clear of the strip and the nav
   let pax=30; const acts=[["shield",shieldOn?1:0],["magnet",magnetT],["spring",springT],["star",starT]];
-  for(const [k,v] of acts){ if(v>0){ drawPU(pax,66,k,12); pax+=32; } }
-  // progress bar
-  const pg=Math.min(1, player.x/L.goalX); ctx.fillStyle="rgba(255,255,255,.25)"; rrect(18,H-22,W-36,8,4);ctx.fill(); ctx.fillStyle=P.flag; rrect(18,H-22,(W-36)*pg,8,4);ctx.fill();
+  for(const [k,v] of acts){ if(v>0){ drawPU(pax,H-52,k,12); pax+=32; } }
+  // progress bar — inset so the thumb pads at the bottom corners never sit on it
+  { const inset=Math.min(150, W*0.17), by=VH-20, bw=W-inset*2;
+    const pg=Math.min(1, player.x/L.goalX);
+    ctx.fillStyle="rgba(10,14,26,.30)"; rrect(inset,by,bw,9,5);ctx.fill();
+    ctx.fillStyle=P.flag; rrect(inset,by,bw*pg,9,5);ctx.fill(); }
   // music track name toast (shown briefly when the song is changed)
-  if(musicToast>0){ musicToast--; const nm=Music.current(); ctx.save(); ctx.font="bold 16px Fredoka,sans-serif"; ctx.textAlign="center"; const tw=ctx.measureText(nm).width+50, x=W/2, y=64; ctx.globalAlpha=Math.max(0,Math.min(1,musicToast/30)); ctx.fillStyle="rgba(20,30,50,.74)"; rrect(x-tw/2,y-16,tw,30,15); ctx.fill(); ctx.fillStyle="#ffd23f"; ctx.beginPath(); ctx.arc(x-tw/2+18,y+4,3.4,0,7); ctx.fill(); ctx.fillRect(x-tw/2+20.4,y-8,2,12); ctx.fillStyle="#fff"; ctx.fillText(nm, x+8, y+5); ctx.restore(); }
+  if(musicToast>0){ musicToast--; const nm=Music.current(); ctx.save(); ctx.font="bold 16px Fredoka,sans-serif"; ctx.textAlign="center"; const tw=ctx.measureText(nm).width+50, x=W/2, y=Math.round(VH*0.16)+20; ctx.globalAlpha=Math.max(0,Math.min(1,musicToast/30)); ctx.fillStyle="rgba(20,30,50,.74)"; rrect(x-tw/2,y-16,tw,30,15); ctx.fill(); ctx.fillStyle="#ffd23f"; ctx.beginPath(); ctx.arc(x-tw/2+18,y+4,3.4,0,7); ctx.fill(); ctx.fillRect(x-tw/2+20.4,y-8,2,12); ctx.fillStyle="#fff"; ctx.fillText(nm, x+8, y+5); ctx.restore(); }
   // banners
   if(state==="win"){ banner(li<LEVELS.length-1?"Level Complete!":"You Win!", "You found "+starsGot+"/"+totalStars+" stars  \u00b7  Tap to play again"); }
   if(state==="lose"){ banner("Try Again!","Tap to restart this level"); }
 }
 function t2(){return Date.now()/1000;}
-function banner(t,s){ BuildableWin.card(ctx,W,H,[{t:t,s:32,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[])); }
+// --- shared HUD strip. Safe no-op headless (node QA has no document.body). ---
+let hud=null;
+try{ if(typeof window!=="undefined" && window.BuildableHUD && document.body){ BuildableHUD.setAccent("#8fc46a"); hud=BuildableHUD.mount(c); } }catch(e){ hud=null; }
+function paintHud(){
+  if(!hud) return;
+  try{ hud.set({
+    left:  [{ text:L.name, soft:"Lv "+(li+1)+"/"+LEVELS.length }],
+    right: [{ coin: coinsGot+" / "+totalCoins, stars:{ got:starsGot, of:totalStars } }, { heart: hearts }]
+  }); }catch(e){}
+}
+// --- shared in-app nav bridge: hide this engine's own buttons in the app shell and let
+// the shell's single Sound / Menu / Help column drive them (HUD-AND-NAV-RULES rule 1). ---
+try{ if(typeof window!=="undefined" && window.BuildableGameNav){
+  BuildableGameNav.register({
+    hide: ["bMute","bMusic","bHelp"],
+    onSound: ()=>{ soundOn=!soundOn; musicOn=soundOn; actx(); if(soundOn&&musicOn) Music.start(); else Music.stop(); paintMute(); },
+    onMenu:  ()=>{ startDemo(); },
+    onHelp:  ()=>{ startDemo(); },
+    soundOn: ()=>soundOn,
+  });
+} }catch(e){}
+function banner(t,s){ BuildableWin.card(ctx,W,VH,[{t:t,s:32,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[])); }
 
 
-function frame(){ update(); draw(); requestAnimationFrame(frame); }
+const hintEl=document.getElementById('hint');
+let hintGone=false;
+function tickHint(){                       // the hint has done its job once the kid is moving
+  if(hintGone||!hintEl) return;
+  if(started && !demoMode && gameT>200){ hintGone=true; hintEl.style.transition='opacity .6s'; hintEl.style.opacity='0'; }
+}
+function frame(){ update(); draw(); tickHint(); requestAnimationFrame(frame); }
 startDemo();
 requestAnimationFrame(frame);
 
