@@ -6,6 +6,92 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Practice Round 2: the warm-up, the birds, and numbers (PT2 + PT3, August 30 2026)
+`public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
+`api/sfx.js`, `qa-practice.mjs`, `qa-practice-shot.mjs`,
+`scripts/gen-practice-math-decks.mjs`, `src/BuildableKids.jsx`,
+`src/GrownUpScreen.jsx`. Phase **PT**, cards **PT2 + PT3** (run as one session,
+as both cards' GROUPED notes asked).
+
+**Practice is open to everyone** — the 1111 owner gate is off the Home door.
+
+**The quick check.** A kid's first visit runs a ten-word warm-up spanning the
+five Dolch lists. Nothing is marked right or wrong on screen; the only outcome
+is a friendlier starting point. Lists below where they land are seeded at box 3
+and flagged as placed, never box 5, so the warm-up can never hand a kid a word —
+or a bird — they did not earn.
+
+**The bird collection.** One drawn bird per word or fact known by heart, sitting
+on telephone wires across the top of Practice, with no text at all so a
+non-reader still gets it. Every bird is really drawn, so the number on screen is
+the mastered count. New birds fly in; finishing a whole list makes them all sing.
+
+**Numbers.** Adding, taking away, times and sharing — 353 facts on the same
+engine, answered on a big drawn keypad. Ordered by strategy family rather than
+up the number line: the facts that share a trick arrive together, easiest trick
+first, hard middle last. Within a family they are spread so consecutive cards
+never all answer the same thing.
+
+**Sprint** is the one timed screen in the product: 60 seconds, a big friendly
+count at the end, and the clock is a draining bar with no digits. It opens only
+once practice shows a kid is already fluent at that operation, it is always
+beat-your-own-best, and sprint answers never move the practice boxes.
+
+**Grown-ups** get a Practice row per kid: where they are, what they know by
+heart, sprint bests, an Easier/Harder level override, a redo of the quick check,
+and the sprint length and question goal.
+
+**QA** is `qa-practice.mjs`, now 279 checks green, booting the page four times in
+jsdom and playing every mode to the end — which is how it caught a real bug
+where the second answer in any run was silently swallowed by a stale lock.
+`qa-practice-shot.mjs` drives a real Chromium for screenshots of the flock;
+looking at those caught a collapsed deck card. The 220 word mp3s are still not
+baked (no network route to production from the build sandbox) — practice speaks
+in the same voice via `/api/say` meanwhile.
+
+## Practice: one deck engine, sight words riding on it (PT1, August 29 2026)
+`public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
+`scripts/gen-practice-decks.mjs`, `scripts/gen-practice-audio.mjs`,
+`qa-practice.mjs`, `vercel.json`, `src/BuildableKids.jsx`.
+Phase **PT**, card **PT1.**
+
+The shared practice engine plus the first subject to ride on it. The engine is
+deliberately subject-agnostic — decks, items, and a per-kid box, with no idea
+what a sight word is — so the maths operations in PT3 arrive as data files and
+not as an engine change.
+
+**The box rule.** Boxes 1-5, new items start in 1. Right AND fast moves an item
+up a box; wrong or slow moves it down. Fast is under 3000ms, and it is measured
+**silently** — no timer, no countdown, no clock, and the milliseconds are never
+rendered anywhere a kid can see (qa-practice fails the build if they are). A
+higher box just means a longer wait: 0/1/2/4/8 days. A session is about 20 items,
+due reviews first with the most overdue leading, and at most 3 never-seen items
+spread through the run. Every new item gets an intro moment before it is ever
+quizzed — shown big, said aloud, tricky letters glowing (heart-word method).
+Wrong answers are never punished: no lives, no score, no fail state, the item
+simply comes back a few cards later.
+
+**The decks.** The five Dolch lists as JSON: pre-primer 40, primer 52, first 41,
+second 46, third 41 = 220 words, each carrying the indices of its heart letters.
+
+**The page.** `/practice` offers Find It (audio says the word, pick from four big
+word cards) and Flash (the word blinks for about a second, pick which one you
+saw). Non-reader friendly, drawn SVG only, no emojis, touch-first for iPad and
+iPhone. Per-kid state is `localStorage bk_practice_v1`; one learning event is
+posted per finished session, through the shell's existing cartridge `skill`
+relay into the 8B ledger.
+
+**Word audio** tries the baked mp3 first, then `/api/say` (live ElevenLabs,
+cached server-side), then the device voice. The 220 static files are **not baked
+yet** — the PT1 sandbox had no network route to the live site — but tier 2 is the
+same voice, so nothing is degraded for a kid today. `scripts/gen-practice-audio.mjs`
+bakes them in one run from any machine that can reach production; details in
+`public/practice/audio/README.md`.
+
+**On Home** the Practice door sits beside Learn and stays Coming Soon behind the
+1111 owner gate until PT2. `qa-practice.mjs` is 129 checks green (box math, deck
+data, and the page booted headless in jsdom playing both modes end to end);
+qa-nv1/2/3/4 still pass.
 ## Farm 2 — the chickens, the cow, and feeding off the stack (FM2, August 16 2026)
 `public/skyflyer-farm.html`, `public/models/skyflyer/animals/farm-animals.glb`,
 `qa-farm.mjs`, `qa-skyflyer.mjs`, `src/BuildableKids.jsx`.
@@ -3318,6 +3404,16 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
+
+Mike found the Make section tiles unexciting. From four mocked options he picked
+"studio doorways": MakeScreen's grid tiles are now wide cards — painted kind=make
+key art on the left, name + fun subtitle + an "Open studio" pill on the right,
+one per row on phones, two-up from 700px. The drawn glyph stays behind the art as
+the 503 fallback, the tiles now show MAKE_CATALOG's `sub` line instead of the
+category word, and chips / sort / the 1111 gate / all data-nv3-make-* QA hooks
+are unchanged. qa-nv1, qa-nv2, qa-nv3 all pass. See SESSION-LOG.md for detail.
+
 ## Session log — 2026-08-16 (FL9 re-land: two fixes for one bug, resolved into one)
 
 FL9 was reopened because RN3 aborted its merge on a cache-buster conflict. In the

@@ -604,7 +604,7 @@ function drawWin(){
   if(isNewBest){ ctx.fillStyle="#7CF6B0"; ctx.font="900 20px 'Baloo 2',Nunito,sans-serif"; ctx.fillText("New best score!", vw/2, py+200); }
   else if(wonBest){ ctx.fillStyle="#a7b6d6"; ctx.font="700 16px Nunito,sans-serif"; ctx.fillText("Best  "+wonBest, vw/2, py+200); }
   ctx.fillStyle="#cfe3ff"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Time  "+fmtTime(elapsedMs)+"  ·  faster = higher score", vw/2, py+232);
-  ctx.fillStyle="#8fa0c4"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText("Tap to play again", vw/2, py+ph-22);
+  ctx.fillStyle="#8fa0c4"; ctx.font="700 15px Nunito,sans-serif"; ctx.fillText((MJ_LEVEL!=null && (PREFS.lvlIdx+1)<GAME_CONFIG.levels.length)?"Tap for the next one":"Tap to play again", vw/2, py+ph-22);
   ctx.restore();
 }
 // ---------- PAINTED WORLD BACKDROP (AI art via /api/images) + AMBIENT PARTICLES ----------
@@ -939,7 +939,12 @@ if(typeof document!=="undefined" && document.getElementById("cv")){
   cv=document.getElementById("cv"); ctx=cv.getContext("2d");
   resize(); window.addEventListener("resize",resize); loadBg();
   const onTap=(e)=>{ if(MJ_DEMO) return;
-    if(state==="win"){ if(BA)BA.unlock(); if(MJ_LEVEL!=null){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else { showMenu(); } return; }  // 7J: opened from the Journey -> go back to it (not the engine's own grid)
+    // SL-NEXT: opened from the Journey -> open the NEXT board instead of bouncing
+    // back to the map; only the last board exits to it.
+    if(state==="win"){ if(BA)BA.unlock();
+      if(MJ_LEVEL!=null && (PREFS.lvlIdx+1)<GAME_CONFIG.levels.length){ PREFS.lvlIdx=PREFS.lvlIdx+1; build(); }
+      else if(MJ_LEVEL!=null){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} }
+      else { showMenu(); } return; }
     if(state==="lose"){ if(BA)BA.unlock(); build(); return; }
     if(state!=="play") return;
     if(demo) endDemo();

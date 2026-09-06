@@ -81,11 +81,14 @@ chk('Keep-playing card carries data-nv2-keep', /data-nv2-keep/.test(S));
 chk('doors grid carries data-nv2-doors',       /data-nv2-doors/.test(S));
 chk('suggested-games row carries data-nv2-suggested', /data-nv2-suggested/.test(S));
 
-// The five doors are named + rendered from NV2_DOORS. Grep by data-nv2-door=<id>.
+// The five NV2 doors are named + rendered from NV2_DOORS. Grep by data-nv2-door=<id>.
 ['play', 'make', 'explore', 'learn', 'mystuff'].forEach((id) => {
   chk('door "' + id + '" is rendered from NV2_DOORS', new RegExp('id:\\s*"' + id + '"').test(S));
 });
-chk('NV2_DOORS has exactly the five expected picture doors',
+// PT1 added a sixth door (Practice, Coming Soon behind 1111 until PT2) between
+// Learn and My Stuff. This check is about the five NV2 doors still being there,
+// in order — a later session adding a door must not silently drop one of them.
+chk('the five NV2 picture doors are all still there, in order',
   /NV2_DOORS\s*=\s*\[[\s\S]{0,4000}?id:\s*"play"[\s\S]{0,4000}?id:\s*"make"[\s\S]{0,4000}?id:\s*"explore"[\s\S]{0,4000}?id:\s*"learn"[\s\S]{0,4000}?id:\s*"mystuff"/.test(S));
 
 // Doors carry the bottom-bar section colours so a door and its tab match.

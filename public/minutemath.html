@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FDFAF5">
+<title>Minute Math - Buildable Kids</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+/* minutemath.html (session MM1) - a one-minute maths-facts sheet, the thing
+   school actually hands out. Modelled on Web Math Minute's online practice:
+   you set it up yourself, a whole worksheet appears, the clock runs, you type
+   into every box, and it marks the lot at the end.
+   Cream brand tokens, same family as lessons.html. No emojis: drawn SVG only. */
+:root{
+  --ink:#0F0E17; --cream:#FDFAF5; --gold:#FFC542; --mint:#2FAE68; --sky:#37B6F5;
+  --card:#FFFFFF; --sub:#6E6684; --line:#EDE5D6; --purple:#7C5CFC; --coral:#FF6B6B;
+  --grad:linear-gradient(90deg,#7C5CFC 0%,#FF6B6B 100%);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--cream);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-weight:800;
+     -webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+
+.top{display:flex;align-items:center;gap:10px;padding:12px 16px 6px}
+.top h1{font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px;margin:0;flex:1}
+/* Inside the app shell the Home pill sits top-left, so shove our own row over. */
+body.in-app .top{padding-left:96px}
+.iconbtn{width:40px;height:40px;flex:none;border-radius:13px;background:#fff;border:2px solid var(--line);
+         display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.timepill{background:#fff;border:2px solid var(--line);border-radius:999px;padding:6px 15px;
+          font-family:'Fredoka',sans-serif;font-weight:600;font-size:19px;flex:none;min-width:74px;text-align:center}
+.timepill.warn{background:#FFF3E2;border-color:#F3E2B6;color:#9A6A00}
+.timepill.hot{background:#FFE9E9;border-color:#FFC9C9;color:#C0392B}
+
+main{flex:1;padding:0 16px 40px}
+
+.buddyrow{display:flex;gap:11px;align-items:flex-end;margin:2px 0 15px}
+.buddyart{width:60px;height:60px;flex:none}
+.bubble{background:#fff;border:2px solid var(--line);border-radius:19px;border-bottom-left-radius:5px;
+        padding:12px 14px;font-size:15.5px;line-height:1.35;flex:1}
+
+.card{background:var(--card);border:2px solid var(--line);border-radius:24px;padding:18px;
+      box-shadow:0 6px 18px rgba(15,14,23,.05);margin-bottom:14px}
+.lab{font-size:11.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin-bottom:4px}
+.help{font-size:13.5px;color:var(--sub);font-weight:800;line-height:1.4;margin:0 0 10px}
+
+.ops{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.op{border:2px solid var(--line);background:var(--cream);border-radius:18px;padding:14px 8px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:6px;font-family:'Fredoka',sans-serif;font-weight:600;
+    font-size:15.5px;color:var(--ink);transition:transform .08s,background .15s}
+.op:active{transform:scale(.96)}
+.op.on{background:#F1ECFF;border-color:#B9A6FF}
+.op svg{width:32px;height:32px}
+
+.row{display:flex;align-items:center;gap:10px;margin:12px 0 0;flex-wrap:wrap}
+.row .name{font-size:15px;flex:1;min-width:120px}
+.step{display:flex;align-items:center;border:2px solid var(--line);border-radius:999px;background:#fff;overflow:hidden}
+.step button{border:none;background:#fff;width:38px;height:38px;font-size:22px;font-family:'Fredoka',sans-serif;
+             font-weight:600;color:var(--purple);cursor:pointer}
+.step button:active{background:#F1ECFF}
+.step span{min-width:44px;text-align:center;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:15px;
+      font-family:'Fredoka',sans-serif;font-weight:600;cursor:pointer;color:var(--ink)}
+.chip.on{background:var(--purple);border-color:#6B4BEB;color:#fff}
+.chip.wide{padding:8px 15px}
+
+.big{width:100%;border:none;border-radius:18px;padding:17px;background:var(--grad);color:#fff;
+     font-family:'Fredoka',sans-serif;font-weight:600;font-size:19px;cursor:pointer;margin-top:6px}
+.big:active{transform:scale(.985)}
+.big.ghost{background:#fff;color:var(--purple);border:2px solid var(--line);margin-top:10px}
+.big.go{background:linear-gradient(180deg,#57D48B,#2FAE68);font-size:22px;padding:20px}
+.small{display:block;width:100%;text-align:center;background:none;border:none;color:var(--sub);font-size:13.5px;
+       font-weight:900;padding:14px 0 4px;cursor:pointer;font-family:'Nunito',sans-serif}
+
+/* the sheet */
+.sheet{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 8px;margin-top:4px}
+@media(min-width:430px){.sheet{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:520px){.sheet{grid-template-columns:repeat(5,1fr)}}
+.prob{background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 6px 7px;text-align:right;
+      cursor:pointer;transition:border-color .12s,background .12s}
+.prob.on{border-color:var(--purple);background:#F7F4FF;box-shadow:0 0 0 3px rgba(124,92,252,.15)}
+.prob .n{font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;line-height:1.15;padding-right:6px}
+.prob .n .sign{float:left;padding-left:4px;color:var(--sub)}
+.prob .box{margin-top:4px;border-top:2px solid var(--ink);height:30px;display:flex;align-items:center;
+           justify-content:flex-end;padding-right:6px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px}
+.prob.on .box{border-top-color:var(--purple)}
+.prob .box .caret{display:inline-block;width:2px;height:20px;background:var(--purple);margin-left:2px;
+                  animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.prob.right{background:#E9F9F0;border-color:var(--mint)}
+.prob.right .box{color:#1C7A45;border-top-color:var(--mint)}
+.prob.wrong{background:#FFF4F4;border-color:#FFC9C9}
+.prob.wrong .box{color:#C0392B;border-top-color:#FFC9C9;text-decoration:line-through}
+.prob .fix{font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:var(--sub);padding-right:6px;
+           height:17px;line-height:17px}
+
+.pad{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(253,250,245,0) 0%,var(--cream) 22%);
+     padding:14px 0 10px;margin-top:12px}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:330px;margin:0 auto}
+.key{border:2px solid var(--line);background:#fff;border-radius:16px;height:54px;font-family:'Fredoka',sans-serif;
+     font-weight:600;font-size:26px;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 #E7DFCF}
+.key:active{transform:translateY(2px);box-shadow:none}
+.key.act{background:#F1ECFF;color:var(--purple)}
+.key.next{background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;border-color:#2FAE68;box-shadow:0 3px 0 #23854F}
+.key svg{width:26px;height:26px;vertical-align:middle}
+
+.score{text-align:center;padding:22px 18px}
+.score .num{font-family:'Fredoka',sans-serif;font-weight:600;font-size:64px;line-height:1;
+            background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.score .of{font-size:16px;color:var(--sub);margin-top:4px}
+.score h2{font-family:'Fredoka',sans-serif;font-weight:600;font-size:24px;margin:12px 0 4px}
+.stats{display:flex;gap:9px;margin-top:14px}
+.stat{flex:1;background:var(--cream);border:2px solid var(--line);border-radius:16px;padding:11px 6px}
+.stat b{display:block;font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px}
+.stat i{font-style:normal;font-size:11.5px;color:var(--sub);font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+.best{background:#FFF7E3;border:2px solid #F3E2B6;border-radius:15px;padding:11px;margin-top:12px;
+      font-size:14.5px;color:#5C4A18;text-align:center}
+.wire{height:56px;margin:2px 0 8px}
+.wire svg{width:100%;height:56px;display:block}
+
+.runs{display:flex;flex-direction:column;gap:8px}
+.run{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--line);border-radius:15px;padding:10px 13px}
+.run .when{flex:1;font-size:14px;color:var(--sub)}
+.run .sc{font-family:'Fredoka',sans-serif;font-weight:600;font-size:19px}
+.run.top{background:#FFF7E3;border-color:#F3E2B6}
+
+.toggle{display:flex;align-items:center;gap:12px;margin-top:14px}
+.toggle .name{flex:1;font-size:15px}
+.sw{width:56px;height:32px;border-radius:999px;background:#E7DFCF;border:none;cursor:pointer;position:relative;flex:none;transition:background .18s}
+.sw i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .18s;
+      box-shadow:0 2px 4px rgba(0,0,0,.18)}
+.sw.on{background:var(--mint)}
+.sw.on i{left:27px}
+.hidden{display:none!important}
+.mocknote{max-width:560px;margin:0 auto;padding:14px 16px 26px;font-size:13px;color:var(--sub);font-weight:800;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ SET UP ============ -->
+  <section id="s-setup">
+    <div class="top">
+      <button class="iconbtn" id="setupBack" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0F0E17" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h1>Minute Math</h1>
+      <button class="iconbtn" id="toScores" aria-label="Scores"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#7C5CFC" stroke-width="3" stroke-linecap="round"><path d="M5 19V11M12 19V5M19 19v-6"/></svg></button>
+    </div>
+    <main>
+      <div class="buddyrow">
+        <svg class="buddyart" viewBox="0 0 64 64"><circle cx="32" cy="34" r="22" fill="#FFC542" stroke="#D99B12" stroke-width="3"/><circle cx="25" cy="31" r="3.4" fill="#0F0E17"/><circle cx="39" cy="31" r="3.4" fill="#0F0E17"/><path d="M25 41c4 4 10 4 14 0" stroke="#0F0E17" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M32 12l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L32 28.5l-6.5 3.4 1.3-7.2-5.3-5.1 7.3-1z" fill="#FF6B6B" stroke="#D6453F" stroke-width="2" stroke-linejoin="round"/></svg>
+        <div class="bubble">Set it up how you like, then answer as many as you can before the time runs out.</div>
+      </div>
+
+      <div class="card">
+        <div class="lab">What kind of maths</div>
+        <p class="help">Tap one. You can tap more than one to mix them together.</p>
+        <div class="ops">
+          <button class="op on" data-op="add">
+            <svg viewBox="0 0 40 40" fill="none" stroke="#7C5CFC" stroke-width="5" stroke-linecap="round"><path d="M20 9v22M9 20h22"/></svg>Addition</button>
+          <button class="op" data-op="sub">
+            <svg viewBox="0 0 40 40" fill="none" stroke="#FF6B6B" stroke-width="5" stroke-linecap="round"><path d="M9 20h22"/></svg>Subtraction</button>
+          <button class="op" data-op="mul">
+            <svg viewBox="0 0 40 40" fill="none" stroke="#2FAE68" stroke-width="5" stroke-linecap="round"><path d="M12 12l16 16M28 12L12 28"/></svg>Multiplication</button>
+          <button class="op" data-op="div">
+            <svg viewBox="0 0 40 40" fill="none" stroke="#37B6F5" stroke-width="5" stroke-linecap="round"><path d="M9 20h22"/><circle cx="20" cy="11" r="2.6" fill="#37B6F5"/><circle cx="20" cy="29" r="2.6" fill="#37B6F5"/></svg>Division</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="lab">How big are the numbers</div>
+        <p class="help">Most school sheets use 1 to 12.</p>
+        <div class="row"><span class="name">Smallest number</span>
+          <div class="step"><button data-adj="lo-1">&minus;</button><span id="v-lo">1</span><button data-adj="lo+1">+</button></div>
+        </div>
+        <div class="row"><span class="name">Biggest number</span>
+          <div class="step"><button data-adj="hi-1">&minus;</button><span id="v-hi">12</span><button data-adj="hi+1">+</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="lab">Stick to one number</div>
+        <p class="help">Pick a number and every question will use it, like a sheet of nothing but 7s. Leave it on <b>Mix them up</b> for all of them.</p>
+        <div class="chips" id="focus"></div>
+      </div>
+
+      <div class="card">
+        <div class="lab">How long, how many</div>
+        <div class="row"><span class="name">Timer</span></div>
+        <div class="chips" id="timers"></div>
+        <div class="row"><span class="name">Questions</span></div>
+        <div class="chips" id="counts"></div>
+        <div class="toggle"><span class="name">Show the countdown</span>
+          <button class="sw on" id="swTimer"><i></i></button></div>
+        <p class="help" style="margin:10px 0 0">Turn it off and the clock still runs, it just stays hidden. Kinder if a ticking timer makes you freeze.</p>
+      </div>
+
+      <button class="big go" id="start">START</button>
+      <button class="big ghost" id="toPrint">Print this sheet on paper</button>
+      <button class="big ghost" id="toKey">Print sheet and answer key</button>
+    </main>
+  </section>
+
+  <!-- ============ THE SHEET ============ -->
+  <section id="s-sheet" class="hidden">
+    <div class="top">
+      <button class="iconbtn" id="quit" aria-label="Stop"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0F0E17" stroke-width="3" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h1 id="sheetTitle">Multiplication, 1 to 12</h1>
+      <div class="timepill" id="clock">1:00</div>
+    </div>
+    <main>
+      <div class="sheet" id="sheet"></div>
+      <div class="pad">
+        <div class="keys">
+          <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+          <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+          <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+          <button class="key act" data-k="del"><svg viewBox="0 0 24 24" fill="none" stroke="#7C5CFC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9L3 12z"/><path d="M12 10l4 4M16 10l-4 4"/></svg></button>
+          <button class="key" data-k="0">0</button>
+          <button class="key next" data-k="next"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg></button>
+        </div>
+        <button class="big ghost" id="finish" style="max-width:330px;margin:10px auto 0;display:block">I'm done</button>
+      </div>
+    </main>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section id="s-done" class="hidden">
+    <div class="top">
+      <button class="iconbtn" id="doneBack" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0F0E17" stroke-width="3" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h1>How you did</h1>
+    </div>
+    <main>
+      <div class="wire"><svg viewBox="0 0 320 56" id="birds"></svg></div>
+      <div class="card score">
+        <div class="num" id="rNum">0</div>
+        <div class="of" id="rOf">right out of 50</div>
+        <h2 id="rMsg">Nice work!</h2>
+        <div class="stats">
+          <div class="stat"><b id="rTime">1:00</b><i>Time</i></div>
+          <div class="stat"><b id="rMiss">0</b><i>Missed</i></div>
+          <div class="stat"><b id="rSkip">0</b><i>Blank</i></div>
+        </div>
+        <div class="best" id="rBest"></div>
+      </div>
+      <button class="big" id="retry">Practise the ones you missed</button>
+      <div class="lab" style="padding-left:4px;margin-top:18px">Your sheet</div>
+      <div class="sheet" id="marked"></div>
+      <button class="big ghost" id="again">Go again</button>
+      <button class="small" id="change">Back to the start</button>
+    </main>
+  </section>
+
+  <!-- ============ SCORES ============ -->
+  <section id="s-scores" class="hidden">
+    <div class="top">
+      <button class="iconbtn" id="scoresBack" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0F0E17" stroke-width="3" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h1>Your scores</h1>
+    </div>
+    <main>
+      <div id="scoreList"></div>
+    </main>
+  </section>
+</div>
+
+
+<script>
+/* ---- shell awareness (the lessons.html / weather.html pattern) ---- */
+function iframed(){ try{ return window.parent && window.parent !== window; }catch(e){ return false; } }
+var IN_SHELL = iframed();
+if(IN_SHELL) document.body.classList.add("in-app");
+
+/* ---- who is playing ---- */
+function activeKid(){
+  try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return (k&&k.id)?k:null; }
+  catch(e){ return null; }
+}
+var KID = activeKid();
+var SCORE_KEY = "bk_minutemath_v1:" + (KID ? KID.id : "guest");
+
+var OPNAME = { add:"Addition", sub:"Subtraction", mul:"Multiplication", div:"Division" };
+var SIGN   = { add:"+", sub:"−", mul:"×", div:"÷" };
+
+var S = { ops:["add"], lo:1, hi:12, focus:null, timer:60, count:50, showTimer:true };
+var RUN = null;                 /* the settings the current run is using */
+var probs = [], cur = 0, left = 60, tick = null, started = 0, hideClock = false;
+
+function $(id){ return document.getElementById(id); }
+function show(id){ ["s-setup","s-sheet","s-done","s-scores"].forEach(function(s){
+    $(s).classList.toggle("hidden", s!==id); }); window.scrollTo(0,0); }
+function opsLabel(ops){ return ops.map(function(o){ return OPNAME[o]; }).join(" and "); }
+function fmt(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function timeWord(t){ return t===0?"no timer":(t<60?t+" seconds":(t/60)+" minute"+(t>60?"s":"")); }
+
+/* ---- scores, kept per kid in localStorage ----------------------------------
+   One row per SHAPE of sheet: the operations, the number range and the timer.
+   Beating your own 1-minute multiplication score means something; comparing a
+   1-minute sheet against a 5-minute one does not, so they never share a row. */
+function readScores(){ try{ return JSON.parse(localStorage.getItem(SCORE_KEY)||"{}")||{}; }catch(e){ return {}; } }
+function writeScores(o){ try{ localStorage.setItem(SCORE_KEY, JSON.stringify(o)); }catch(e){} }
+function runKey(cfg){ return cfg.ops.slice().sort().join("+")+"|"+cfg.lo+"-"+cfg.hi+"|"+cfg.timer; }
+function runLabel(cfg){ return opsLabel(cfg.ops)+", "+cfg.lo+" to "+cfg.hi+", "+timeWord(cfg.timer); }
+function bestFor(cfg){ var r=readScores()[runKey(cfg)]; return r ? r.best : 0; }
+function saveRun(cfg, right, total, secs){
+  var all=readScores(), k=runKey(cfg);
+  var row=all[k]||{ label:runLabel(cfg), best:0, runs:[] };
+  row.label=runLabel(cfg);
+  row.runs.unshift({ n:right, total:total, secs:secs, at:Date.now() });
+  row.runs=row.runs.slice(0,10);
+  if(right>row.best) row.best=right;
+  all[k]=row; writeScores(all);
+}
+function whenWord(ms){
+  var d=Math.floor((Date.now()-ms)/86400000);
+  if(d<=0) return "Today"; if(d===1) return "Yesterday";
+  if(d<7) return d+" days ago";
+  return new Date(ms).toLocaleDateString();
+}
+function paintScores(){
+  var all=readScores(), keys=Object.keys(all), h="";
+  if(!keys.length){
+    h='<div class="card"><p class="help" style="margin:0">No scores yet. Finish a sheet and it will show up here, so you can try to beat yourself next time.</p></div>';
+  }
+  keys.sort(function(a,b){ return (all[b].runs[0]||{}).at - (all[a].runs[0]||{}).at; });
+  keys.forEach(function(k){
+    var row=all[k];
+    h+='<div class="card"><div class="lab">'+row.label+'</div><div class="runs">';
+    row.runs.forEach(function(r,i){
+      var top = r.n===row.best && i===row.runs.indexOf(row.runs.filter(function(x){return x.n===row.best;})[0]);
+      h+='<div class="run'+(top?" top":"")+'"><span class="sc">'+r.n+'</span>'+
+         '<span class="when">'+(top?"Best ever, ":"")+whenWord(r.at).toLowerCase().replace(/^t/,"T")+
+         ', out of '+r.total+'</span></div>';
+    });
+    h+='</div></div>';
+  });
+  document.getElementById("scoreList").innerHTML=h;
+}
+
+/* ---------- chip builders ---------- */
+function chipRow(wrap, items, isOn, pick){
+  wrap.innerHTML="";
+  items.forEach(function(it){
+    var b=document.createElement("button");
+    b.className="chip"+(it.wide?" wide":"")+(isOn(it)?" on":"");
+    b.textContent=it.label;
+    b.onclick=function(){ pick(it); [].forEach.call(wrap.children,function(c){ c.classList.toggle("on",c===b); }); };
+    wrap.appendChild(b);
+  });
+}
+var FOCUS=[{label:"Mix them up",v:null,wide:true}]; for(var i=0;i<=12;i++) FOCUS.push({label:i+"s",v:i});
+var TIMES=[{label:"Off",v:0},{label:"30s",v:30},{label:"1 min",v:60},{label:"2 min",v:120},{label:"3 min",v:180},{label:"5 min",v:300}];
+var COUNTS=[10,20,30,50,80,100].map(function(n){ return {label:String(n),v:n}; });
+
+chipRow($("focus"), FOCUS, function(it){ return it.v===S.focus; }, function(it){ S.focus=it.v; });
+chipRow($("timers"), TIMES, function(it){ return it.v===S.timer; }, function(it){ S.timer=it.v; });
+chipRow($("counts"), COUNTS, function(it){ return it.v===S.count; }, function(it){ S.count=it.v; });
+
+/* ---------- operation multi-select ---------- */
+function wireOps(sel, attr, target){
+  [].forEach.call(document.querySelectorAll(sel),function(b){
+    b.onclick=function(){
+      var op=b.dataset[attr], i=target.ops.indexOf(op);
+      if(i>=0){ if(target.ops.length>1) target.ops.splice(i,1); } else target.ops.push(op);
+      [].forEach.call(document.querySelectorAll(sel),function(o){
+        o.classList.toggle("on", target.ops.indexOf(o.dataset[attr])>=0); });
+    };
+  });
+}
+wireOps(".op[data-op]","op",S);
+
+function wireStep(sel, attr, target, loEl, hiEl){
+  [].forEach.call(document.querySelectorAll(sel),function(b){
+    b.onclick=function(){
+      var a=b.dataset[attr], k=a.slice(0,2), d=parseInt(a.slice(2),10);
+      target[k]=Math.max(0,Math.min(20,target[k]+d));
+      if(target.lo>target.hi){ if(k==="lo") target.hi=target.lo; else target.lo=target.hi; }
+      $(loEl).textContent=target.lo; $(hiEl).textContent=target.hi;
+    };
+  });
+}
+wireStep("[data-adj]","adj",S,"v-lo","v-hi");
+
+/* ---------- switches ---------- */
+function wireSw(id, get, set){
+  var b=$(id); b.onclick=function(){ set(!get()); b.classList.toggle("on", get()); };
+}
+wireSw("swTimer", function(){return S.showTimer;}, function(v){S.showTimer=v;});
+
+/* ---------- problem making ---------- */
+function rnd(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
+function makeProblem(cfg){
+  var op = cfg.ops[Math.floor(Math.random()*cfg.ops.length)];
+  var a=rnd(cfg.lo,cfg.hi), b=rnd(cfg.lo,cfg.hi);
+  if(cfg.focus!==null && cfg.focus!==undefined){ if(Math.random()<0.5) a=cfg.focus; else b=cfg.focus; }
+  if(op==="add") return {op:op,a:a,b:b,ans:a+b};
+  if(op==="mul") return {op:op,a:a,b:b,ans:a*b};
+  if(op==="sub"){ var hi=Math.max(a,b), lo=Math.min(a,b); return {op:op,a:hi,b:lo,ans:hi-lo}; }
+  var d=(b===0?1:b); return {op:op,a:a*d,b:d,ans:a};
+}
+function makeSet(cfg,n){ var out=[]; for(var i=0;i<n;i++) out.push(makeProblem(cfg)); return out; }
+
+/* ---------- the sheet ---------- */
+function renderSheet(){
+  var el=$("sheet"); el.innerHTML="";
+  probs.forEach(function(p,i){
+    var d=document.createElement("div"); d.className="prob";
+    d.innerHTML='<div class="n">'+p.a+'</div><div class="n"><span class="sign">'+SIGN[p.op]+'</span>'+p.b+'</div><div class="box"></div>';
+    d.onclick=function(){ setCur(i); };
+    el.appendChild(d);
+  });
+  setCur(0);
+}
+function setCur(i){ cur=i; [].forEach.call($("sheet").children,function(c,n){ c.classList.toggle("on",n===i); }); paintBoxes(); }
+function paintBoxes(){
+  [].forEach.call($("sheet").children,function(c,n){
+    c.querySelector(".box").innerHTML = probs[n].typed + (n===cur?'<span class="caret"></span>':'');
+  });
+}
+function key(k){
+  var p=probs[cur];
+  if(k==="del"){ p.typed=p.typed.slice(0,-1); paintBoxes(); return; }
+  if(k==="next"){
+    if(cur<probs.length-1){ setCur(cur+1); $("sheet").children[cur].scrollIntoView({block:"center",behavior:"smooth"}); }
+    else finish();
+    return;
+  }
+  if(p.typed.length<3) p.typed+=k;
+  paintBoxes();
+}
+[].forEach.call(document.querySelectorAll(".key"),function(b){ b.onclick=function(){ key(b.dataset.k); }; });
+document.addEventListener("keydown",function(e){
+  if($("s-sheet").classList.contains("hidden")) return;
+  if(/^[0-9]$/.test(e.key)) key(e.key);
+  else if(e.key==="Backspace"){ e.preventDefault(); key("del"); }
+  else if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); key("next"); }
+});
+
+/* ---------- running ---------- */
+function startRun(cfg, list){
+  RUN = cfg;
+  probs = list || makeSet(cfg, cfg.count);
+  probs.forEach(function(p){ p.typed=""; });
+  renderSheet();
+  $("sheetTitle").textContent = opsLabel(cfg.ops)+", "+cfg.lo+" to "+cfg.hi +
+    ((cfg.focus!==null && cfg.focus!==undefined) ? " ("+cfg.focus+"s)" : "");
+  started = Date.now(); left = cfg.timer;
+  hideClock = (cfg.showTimer === false);
+  var c=$("clock");
+  clearInterval(tick);
+  if(cfg.timer===0){ c.textContent="—"; c.className="timepill"; }
+  else if(hideClock){
+    c.textContent="• • •"; c.className="timepill";
+    tick=setInterval(function(){ left--; if(left<=0){ clearInterval(tick); finish(); } },1000);
+  } else {
+    c.textContent=fmt(left); c.className="timepill";
+    tick=setInterval(function(){
+      left--; c.textContent=fmt(Math.max(0,left));
+      c.className="timepill"+(left<=10?" hot":(left<=20?" warn":""));
+      if(left<=0){ clearInterval(tick); finish(); }
+    },1000);
+  }
+  show("s-sheet");
+}
+
+/* ---------- marking ---------- */
+var missed = [];
+function finish(){
+  clearInterval(tick);
+  var right=0, miss=0, blank=0; missed=[];
+  var el=$("marked"); el.innerHTML="";
+  probs.forEach(function(p){
+    var d=document.createElement("div"); d.className="prob"; var state="";
+    if(p.typed===""){ blank++; missed.push(p); }
+    else if(parseInt(p.typed,10)===p.ans){ right++; state="right"; }
+    else { miss++; state="wrong"; missed.push(p); }
+    if(state) d.classList.add(state);
+    d.innerHTML='<div class="n">'+p.a+'</div><div class="n"><span class="sign">'+SIGN[p.op]+'</span>'+p.b+'</div>'+
+                '<div class="box">'+(p.typed||"")+'</div>'+
+                '<div class="fix">'+(state==="right"?"":p.ans)+'</div>';
+    el.appendChild(d);
+  });
+  var secs = RUN.timer>0 ? (RUN.timer-Math.max(0,left)) : Math.round((Date.now()-started)/1000);
+  $("rNum").textContent=right;
+  $("rOf").textContent="right out of "+probs.length;
+  $("rTime").textContent=fmt(secs);
+  $("rMiss").textContent=miss;
+  $("rSkip").textContent=blank;
+  $("rMsg").textContent = right>=probs.length*0.8 ? "You are flying!" : right>=probs.length*0.4 ? "Nice work!" : "Good try. Go again?";
+  var pb = RUN.practice ? 0 : bestFor(RUN);
+  if(!RUN.practice){
+    saveRun(RUN, right, probs.length, secs);
+    $("rBest").textContent = (pb===0) ? "First go at "+runLabel(RUN)+". That is the score to beat."
+      : (right>pb) ? "A new best at "+opsLabel(RUN.ops)+"! Your old best was "+pb+"."
+                   : "Your best at "+runLabel(RUN)+" is "+pb+".";
+  } else {
+    $("rBest").textContent = "Practice round, this one does not count towards your best.";
+  }
+  $("retry").classList.toggle("hidden", missed.length===0);
+  $("retry").textContent = "Practise the "+missed.length+" you missed";
+  drawBirds(right);
+  show("s-done");
+}
+
+/* ---------- birds ---------- */
+function drawBirds(n){
+  var w=320, y=40, k=Math.min(n,14), s='';
+  s+='<path d="M0 '+y+' Q160 '+(y+9)+' 320 '+y+'" stroke="#C9BFAC" stroke-width="2.5" fill="none"/>';
+  for(var i=0;i<k;i++){
+    var x=16+i*((w-32)/Math.max(1,(k-1)||1));
+    var yy=y+8*Math.sin(Math.PI*(x/w));
+    s+='<g transform="translate('+x.toFixed(1)+','+(yy-9).toFixed(1)+')">'+
+       '<ellipse cx="0" cy="0" rx="6.5" ry="5" fill="#7C5CFC"/>'+
+       '<circle cx="4.5" cy="-3.5" r="3.6" fill="#7C5CFC"/>'+
+       '<circle cx="5.6" cy="-4.2" r="0.9" fill="#fff"/>'+
+       '<path d="M8 -3.4l3 1.2-3 1.1z" fill="#FFC542"/>'+
+       '<path d="M-6 1l-3 5" stroke="#7C5CFC" stroke-width="1.6" stroke-linecap="round"/>'+
+       '<path d="M0 4v5M2 4v5" stroke="#6E6684" stroke-width="1.3" stroke-linecap="round"/></g>';
+  }
+  $("birds").innerHTML=s;
+}
+
+/* ---------- printing ---------- */
+function printSheet(cfg, withKey){
+  var list = makeSet(cfg, cfg.count);
+  var cols = 5, title = opsLabel(cfg.ops)+", "+cfg.lo+" to "+cfg.hi;
+  function grid(showAns){
+    var h='<div class="g">';
+    list.forEach(function(p){
+      h+='<div class="p"><div class="a">'+p.a+'</div><div class="a"><span>'+SIGN[p.op]+'</span>'+p.b+'</div>'+
+         '<div class="ln">'+(showAns?p.ans:'')+'</div></div>';
+    });
+    return h+'</div>';
+  }
+  var css='body{font-family:Georgia,serif;margin:26px 30px;color:#111}'+
+    'h1{font-size:19px;margin:0 0 3px}.meta{font-size:12px;color:#555;margin-bottom:14px}'+
+    '.nd{display:flex;gap:30px;font-size:13px;margin-bottom:16px}.nd div{flex:1;border-bottom:1px solid #999;padding-bottom:3px}'+
+    '.g{display:grid;grid-template-columns:repeat('+cols+',1fr);gap:16px 22px}'+
+    '.p{text-align:right;font-size:19px;line-height:1.25}.p .a span{float:left}'+
+    '.ln{border-top:1.6px solid #111;margin-top:3px;height:26px;font-size:17px;color:#111}'+
+    '.key .ln{color:#0a7}.page{page-break-before:always}'+
+    '@media print{.no{display:none}}';
+  var html='<html><head><title>'+title+'</title><style>'+css+'</style></head><body>'+
+    '<h1>Minute Math &mdash; '+title+'</h1>'+
+    '<div class="meta">'+cfg.count+' questions &middot; '+timeWord(cfg.timer)+'</div>'+
+    '<div class="nd"><div>Name</div><div>Date</div><div>Score</div></div>'+
+    grid(false)+
+    (withKey ? '<div class="page key"><h1>Answer key &mdash; '+title+'</h1>'+grid(true)+'</div>' : '')+
+    '<p class="no" style="margin-top:26px;font-size:12px;color:#666">Printed from Buildable Kids</p>'+
+    '<script>window.onload=function(){window.print()}<\/script></body></html>';
+  var w=window.open("","_blank"); w.document.write(html); w.document.close();
+}
+
+/* ---------- wiring ---------- */
+$("start").onclick=function(){ startRun(S); };
+$("toPrint").onclick=function(){ printSheet(S,false); };
+$("toKey").onclick=function(){ printSheet(S,true); };
+$("again").onclick=function(){ startRun(RUN); };
+$("retry").onclick=function(){
+  var list = missed.map(function(p){ return {op:p.op,a:p.a,b:p.b,ans:p.ans,typed:""}; });
+  var cfg = Object.assign({}, RUN, {count:list.length, timer:0, practice:true});
+  startRun(cfg, list);
+};
+$("finish").onclick=function(){ clearInterval(tick); finish(); };
+$("quit").onclick=function(){ clearInterval(tick); show("s-setup"); };
+$("change").onclick=function(){ show("s-setup"); };
+$("doneBack").onclick=function(){ show("s-setup"); };
+$("toScores").onclick=function(){ paintScores(); show("s-scores"); };
+$("scoresBack").onclick=function(){ show("s-setup"); };
+$("setupBack").onclick=function(){ location.href = "/lessons"; };
+</script>
+<script src="/buildable-gamenav.js"></script>
+</body>
+</html>

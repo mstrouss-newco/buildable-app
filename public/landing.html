@@ -10,6 +10,17 @@
 (function () {
   try {
     var loc = window.location;
+
+    // Google/Supabase hands the sign-in token back in the address bar (after
+    // the "#"). If it lands HERE, on the marketing page, instead of on /app,
+    // the check below used to bail out and the token was silently thrown away
+    // -- the grown-up looked signed out and was asked to do Google all over
+    // again. Forward it to the app, token intact, so the sign-in completes.
+    if (loc.hash && loc.hash.indexOf("access_token") !== -1) {
+      loc.replace("/app" + loc.hash);
+      return;
+    }
+
     if (loc.hash || /(?:[?&])stay=1\b/.test(loc.search)) return;
 
     var known = false;

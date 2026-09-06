@@ -142,6 +142,33 @@
   #helpCard p{margin:8px 0;font-size:16px;font-weight:600;line-height:1.45}
   #helpCard button{margin-top:14px;border:none;border-radius:999px;padding:12px 28px;
     background:#2FB7D6;color:#fff;font-weight:900;font-size:17px;cursor:pointer;font-family:inherit}
+  /* ---- FL15: THE FIND PILL. A quest raising its hand, never grabbing an arm.
+     Swooping low over a beam used to throw the whole offer card up on its own,
+     and on the islands the post dock is about seven seconds of straight flying
+     from the pad, so the first thing a new kid met was a decision. Now the
+     quest only slides a small pill up from the bottom edge with its own picture
+     on it. Tapping it is the ONLY way a quest can open. Fly on and it slides
+     away again. Centred in the space that is NOT the right-hand column, exactly
+     like #padmsg, so it can never run under the map. ---- */
+  #findPill{position:absolute;left:calc(50% - 59px);
+    bottom:calc(11% + env(safe-area-inset-bottom));
+    transform:translate(-50%,30px);pointer-events:auto;cursor:pointer;border:none;
+    font-family:inherit;display:flex;align-items:center;gap:10px;text-align:left;
+    max-width:calc(100% - 190px);box-sizing:border-box;
+    background:rgba(255,252,240,.96);border-radius:999px;padding:9px 20px 9px 10px;
+    box-shadow:0 6px 18px rgba(20,70,100,.28);
+    opacity:0;visibility:hidden;
+    transition:opacity .28s ease,transform .28s ease,visibility .28s}
+  #findPill.up{opacity:1;visibility:visible;transform:translate(-50%,0);
+    animation:fpNudge 3s ease-in-out .4s infinite}
+  #findPill .ico{width:36px;height:36px;flex:0 0 36px;border-radius:999px;
+    background:#EAF4F8;display:flex;align-items:center;justify-content:center}
+  #findPill .txt{min-width:0;line-height:1.15}
+  #findPill .s{display:block;font-weight:900;font-size:10px;letter-spacing:.6px;color:#2FB7D6}
+  #findPill .n{display:block;font-weight:900;font-size:16px;color:#33566e;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @keyframes fpNudge{0%,86%,100%{transform:translate(-50%,0)}
+    93%{transform:translate(-50%,-6px)}}
   /* ---- FL5: the job offer card, the job chips and the Did You Know card ---- */
   .sheet{position:absolute;inset:0;background:rgba(18,52,74,.72);display:none;
     align-items:center;justify-content:center;pointer-events:auto;padding:18px;overflow:auto}
@@ -383,6 +410,12 @@
     <div class="lbl" id="arrowLbl">Landing pad</div>
   </div>
   <div id="toast"></div>
+  <!-- FL15: you swooped low over a beam, so the quest raises its hand. This is
+       the only door into the offer card now - nothing opens without this tap. -->
+  <button id="findPill">
+    <span class="ico" id="fpIco"></span>
+    <span class="txt"><span class="s">YOU FOUND SOMETHING</span><span class="n" id="fpName">Mail Run</span></span>
+  </button>
   <button id="takeoff">TAKE OFF</button>
   <div id="helpCard"><div class="inner">
     <h2>How to fly</h2>
@@ -390,7 +423,7 @@
     <p>Pick which ride you fly in the hangar, on the Make it mine screen. Every ride scoops the same coins and lands on the same pads - they just look and feel different.</p>
     <p>Scoop up gold coins in the sky. Bumping into things just gives you a soft bounce, so you can never crash.</p>
     <p>Follow the orange arrow to a landing pad. Fly low over it to land and bank your coins.</p>
-    <p>There are jobs out there to find. Look for a bright beam of light in the sky, fly down to it and see what it is. You can say no, and you can leave a job whenever you like.</p>
+    <p>There are jobs out there to find. Look for a bright beam of light in the sky. Fly right down low over it and a little card slides up at the bottom - tap that to see what the job is. Nothing ever starts on its own, you can say no, and you can leave a job whenever you like.</p>
     <div id="helpJobs"></div>
     <button id="helpClose">Got it</button>
   </div></div>
@@ -3220,6 +3253,10 @@ var coinsEl=D.getElementById("coins"),
     leaveJobEl=D.getElementById("leaveJob"),
     helpJobs=D.getElementById("helpJobs"),
     offerCard=D.getElementById("offerCard"),
+    // FL15
+    findPill=D.getElementById("findPill"),
+    fpIco=D.getElementById("fpIco"),
+    fpName=D.getElementById("fpName"),
     ofName=D.getElementById("ofName"),
     ofBlurb=D.getElementById("ofBlurb"),
     ofTip=D.getElementById("ofTip"),
@@ -4199,6 +4236,7 @@ function takeOff(){
 takeoffBtn.addEventListener("click",takeOff);
 
 // ---------- FL5 card buttons ----------
+findPill.addEventListener("click",tapFindPill);
 ofStart.addEventListener("click",acceptOffer);
 ofNo.addEventListener("click",declineOffer);
 leaveJobEl.addEventListener("click",leaveJob);
@@ -5743,6 +5781,7 @@ function hideScouts(){
 // ---------- the offer: you found something, do you want it? ----------
 function openOffer(m){
   if(DEMO||S.auto) return;                 // the attract demo and the robot are not kids
+  hideFindPill();
   offered=m;
   try{
     ofName.textContent=m.name;
@@ -5823,27 +5862,83 @@ function pinTrail(tr){
   return setWaypoint({id:"trail:"+tr.id,kind:"trail",
     x:tr.pt.x,z:tr.pt.z,label:tr.label||"Sky trail",done:!!tr.done});
 }
+// ============================================================================
+//  FL15 - FINDING IS A TAP, NOT AN AMBUSH.
+//  Mike's note: "the game hits side quest too fast, let kids fly around and
+//  find them on their own." Two things were making that happen.
+//
+//  1) The offer card opened BY ITSELF the moment a kid drifted near a beam. So
+//     the quest chose the moment, not the kid. Now a low swoop only raises a
+//     small pill at the bottom edge (#findPill) with the quest's own picture on
+//     it, drawn from the recipe like everything else. Tapping the pill is the
+//     only way the card can open. Flying on slides it away and costs nothing.
+//
+//  2) The swoop barely had to be a swoop. The old test was radius+10 wide and
+//     ceiling+25 high - on the Mail Run that is 40 units across and 85 units up,
+//     which is most of ordinary cruising height, so simply heading north out of
+//     the pad set it off. The numbers below are the real ones, still derived
+//     from the recipe and never written per job.
+//
+//  THE FL5 LAW IS UNTOUCHED: nothing starts without a tap, saying no is still
+//  remembered for a moment, and leaving is still free.
+// ============================================================================
+var pillJob=null;
+// The recipe's own radius, with the +10 of slack taken off: you have to aim at
+// the beam, not merely pass it.
+function offerRad(m){ return (m.radius||30); }
+// And 70% of the recipe's own ceiling, with a FLOOR of 30 units. The floor is
+// there because several recipes have a low ceiling of their own (a bee works at
+// 34, a puffin at 24) and a fraction of those would sit under ordinary cruising
+// height, where a kid could never raise the pill at all. On the Mail Run this
+// takes the swoop from 40 units across and 85 up down to 30 across and 42 up.
+function offerCeil(m){ return Math.max((m.ceiling||45)*0.7,30); }
+// leaving is looser than arriving, so a pill on the edge of the swoop cannot
+// flicker on and off while a kid circles
+function offerRadOut(m){ return offerRad(m)*1.9; }
+function offerCeilOut(m){ return offerCeil(m)+22; }
+function showFindPill(m){
+  if(DEMO||S.auto||!m) return;
+  pillJob=m;
+  try{
+    fpIco.innerHTML=targetIcon(scoutStyle(m),30,false);
+    fpName.textContent=m.name;
+    findPill.classList.add("up");
+    // the "drag anywhere to fly" hint lives in the same corner of the screen
+    if(!S.hintDone){ S.hintDone=true; hintEl.style.opacity=0; }
+  }catch(e){ pillJob=null; }
+  sfx("select");
+}
+function hideFindPill(){
+  pillJob=null;
+  try{ findPill.classList.remove("up"); }catch(e){}
+}
+// the one door into the offer card
+function tapFindPill(){ var m=pillJob; hideFindPill(); if(m) openOffer(m); return !!m; }
 // while you are just flying: have we swooped low over a job's start point?
 function scoutStep(){
-  if(MODE==="job"||S.picking||DEMO||S.auto||MODEQ==="free") return;
+  if(MODE==="job"||S.picking||DEMO||S.auto||MODEQ==="free"||S.mode!=="fly"){
+    if(pillJob) hideFindPill();
+    return;
+  }
+  var best=null;
   for(var i=0;i<scouts.length;i++){
     var s=scouts[i], m=s.job;
     var d=Math.hypot(S.pos.x-s.pt.x,S.pos.z-s.pt.z);
     // FL5b: having BEEN somewhere is what turns its map dot from faint to gold.
-    // A faint dot is the map saying "there is more out there" — the one thing a
+    // A faint dot is the map saying "there is more out there" - the one thing a
     // single arrow can never say.
     if(d<260) foundPts[m.id]=true;
-    if(d>(m.radius+10)||S.pos.y>(m.ceiling+25)){
-      if(s.near) s.near=false;
-      continue;
-    }
-    if(s.near) continue;                                  // already handled this pass
-    s.near=true;
-    if(declined[m.id]!=null&&(time-declined[m.id])<20) continue;   // asked recently, let it be
-    if(guideJob===m) guideJob=null;
-    openOffer(m);
-    return;
+    var isUp=(pillJob===m);
+    s.near=(d<=offerRad(m)&&S.pos.y<=offerCeil(m));
+    if(d>(isUp?offerRadOut(m):offerRad(m))) continue;
+    if(S.pos.y>(isUp?offerCeilOut(m):offerCeil(m))) continue;
+    if(!isUp&&declined[m.id]!=null&&(time-declined[m.id])<20) continue;  // asked recently, let it be
+    if(!best||d<best.d) best={job:m,d:d};
   }
+  if(!best){ if(pillJob) hideFindPill(); return; }
+  if(pillJob===best.job) return;             // already raised, leave it alone
+  if(guideJob===best.job) guideJob=null;
+  showFindPill(best.job);
 }
 // ---------- "show me where it is": the quiet list under the help button ----------
 function paintHelpJobs(){
@@ -7308,6 +7403,14 @@ window.SKY={
              opacity:(s.mk&&s.mk.beam)?s.mk.beam.material.opacity:0 }; }); },
   // ---- FL5 discovery handles ----
   scouts:function(){ return scouts.map(function(s){ return {id:s.job.id,x:s.pt.x,z:s.pt.z}; }); },
+  // FL15: the pill is the only door into the offer, so a harness has to be able
+  // to see it and to knock on it.
+  findPill:function(){ try{ return { up:findPill.classList.contains("up"),
+    id:pillJob?pillJob.id:null, name:pillJob?pillJob.name:null,
+    label:findPill.textContent.replace(/\s+/g," ").trim(),
+    icons:fpIco.querySelectorAll("svg").length }; }
+    catch(e){ return {up:false,id:null,name:null,label:"",icons:0}; } },
+  tapPill:tapFindPill,
   offer:function(){ try{ return { up:offerCard.style.display==="flex", id:offered?offered.id:null,
     name:offered?offered.name:null }; }catch(e){ return {up:false,id:null,name:null}; } },
   // FL5b(2): what the offer card is actually SHOWING, read off the live DOM, so

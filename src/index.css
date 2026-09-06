@@ -51,6 +51,13 @@ input::placeholder, textarea::placeholder {
   color: rgba(255, 255, 255, 0.4);
 }
 
+/* The grown-ups setup flow uses WHITE input boxes. The rule above is for dark
+   inputs; on a white box it paints the hint text white-on-white, so the box
+   looks completely empty and a new parent has no idea what to type. */
+input.bk-light::placeholder, textarea.bk-light::placeholder {
+  color: #8A86A8;
+}
+
 @keyframes spin {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }

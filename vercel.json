@@ -117,6 +117,10 @@
       "dest": "/assets/$1"
     },
     {
+      "src": "/demo/(buildable-[^/]+\\.js)",
+      "dest": "/$1"
+    },
+    {
       "src": "/demo/(.*)",
       "status": 308,
       "headers": {
@@ -535,6 +539,14 @@
       "dest": "/survival-engine.html"
     },
     {
+      "src": "/audio-check.html",
+      "dest": "/audio-check.html"
+    },
+    {
+      "src": "/audio-watch.html",
+      "dest": "/audio-watch.html"
+    },
+    {
       "src": "/breaker-engine.html",
       "dest": "/breaker-engine.html"
     },
@@ -600,6 +612,10 @@
     {
       "src": "/buildable-feel.js",
       "dest": "/buildable-feel.js"
+    },
+    {
+      "src": "/buildable-practice.js",
+      "dest": "/buildable-practice.js"
     },
     {
       "src": "/buildable-mechanics.js",
@@ -781,6 +797,13 @@
       }
     },
     {
+      "src": "/explore/(.*)\\.(webp|png|jpg|jpeg|svg|gif)",
+      "dest": "/explore/$1.$2",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
       "src": "/explore/solar-system/textures/(.*)",
       "dest": "/explore/solar-system/textures/$1",
       "headers": {
@@ -874,6 +897,94 @@
     {
       "src": "/lessons",
       "dest": "/lessons.html"
+    },
+    {
+      "src": "/minutemath.html",
+      "dest": "/minutemath.html"
+    },
+    {
+      "src": "/minutemath",
+      "dest": "/minutemath.html"
+    },
+    {
+      "src": "/cobuild/(.*)",
+      "dest": "/cobuild/$1",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
+      }
+    },
+    {
+      "src": "/cobuild.html",
+      "dest": "/cobuild.html"
+    },
+    {
+      "src": "/cobuild",
+      "dest": "/cobuild.html"
+    },
+    {
+      "src": "/practice/favicon.ico",
+      "dest": "/favicon.ico",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/favicon.svg",
+      "dest": "/favicon.svg",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/favicon-32.png",
+      "dest": "/favicon-32.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/favicon-16.png",
+      "dest": "/favicon-16.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/apple-touch-icon.png",
+      "dest": "/apple-touch-icon.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/audio/(.*)",
+      "dest": "/practice/audio/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/practice/decks/([A-Za-z0-9_-]+).json",
+      "dest": "/practice/decks/$1.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/practice.html",
+      "dest": "/practice.html"
+    },
+    {
+      "src": "/practice",
+      "dest": "/practice.html"
+    },
+    {
+      "src": "/feedback.html",
+      "dest": "/feedback.html"
+    },
+    {
+      "src": "/feedback",
+      "dest": "/feedback.html"
     },
     {
       "src": "/sling/(.*)",

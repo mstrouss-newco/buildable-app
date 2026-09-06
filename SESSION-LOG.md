@@ -1,5 +1,589 @@
+## 2026-08-30 — QA-FIX: Practice is alive, Lessons is open, and there is finally a release gate
+
+The first fixing session off the QA3d/QA3e sweep. Mike picked the Practice fix plus
+test coverage, and said to open Lessons.
+
+**Practice was dead on the live site, and it was three lines.** `vercel.json` names
+every shared script one by one, and `buildable-practice.js` — shipped in the PT1–PT3
+merge — was never added, so the final `/(.*)` catch-all served `landing.html` in its
+place. The browser asked for JavaScript, got 111KB of HTML, threw
+`Unexpected token '<'`, and the page told kids *"The sets would not load."* The
+Grown-ups Practice card hung on "Loading practice progress…" for the same reason.
+`public/feedback.html` had fallen through the same hole and is routed now too.
+
+**The part that matters more: nothing could have caught it.** `qa-practice.mjs` was
+written in the same session as the feature and passes — it just was not run by
+anything, and it never asked whether the file was *reachable*. Mike asked whether a QA
+tool already existed before I built one. It does: `scripts/editor-qa-run.mjs` with a
+nightly GitHub Action. But it only covers the **19 manifest games** in
+`qa/qa-map.mjs` and only asks "is this level still beatable?". **Thirty-three other
+`qa-*.mjs` files were run by hand or not at all.**
+
+**So: `qa-all.mjs`, the release gate.** One command, about four minutes, 45 harnesses.
+Two deliberate choices. It **finds harnesses on disk** rather than reading a list, so
+writing `qa-newthing.mjs` is all it takes to be in the gate and nothing can be
+forgotten. And before any of them it runs a **serving check**: every
+`public/buildable-*.js` and every `public/*.html` must have a route ahead of the
+catch-all. Verified against the real bug — with the new route removed it reports
+*"buildable-practice.js would be served as landing.html"*; with it back in, green.
+`--live` fetches each file from production and fails when HTML comes back where
+JavaScript belongs; it needs real network, so on a machine that cannot reach the site
+it skips loudly rather than inventing fifty failures. Wired into
+`.github/workflows/editor-qa.yml` as a new `gate` job on every push to main, with the
+live check running after the deploy and never failing the build on its own.
+`play-test` now skips plain pushes so it does not re-test every game on every commit.
+Named in AGENTS.md. It does not replace the editor runner; different job.
+
+**Three harnesses were failing and none of them was a product bug.** `qa-maze` and
+`qa-snakes` both died on `BuildableWin is not defined`, then on
+`Cannot read properties of undefined (reading 'width')`: their jsdom stubs never
+loaded `buildable-wincard.js` and never stubbed `measureText`, which every other
+harness in the repo already does. `qa-lessons` was failing three checks because it
+still greps the pre-NV2 Home shape (`id: "lessons", title: "Lessons"`, `sub: "Coming
+soon"`) that NV3 replaced with the `learn` door. All three fixed to match what the
+code actually is. That closes QA11 and takes the suite to 45 of 45 green.
+
+**Lessons is open to kids.** No code, no deploy: LS4 built it as a database switch
+(`app_flags.lessons_live`) precisely so the owner could flip it without a push.
+Approved by Mike in chat, applied, and recorded as `db/ls4-lessons-live-on.sql`
+(idempotent, with the statement to close it again). Verified on the live site: the
+Learn door now reads "Math & reading", the SOON badge is gone, and it opens
+`/app/lessons`.
+
+**The Learn door had no art**, because `/api/images?kind=game&id=mathcannon` 400s —
+`mathcannon` and `rileys` were the only two ids in `GAME_CATALOG` with no prompt in
+`api/images.js`. Both prompts added, which also fixes the two art-less tiles in the
+Play grid. That is QA12.
+
+**QA before/after:** 42 of 45 passing at the start of the session, 45 of 45 at the
+end, plus a serving check that did not exist. Nine Playwright harnesses still need
+`--with-browser` and were not run here.
+
+**What remains in this phase:** 40 open finding cards. The next big one is QA42/QA43 —
+a guest kid profile under a signed-in parent means every song and drawing saves with
+no child attached and never appears, and "Start game" in Play a friend 403s in
+silence. Then the book art (QA45, QA46), the landing page (QA49), and the polish
+batches (QA51, QA52, QA53). QA50 (there is no login or sign-up page) is tagged
+`[LOGIN]` and belongs to the separate login effort.
+
+## 2026-08-30 — QA3d + QA3e: the pages sweep (books, makers, creations, friends, parent side)
+
+Run in Cowork against the live site, as one session per the `GROUPED 2026-08-29`
+note on both cards. **Find only, nothing fixed.** Thirteen findings filed as
+planner cards **QA41–QA53**.
+
+**The big one: Practice is dead on the live site.** The Home tile advertises
+"Practice — Words & numbers" with no SOON badge, and the page says *"The sets
+would not load."* One console exception explains it: `SyntaxError: Unexpected
+token '<'` from `/buildable-practice.js`, which returns **200 `text/html`,
+111,072 bytes — it is `landing.html`**. `vercel.json` lists every
+`buildable-*.js` by name and the new file from the PT1–PT3 merge (`ac2c0f4`) was
+never added, so the final `/(.*) -> /landing.html` catch-all swallows it.
+`practice.html` and `/practice/decks/index.json` both serve fine, so it is one
+missing route line. The Grown-ups Practice card is stuck on "Loading practice
+progress…" for the same reason. Filed as **QA41**, with a task to add a
+qa-all.mjs check that every `public/buildable-*.js` is served as JavaScript —
+this is the third time a file has fallen through to `landing.html`.
+
+**The second big one: nothing a kid makes ever shows up.** Made a song, saved
+it: *"Saved to My Songs!"*, and the tab still read **(0)**. Drew a picture,
+saved it: *"Saved to your gallery!"*, and Mine said *"No saved art yet"*. Both
+rows are really on the server — `list-songs?deviceId=` returns them — but with
+`kid_profile_id` null, and every gallery lists by kid. The kid playing is a
+**guest profile** (`bk_guest_kid_profiles_v1`) with no row in `kid_profiles`, so
+the insert hits a foreign key, `api/save-song.js` falls back to
+`kid_profile_id: null` and still returns `ok: true`, and the client believes it.
+The same guest-kid mismatch kills Friends: **Start game** in "Play a friend"
+does nothing at all, and the logged request is
+`POST /api/friends {action:'invite'}` → **403 `not your player`**, swallowed
+because the error box only renders on another branch. **QA42**, **QA43**.
+
+**Books.** All twenty checked by opening them and by fetching every image.
+Fourteen are open; the other six (Snakes & Reptiles, The Planets, Rockets,
+Volcanoes, Wild Weather, The Deep Ocean) have **no pictures at all** — 78 files
+404 — and are correctly gated behind "Not ready yet" (**QA45**). The first six
+open books (Sharks, Dinosaurs, The Moon, Big Cats, Penguins, Bugs & Butterflies)
+are missing their eight per-fact photos each, so the page photo and both fact
+circles are **the same picture** on every page; the TB4 books 13–20 have all
+thirteen and look right (**QA46**). Every page in a book is padded to the height
+of the tallest page, so the cover ends in ~890px of blank cream and the finish
+page in ~1,080px, with the page arrows below all of it (**QA47**).
+
+**Exhibits.** Journey to the Deep and Weather Lab both work — the dive's
+creature cards, the fact sheets, the found counter, and the Weather Lab's
+recipes all behave. Solar System was checked through the catalogue.
+
+**Lessons is finished, and no kid can reach it.** `/lessons` is live with 11
+Math and 19 Reading lessons, real routes, placement, read-aloud, ten-frames and
+a kind failure state — and the Home **Learn tile says "Coming soon"** with no
+way in (**QA48**).
+
+**Parent side and landing.** The landing page carries **45 emojis** across 24
+glyphs, against the repo's hardest rule, and claims games/music/art/stories are
+"all live today" while two of the four studios are Coming soon (**QA49**).
+There is **no login or sign-up page at all** — "Log in" and "Try it free" are
+the same `/app` link and a signed-out stranger lands in the full kid app with a
+question-mark avatar; filed **[BROKEN][LOGIN]** as **QA50** and left alone.
+`/?stay=1` and the signed-in `/` → `/app` redirect both work. Sound Machine
+batch (Home pill over the title, 1.7MB of pack icons, no save) is **QA51**;
+studio polish batch is **QA52**; the Parents/My Stuff mismatch is **QA53**.
+
+**Not verified, honestly.** The invite banner needs two accounts and was not
+reachable in one session. And a QA-tooling warning worth remembering: **both
+automated browsers keep the page hidden between calls, so `requestAnimationFrame`
+never runs** — canvas games, fade-ins and the Weather Lab's slider glide all look
+frozen or blank when they are fine. Several "missing art" scares in this sweep
+were that, not the product. Force `opacity: 1` or read the DOM before believing
+a blank screen; the headless `qa-*.mjs` harnesses are unaffected.
+
+**How this reached main.** The sandbox's git proxy refuses this repo (`not in this
+session's authorized repository set`) for both `git push` and `api.github.com`, so
+`PUSH-TOKEN.txt` is never even reached and there is no GitHub connector in the
+directory to fix that. Committed through the GitHub web UI in Mike's Chrome
+instead, with his approval, in the same session as the QA-FIX work logged above.
+
+## 2026-08-30 — PT2 + PT3: Practice Round 2 (the GROUPED batch)
+
+Both cards carried a `GROUPED 2026-08-29` note saying to run them as one
+session, and Mike confirmed the batch. So: the warm-up, the birds, the parent
+controls and the open gate (PT2), plus the four maths operations and Sprint
+(PT3), all on the one engine PT1 built. **No fork of `buildable-practice.js`** —
+the maths decks are data files and the engine still has no idea what a times
+table is (qa-practice fails the build if that ever changes).
+
+**The placement warm-up.** A kid's first visit opens on "Let's see what you
+already know" — ten words spanning the five Dolch lists, two from each. Nothing
+is marked right or wrong on screen: a tap gets a neutral acknowledgement, never
+green or red, because the kid is not being marked. The only outcome is a
+friendlier starting point. Lists below where they land are seeded at **box 3
+and flagged `placed`, never box 5** — the warm-up can put a kid in the right
+place but can never hand them a word, or a bird, they did not earn. Seeded due
+dates are staggered so they trickle back instead of all landing on one day.
+Re-running it (from the Parents area) drops only the seeded items; work a kid
+actually did is never touched.
+
+**The bird collection.** Birds on telephone wires across the top of Practice,
+one per word or fact known by heart. **No text anywhere in it**, so a
+non-reader still understands their flock got bigger. Every bird is really
+drawn — the number on screen IS the mastered count, not a rounded-off
+decoration — and as the flock grows the birds shrink and more wires appear, so
+a big flock reads as a big flock. A new bird flies in with a soft sound;
+finishing a whole list makes every bird sing.
+
+**Practice is open to everyone.** The 1111 owner gate is off the Home door. It
+reads "Words & numbers" now.
+
+**The Parents Practice row.** One per kid under the skills dashboard: where
+they are, how much they know by heart, per-list bars, sprint bests. Grown-ups
+can bump the word list Easier or Harder, send a kid back through the quick
+check, and set the sprint length and question goal (60s / 40 by default, the
+common school format). It reads and writes the *same* state the kid's page
+uses, through the shared engine — one set of box rules, not a parent-side copy.
+
+**The four maths decks — and the ordering is the whole point.** Adding 66,
+taking away 121, times 66, sharing 100. School fact practice usually marches
+1+1, 1+2, 1+3, which teaches a child to count up rather than to *know*. These
+group facts by the trick they share (zeros and ones, doubles, make ten, tens,
+almost doubles, then the genuinely hard middle last), and item order IS
+introduction order. Within a family the facts are then **spread**: sorting by
+size alone produced `0x0, 0x1, 0x2 …` — ten cards in a row all answering zero,
+the same failure wearing a family badge. Multiplication now opens
+`0x0, 1x1, 0x2, 1x3`. Dividing by zero is out (not a fact); so is dividing zero
+by things (eleven cards answering zero teach nothing).
+
+**The keypad.** Maths answers on a big drawn keypad — digits, a rub-out, a go
+key, all SVG. An explicit go key rather than auto-submit, which would leak how
+many digits the answer has.
+
+**Sprint.** Sixty seconds, answer as many as you can, big friendly count at the
+end. It is the **only timed screen in the product and the only clock**, and even
+there the time is a draining bar with no digits chasing the kid. It unlocks only
+once practice shows about 80% of the facts a kid has actually met sitting at box
+3+ — a victory lap, not a wall — and facts never introduced are never held
+against them. Beat-your-own-best only: the stored shape has nowhere to put
+another kid's number. **Sprint answers never move the practice boxes**, because
+time pressure must not knock a word back down.
+
+**Sounds.** Nine practice cues added to `api/sfx.js`, played through the shared
+ElevenLabs pipeline, every one authored at or above the 0.5s minimum. The
+wrong-answer cue is deliberately a warm neutral tap, never a buzzer.
+
+**QA: `qa-practice.mjs` is now 279 checks, all green.** It boots the page four
+times in jsdom with its real scripts and plays each mode to the end. Two real
+bugs came out of doing that rather than checking one answer:
+
+1. **The stalled run.** `answer()` locks both the card grid and the keypad so a
+   double tap cannot double-grade, but `showAsk` only reset whichever surface it
+   was about to use. The other stayed locked forever, so from the *second* card
+   onwards every tap was silently swallowed. A single-answer test would never
+   have seen it.
+2. **The collapsed deck card.** `qa-practice-shot.mjs` drives a real Chromium
+   and writes phone/iPad/numbers screenshots so a human can LOOK at the flock.
+   Looking at the first pass showed the deck name and count running together
+   ("First Words40 words") with the progress bar collapsed — the card's spans
+   were never set to `display:block`. Fixed and re-shot.
+
+`qa-nv1` through `qa-nv4` still pass after the Home change.
+
+**Flagged, unchanged from PT1: the 220 word mp3s are still not baked.** This
+sandbox has no network route to the live site. Practice speaks in the same
+ElevenLabs voice through `/api/say`, so nothing is broken for a kid — the static
+files are a speed and offline win. One command from any machine that can reach
+production: `node scripts/gen-practice-audio.mjs`.
+
+**What remains in this phase:** nothing on the roadmap. PT1, PT2 and PT3 are the
+whole PT block, and all three are now built. The phase's done-when is met except
+for that audio bake and a look at the live site once this branch merges.
+
+## 2026-08-29 — PT1: the practice engine, and sight words playing on it
+
+The first half of the practice phase: build the shared deck engine, then ship the
+Dolch sight words on top of it so the thing is playable end to end, not a library
+waiting for a page.
+
+**The engine — `public/buildable-practice.js`.** Subject-agnostic on purpose: it
+knows about decks, items and a per-kid box, and nothing about words. The maths
+decks in PT3 are data files, not an engine change. There is no
+`if (subject === "reading")` anywhere in it, and qa-practice fails the build if
+one appears.
+- Boxes 1-5, new items start in 1. **Right AND fast** moves an item up a box;
+  **wrong or slow** moves it down. Fast is under 3000ms.
+- The timing is measured **silently**. No timer, no countdown, no clock, nothing
+  on screen a kid could read as being raced. The milliseconds are never rendered
+  and qa-practice checks for that specifically. A kid only ever notices that the
+  words they know come round less often.
+- A higher box is a longer wait: 0 / 1 / 2 / 4 / 8 days.
+- A session is about 20 items: due reviews first, most overdue leading, and **at
+  most 3 never-seen items** spread through the run rather than stacked at the
+  front. Every new item is flagged for its intro moment so it is never quizzed
+  cold. A deck with nothing due pads from resting items instead of handing back a
+  three-card anticlimax.
+- **Wrong answers are never punished.** No lives, no score, no fail state
+  anywhere. A miss is requeued a few cards later. That is the whole consequence.
+
+**The decks — `public/practice/decks/`.** The five Dolch lists as data:
+pre-primer 40, primer 52, first 41, second 46, third 41 — **220 words**. Each
+word carries its `heart` letters: the indices of the graphemes a kid cannot sound
+out ("said" glows on its ai, "come" on the o and the silent e). Decodable words
+carry none and nothing glows. `scripts/gen-practice-decks.mjs` regenerates them
+and refuses a duplicate id or a heart index pointing past the end of a word.
+
+**The page — `public/practice.html`.** Two modes on one engine:
+- **Find It** — audio says the word, the kid picks from four big word cards.
+- **Flash** — the word flashes for about a second with audio, then the kid picks
+  which word they saw.
+Both work for a non-reader: nothing has to be read to start and every instruction
+is spoken. Cream brand tokens, drawn SVG only, no emojis, touch-first for iPad
+and iPhone. A new word gets its intro moment first — shown big, said aloud,
+tricky letters glowing (heart-word method). A miss quietly shows the right card,
+says the word, and puts it back a few cards later.
+
+**Word audio has three tiers**, so a kid always hears the word: the baked mp3 in
+`/practice/audio/words/`, then `/api/say` (the live ElevenLabs pipeline, which
+caches server-side so a missing file self-heals), then the device voice.
+
+**Flagged honestly: the 220 mp3s are not baked yet.** `scripts/gen-practice-audio.mjs`
+is written and dry-runs clean, but this build sandbox has no network route to
+`www.buildablekids.com` — its policy refused all 220 requests with a 403 before
+they reached the site, and the ElevenLabs key correctly lives only in Vercel. The
+script needs one run from a machine that can reach the live site. **Practice is
+not blocked by it:** tier 2 is the same ElevenLabs voice through `/api/say`, so
+kids hear the right thing today and the static files are purely a speed and
+offline win. See `public/practice/audio/README.md`.
+
+**Wiring.** `/practice` and `/practice.html` routed in `vercel.json`, with the
+deck JSON revalidated, the word audio cached for a year, and the favicon block
+for the new page. `SCREEN_PRACTICE` lives at the stable address `/app/practice`
+and is framed by the shared `GameFrame` like Lessons — which already relays the
+cartridge `skill` message into the 8B learning ledger, so a session reaches the
+ledger with no new shell wiring. Per-kid state is `localStorage bk_practice_v1`
+keyed by kid id, and **one** learning event is posted per finished session, not
+one per answer.
+
+**Home.** The Practice door sits beside Learn and stays **Coming Soon behind the
+1111 owner gate until PT2** — flipping `soon` to false is the whole of that
+change. Six doors now, so on phones My Stuff bookends the run full width and
+nothing is orphaned on its own row; on tablet and desktop all six sit in one row.
+
+**QA.** `qa-practice.mjs` — **129 checks, all green.** Three parts, all
+in-process in jsdom (no Playwright, no network): the box math in a real window;
+the deck data (exact counts, unique ids, every glowing letter landing on a real
+letter, index agreeing with the files); and `practice.html` booted headless with
+its real scripts, playing a whole Find It run and a whole Flash run to the end —
+including a deliberate wrong tap proving the only consequence is the word coming
+back, and exactly one ledger row per finished session. `qa-nv1`, `qa-nv2`,
+`qa-nv3` and `qa-nv4` all still pass after the Home change.
+
+**Two notes for the next session.** There is still no `qa-all.mjs` in the repo,
+so there was nothing to wire `qa-practice` into. And Practice is deliberately
+absent from `qa/qa-map.mjs` — that map is for manifest games, and Lessons is
+absent for the same reason.
+
+**What remains in this phase:** PT2 (open the tile to everyone), PT3 (the four
+maths operations as decks on this same engine), and the placement warm-up, bird
+collection and Sprint-with-parent-settings work that the phase's done-when
+describes.
+## 2026-08-29 - SL-NEXT (part 2): every Journey game now goes forward
+
+Mike: "yes check everything and fix if its broken." Audited all 14 games that have a
+winding Journey map, on two axes: does the win tap open the next level, and does the
+map actually LEARN the level was cleared.
+
+**Bubble Buddies was the worst one, and nobody had noticed.** The engine wrote no
+progress at all -- zero localStorage calls in the file -- so the shell's
+`readBreakerProgress("bubble")` read `{unlocked:0}` forever. A kid could clear level 1,
+leave, come back, and find levels 2-6 still padlocked. Every time. It now writes the
+shared per-kid shape `bk_bubble_prefs[_<kidId>]` = `{unlocked, stars}` on every clear.
+
+**Four more had Sling's bounce-back**: memory, mahjong, tumble and castle-guard all
+posted `nav:exit` after EVERY clear when opened from the map. All four now open the
+next level and only exit to the map on the last one. Castle Guard's card said "Tap to
+choose another level" and Mahjong's and Memory's said "Tap to play again"; all three
+now say "Tap for the next one" when there is one.
+
+Clean already: survival, croctot, string-match, rileys-garden, typing, mathcannon and
+breaker all advance in-engine, and their maps read a key the engine really writes.
+
+**Sky Flyer is the open question** -- it has no level-clear state at all. A finished job
+shows a fact card that auto-closes back into free flight in the same world, and the
+world only unlocks through the quiz gate (`quizRequest` -> `bk:quizDone` ->
+`markUnlockNext`). If that modal is dismissed without finishing, the unlock is silently
+dropped. Not touched here; needs a decision about what "clearing a world" even means.
+
+qa-bubble now stubs localStorage and asserts the save for real -- and it immediately
+earned its keep: the first cut of `bbLoadPrefs` only overwrote fields when a stored
+value existed, so switching kids inherited the previous kid's `unlocked`. It resets to
+`{unlocked:0, stars:{}}` first now. New `_win()` hook on Bubble's QA API drives a clear.
+
+qa-memory, qa-mahjong, qa-castleguard, qa-bubble, qa-tumble, qa-sling: ALL CHECKS PASS.
+
+## 2026-08-29 - SL-NEXT: Sling Squad now goes to the next level when you tap
+
+Mike, from his iPhone: "sling squad doesnt go forward after beating the first level."
+
+Nothing was crashing. Driving the real flow in his Chrome (Home -> Sling Squad ->
+Play -> stop 1) showed the win card reading **"Level cleared! Tap for the next one"**
+and the tap doing something else entirely: session 7J made a level opened from the
+Journey post `nav:exit` after EVERY clear, so the kid was thrown back to the winding
+map. Stars saved, level 2 unlocked -- and the game still looked like it refused to
+go on, because it had just promised the next level and then walked away from it.
+
+**Fix.** `onDown`'s win branch now advances first: `startLevel(level+1)` whenever
+there is a next level, in the app exactly as when standalone. Only the LAST level
+falls back to the map (new `IN_JOURNEY` flag, the old `?level=` test given a name),
+and its card now says "Tap to see your map" there instead of "Tap to play again".
+Progress still writes to `bk_sling_prefs[_kid]` on every clear, so the map lights up
+whenever the kid does go back to it.
+
+Same bounce-back shape lives in tumble, memory and mahjong -- not touched here.
+
+qa-sling.mjs: ALL CHECKS PASS.
+
+## 2026-08-29 - SL1: the sign-in that forgot itself, and guest stops asking for a child
+
+Mike, on his iPad: "I logged in under OAuth, and its asking me to create an account
+for my kid again." His four kids (Riley, Jack, Dad, Mom) were on the server the
+whole time.
+
+**The measurement (Supabase edge logs, his iPad, 23:21:28Z).** Google handed back,
+`/auth/v1/callback` 302'd, the app read `/auth/v1/user` with a REAL JWT, and asked
+`kid_profiles?select=...grade,pin_hash...` with that JWT (400 -- see below). Then,
+**150ms later**, the same page's very next requests -- `parent_accounts?id=eq.<his
+uid>`, the `kid_profiles` fallback select -- went out with
+`request.sb.apikey.authorization.prefix = sb_publishable_...`, i.e. the ANON key,
+and came back `content_length: 2` (`[]`). The session had been dropped from
+localStorage a tenth of a second after being written to it. Desktop Chrome, driven
+through the same flow in the same minute, worked perfectly and landed on "Who's
+playing?" with all four kids -- this is a Safari storage behaviour, not a flow bug.
+
+**Fix 1 -- the session no longer lives only in the storage box** (`src/lib/accounts.js`).
+`loadSession`/`saveSession` now keep a module-level `memSession` mirror: a visit
+survives the box being emptied under it, and the box is rewritten from memory the
+moment it comes back empty. `saveSession` is also wrapped in try/catch so a full or
+blocked storage box cannot throw mid-sign-in.
+
+**Fix 2 -- a dropped session can no longer masquerade as a new family.**
+`authFetch` now attaches `err.status`; `refreshSession` only clears the session on a
+definite rejection (400/401/403) instead of on ANY error -- a network hiccup used to
+silently sign a parent out. `listKidProfiles` throws `code: "SESSION_LOST"` when it
+gets an empty list while no longer signed in, and `GrownUpScreen.refreshKids` shows
+"Your sign-in dropped out" on the chooser instead of "Add your first child".
+**The rule this encodes: an empty kid list is only a new family if we are still
+holding a session.**
+
+**Fix 3 -- guest play never asks for a child profile** (Mike: "if you say play as a
+guest, no need to create kid profile... it wont save anyway"). "Keep playing as a
+guest" now calls `playAsGuest()`: reuse an existing device profile, else create one
+called "Player" and go straight into Home. The empty picker for a signed-OUT visitor
+offers "Start playing" + "Sign in to find your family", never the setup form.
+
+**Fix 4 -- the 400 on every single load.** `db/6b-kid-profile-grade-pin.sql` had
+never been run: prod `kid_profiles` had no `grade` and no `pin_hash`, so the ideal
+select 400'd on every app load and grade/PIN silently never saved. Applied this
+session via the Supabase MCP (`apply_migration` 6b_kid_profile_grade_pin); columns
+verified present.
+
+## 2026-08-29 — MK2: the Make page gets studio doorways
+
+Mike: "the make section navigation tiles lacks any sort of excitement." Four tile
+options were mocked (project doc claude/make-tiles-options-mock.html); Mike picked
+the studio doorways.
+
+**What changed (all in MakeScreen, src/BuildableKids.jsx):**
+- The 4:3 grid tiles became wide DOORWAY cards: painted kind=make key art (live
+  since MK1) fills the left 45%, name + fun subtitle + an "Open studio" pill sit
+  on the right. One per row on phones, two-up from 700px.
+- The drawn white glyph now sits BEHIND the art as the fallback face, so an image
+  503 shows the old tile look instead of a blank panel.
+- The cards finally show MAKE_CATALOG's fun `sub` line ("Silly sounds &
+  explosions") instead of the dry category word. story/game got real subs
+  ("Your tale, your pictures" / "Build your own world") — the Soon badge and a
+  gray "Coming soon" pill carry the gating message now.
+- Chips, sort order, the 1111 Coming Soon gate and every data-nv3-make-* QA hook
+  are unchanged. qa-nv1 + qa-nv2 + qa-nv3 all pass.
+
+## 2026-08-29 — CP2: chess pieces you can actually read, and the hi-def worlds turned on
+
+Mike: "the chess pieces are kinda weird and hard to see... hard to see with the
+plants and stuff on them, doesnt make sense either."
+
+**Why they were unreadable, and it was in the prompt all along.** `kind=chesspiece`
+treats the world theme as a SURFACE TEXTURE painted over the piece -- jungle was
+literally "covered in leaves, vines and little flowers", ocean "made of coral,
+pearl and seashells". The art smothers the silhouette. On top of that no piece had
+a height, so a pawn and a queen occupied the same footprint and the only thing
+telling them apart was a tiny hat.
+
+**New `kind=chesspiece2`.** Two candidate directions were painted for jungle and
+mocked side by side against today's art, big and shrunk to real board size; Mike
+picked **style a, "clean chess"**: the classic chess silhouette, a hard height
+ramp (`TALL`, "the SHORTEST piece on the board" through "the TALLEST"), and the
+world reduced to ONE small accent on top. Style b (each piece a character from
+the world wearing the chess role's hat, full 6x6 `HERO` map for all six worlds)
+stays in the file behind `&style=b` if he ever wants it. The shared `CP2_STYLE`
+string carries the rule that actually fixed this and belongs in any future piece
+prompt: nothing may cover, overlap or blur the shape, and it must read when
+shrunk to a thumbnail. `kind=chesspiece` is deliberately untouched, so the
+switch is one string and the rollback is free.
+
+All 72 pieces (6 worlds x 6 pieces x 2 sides) generated and cached, ~$5. Four
+came back missing on the first pass and were re-fired; ALWAYS re-read
+`?manifest=1&kind=` and diff against the full set rather than trusting the batch.
+
+**The white rank dots are gone.** `withBadge`/`rankBadge`/`RANKGL` are deleted.
+They were only ever drawn on the BACKUP vector pieces, so a dot on screen meant
+"the real art did not load" -- never a feature.
+
+**Movement.** The game already had per-piece idle animations and a lift on
+pick-up; added the tilt on the lift, a `landsquash` when a piece sets down on its
+new square (`!important`, because the idle animation is written inline), and a
+spin on the capture shrink.
+
+**The hi-def backgrounds finally turned on.** `kind=chessworld` was generated for
+all six worlds back on 2026-08-16 and then never wired into the board -- the game
+was still loading the old upscaled parallax jpgs. `buildWorld` now preloads the
+new scene and only swaps it in once it has decoded (a missing one leaves the old
+background in place instead of an empty board), and adds `.hidef` to drop the
+scene blur from 2px to 0.6px and hide the old foreground layer, whose recycled
+leaves fought the new art.
+
+Both chess mocks and their vercel.json routes are deleted. qa-chess grew ten
+checks covering all of the above; ALL CHECKS PASSED.
+
+## 2026-08-29 — ONB1: the new-user onboarding QA + fix
+
+QA'd the first run in a cleared browser and against last night's auth records.
+Four real faults, all fixed here:
+
+1. **The Back button did nothing on every step.** It called `onBack()`, which in
+   BuildableKids resolves to `setScreen(SCREEN_GROWNUP)` when no kid is chosen --
+   the screen you are already on. Replaced with a step-aware `backFromStep()`
+   (auth -> choose, gate/parents -> picker, projects -> parents, picker -> Home
+   or choose) and hidden on the first step, where there is nowhere back to.
+2. **Every placeholder was white on white.** `src/index.css` paints all
+   placeholders `rgba(255,255,255,.4)` for dark inputs, but the grown-ups flow
+   uses WHITE boxes -- so email, password, child name, PIN and family code all
+   looked like empty rectangles. Added a `.bk-light` placeholder colour and put
+   the class on all six inputs, plus real labels above the name field.
+3. **Google sign-in could be silently thrown away.** The token comes back in the
+   URL hash; if it landed on `/` (the marketing page) rather than `/app`,
+   `public/landing.html` bailed out on `if (loc.hash) return;` and did nothing.
+   alexandra's account shows THREE full Google sign-ins in 40 minutes on
+   2026-08-29 because of this. landing.html now forwards `#access_token` to
+   `/app` with the hash intact.
+4. **First run was an admin wall.** "Add your first child" opened the whole
+   Parents page: name, avatar, grade, PIN, Learning Mode, buddy moments, skills
+   progress, badge shelf, family code -- before one child existed. Everything
+   except name + face + optional grade is now gated on `kids.length > 0`, and
+   adding the FIRST child drops straight into that child's Home instead of
+   clearing the form and leaving the grown-up on the admin page.
+
+Also: the friend-invite poll ran every 5s and each tick makes the server
+re-verify the token with Supabase Auth (`/api/friends` -> `/auth/v1/user`).
+Moved to 15s.
+
+Not changed, worth knowing: the Supabase redirect allowlist could not be read or
+edited from a session (no auth-config tool). Fix 3 makes the app work either
+way, but adding both `https://buildablekids.com/app` and
+`https://www.buildablekids.com/app` to the Supabase Auth redirect list is still
+the belt-and-braces move.
+
 # Buildable Kids — Session Log
 
+## 2026-08-25 (MM-FIX): the Music Maker was handing kids a 3-second beep
+
+**QA session, four fixes, no new features.** Mike reported "the music creation
+tool and the new work flow doesn't work at all, nothing gets created." Ran the
+whole flow live and found five things, one of them app-wide.
+
+### Root cause (NOT a code bug — Vercel env)
+`ELEVENLABS_API_KEY` holds the API key **ID**, not the `sk_` secret. ElevenLabs
+answers every call with `400 invalid_api_key` — *"API key ID used as API key…
+API keys start with 'sk_'"*. Thirteen endpoints share that key, so ALL new audio
+generation app-wide is dead; already-cached tracks still play, which is why the
+games sound fine and only the makers look broken. Owner's fix in Vercel.
+
+### What this session changed
+1. **`api/generate-song.js` — stop dressing the dev tone up as a song.** The
+   ElevenLabs adapter silently fell back to `generateDemo` (a 3s 8 kHz sine
+   chord) and the handler returned `ok:true`, so the UI showed "YOUR NEW SONG!"
+   over a beep. Straight violation of the ASSET-LIBRARY sound rule. The three
+   fallback paths now set `demoFallback`, and when `MUSIC_PROVIDER !== "demo"`
+   the handler returns `ok:false, reason:"music_unavailable"` with a kid-safe
+   message. `src/MusicMaker.jsx` speaks and shows "The song machine is having a
+   nap! Tap GO to try again."
+2. **`api/generate-song.js` — deterministic cover seed.** `coverSeed` mixed in
+   `Math.random()`, so every song asked for a brand-new image, `/api/images`
+   answered `503 {"error":"warming"}`, and the background warm never finishes on
+   Vercel. Every cover was a blank colour square, forever. Seed is now derived
+   from title + vibe + theme, so the URL is stable and cacheable.
+3. **`src/lib/CoverThumb.jsx` — survive the first warm.** On the first image
+   error it now retries the same URL with `&wait=1`, which makes the server
+   generate inline (~25s) and cache it. One slow first paint, instant after.
+4. **`api/images.js` — the `topic` icon category did not exist.** MusicMaker
+   asks for `kind=icon&cat=topic&id=dog…` for the ten step-1 chips; `ICONS` had
+   no `topic` key, so all ten 400'd and every card fell back to the same grey
+   music note. For a flow whose whole point is zero reading, ten identical
+   buttons. Added all ten subjects, ids kept in sync with `TOPICS`.
+5. **`vercel.json` — five core scripts were serving HTML.** `vite.config.js` has
+   `base: '/demo/'`, so the built `index.html` asks for `/demo/buildable-wallet.js`
+   (+ audio, mechanics, feel, manifest). The `/demo/(.*)` catch-all 308s those to
+   `/app/…`, which the SPA rewrite answers with `index.html` → five
+   `SyntaxError: Unexpected token '<'` on every app load, and no wallet. Added a
+   `/demo/(buildable-[^/]+\.js)` → `/$1` route above the catch-all, matching the
+   existing `/demo/assets/` pattern. (The deeper fix is the `base`, left alone —
+   changing it moves every built asset path.)
+
+### Also found, NOT fixed
+- The Make hub cards render as flat gradient + glyph although
+  `/api/images?kind=make&id=…` returns 200 for all five. The MK1 key-art cards
+  appear to have been dropped in a redesign. Asked the owner whether that was
+  deliberate before touching it.
+
+### Verified
+`vite build` clean (70 modules). `api/images.js` and `api/generate-song.js`
+import clean under node. Live re-QA of the song flow is blocked until the real
+`sk_` key is in Vercel.
 ## 2026-08-16 (FM2): Farm 2 — the chickens, the cow, and feeding off the stack
 
 **Phase FM, card FM2.** The animals go into the farm corner FM1 built, east of

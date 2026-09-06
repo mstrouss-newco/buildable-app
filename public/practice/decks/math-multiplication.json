@@ -1,0 +1,505 @@
+{
+  "id": "math-multiplication",
+  "name": "Times",
+  "group": "Numbers",
+  "blurb": "Tables to ten",
+  "subject": "math",
+  "skill": "math-multiplication",
+  "grade": "3",
+  "order": 13,
+  "answerUI": "keypad",
+  "families": [
+    {
+      "key": "zeros-ones",
+      "name": "Zeros and ones"
+    },
+    {
+      "key": "tens",
+      "name": "Tens"
+    },
+    {
+      "key": "twos",
+      "name": "Doubles"
+    },
+    {
+      "key": "fives",
+      "name": "Fives"
+    },
+    {
+      "key": "squares",
+      "name": "Squares"
+    },
+    {
+      "key": "nines",
+      "name": "Nines"
+    },
+    {
+      "key": "hard-middle",
+      "name": "The tricky ones"
+    }
+  ],
+  "items": [
+    {
+      "id": "m0x0",
+      "prompt": "0 × 0",
+      "answer": "0",
+      "say": "zero times zero",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x1",
+      "prompt": "1 × 1",
+      "answer": "1",
+      "say": "one times one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x2",
+      "prompt": "0 × 2",
+      "answer": "0",
+      "say": "zero times two",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x3",
+      "prompt": "1 × 3",
+      "answer": "3",
+      "say": "one times three",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x4",
+      "prompt": "0 × 4",
+      "answer": "0",
+      "say": "zero times four",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x2",
+      "prompt": "1 × 2",
+      "answer": "2",
+      "say": "one times two",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x3",
+      "prompt": "0 × 3",
+      "answer": "0",
+      "say": "zero times three",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x4",
+      "prompt": "1 × 4",
+      "answer": "4",
+      "say": "one times four",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x5",
+      "prompt": "0 × 5",
+      "answer": "0",
+      "say": "zero times five",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x6",
+      "prompt": "1 × 6",
+      "answer": "6",
+      "say": "one times six",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x7",
+      "prompt": "0 × 7",
+      "answer": "0",
+      "say": "zero times seven",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x5",
+      "prompt": "1 × 5",
+      "answer": "5",
+      "say": "one times five",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x6",
+      "prompt": "0 × 6",
+      "answer": "0",
+      "say": "zero times six",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x7",
+      "prompt": "1 × 7",
+      "answer": "7",
+      "say": "one times seven",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x8",
+      "prompt": "0 × 8",
+      "answer": "0",
+      "say": "zero times eight",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x9",
+      "prompt": "1 × 9",
+      "answer": "9",
+      "say": "one times nine",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x10",
+      "prompt": "0 × 10",
+      "answer": "0",
+      "say": "zero times ten",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x8",
+      "prompt": "1 × 8",
+      "answer": "8",
+      "say": "one times eight",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x9",
+      "prompt": "0 × 9",
+      "answer": "0",
+      "say": "zero times nine",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m1x10",
+      "prompt": "1 × 10",
+      "answer": "10",
+      "say": "one times ten",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m0x1",
+      "prompt": "0 × 1",
+      "answer": "0",
+      "say": "zero times one",
+      "family": "zeros-ones"
+    },
+    {
+      "id": "m2x10",
+      "prompt": "2 × 10",
+      "answer": "20",
+      "say": "two times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m3x10",
+      "prompt": "3 × 10",
+      "answer": "30",
+      "say": "three times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m4x10",
+      "prompt": "4 × 10",
+      "answer": "40",
+      "say": "four times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m5x10",
+      "prompt": "5 × 10",
+      "answer": "50",
+      "say": "five times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m6x10",
+      "prompt": "6 × 10",
+      "answer": "60",
+      "say": "six times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m7x10",
+      "prompt": "7 × 10",
+      "answer": "70",
+      "say": "seven times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m8x10",
+      "prompt": "8 × 10",
+      "answer": "80",
+      "say": "eight times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m9x10",
+      "prompt": "9 × 10",
+      "answer": "90",
+      "say": "nine times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m10x10",
+      "prompt": "10 × 10",
+      "answer": "100",
+      "say": "ten times ten",
+      "family": "tens"
+    },
+    {
+      "id": "m2x2",
+      "prompt": "2 × 2",
+      "answer": "4",
+      "say": "two times two",
+      "family": "twos"
+    },
+    {
+      "id": "m2x3",
+      "prompt": "2 × 3",
+      "answer": "6",
+      "say": "two times three",
+      "family": "twos"
+    },
+    {
+      "id": "m2x4",
+      "prompt": "2 × 4",
+      "answer": "8",
+      "say": "two times four",
+      "family": "twos"
+    },
+    {
+      "id": "m2x5",
+      "prompt": "2 × 5",
+      "answer": "10",
+      "say": "two times five",
+      "family": "twos"
+    },
+    {
+      "id": "m2x6",
+      "prompt": "2 × 6",
+      "answer": "12",
+      "say": "two times six",
+      "family": "twos"
+    },
+    {
+      "id": "m2x7",
+      "prompt": "2 × 7",
+      "answer": "14",
+      "say": "two times seven",
+      "family": "twos"
+    },
+    {
+      "id": "m2x8",
+      "prompt": "2 × 8",
+      "answer": "16",
+      "say": "two times eight",
+      "family": "twos"
+    },
+    {
+      "id": "m2x9",
+      "prompt": "2 × 9",
+      "answer": "18",
+      "say": "two times nine",
+      "family": "twos"
+    },
+    {
+      "id": "m3x5",
+      "prompt": "3 × 5",
+      "answer": "15",
+      "say": "three times five",
+      "family": "fives"
+    },
+    {
+      "id": "m4x5",
+      "prompt": "4 × 5",
+      "answer": "20",
+      "say": "four times five",
+      "family": "fives"
+    },
+    {
+      "id": "m5x5",
+      "prompt": "5 × 5",
+      "answer": "25",
+      "say": "five times five",
+      "family": "fives"
+    },
+    {
+      "id": "m5x6",
+      "prompt": "5 × 6",
+      "answer": "30",
+      "say": "five times six",
+      "family": "fives"
+    },
+    {
+      "id": "m5x7",
+      "prompt": "5 × 7",
+      "answer": "35",
+      "say": "five times seven",
+      "family": "fives"
+    },
+    {
+      "id": "m5x8",
+      "prompt": "5 × 8",
+      "answer": "40",
+      "say": "five times eight",
+      "family": "fives"
+    },
+    {
+      "id": "m5x9",
+      "prompt": "5 × 9",
+      "answer": "45",
+      "say": "five times nine",
+      "family": "fives"
+    },
+    {
+      "id": "m3x3",
+      "prompt": "3 × 3",
+      "answer": "9",
+      "say": "three times three",
+      "family": "squares"
+    },
+    {
+      "id": "m4x4",
+      "prompt": "4 × 4",
+      "answer": "16",
+      "say": "four times four",
+      "family": "squares"
+    },
+    {
+      "id": "m6x6",
+      "prompt": "6 × 6",
+      "answer": "36",
+      "say": "six times six",
+      "family": "squares"
+    },
+    {
+      "id": "m7x7",
+      "prompt": "7 × 7",
+      "answer": "49",
+      "say": "seven times seven",
+      "family": "squares"
+    },
+    {
+      "id": "m8x8",
+      "prompt": "8 × 8",
+      "answer": "64",
+      "say": "eight times eight",
+      "family": "squares"
+    },
+    {
+      "id": "m9x9",
+      "prompt": "9 × 9",
+      "answer": "81",
+      "say": "nine times nine",
+      "family": "squares"
+    },
+    {
+      "id": "m3x9",
+      "prompt": "3 × 9",
+      "answer": "27",
+      "say": "three times nine",
+      "family": "nines"
+    },
+    {
+      "id": "m4x9",
+      "prompt": "4 × 9",
+      "answer": "36",
+      "say": "four times nine",
+      "family": "nines"
+    },
+    {
+      "id": "m6x9",
+      "prompt": "6 × 9",
+      "answer": "54",
+      "say": "six times nine",
+      "family": "nines"
+    },
+    {
+      "id": "m7x9",
+      "prompt": "7 × 9",
+      "answer": "63",
+      "say": "seven times nine",
+      "family": "nines"
+    },
+    {
+      "id": "m8x9",
+      "prompt": "8 × 9",
+      "answer": "72",
+      "say": "eight times nine",
+      "family": "nines"
+    },
+    {
+      "id": "m3x4",
+      "prompt": "3 × 4",
+      "answer": "12",
+      "say": "three times four",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m6x7",
+      "prompt": "6 × 7",
+      "answer": "42",
+      "say": "six times seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m3x8",
+      "prompt": "3 × 8",
+      "answer": "24",
+      "say": "three times eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m4x6",
+      "prompt": "4 × 6",
+      "answer": "24",
+      "say": "four times six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m3x7",
+      "prompt": "3 × 7",
+      "answer": "21",
+      "say": "three times seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m4x8",
+      "prompt": "4 × 8",
+      "answer": "32",
+      "say": "four times eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m3x6",
+      "prompt": "3 × 6",
+      "answer": "18",
+      "say": "three times six",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m4x7",
+      "prompt": "4 × 7",
+      "answer": "28",
+      "say": "four times seven",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m6x8",
+      "prompt": "6 × 8",
+      "answer": "48",
+      "say": "six times eight",
+      "family": "hard-middle"
+    },
+    {
+      "id": "m7x8",
+      "prompt": "7 × 8",
+      "answer": "56",
+      "say": "seven times eight",
+      "family": "hard-middle"
+    }
+  ]
+}

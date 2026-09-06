@@ -73,6 +73,20 @@ const ICONS = {
             waltz:"an elegant golden harp with a swirl of dancing musical notes",
             samba:"colorful carnival hand drums with bright feathers and maracas",
             afrobeat:"a set of colorful African djembe hand drums with warm patterns" },
+  // Music Maker song topics. These are the picture chips on step 1 of the
+  // "Make a Song" flow (TOPICS in src/MusicMaker.jsx) — the ids MUST stay in
+  // sync with that list or the card falls back to a grey music note and a kid
+  // who can't read sees ten identical buttons.
+  topic:  { dog:"a happy friendly puppy dog sitting with its tongue out",
+            cat:"a cute fluffy kitten sitting and looking up",
+            dinosaur:"a friendly green cartoon dinosaur with a big smile",
+            space:"a cheerful cartoon rocket ship flying past a ringed planet and stars",
+            pancakes:"a tall stack of golden pancakes with a pat of butter and syrup",
+            princess:"a smiling young princess wearing a sparkling crown and a pretty gown",
+            trucks:"a chunky colorful toy dump truck",
+            ocean:"a friendly smiling cartoon whale spouting water above blue waves",
+            robots:"a friendly cute boxy toy robot with big round eyes waving",
+            family:"a happy cartoon family of four holding hands together" },
   world:  { space:"a colorful outer-space scene with planets, stars and a rocket",
             underwater:"a vibrant underwater coral reef with tropical fish and sunbeams",
             castle:"a majestic fairytale castle on a green hill under a bright sky",
@@ -281,6 +295,8 @@ function build(q) {
       snakes: "A whimsical snakes-and-ladders board game viewed at a tilt, a winding numbered path climbing a colorful hill with friendly rope ladders going up and silly smiling cartoon snakes sliding down, cute colorful player tokens racing to a golden star at the top",
 
       tank: "Two friendly cartoon tanks on top of separate grassy green mountains under a bright sunny blue sky with fluffy clouds, a cheerful green tank on the left hill lobbing a glowing cannon shell in a high arc across a valley toward a grey tank on the right hill, a dotted aiming arc, small puffs of smoke, colorful and playful storybook style, not scary",
+      rileys: "A cheerful cartoon girl gardener with a watering can standing proudly in a bright blooming vegetable garden of giant sunflowers, tomatoes and carrots, blasting a swarm of goofy buzzing bees away with a spray of sparkling water, a big silly grinning bear peeking over the garden fence, sunny storybook colors, playful and not scary",
+      mathcannon: "A big friendly cartoon cannon on a sunny hill firing a glowing numbered ball in a high arc toward a row of floating colorful answer bubbles with big numbers on them, one bubble bursting into sparkles and confetti, a smiling kid character loading the next number, bright storybook colors, joyful and exciting",
       skyflyer: "A cheerful little red propeller plane with a smiling kid pilot flying low over a sunny cartoon sea dotted with green palm islands, a curving trail of big shiny gold coins arcing through the sky ahead of it, fluffy white clouds and a bright sun, a small white landing pad with an orange ring on one island below, bright storybook colors, joyful sense of soaring flight",
       sling: "Cute round cartoon animals — a happy blue bird, a chubby brown bear and a little yellow chick — launching joyfully out of a big wooden slingshot and soaring through the air toward a wobbly tower of stacked wooden and stone blocks topped with goofy smiling castle creatures, blocks tumbling and toppling over with bursts of sparkles and a puff of POOF smoke, sunny grassy castle field with blue sky, strong sense of launch and motion",
     };
@@ -416,6 +432,138 @@ function build(q) {
       descriptor:`chesspiece|${world}|${piece}|${side}`,
       prompt:`${PIECE[piece]}, ${THEME[world]}. Color: ${SIDE[side]}; the color must be obvious at a glance even when the piece is very small. The overall silhouette must clearly read as a chess ${NAME[piece]}. Cute kawaii character with two big friendly eyes and a little smile, thick clean outlines, bold soft 3D cartoon style, a single piece standing upright and centered, full body, soft studio lighting, child-friendly ages 4-8, no text, no words, no letters, transparent background`,
       transparent:true, quality:"medium",
+    };
+  }
+  if (kind === "chesspiece2") {
+    // v2 chess pieces (phase CP2). Two things were wrong with kind=chesspiece:
+    //  1. THEME was a surface texture ("covered in leaves and vines"), so the art
+    //     smothered the silhouette and a kid could not tell a bishop from a queen.
+    //  2. Classic statue shapes + kawaii eyes fought each other.
+    // So the theme now lives in ONE accent (style a) or in the CHARACTER itself
+    // (style b), and the role read is carried by the headpiece + height, always.
+    // kind=chesspiece is deliberately left alone so today's board cannot break.
+    const V = "v1";
+    const NAME = {p:"pawn",n:"knight",b:"bishop",r:"rook",q:"queen",k:"king"};
+    // Height ramp is a huge part of the read at board size.
+    const TALL = {p:"the SHORTEST piece on the board, small and stubby",
+                  n:"medium height",
+                  b:"tall and slender",
+                  r:"medium height but wide, stocky and heavy",
+                  q:"very tall",
+                  k:"the TALLEST piece on the board"};
+    // ---- style a: classic chess shapes, theme as one small accent ----
+    const SHAPE = {
+      p:"a chess PAWN: one simple round ball head on a short round base, no hat",
+      n:"a chess KNIGHT: a horse's head and arched neck on a round base",
+      b:"a chess BISHOP: a smooth tall pointed mitre hat with one vertical slit, on a round base",
+      r:"a chess ROOK: a square castle tower with four clear square battlements on top, on a round base",
+      q:"a chess QUEEN: a tall body wearing a wide crown of many sharp points, on a round base",
+      k:"a chess KING: a tall body wearing a rounded crown topped with a small upright cross, on a round base",
+    };
+    const ACCENT = {
+      jungle:"one single small green leaf tucked into the very top of the piece",
+      ocean:"one single small spiral seashell tucked into the very top of the piece",
+      space:"one single small yellow star tucked into the very top of the piece",
+      candy:"one single small red-and-white candy swirl tucked into the very top of the piece",
+      castle:"one single small triangular flag tucked into the very top of the piece",
+      desert:"one single small orange sun tucked into the very top of the piece",
+    };
+    // ---- style b: the world's own character, wearing the chess role ----
+    const HERO = {
+      jungle:{
+        p:"a little cheeky monkey standing upright, wearing a tiny round helmet",
+        n:"a striped zebra standing upright, its long horse head and neck unmistakable",
+        b:"a toucan with a big colourful beak standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad-shouldered gorilla standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful jaguar standing upright, wearing a tall crown of many sharp points",
+        k:"a big proud lion with a full mane standing upright, wearing a rounded crown topped with a small cross",
+      },
+      ocean:{
+        p:"a little round clownfish standing upright on its tail, wearing a tiny round helmet",
+        n:"a seahorse standing upright, its long curved horse head unmistakable",
+        b:"a tall squid standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad crab standing upright, wearing a square castle-tower crown with battlements",
+        q:"an elegant dolphin standing upright on its tail, wearing a tall crown of many sharp points",
+        k:"a big friendly whale standing upright on its tail, wearing a rounded crown topped with a small cross",
+      },
+      space:{
+        p:"a tiny round astronaut standing upright, wearing a small round space helmet",
+        n:"a rocket-riding space horse standing upright, its long horse head unmistakable",
+        b:"a tall friendly green alien standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky boxy robot standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful star-fairy standing upright, wearing a tall crown of many sharp points",
+        k:"a big round planet-bellied space captain standing upright, wearing a rounded crown topped with a small cross",
+      },
+      candy:{
+        p:"a little round gumdrop character standing upright, wearing a tiny round helmet",
+        n:"a candy-cane-striped horse standing upright, its long horse head and neck unmistakable",
+        b:"a tall lollipop character standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky square chocolate-block character standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful swirled ice-cream character standing upright, wearing a tall crown of many sharp points",
+        k:"a big frosted layer-cake character standing upright, wearing a rounded crown topped with a small cross",
+      },
+      castle:{
+        p:"a little round squire boy standing upright, wearing a tiny round helmet",
+        n:"a noble horse standing upright, its long horse head and arched neck unmistakable",
+        b:"a tall wise wizard standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad armoured guard standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful princess standing upright, wearing a tall crown of many sharp points",
+        k:"a big bearded king standing upright, wearing a rounded crown topped with a small cross",
+      },
+      desert:{
+        p:"a little round cactus character standing upright, wearing a tiny round helmet",
+        n:"a camel standing upright, its long head and curved neck unmistakable",
+        b:"a tall meerkat standing upright, wearing a tall pointed bishop hat",
+        r:"a chunky broad tortoise standing upright, wearing a square castle-tower crown with battlements",
+        q:"a graceful desert fox standing upright, wearing a tall crown of many sharp points",
+        k:"a big proud eagle standing upright, wearing a rounded crown topped with a small cross",
+      },
+    };
+    const SIDE2 = {
+      w:"BOLD BRIGHT BLUE: the whole character, its clothes, its hat and its base are painted in one strong vivid royal blue",
+      b:"BOLD BRIGHT ORANGE: the whole character, its clothes, its hat and its base are painted in one strong vivid pumpkin orange",
+    };
+    // The rules that make it readable on a small square, and the reason v1 failed.
+    const CP2_STYLE = "Bold soft 3D cartoon style like a modern animated kids film, thick clean dark outline all the way around, big simple confident shapes, smooth glossy finish, two big friendly eyes and a happy smile, standing upright and facing forward, full body, centred, soft even studio lighting, child-friendly ages 4-8. CRITICAL: the outline must be instantly readable when the image is shrunk to the size of a thumbnail. NOTHING may cover, overlap or blur the shape: no leaves, no vines, no plants, no flowers, no sprinkles, no bubbles, no stars, no scenery, no ground, no shadow, no background, no extra props, no second character. No text, no words, no letters, no numbers. Transparent background";
+    const piece2 = (q.piece || "").toString();
+    const world2 = (q.world || "").toString();
+    const side2  = (q.side || "w").toString();
+    const style2 = (q.style || "a").toString();
+    if (!NAME[piece2] || !SIDE2[side2]) return null;
+    let subject2;
+    if (style2 === "b") {
+      if (!HERO[world2]) return null;
+      subject2 = `${HERO[world2][piece2]}. It is a chess ${NAME[piece2].toUpperCase()} and its hat makes that obvious. It is ${TALL[piece2]}. It stands on a simple round pedestal base`;
+    } else if (style2 === "a") {
+      if (!ACCENT[world2]) return null;
+      subject2 = `${SHAPE[piece2]}. It is ${TALL[piece2]}. ${ACCENT[world2]} — and that accent is the ONLY decoration anywhere on the piece`;
+    } else return null;
+    return {
+      descriptor: `chesspiece2|${style2}|${world2}|${piece2}|${side2}|${V}`,
+      prompt: `${subject2}. Color: ${SIDE2[side2]}; the colour must be obvious at a glance even when the piece is very small. ${CP2_STYLE}`,
+      transparent: true, quality: "medium",
+    };
+  }
+  if (kind === "chessworld") {
+    // The scenery BEHIND the chess board. The board is a big square parked in the
+    // middle of the screen, so the centre is deliberately calm and open and all the
+    // detail lives around the edges — same trick as mahjongbg, but wide and hi-def.
+    const CW_STYLE = "Rich high-detail painterly children's storybook scene, smooth polished digital painting, deep layered depth with a soft far background and crisp detail near the edges, warm cinematic lighting, wide landscape composition. The CENTRE of the image is calm, open and uncluttered (a big square in the middle will be covered by a game board) with all of the scenery framing the top, bottom and sides. Absolutely NOT pixel art, no pixelation, no 8-bit, no retro, no dithering. No people, no characters, no animals in the middle, no board, no chess pieces, no grid, no game UI, no text, no words, no letters. Child-friendly ages 4-8";
+    const CW = {
+      jungle: "A lush sunlit rainforest clearing: enormous glossy leaves, hanging vines and bright tropical flowers crowding the edges, tall mossy trees fading into warm green mist, golden dappled sunbeams falling through the canopy, a soft mossy forest floor along the bottom",
+      ocean:  "A bright underwater coral garden: colourful branching coral, sea fans and kelp along the edges, drifting bubbles, soft turquoise water fading to deep blue in the distance, brilliant sunbeams streaming down from the surface, pale rippled sand along the bottom",
+      space:  "A magical deep-space vista: a glowing pastel nebula in violet and teal, scattered twinkling stars, a large softly-lit ringed planet low toward one edge and a small moon toward the other, gentle cosmic dust, calm and wondrous",
+      candy:  "A dreamy candy kingdom: rolling pink and mint cotton-candy hills, giant swirled lollipops, candy-cane trees and glossy gumdrops framing the edges, a chocolate river winding along the bottom, a soft baby-blue sky with fluffy whipped-cream clouds, sprinkles drifting in the air",
+      castle: "A grand fairytale castle courtyard at golden hour: warm carved stone walls, tall banner-hung towers and a stone archway framing the edges, ivy and flowering window boxes, distant rolling green hills and a soft amber sky, a worn flagstone floor along the bottom",
+      desert: "A warm golden desert oasis at late afternoon: sculpted sand dunes, tall saguaro cacti with little flowers and weathered red rock arches framing the edges, a small palm-fringed pool of blue water, a wide peach-and-lavender sky, long soft shadows across rippled sand",
+    };
+    const world = (q.world || "").toString();
+    const subject = CW[world];
+    if (!subject) return null;
+    return {
+      descriptor: `chessworld|${world}|v1`,
+      prompt: `${subject}. ${CW_STYLE}`,
+      transparent: false, quality: "high", size: "1536x1024", format: "webp",
     };
   }
   if (kind === "runnerobj") {
@@ -599,9 +747,16 @@ async function generateImage(prompt, openaiKey, opts = {}, timeoutMs = 42000) {
         ? { background: "transparent", output_format: "webp", output_compression: 75 }
         : { background: "transparent", output_format: "png" })
     : (fmt === "webp" ? { output_format: "webp", output_compression: 75 } : {});
+  // Wide scenery (chess worlds) asks for a landscape frame; everything else stays square.
+  const size = opts.size === "1536x1024" ? "1536x1024" : "1024x1024";
+  // A big high-quality landscape takes far longer than a small icon, and these
+  // functions are allowed 300s, so give the wide ones room instead of aborting at 42s.
+  if (size === "1536x1024" && timeoutMs < 180000) timeoutMs = 180000;
   return (
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", quality: q, ...tx })) ||
-    (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", ...tx })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size, quality: q, ...tx })) ||
+    (await attempt({ model: "gpt-image-1", prompt, n: 1, size, ...tx })) ||
+    (size === "1024x1024" ? null
+      : (await attempt({ model: "gpt-image-1", prompt, n: 1, size: "1024x1024", ...tx }))) ||
     null
   );
 }
@@ -615,7 +770,7 @@ async function bgWarm(key, spec, kind) {
     if (!process.env.OPENAI_API_KEY) return;
     if (!(await underBudget())) return;
     const b64 = await generateImage(spec.prompt, process.env.OPENAI_API_KEY,
-      { transparent: spec.transparent, quality: spec.quality, format: spec.format });
+      { transparent: spec.transparent, quality: spec.quality, format: spec.format, size: spec.size });
     if (!b64) return;
     await cachePut(key, spec.descriptor, (kind || "").toString(), b64);
     const COST = { low: 0.011, medium: 0.042, high: 0.167 };
@@ -676,7 +831,7 @@ export default async function handler(req, res) {
   if (!openaiKey) return res.status(503).json({ error: "no_openai_key" });      // <img onError> -> fallback
   if (!(await underBudget())) return res.status(503).json({ error: "over_budget" });
 
-  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent, quality: spec.quality, format: spec.format });
+  const b64 = await generateImage(spec.prompt, openaiKey, { transparent: spec.transparent, quality: spec.quality, format: spec.format, size: spec.size });
   if (!b64) return res.status(502).json({ error: "image_provider_failed" });
   await cachePut(key, spec.descriptor, (q.kind || "").toString(), b64);
   const COST = { low: 0.011, medium: 0.042, high: 0.167 };

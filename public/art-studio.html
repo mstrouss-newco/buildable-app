@@ -49,8 +49,8 @@
   #top .tbtn{width:56px;height:50px;flex-direction:column;gap:0}
   #top .tbtn svg{width:24px;height:24px}
   #top .tbtn .cap{font-size:9px;font-weight:700;color:#cfc8ff;line-height:1.05;margin-top:1px}
-  #top .tbtn.clear{background:#2a1430;border-color:#ff7a90}
-  #top .tbtn.clear .cap{color:#ffb3c1}
+  #top .tbtn.clear{background:#241a52;border-color:#ffd23f}
+  #top .tbtn.clear .cap{color:#ffe08a}
   #top .tbtn.save .cap{color:#ff5d8f}
   .spacer{flex:1}
   input[type=color]{width:42px;height:42px;border:none;background:none;border-radius:50%;cursor:pointer;padding:0;flex:0 0 auto}
@@ -90,7 +90,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     <div class="t">Art Studio</div>
     <button class="iconbtn tbtn" id="undoBtn" aria-label="Undo"></button>
     <button class="iconbtn tbtn" id="redoBtn" aria-label="Redo"></button>
-    <button class="iconbtn tbtn clear" id="clearBtn" aria-label="Clear"></button>
+    <button class="iconbtn tbtn clear" id="clearBtn" aria-label="New page"></button>
     <button class="iconbtn tbtn save" id="saveBtn" aria-label="Save"></button>
     <span class="spacer"></span>
     <button class="iconbtn tbtn" id="galleryBtn" aria-label="My art"></button>
@@ -104,9 +104,6 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   <div id="bottom"></div>
 </div>
 
-<div class="ov" id="clearOv"><div class="card"><h2>Start over?</h2>
-  <div><button class="iconbtn" id="clearNo" aria-label="Keep it" style="width:62px;height:62px;background:#10391f;border-color:#3DD06A"></button>
-  <button class="iconbtn" id="clearYes" aria-label="Start over" style="width:62px;height:62px;background:#3a1430;border-color:#ff7a90"></button></div></div></div>
 <div class="ov" id="stickOv"><div class="card"><h2>Stickers</h2><div class="tabs" id="stickTabs"></div><div class="pickwrap" id="stickWrap"></div>
   <div style="margin-top:16px"><button class="iconbtn" id="stickClose" style="width:62px;height:62px" aria-label="Done"></button></div></div></div>
 <div class="ov" id="shapeOv"><div class="card"><h2>Shapes</h2><div class="pickwrap" id="shapeWrap"></div>
@@ -152,7 +149,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       {type:"grad",from:"#0a0a2e",to:"#3a1c71",name:"Galaxy"},{type:"grad",from:"#0f3d3e",to:"#136a4a",name:"Forest"}],
     stickerThemes:["all","forest","ocean","space","candy"]
   };
-  var S={brush:CFG.brushes[0],color:CFG.palette[0],size:18,mirror:1,style:"paper",bg:CFG.styles[0].bg,ops:[],redo:[],sticker:null,shape:"star",hue:0,muted:false,recent:[],coloring:null};
+  var S={brush:CFG.brushes[0],color:CFG.palette[0],size:18,mirror:1,style:"paper",bg:CFG.styles[0].bg,ops:[],redo:[],sticker:null,shape:"star",hue:0,muted:false,recent:[],coloring:null,cleared:null};
   var Q=10;
   var paper=document.getElementById("paper"), ctx=paper.getContext?paper.getContext("2d"):null, stage=document.getElementById("stage");
   function fitCanvas(){ if(!paper.getBoundingClientRect) return; var r=stage.getBoundingClientRect();
@@ -205,9 +202,21 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 
   var stampCache={}; function loadStamp(url,cb){ if(stampCache[url]&&stampCache[url]._done){ cb&&cb(); return; } var img=new Image(); img.crossOrigin="anonymous"; img.onload=function(){ img._done=true; stampCache[url]=img; cb&&cb(); }; img.onerror=function(){ img._done=true; stampCache[url]=img; cb&&cb(); }; img.src=url; stampCache[url]=img; }
   function pushOp(op){ S.ops.push(op); S.redo.length=0; autosave(); }
-  function undo(){ if(!S.ops.length) return; S.redo.push(S.ops.pop()); redraw(); playSfx("art_undo"); autosave(); }
+  function undo(){ if(!S.ops.length&&S.cleared){ var c=S.cleared; S.cleared=null; S.ops=(c.ops||[]).slice(); if(c.bg)S.bg=c.bg; if(c.style)S.style=c.style; if("coloring" in c)S.coloring=c.coloring;
+      S.redo.length=0; redraw(); playSfx("art_undo"); autosave(); toast("Got it back!"); return; }
+    if(!S.ops.length) return; S.redo.push(S.ops.pop()); redraw(); playSfx("art_undo"); autosave(); }
   function redoOp(){ if(!S.redo.length) return; S.ops.push(S.redo.pop()); redraw(); autosave(); }
-  function clearAll(){ S.ops.length=0; S.redo.length=0; redraw(); autosave(); }
+  function clearAll(){ if(S.ops.length) S.cleared={ops:S.ops.slice(),bg:S.bg,style:S.style,coloring:S.coloring}; S.ops.length=0; S.redo.length=0; redraw(); autosave(); }
+  // New Page: quietly file the drawing in My Art, wipe the paper, and leave Undo able to bring it back.
+  function tuckAway(cb){ if(S.ops.length<3){ cb(false); return; }
+    var img=""; try{ img=paper.toDataURL("image/png"); }catch(e){}
+    var payload={ art_id:"art_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), device_id:deviceId(), kid_profile_id:kidId()||undefined,
+      title:"My drawing", theme:(S.bg&&S.bg.name)||S.style||"rainbow", image_b64:img, art:{ops:S.ops,bg:S.bg,style:S.style,coloring:S.coloring}, published:false };
+    try{ fetch("/api/save-art",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).then(function(r){ cb(!!(r&&r.ok)); }).catch(function(){ cb(false); }); }catch(e){ cb(false); } }
+  function newPage(){ var had=S.ops.length;
+    tuckAway(function(ok){ if(ok) toast("Your picture is safe in My Art."); });
+    clearAll(); playSfx("art_undo");
+    toast(had?"New page! Undo brings it back.":"New page!"); }
 
   var drawing=false,cur=null,lastP=null,lastT=0;
   function pos(e){ var r=paper.getBoundingClientRect(); var cx=e.touches?e.touches[0].clientX:e.clientX, cy=e.touches?e.touches[0].clientY:e.clientY; return {x:(cx-r.left)*(paper.width/r.width),y:(cy-r.top)*(paper.height/r.height)}; }
@@ -226,8 +235,9 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     if(cur.rainbow) S.hue=(S.hue+3)%360; if(S.brush.fx==="twinkle") sparkleAt(p); lastP=p; playStrokeSfx(S.brush.sound); }
   function up(){ if(!drawing) return; drawing=false; if(cur&&cur.points.length){ pushOp(cur); redraw(); } cur=null; }
   function sparkleAt(p){ if(!ctx) return; for(var k=0;k<5;k++){ var ang=Math.random()*7,rr=Math.random()*S.size*1.4; ctx.save(); ctx.globalAlpha=.9; ctx.fillStyle="hsl("+((S.hue+k*40)%360)+",90%,65%)"; if(BR.sparkle) BR.sparkle(ctx,p.x+Math.cos(ang)*rr,p.y+Math.sin(ang)*rr,4,Date.now()/120); else{ ctx.beginPath(); ctx.arc(p.x+Math.cos(ang)*rr,p.y+Math.sin(ang)*rr,1.6,0,7); ctx.fill(); } ctx.restore(); } S.hue=(S.hue+12)%360; }
-  function autosave(){ try{ localStorage.setItem("artstudio:wip",JSON.stringify({ops:S.ops,style:S.style,bg:S.bg,coloring:S.coloring})); }catch(e){} }
-  function restoreWip(){ try{ var w=JSON.parse(localStorage.getItem("artstudio:wip")||"null"); if(w&&w.ops){ S.ops=w.ops.filter(function(o){return o.t==="stroke"||o.t==="stamp"||o.t==="fill";}); if(w.style)S.style=w.style; if(w.bg)S.bg=w.bg; if("coloring" in w)S.coloring=w.coloring; } }catch(e){} }
+  function autosave(){ try{ var w={ops:S.ops,style:S.style,bg:S.bg,coloring:S.coloring}; if(S.cleared) w.cleared=S.cleared;
+    try{ localStorage.setItem("artstudio:wip",JSON.stringify(w)); }catch(e){ delete w.cleared; localStorage.setItem("artstudio:wip",JSON.stringify(w)); } }catch(e){} }
+  function restoreWip(){ try{ var w=JSON.parse(localStorage.getItem("artstudio:wip")||"null"); if(w&&w.ops){ S.ops=w.ops.filter(function(o){return o.t==="stroke"||o.t==="stamp"||o.t==="fill";}); if(w.style)S.style=w.style; if(w.bg)S.bg=w.bg; if("coloring" in w)S.coloring=w.coloring; if(w.cleared&&w.cleared.ops)S.cleared=w.cleared; } }catch(e){} }
 
   function ic(inner,w){ w=w||28; return '<svg width="'+w+'" height="'+w+'" viewBox="0 0 32 32" fill="none">'+inner+'</svg>'; }
   var ICONS={
@@ -236,6 +246,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     soundOff: ic('<path d="M7 13 H11 L16 8 V24 L11 19 H7 Z" fill="#9b93d6"/><path d="M21 12 l7 8 M28 12 l-7 8" stroke="#ff7a90" stroke-width="2.6" stroke-linecap="round"/>'),
     undo: ic('<path d="M11 9 L6 14 L11 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14 H18 a7 7 0 1 1 0 14 H13" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>'),
     redo: ic('<path d="M21 9 L26 14 L21 19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 14 H14 a7 7 0 1 0 0 14 H19" stroke="#dcd6ff" stroke-width="3" stroke-linecap="round"/>'),
+    newpage: ic('<rect x="7" y="4.5" width="17" height="23" rx="2.5" fill="#fff" stroke="#cfc8ff" stroke-width="2.2"/><path d="M11 12 H20 M11 17 H20 M11 22 H17" stroke="#c9c2f0" stroke-width="1.6" stroke-linecap="round"/><path d="M25.5 5 l1.1 2.9 2.9 1.1 -2.9 1.1 -1.1 2.9 -1.1 -2.9 -2.9 -1.1 2.9 -1.1z" fill="#ffd23f"/>'),
     trash: ic('<path d="M6 9 H26" stroke="#ffb3c1" stroke-width="2.6" stroke-linecap="round"/><path d="M12 9 V6.5 H20 V9" stroke="#ffb3c1" stroke-width="2.4"/><path d="M9 9 L10.5 27 H21.5 L23 9" stroke="#ffb3c1" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 13 V23 M18 13 V23" stroke="#ffb3c1" stroke-width="2.2" stroke-linecap="round"/>'),
     heart: ic('<path d="M16 27 C16 27 4 19.5 4 11.5 C4 7.4 7.2 4.5 11 4.5 C13.5 4.5 15.2 6 16 7.6 C16.8 6 18.5 4.5 21 4.5 C24.8 4.5 28 7.4 28 11.5 C28 19.5 16 27 16 27 Z" fill="#ff5d8f"/>',30),
     check: ic('<path d="M7 17 L13 23 L25 9" stroke="#7ee0a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',30),
@@ -368,10 +379,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     window.addEventListener("mousemove",move); window.addEventListener("touchmove",move,{passive:false});
     window.addEventListener("mouseup",up); window.addEventListener("touchend",up);
     document.getElementById("undoBtn").onclick=undo; document.getElementById("redoBtn").onclick=redoOp;
-    document.getElementById("clearBtn").onclick=function(){ document.getElementById("clearOv").classList.add("show"); };
+    document.getElementById("clearBtn").onclick=newPage;
     document.getElementById("saveBtn").onclick=function(){ document.getElementById("saveOv").classList.add("show"); };
-    document.getElementById("clearNo").onclick=function(){ document.getElementById("clearOv").classList.remove("show"); };
-    document.getElementById("clearYes").onclick=function(){ document.getElementById("clearOv").classList.remove("show"); clearAll(); playSfx("art_undo"); };
     document.getElementById("saveCancel").onclick=function(){ document.getElementById("saveOv").classList.remove("show"); };
     document.getElementById("saveGo").onclick=doSave;
     document.getElementById("stickClose").onclick=function(){ document.getElementById("stickOv").classList.remove("show"); };
@@ -387,9 +396,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
   function cap(t){ return '<span class="cap">'+t+'</span>'; }
   function setSound(){ document.getElementById("soundBtn").innerHTML=(S.muted?ICONS.soundOff:ICONS.soundOn)+cap("Sound"); }
   function paintStatic(){ document.getElementById("undoBtn").innerHTML=ICONS.undo+cap("Undo"); document.getElementById("redoBtn").innerHTML=ICONS.redo+cap("Redo");
-    document.getElementById("clearBtn").innerHTML=ICONS.trash+cap("Clear"); document.getElementById("saveBtn").innerHTML=ICONS.heart+cap("Save");
+    document.getElementById("clearBtn").innerHTML=ICONS.newpage+cap("New Page"); document.getElementById("saveBtn").innerHTML=ICONS.heart+cap("Save");
     document.getElementById("galleryBtn").innerHTML=ICONS.gallery+cap("Mine"); setSound();
-    document.getElementById("clearNo").innerHTML=ICONS.check; document.getElementById("clearYes").innerHTML=ICONS.trash;
     document.getElementById("saveCancel").innerHTML=ICONS.x; document.getElementById("saveGo").innerHTML=ICONS.heart;
     document.getElementById("stickClose").innerHTML=ICONS.check; document.getElementById("shapeClose").innerHTML=ICONS.check;
     document.getElementById("bgClose").innerHTML=ICONS.check; document.getElementById("colorClose").innerHTML=ICONS.check; document.getElementById("galleryClose").innerHTML=ICONS.x; }
@@ -409,7 +417,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       report.total=S.ops.length; report.allBrushesDrawable=report.brushesUsed.length>=9; return report; },
     roundtrip:function(){ var json=JSON.stringify({ops:S.ops,bg:S.bg,style:S.style}), n=S.ops.length, saved=S.ops.slice(); S.ops.length=0; var p=JSON.parse(json); S.ops=p.ops; S.style=p.style; S.bg=p.bg;
       return {ok:(S.ops.length===n&&JSON.stringify(S.ops)===JSON.stringify(saved)),count:S.ops.length,expected:n}; },
-    reset:function(){ S.ops.length=0; S.redo.length=0; } };
+    clearUndo:function(){ var before=S.ops.length, sig=JSON.stringify(S.ops);
+      clearAll(); var wiped=(S.ops.length===0&&!!S.cleared);
+      undo(); return {wiped:wiped, restored:(S.ops.length===before&&JSON.stringify(S.ops)===sig), snapshotGone:!S.cleared}; },
+    reset:function(){ S.ops.length=0; S.redo.length=0; S.cleared=null; } };
 })();
 </script>
 </body>

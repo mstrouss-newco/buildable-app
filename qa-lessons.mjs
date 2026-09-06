@@ -320,15 +320,15 @@ chk('a lost lesson map never leaves a kid on a dead screen',
 chk('the map names the buddy art rather than the page hardcoding it',
   /IDX && IDX\.art && IDX\.art\.buddy/.test(H));
 
-console.log('\n--- LS2 THE PATH: the Home tile (Coming Soon gated) ---');
+console.log('\n--- LS2 THE PATH: the Home door (NV3 shape, switch-gated) ---');
 const SH = exists('src/BuildableKids.jsx') ? read('src/BuildableKids.jsx') : '';
 chk('the shell has a Lessons screen', SH.includes('SCREEN_LESSONS') && SH.includes('function LessonsScreen'));
 chk('the Lessons screen frames the lessons page (one page, three screens)',
   /GameFrame title="Lessons" src="\/lessons"/.test(SH));
-chk('there is a Lessons tile on Home', /id: "lessons", title: "Lessons"/.test(SH));
-chk('the tile is COMING SOON gated, so no kid reaches a lesson before Mike flips it',
-  /id: "lessons"[\s\S]{0,320}?sub: "Coming soon"[\s\S]{0,320}?soon: true/.test(SH) &&
-  /id: "lessons"[\s\S]{0,400}?setCatalogGate/.test(SH));
+chk('there is a Learn door on Home', /id: "learn",\s+label: "Learn"/.test(SH));
+chk('the door is driven by the lessons_live switch, not by a code edit',
+  /id: "learn"[\s\S]{0,400}?soon: !lessonsLive/.test(SH) &&
+  /id: "learn"[\s\S]{0,400}?setCatalogGate/.test(SH));
 chk('the gate is the same owner preview gate the rest of Home uses', SH.includes('catalogPw === "1111"'));
 chk('/app/lessons is a real reload-safe address',
   /screen === SCREEN_LESSONS\) return "\/app\/lessons"/.test(SH) && /seg === "lessons"/.test(SH));
@@ -760,10 +760,10 @@ chk('the Home tile reads the switch instead of a hardcoded Coming Soon',
   /const \[lessonsLive, setLessonsLive\] = useState\(false\)/.test(BK) && /d\.flags\.lessons_live === true/.test(BK));
 chk('the tile FAILS CLOSED: Coming Soon until the switch says otherwise',
   /useState\(false\)/.test(BK) && /lessonsLive\s*\n?\s*\?/.test(BK));
-chk('when it is live the tile just opens Lessons, with no code gate in the way',
-  /sub: "Math and reading, at your own pace"[\s\S]{0,200}onClick: onLessons/.test(BK));
+chk('when it is live the door just opens Lessons, with no code gate in the way',
+  /lessonsLive \? "Math & reading"[\s\S]{0,400}?onClick: lessonsLive \? onLessons/.test(BK));
 chk('when it is not live the 1111 owner gate is still the only way in',
-  /soon: true, gated: true,[\s\S]{0,160}setCatalogGate\(\(\) => onLessons\)/.test(BK));
+  /soon: !lessonsLive[\s\S]{0,200}setCatalogGate\(\(\) => onLessons\)/.test(BK));
 
 console.log('\n--- LS4 THE PARENT DASHBOARD: lessons finished ---');
 const ST = read('src/store.js');

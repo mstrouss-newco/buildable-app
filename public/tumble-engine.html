@@ -487,7 +487,15 @@ function navUpdate(){ try{ if(typeof window!=="undefined" && window.BuildableGam
 
 function onCanvasTap(){
   if(state==="title" && !bsMounted){ pickWorld(Math.max(1, (PREFS.unlocked||0)+1)); return true; }   // fallback start
-  if(state==="win"){ if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else if(mode==="adventure" && worldIdx<WORLDS.length-1 && PREFS.cleared[worldIdx]) startWorld(worldIdx+1,"adventure"); else showMenu(); return true; }  // 7J: from the Journey -> bounce back after EVERY world (star already saved); standalone still auto-advances
+  // SL-NEXT: a "tap for the next one" card has to actually open the next one.
+  // 7J used to bounce a Journey level back to the map after EVERY clear, which
+  // reads as "the game will not go on". Progress is still saved on every win, so
+  // the map lights up whenever the kid goes back; only the LAST level exits to it.
+  if(state==="win"){
+    if(mode==="adventure" && worldIdx<WORLDS.length-1 && PREFS.cleared[worldIdx]) startWorld(worldIdx+1,"adventure");
+    else if(/[?&]level=/.test(location.search)){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} }
+    else showMenu();
+    return true; }
   if(state==="pause"){ state="play"; setPauseLabel(); return true; }
   return false;
 }

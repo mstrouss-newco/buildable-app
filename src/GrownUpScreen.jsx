@@ -267,8 +267,32 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
   async function refreshKids() {
     setLoadingKids(true);
     try { setKids(await listKidProfiles()); }
-    catch (e) { setError(e.message); }
+    catch (e) {
+      if (e && e.code === "SESSION_LOST") {
+        // The sign-in vanished between the check and the request (seen on iPad
+        // Safari). Ask for the sign-in again -- NEVER show "add your first
+        // child" to a family that already has kids on the server.
+        setKids([]);
+        setSignedIn(false);
+        setNotice("Your sign-in dropped out. Tap Continue with Google to pick up where you left off.");
+        setStep("choose");
+      } else setError(e.message);
+    }
     finally { setLoadingKids(false); }
+  }
+
+  // Guest lane: nothing is saved off this device, so there is nothing to set up.
+  // Make one "Player" profile behind the scenes and start playing.
+  async function playAsGuest() {
+    setError(null);
+    try {
+      const existing = await listKidProfiles();
+      if (existing && existing.length) { chooseKid(existing[0]); return; }
+      const created = await createKidProfile("Player", DEFAULT_AVATAR);
+      await refreshKids();
+      if (created && created.id) { chooseKid(created); return; }
+      setStep("picker");
+    } catch (e) { setStep("picker"); }
   }
 
   useEffect(() => { refreshKids(); }, [signedIn]);
@@ -371,12 +395,18 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
     if (!newName.trim()) return;
     setBusy(true); setError(null);
     try {
-      await createKidProfile(newName.trim(), newAvatar, { grade: newGrade || null, pin: /^[0-9]{4}$/.test(newPin) ? newPin : null });
+      const created = await createKidProfile(newName.trim(), newAvatar, { grade: newGrade || null, pin: /^[0-9]{4}$/.test(newPin) ? newPin : null });
+      const wasFirst = kids.length === 0;
       setNewName("");
       setNewAvatar(DEFAULT_AVATAR);
       setNewGrade("");
       setNewPin("");
       await refreshKids();
+      // The first child is the end of setup, not the middle of it. Go straight
+      // into that child's Home instead of leaving a grown-up staring at a
+      // cleared form wondering whether anything happened.
+      if (wasFirst && created && created.id) { chooseKid(created); return; }
+      setStep("picker");
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -442,14 +472,29 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
     finally { setBusy(false); }
   }
 
+  // Back means "one step back in THIS flow", not "leave the flow". The old
+  // handler sent nearly every step to onBack(), and onBack() lands on this very
+  // screen while no kid is chosen -- so the button did nothing at all, on every
+  // screen. On the first step there is nowhere back to, so it is hidden.
+  function backFromStep() {
+    setError(null); setNotice(null);
+    if (step === "auth") return setStep("choose");
+    if (step === "gate") return setStep("picker");
+    if (step === "projects") return setStep("parents");
+    if (step === "parents") return setStep(signedIn || kids.length ? "picker" : "choose");
+    if (step === "picker") return active ? onBack() : setStep("choose");
+    return onBack();
+  }
+
   // -------------------------------------------------------------
   // RENDER
   // -------------------------------------------------------------
   return (
     <div style={S.container}>
       <div style={S.topRow}>
-        <button onClick={(step === "choose" || step === "picker" || !signedIn) ? onBack : () => setStep("picker")}
-          style={S.backBtn}>← Back</button>
+        {step === "choose"
+          ? <span />
+          : <button onClick={backFromStep} style={S.backBtn}>← Back</button>}
         {signedIn && <button onClick={handleSignOut} style={S.backBtn}>Sign out</button>}
       </div>
 
@@ -461,6 +506,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
           <h1 style={S.title}>Set up your family</h1>
           <div style={S.card}>
             <p style={S.lead}>Your kids' creations follow them on any device.</p>
+            {notice && <p style={S.noticeBox}>{notice}</p>}
             {!configured && (
               <p style={S.warn}>
                 Accounts aren't switched on for this site yet. You can still play as a
@@ -475,7 +521,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               Continue with email
             </button>
             <div style={S.divider}><span style={S.dividerText}>or</span></div>
-            <button style={S.ghostBig} onClick={() => setStep("picker")}>
+            <button style={S.ghostBig} onClick={playAsGuest}>
               Keep playing as a guest
             </button>
             <p style={S.fineprint}>
@@ -497,12 +543,12 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             <div style={S.divider}><span style={S.dividerText}>or use email</span></div>
             <form onSubmit={handleAuth} style={S.form}>
               <label style={S.label}>Email
-                <input style={S.input} type="email" autoComplete="email" required
+                <input className="bk-light" style={S.input} type="email" autoComplete="email" required
                   value={email} onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com" />
               </label>
               <label style={S.label}>Password
-                <input style={S.input} type="password"
+                <input className="bk-light" style={S.input} type="password"
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   required minLength={6} value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -530,10 +576,21 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             {loadingKids && <p style={S.muted}>Loading profiles…</p>}
 
             {!loadingKids && kids.length === 0 ? (
-              <>
-                <p style={S.lead}>Let's set up your first child's profile.</p>
-                <button style={S.primaryBig} onClick={() => setStep("parents")}>Add your first child</button>
-              </>
+              signedIn ? (
+                <>
+                  <p style={S.lead}>Let's set up your first child's profile.</p>
+                  <button style={S.primaryBig} onClick={() => setStep("parents")}>Add your first child</button>
+                </>
+              ) : (
+                // Signed out with nothing on this device. Do NOT demand a child
+                // profile: guest play saves nothing off this device anyway, and
+                // a returning parent needs the way back to their account.
+                <>
+                  <p style={S.lead}>Ready when you are.</p>
+                  <button style={S.primaryBig} onClick={playAsGuest}>Start playing</button>
+                  <button style={S.ghostBig} onClick={() => setStep("choose")}>Sign in to find your family</button>
+                </>
+              )
             ) : (
               <>
                 <div style={S.kidGrid}>
@@ -563,7 +620,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
           <div style={S.card}>
             <p style={S.lead}>Quick check — what is {gateA} × {gateB}?</p>
             <form onSubmit={submitGate} style={S.form}>
-              <input style={S.input} type="number" inputMode="numeric" autoFocus
+              <input className="bk-light" style={S.input} type="number" inputMode="numeric" autoFocus
                 value={gateInput} onChange={(e) => setGateInput(e.target.value)}
                 placeholder="Type the answer" />
               {gateError && <p style={S.error}>{gateError}</p>}
@@ -577,9 +634,11 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
       {/* STEP: parents management (add/edit kids + organize) ----- */}
       {step === "parents" && (
         <>
-          <h1 style={S.title}>Parents</h1>
+          <h1 style={S.title}>{kids.length ? "Parents" : "Add your child"}</h1>
           <div style={S.card}>
-            <p style={S.lead}>Add or edit your kids, and organize what they've made.</p>
+            <p style={S.lead}>{kids.length
+              ? "Add or edit your kids, and organize what they've made."
+              : "Just a first name and a face. Everything else can wait."}</p>
 
             {kids.length > 0 && (
               <div style={S.kidGrid}>
@@ -599,8 +658,10 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             )}
 
             <form onSubmit={handleAddKid} style={S.addRow}>
-              <input style={S.input} value={newName} maxLength={40}
-                onChange={(e) => setNewName(e.target.value)} placeholder="Add a child's name" />
+              <div style={S.fieldLabel}>Child's first name</div>
+              <input className="bk-light" style={S.input} value={newName} maxLength={40} autoFocus
+                onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Riley" />
+              <div style={S.fieldLabel}>Pick a face</div>
               <div style={S.avatarRow}>
                 {AVATARS.map((a) => (
                   <button type="button" key={a.key} onClick={() => setNewAvatar(a.key)}
@@ -610,7 +671,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   </button>
                 ))}
               </div>
-              <div style={S.fieldLabel}>Grade (sets the learning level)</div>
+              <div style={S.fieldLabel}>Grade (optional — sets the learning level)</div>
               <div style={S.avatarRow}>
                 {learningGradeOptions().map((g) => (
                   <button type="button" key={g} onClick={() => setNewGrade(newGrade === g ? "" : g)}
@@ -619,10 +680,14 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   </button>
                 ))}
               </div>
-              <input style={S.input} value={newPin} inputMode="numeric" maxLength={4}
-                onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
-                placeholder="Optional 4-digit PIN (for snoopy siblings)" />
-              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>Add child</button>
+              {kids.length > 0 && (
+                <input className="bk-light" style={S.input} value={newPin} inputMode="numeric" maxLength={4}
+                  onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                  placeholder="Optional 4-digit PIN (for snoopy siblings)" />
+              )}
+              <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>
+                {kids.length ? "Add child" : "Start playing"}
+              </button>
             </form>
 
             {error && <p style={S.error}>{error}</p>}
@@ -647,7 +712,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               </div>
             )}
 
-            {signedIn && (
+            {signedIn && kids.length > 0 && (
               <div style={{ marginTop: 20, paddingTop: 18, borderTop: CARD_BORDER }}>
                 <h2 style={{ ...S.title, fontSize: 20, margin: "0 0 4px" }}>Add another parent</h2>
                 <p style={S.lead}>
@@ -678,7 +743,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   Joining another parent's family? Enter their code:
                 </p>
                 <form onSubmit={handleJoinFamily} style={S.addRow}>
-                  <input style={S.input} value={joinCode} maxLength={12}
+                  <input className="bk-light" style={S.input} value={joinCode} maxLength={12}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     placeholder="Family code (e.g. ABC234)" />
                   <button type="submit" style={S.primaryBig} disabled={familyBusy || !joinCode.trim()}>
@@ -691,19 +756,26 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               </div>
             )}
 
-            <LearningModeCard />
+            {/* Learning Mode, buddy moments, progress and badges are settings FOR a
+                child. Showing them before one exists is what made the first run feel
+                like a hundred questions. */}
+            {kids.length > 0 && <LearningModeCard />}
 
-            <BuddyMomentsCard />
+            {kids.length > 0 && <BuddyMomentsCard />}
 
-            <LearningProgressCard />
+            {kids.length > 0 && <LearningProgressCard />}
 
-            {signedIn && (
+            {kids.length > 0 && <PracticeCard kids={kids} />}
+
+            {signedIn && kids.length > 0 && (
               <button style={S.linkBtn} onClick={goProjects}>Organize creations by child →</button>
             )}
-            {signedIn && onOpenFriends && (
+            {signedIn && kids.length > 0 && onOpenFriends && (
               <button style={S.linkBtn} onClick={onOpenFriends}>Manage friends & friend code →</button>
             )}
-            <button style={S.ghostBig} onClick={() => setStep("picker")}>← Done</button>
+            {kids.length > 0 && (
+              <button style={S.ghostBig} onClick={() => setStep("picker")}>← Done</button>
+            )}
           </div>
         </>
       )}
@@ -981,6 +1053,213 @@ function TrendBars({ data }) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Session PT2/PT3 — the Practice row, one per kid.
+//
+// It reads and writes the SAME state the kid's practice page uses
+// (localStorage bk_practice_v1, through public/buildable-practice.js), so
+// there is one engine and one source of truth rather than a parent-side copy
+// of the box rules. The engine is a plain script in public/, so it is loaded
+// on demand and the card renders a quiet placeholder until it is there.
+//
+// What a grown-up can do here: see where each kid is and how much they know by
+// heart, bump the word list up or down, send them back through the quick
+// check, and set the sprint length and question target. Everything else stays
+// the kid's.
+// ---------------------------------------------------------------------------
+function usePracticeEngine() {
+  const [bp, setBp] = useState(() => (typeof window !== "undefined" ? window.BuildablePractice : null));
+  useEffect(() => {
+    if (bp || typeof document === "undefined") return;
+    if (window.BuildablePractice) { setBp(window.BuildablePractice); return; }
+    let el = document.querySelector('script[data-bk-practice]');
+    if (!el) {
+      el = document.createElement("script");
+      el.src = "/buildable-practice.js";
+      el.setAttribute("data-bk-practice", "1");
+      document.head.appendChild(el);
+    }
+    const on = () => setBp(window.BuildablePractice || null);
+    el.addEventListener("load", on);
+    return () => el.removeEventListener("load", on);
+  }, [bp]);
+  return bp;
+}
+
+function PracticeCard({ kids }) {
+  const BP = usePracticeEngine();
+  const [decks, setDecks] = useState(null);
+  const [tick, setTick] = useState(0);
+  const bump = () => setTick((t) => t + 1);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/practice/decks/index.json", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d && d.decks) setDecks(d.decks.slice().sort((a, b) => (a.order || 0) - (b.order || 0))); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  if (!BP || !decks) {
+    return (
+      <div style={LP.wrap}>
+        <div style={LP.title}>Practice</div>
+        <div style={LP.empty}>Loading practice progress...</div>
+      </div>
+    );
+  }
+
+  const state = BP.loadState();
+  const wordDecks = decks.filter((d) => d.subject === "reading");
+  const mathDecks = decks.filter((d) => d.subject === "math");
+  const nameOf = (id) => (decks.find((d) => d.id === id) || {}).name || "the first set";
+
+  return (
+    <div style={LP.wrap}>
+      <div style={LP.title}>Practice</div>
+      <div style={LP.sub}>
+        Sight words and number facts. Kids move a word up a box when they get it right and quickly,
+        and every word they truly know by heart becomes a bird in their collection.
+      </div>
+
+      {kids.map((kid) => {
+        const by = BP.masteredByDeck(state, kid.id);
+        const total = BP.masteredTotal(state, kid.id);
+        const placed = BP.placement(state, kid.id);
+        const current = BP.level(state, kid.id) || (wordDecks[0] || {}).id;
+        const at = wordDecks.findIndex((d) => d.id === current);
+        const set = BP.settings(state, kid.id);
+        const bests = mathDecks
+          .map((d) => ({ d, b: BP.sprintBest(state, kid.id, d.id) }))
+          .filter((x) => x.b && x.b.best);
+
+        const move = (delta) => {
+          const next = wordDecks[Math.max(0, Math.min(wordDecks.length - 1, at + delta))];
+          if (next) { BP.setLevel(kid.id, next.id); bump(); }
+        };
+        const setting = (key, delta, min, max) => {
+          const cur = set[key];
+          BP.setSettings(kid.id, { [key]: Math.max(min, Math.min(max, cur + delta)) });
+          bump();
+        };
+
+        return (
+          <div key={kid.id} data-practice-kid={kid.id} style={PC.row}>
+            <div style={PC.head}>
+              <AvatarMark kid={kid} size={34} />
+              <div style={{ minWidth: 0 }}>
+                <div style={PC.name}>{kid.display_name || "Your kid"}</div>
+                <div style={PC.meta}>
+                  {total > 0
+                    ? total + (total === 1 ? " word known by heart" : " known by heart")
+                    : "Nothing mastered yet - that is normal at the start"}
+                </div>
+              </div>
+            </div>
+
+            <div style={PC.line}>
+              <span style={PC.lineLabel}>Working on</span>
+              <span style={PC.lineValue}>{nameOf(current)}</span>
+            </div>
+            <div style={PC.btnRow}>
+              <button
+                onClick={() => move(-1)}
+                disabled={at <= 0}
+                style={{ ...PC.btn, opacity: at <= 0 ? 0.4 : 1 }}
+              >Easier</button>
+              <button
+                onClick={() => move(1)}
+                disabled={at < 0 || at >= wordDecks.length - 1}
+                style={{ ...PC.btn, opacity: at < 0 || at >= wordDecks.length - 1 ? 0.4 : 1 }}
+              >Harder</button>
+              <button
+                onClick={() => { BP.clearPlacement(kid.id); bump(); }}
+                style={PC.btn}
+              >{placed ? "Redo quick check" : "Quick check not done"}</button>
+            </div>
+
+            {wordDecks.some((d) => (by[d.id] || 0) > 0) && (
+              <div style={PC.bars}>
+                {wordDecks.filter((d) => (by[d.id] || 0) > 0).map((d) => (
+                  <div key={d.id} style={LP.barRow}>
+                    <span style={LP.barLabel}>{d.name}</span>
+                    <span style={LP.barTrack}>
+                      <span style={{ ...LP.barFill, width: Math.round(((by[d.id] || 0) / d.count) * 100) + "%" }} />
+                    </span>
+                    <span style={LP.barNum}>{(by[d.id] || 0) + "/" + d.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {bests.length > 0 && (
+              <div style={PC.bars}>
+                <div style={LP.trendLabel}>Sprint bests</div>
+                {bests.map(({ d, b }) => (
+                  <div key={d.id} style={LP.skillRow}>
+                    <span style={LP.skillLabel}>{d.name}</span>
+                    <span style={LP.skillNum}>{b.best} in {b.seconds}s</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={PC.line}>
+              <span style={PC.lineLabel}>Sprint length</span>
+              <span style={PC.stepper}>
+                <button onClick={() => setting("sprintSeconds", -15, 15, 300)} style={PC.step}>-</button>
+                <span style={PC.stepVal}>{set.sprintSeconds}s</span>
+                <button onClick={() => setting("sprintSeconds", 15, 15, 300)} style={PC.step}>+</button>
+              </span>
+            </div>
+            <div style={PC.line}>
+              <span style={PC.lineLabel}>Question goal</span>
+              <span style={PC.stepper}>
+                <button onClick={() => setting("sprintTarget", -5, 5, 200)} style={PC.step}>-</button>
+                <span style={PC.stepVal}>{set.sprintTarget}</span>
+                <button onClick={() => setting("sprintTarget", 5, 5, 200)} style={PC.step}>+</button>
+              </span>
+            </div>
+          </div>
+        );
+      })}
+      <div style={LP.lessonNote}>
+        Sprint is a 60-second timed round that mirrors a school fact test. It only opens once
+        practice shows a kid is already fluent, and it is always beat-your-own-best - kids are
+        never compared with each other. Practice itself is never timed.
+      </div>
+    </div>
+  );
+}
+
+const PC = {
+  row: {
+    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 14, padding: "12px 13px", margin: "12px 0 0",
+  },
+  head: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 },
+  name: { fontSize: 15, fontWeight: 800, color: "#F1EDFB" },
+  meta: { fontSize: 12, opacity: 0.72, marginTop: 2 },
+  line: { display: "flex", alignItems: "center", gap: 10, padding: "5px 0", fontSize: 13 },
+  lineLabel: { opacity: 0.72, fontWeight: 700 },
+  lineValue: { marginLeft: "auto", fontWeight: 800, color: "#E8E2FA" },
+  btnRow: { display: "flex", flexWrap: "wrap", gap: 8, margin: "8px 0 4px" },
+  btn: {
+    flex: "1 1 auto", minWidth: 96, padding: "9px 10px", borderRadius: 11, cursor: "pointer",
+    border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)",
+    color: "#E8E2FA", fontFamily: "inherit", fontWeight: 800, fontSize: 12.5,
+  },
+  bars: { display: "flex", flexDirection: "column", gap: 8, margin: "10px 0 4px" },
+  stepper: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 },
+  step: {
+    width: 30, height: 30, borderRadius: 9, cursor: "pointer", lineHeight: 1,
+    border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.08)",
+    color: "#E8E2FA", fontFamily: "inherit", fontWeight: 900, fontSize: 16,
+  },
+  stepVal: { minWidth: 42, textAlign: "center", fontWeight: 800, fontSize: 13, color: "#E8E2FA" },
+};
 
 function LearningProgressCard() {
   const p = getProgress();

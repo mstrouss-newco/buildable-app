@@ -212,6 +212,27 @@ no jargon.
 - **QA honesty.** Any session that touches a game ends by running that game's QA script
   (`qa-{game}.mjs`). If a game has no QA script, say so plainly. **Never claim QA passed
   if it did not actually run.**
+- **`qa-all.mjs` is the release gate. Run it before you call a session done.**
+
+  ```
+  node qa-all.mjs            # every harness, no browser needed, about 4 minutes
+  node qa-all.mjs --live     # ALSO check the live site serves what it should (CI only)
+  ```
+
+  It finds every `qa-*.mjs` on disk, so a new harness is in the gate the moment you
+  write one and can never be forgotten. Before the harnesses it runs a **serving
+  check**: every `public/buildable-*.js` and every `public/*.html` must have a route
+  in `vercel.json` ahead of the `/(.*)` catch-all. That check exists because Practice
+  shipped completely dead — `qa-practice.mjs` passed the whole time, but
+  `buildable-practice.js` had no route, so the server sent `landing.html` in its place
+  and the browser choked on `Unexpected token '<'`. **A passing harness does not mean
+  the thing is reachable.** `--live` fetches each file from production and fails if
+  HTML comes back where JavaScript should; it needs real network, so it is skipped
+  (loudly, never silently) on a machine that cannot reach the site.
+
+  This does not replace `scripts/editor-qa-run.mjs`, which is a different job: that one
+  play-tests the 19 manifest games in `qa/qa-map.mjs` after an editor save. `qa-all.mjs`
+  is the whole-repo gate.
 - **Log every session in `SESSION-LOG.md`** at the end: date, block ID, what shipped,
   what remains, anything flagged. (This is in addition to the dated README log entry
   noted at the top of this file.)
@@ -253,7 +274,20 @@ no jargon.
   decide whether to carry on. If your session was started that way, **read `AUTOPILOT.md`** — it is
   what changes when nobody is watching (decide and log, never stall), and it explains why
   ticking a card you have not really finished is the one thing that breaks the chain. Do
-  ONLY your card; the runner starts the next one.
+  ONLY your card; the runner starts the next one. ONE EXCEPTION: if your card's notes
+  carry a `GROUPED` line, the batch IS the card. Do every card the note names in this
+  one session (one clone, one deploy, one QA pass), tick each card as its own part
+  lands, and the runner will read them as done and skip ahead. Never tick a batch-mate
+  whose part you did not actually finish.
+- **Size cards to fill a session.** Every session pays a fixed cost before any work
+  lands: clone, install, deploy, QA. Never spend that on one small fix. When adding
+  cards, one card = one full session of real work. A small finding (a CSS fix, one
+  missing file, one broken qa script) does not get its own session-sized card: fold it
+  into an open card that touches the same system, or collect several smalls into one
+  batch card. Group by shared system (same files, same test rig, same deploy surface),
+  not by theme. If small cards already exist separately (findings that arrived one at
+  a time), do not delete them; put a note on each naming the batch, in the form
+  `GROUPED <date>: run as ONE session with <other ids>`, so the exception above fires.
 - **File planner work under the Roadmap, not the Log.** The owner works from the
   **Roadmap** tab in `/planner` (phases + sessions). When recording planned or upcoming
   work in the planner, add it as a session under the right Roadmap phase — never the

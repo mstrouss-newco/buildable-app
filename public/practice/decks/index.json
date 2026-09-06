@@ -1,0 +1,112 @@
+{
+  "decks": [
+    {
+      "id": "sight-words-pre-primer",
+      "name": "First Words",
+      "group": "Sight Words",
+      "blurb": "Where every reader starts",
+      "subject": "reading",
+      "grade": "K",
+      "order": 1,
+      "answerUI": "choice",
+      "count": 40,
+      "file": "/practice/decks/sight-words-pre-primer.json"
+    },
+    {
+      "id": "sight-words-primer",
+      "name": "Next Words",
+      "group": "Sight Words",
+      "blurb": "For the end of kindergarten",
+      "subject": "reading",
+      "grade": "K",
+      "order": 2,
+      "answerUI": "choice",
+      "count": 52,
+      "file": "/practice/decks/sight-words-primer.json"
+    },
+    {
+      "id": "sight-words-first",
+      "name": "First Grade",
+      "group": "Sight Words",
+      "blurb": "For first grade",
+      "subject": "reading",
+      "grade": "1",
+      "order": 3,
+      "answerUI": "choice",
+      "count": 41,
+      "file": "/practice/decks/sight-words-first.json"
+    },
+    {
+      "id": "sight-words-second",
+      "name": "Second Grade",
+      "group": "Sight Words",
+      "blurb": "For second grade",
+      "subject": "reading",
+      "grade": "2",
+      "order": 4,
+      "answerUI": "choice",
+      "count": 46,
+      "file": "/practice/decks/sight-words-second.json"
+    },
+    {
+      "id": "sight-words-third",
+      "name": "Third Grade",
+      "group": "Sight Words",
+      "blurb": "For third grade",
+      "subject": "reading",
+      "grade": "3",
+      "order": 5,
+      "answerUI": "choice",
+      "count": 41,
+      "file": "/practice/decks/sight-words-third.json"
+    },
+    {
+      "id": "math-addition",
+      "name": "Adding",
+      "group": "Numbers",
+      "blurb": "Facts to ten",
+      "subject": "math",
+      "grade": "1",
+      "order": 11,
+      "answerUI": "keypad",
+      "count": 66,
+      "file": "/practice/decks/math-addition.json"
+    },
+    {
+      "id": "math-subtraction",
+      "name": "Taking away",
+      "group": "Numbers",
+      "blurb": "The other way round",
+      "subject": "math",
+      "grade": "1",
+      "order": 12,
+      "answerUI": "keypad",
+      "count": 121,
+      "file": "/practice/decks/math-subtraction.json"
+    },
+    {
+      "id": "math-multiplication",
+      "name": "Times",
+      "group": "Numbers",
+      "blurb": "Tables to ten",
+      "subject": "math",
+      "grade": "3",
+      "order": 13,
+      "answerUI": "keypad",
+      "count": 66,
+      "file": "/practice/decks/math-multiplication.json"
+    },
+    {
+      "id": "math-division",
+      "name": "Sharing",
+      "group": "Numbers",
+      "blurb": "Times tables backwards",
+      "subject": "math",
+      "grade": "4",
+      "order": 14,
+      "answerUI": "keypad",
+      "count": 100,
+      "file": "/practice/decks/math-division.json"
+    }
+  ]
+}

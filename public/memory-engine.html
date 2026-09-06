@@ -198,7 +198,12 @@ function cardRect(i){
 
 // ---------- INPUT ----------
 function tapAt(px,py){
-  if(state!=="play") { if(state==="win"){ if(MEM_LEVEL!=null){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} } else { showMenu(); } } return; }  // 7J: opened from the Journey -> go back to it (not the engine's own grid)
+  if(state!=="play") { if(state==="win"){
+    // SL-NEXT: opened from the Journey -> open the NEXT board instead of bouncing
+    // back to the map; only the last board exits to it.
+    if(MEM_LEVEL!=null && (PREFS.sizeIdx+1)<GAME_CONFIG.sizes.length){ PREFS.sizeIdx=PREFS.sizeIdx+1; build(); }
+    else if(MEM_LEVEL!=null){ try{ window.parent.postMessage({type:"nav:exit"},"*"); window.parent.postMessage("nav:exit","*"); }catch(e){} }
+    else { showMenu(); } } return; }
   if(nowMs<lockUntil) return;
   if(faceUp.length>=2) return;
   for(let i=0;i<deck.length;i++){
@@ -324,7 +329,7 @@ function drawHUD(){
 }
 function drawWin(){
   const w=match.leader();
-  BuildableWin.card(ctx,W,H,[{t:match.solo?"You did it!":(w.name+" wins!"),s:34,w:900,c:"#fff"},{t:match.solo?("All "+w.score+" pairs found"):("with "+w.score+" pairs"),s:18,w:800,c:"#cfc9e6"},{t:"Tap to play again",s:16,w:800,c:"#7CF6B0"}]);
+  BuildableWin.card(ctx,W,H,[{t:match.solo?"You did it!":(w.name+" wins!"),s:34,w:900,c:"#fff"},{t:match.solo?("All "+w.score+" pairs found"):("with "+w.score+" pairs"),s:18,w:800,c:"#cfc9e6"},{t:(MEM_LEVEL!=null && (PREFS.sizeIdx+1)<GAME_CONFIG.sizes.length)?"Tap for the next one":"Tap to play again",s:16,w:800,c:"#7CF6B0"}]);
 }
 
 // ---------- START SCREEN (BS) ----------
@@ -472,6 +477,11 @@ window.BUILDABLE_GAME = {
   _draw:()=>{ try{ return draw(); }catch(e){ return "ERR: "+(e&&e.message||e); } },
   _step:(n)=>{ for(let i=0;i<(n||1);i++) update(1/60); },
   _cfg:()=>GAME_CONFIG, _prefs:()=>PREFS,
+  // SL-NEXT QA hooks: force a clear, then feed the tap that follows it, so the
+  // "next board" path can be checked without playing a whole board by hand.
+  _win:()=>{ deck.forEach(c=>{c.matched=true;}); match.finish(); state="win"; return state; },
+  _tap:()=>{ tapAt(-999,-999); return state; },
+  _state:()=>state,
 };
 window.MEMORY_GAME = window.BUILDABLE_GAME;
 </script>
