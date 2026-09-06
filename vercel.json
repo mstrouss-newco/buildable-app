@@ -1001,6 +1001,14 @@
       "dest": "/studio.html"
     },
     {
+      "src": "/studio-grownups.html",
+      "dest": "/studio-grownups.html"
+    },
+    {
+      "src": "/studio/grownups",
+      "dest": "/studio-grownups.html"
+    },
+    {
       "src": "/studio",
       "dest": "/studio.html"
     },

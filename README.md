@@ -6,6 +6,59 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## CB4 — the grown-up studio: shelves, games a month, the share sheet, house rules, real signup (September 6 2026)
+`db/create-cobuild-plans.sql` (written AND applied), `api/cobuild-billing.js`,
+`api/cobuild-rules.js`, `api/cobuild-poster.js`, `api/cobuild-lead.js`,
+`api/app-flags.js`, `public/studio-grownups.html`, `public/studio.html`,
+`public/cobuild.html`, `src/BuildableKids.jsx`, `qa-grownups.mjs`, `vercel.json`.
+
+CB3 gave a child the studio. CB4 is everything a child never sees. Money and limits
+live ONLY here, and nothing with a currency on it appears anywhere a kid can reach.
+
+1. **What a family is on.** Two tables, `cobuild_plans` and `cobuild_house_rules`,
+   written as a migration and applied in the same session (verified against
+   `information_schema`). `api/cobuild-billing.js` does Stripe Checkout for the two
+   monthly plans and the three-game add-on, a signed webhook that keeps the row
+   honest, and THE METER: a new game counts one, a remix counts one, an edit never
+   counts, a layer-three build counts two. The sentence the grown-up page shows,
+   "N of M new games this month, renews <date>. Edits are always free", is generated
+   by the same code that enforces it, so the words and the behaviour cannot drift.
+   No secret is in the repo: the Stripe key, the webhook secret and the three price
+   ids are read by name from the environment, which the owner sets in Vercel.
+2. **The grown-up studio** at `/studio/grownups`, behind the grown-up code: one
+   shelf per kid in the house with plays per game, the plan line, the add-on button
+   and plan management.
+3. **A share sheet per game**: copy the link (CB1's `/g/<slug>`), text it with a
+   prewritten line through the share API, a Top Board toggle (public, first name
+   only), and Print the poster. The poster is a real PDF built server-side: one A4
+   page with the cover the kid painted, the title, "A GAME BY <kid>", and a QR code
+   drawn as vector squares so it prints crisply. Printing turns the link on, and
+   says so, rather than printing a code that does not work.
+4. **House rules per kid, all off by default.** Vegetables first is not a new
+   feature: it applies the CB2 `mathGate` recipe to the games the grown-up chose, so
+   it is re-validated and re-played by the robot like any other change, and turning
+   it off really takes the questions back out. Chores unlock play is a short list the
+   grown-up writes and the child ticks; it clears itself every day and it is shown
+   BEFORE a game, never over the top of one. The play clock is minutes a day with no
+   countdown on screen: when the time is up the session ends with a goodnight. Every
+   door in the app into a kid-made game now goes through the same gate, and a
+   network wobble opens the game rather than locking a child out of their own work.
+5. **The fake door becomes a real one, on a switch.** `app_flags.cobuild_live` is
+   FALSE by default. While it is off, `/cobuild` behaves exactly as it has: it logs
+   the click and takes a name. When the owner flips it on, the same buttons go to
+   real checkout, and the click is still logged either way. `api/cobuild-lead.js`
+   gains a waitlist notifier that needs the owner code AND an explicit `send:true`;
+   anything else is a dry run that shows who would be emailed and changes nothing,
+   and nobody is ever emailed twice.
+6. **`qa-grownups.mjs`**: the meter (including the edit-is-free promise), the rule
+   gates, the share toggles, the poster PDF built for real and parsed back (its xref
+   offsets followed, its content stream inflated, its 577 QR squares counted), and
+   both sides of the switch. `node qa-all.mjs` green: 50 harnesses.
+
+**Still needs the owner, and cannot be done from here:** the Stripe account, its
+keys and the three price ids, and linking a paid family to a signed-in Google
+account rather than to the device they paid on.
+
 ## CB3 — the studio: a child says it, the game appears, and they change it by asking (September 6 2026)
 `public/studio.html`, `api/cobuild-plan.js`, `api/cobuild-edit.js`, `api/_cobuildBrain.js`,
 `api/cobuild-voice.js`, `api/transcribe.js`, `api/asset-studio.js` (kids lane),

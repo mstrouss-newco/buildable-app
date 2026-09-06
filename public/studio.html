@@ -179,7 +179,7 @@
       if(t.length<3){ document.getElementById("err").textContent="Tell me a little more."; return; }
       S.text=t; askNext();
     });
-    on("remix", screenRemix);
+    on("remix", function(){ meterCheck("remix").then(function(m){ m.allowed ? screenRemix() : screenAskAGrownUp(); }); });
     idea.addEventListener("keydown", function(e){ if(e.key==="Enter") document.getElementById("go").click(); });
   }
 
@@ -234,7 +234,7 @@
     Array.prototype.forEach.call(document.querySelectorAll("#chips .chip"), function(c){
       c.onclick=function(){ tapChip(c.getAttribute("data-c")); };
     });
-    on("build", buildIt);
+    on("build", function(){ meterCheck("new").then(function(m){ m.allowed ? buildIt() : screenAskAGrownUp(); }); });
     on("back", screenAsk);
   }
   function tapChip(id){
@@ -286,6 +286,7 @@
       kidName:(k&&k.name)||null }).then(function(j){
       if(!j.ok) return oops((j.errors&&j.errors[0])||j.error);
       S.game=j.game; S.engine=j.game.engine; S.manifest=j.game.manifest; S.beaten=false;
+      meterCount("remix");
       screenPlay();
     });
   }
@@ -339,6 +340,7 @@
           if(!j.ok) return oops((j.errors&&j.errors[0])||j.error||"the robot could not finish your game");
           at=5; paint();
           S.game=j.game; S.manifest=j.game.manifest||p.manifest; S.engine=p.engine; S.beaten=false;
+          if(j.created) meterCount("new");
           try{ history.replaceState(null,"","/studio/"+j.game.id); }catch(e){}
           setTimeout(screenPlay, 450);
         });
@@ -356,8 +358,12 @@
   ];
   var ENTRY = { breaker:"/breaker-engine.html", sling:"/sling-squad.html",
     castleguard:"/castle-guard.html", skyflyer:"/skyflyer-engine.html" };
-  function screenPlay(msg){
+  // Every time a game opens, the house rules get asked first. A family with no
+  // rules set never sees any of this: the gate answers yes and nothing changes.
+  function screenPlay(msg){ houseGate(function(){ playNow(msg); }); }
+  function playNow(msg){
     var g=S.game;
+    startClock();
     titleEl.textContent=g.name;
     var src=(ENTRY[S.engine]||"/breaker-engine.html")+"?kg="+encodeURIComponent(g.id)+"&kgplay=0&screen=play&t="+Date.now();
     show('<div class="playwrap"><iframe class="frame" id="frame" src="'+esc(src)+'" allow="autoplay; fullscreen; microphone" title="'+esc(g.name)+'"></iframe></div>'+
@@ -369,7 +375,7 @@
         return '<button class="tile" type="button" data-t="'+esc(t.t)+'">'+esc(t.t)+'<small>'+esc(t.s)+'</small></button>'; }).join("")+
       '<button class="tile" type="button" id="voice">Record your voice<small>say a line for your game</small></button></div>'+
       '<button class="btn'+(S.beaten?"":" alt")+'" id="keep">'+(S.beaten?"Keep it":"Beat it once to keep it")+'</button>'+
-      (S.grown?'<button class="btn alt" id="share" style="margin-top:10px">Share this game</button>':'')+
+      (S.grown?'<button class="btn alt" id="share" style="margin-top:10px">Share this game</button><a class="btn alt" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/studio/grownups">Grown-up studio</a>':'')+
       '<div class="err" id="err"></div></div>', true);
     Array.prototype.forEach.call(document.querySelectorAll("#tweaks .tile"), function(t){
       if(t.id==="voice") return;
@@ -511,6 +517,80 @@
     });
     on("back", function(){ screenPlay(); });
   }
+
+  // =========================================================================
+  //  CB4 — THE METER AND THE HOUSE RULES, from a child's side.
+  //
+  //  A child never sees a number with a currency on it. When the month's new
+  //  games are used up they are told, in their own words, to ask a grown-up; the
+  //  grown-up page is where the plan and the money actually live. Editing a game
+  //  they already have is free and always will be, so nothing below runs on an
+  //  edit.
+  //
+  //  The house rules work the same way: the gate is asked BEFORE a game opens, so
+  //  a child sees a short list to tick or a goodnight, never a nag over the top
+  //  of a game they are already playing.
+  // =========================================================================
+  function kidId(){ var k=activeKid(); return (k&&k.id)||"default"; }
+  function meterCheck(kind){
+    return post("/api/cobuild-billing",{ op:"check", familyId:deviceId(), kind:kind||"new" })
+      .then(function(j){ return (j && j.ok) ? j : { allowed:true }; });   // a wobble never blocks a child
+  }
+  function meterCount(kind){
+    return post("/api/cobuild-billing",{ op:"count", familyId:deviceId(), kind:kind||"new" }).catch(function(){});
+  }
+  function screenAskAGrownUp(){
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">All the new games for this month are made. A grown-up can add more.</div></div>'+
+      '<div class="card"><p class="why">You can still play the games you have, and changing them is always free.</p></div>'+
+      '<button class="btn" id="mine">Play a game I made</button>'+
+      '<button class="btn alt" id="grown" style="margin-top:10px">I am a grown-up</button>');
+    on("mine", function(){ location.href="/app"; });
+    on("grown", function(){ location.href="/studio/grownups"; });
+  }
+
+  // The gate the house rules put in front of a game. Chores to tick, or a
+  // goodnight when the play clock is done. Never over the top of a game.
+  function houseGate(then){
+    post("/api/cobuild-rules",{ op:"gate", familyId:deviceId(), kidId:kidId() }).then(function(j){
+      if(!j || !j.ok || j.allowed) return then();
+      if(j.why==="clock") return screenGoodnight(j.said);
+      screenChores(j.chores||[], then);
+    }).catch(then);
+  }
+  function screenChores(chores, then){
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">These first, then play.</div></div>'+
+      '<div class="grid" id="ch">'+chores.map(function(c){
+        return '<button class="tile'+(c.done?" keep":"")+'" type="button" data-c="'+esc(c.id)+'">'+esc(c.text)+
+          '<small>'+(c.done?"done":"tap when it is done")+'</small></button>'; }).join("")+'</div>'+
+      '<button class="btn" id="go" '+(chores.every(function(c){return c.done;})?"":"disabled")+'>All done, let me play</button>');
+    Array.prototype.forEach.call(document.querySelectorAll("#ch .tile"), function(t){
+      t.onclick=function(){
+        post("/api/cobuild-rules",{ op:"chore", familyId:deviceId(), kidId:kidId(), choreId:t.getAttribute("data-c"), done:true })
+          .then(function(j){ if(j&&j.ok) screenChores(j.chores||[], then); });
+      };
+    });
+    on("go", then);
+  }
+  function screenGoodnight(said){
+    show('<div class="center">'+
+      '<svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>'+
+      '<h2>That is play for today</h2><p class="sub">'+esc(said||"See you tomorrow.")+'</p>'+
+      '<div class="card keep"><p class="why">Your games are all still here. They will be waiting.</p></div>'+
+      '<a class="btn" style="display:block;text-align:center;text-decoration:none" href="/app">Goodnight</a></div>');
+  }
+  // The play clock counts real minutes while a game is open. No countdown is ever
+  // drawn: the child plays, and when it is done the session ends the way a win
+  // does, with a goodnight rather than a snatched screen.
+  var clock=null;
+  function startClock(){
+    stopClock();
+    clock=setInterval(function(){
+      post("/api/cobuild-rules",{ op:"tick", familyId:deviceId(), kidId:kidId(), minutes:1 }).then(function(j){
+        if(j && j.ok && j.over){ stopClock(); screenGoodnight(j.said); }
+      });
+    }, 60000);
+  }
+  function stopClock(){ if(clock){ clearInterval(clock); clock=null; } }
 
   // =========================================================================
   //  KID MODE vs GROWN-UP MODE. Kid mode is the default and never shows money,

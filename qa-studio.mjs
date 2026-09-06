@@ -144,7 +144,10 @@ console.log("\n--- 5. the studio page itself ---");
   // that only renders behind the grown-up gate taken out.
   const kidVisible = src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ")
     .replace(/S\.grown\s*\?[^:]*:/g, " ").replace(/if\s*\(S\.grown\)[^\n]*/g, " ");
-  const money = kidVisible.match(/[$£€]\d|subscri|billing|per month|upgrade|checkout|free trial|payment/i);
+  // CB4 note: a URL like /api/cobuild-billing is plumbing, not something a child
+  // reads, so endpoint names come out before looking for anything about money.
+  const money = kidVisible.replace(/\/api\/[a-z-]+/g, " ")
+    .match(/[$£€]\d|subscri|per month|upgrade|checkout|free trial|payment/i);
   chk("kid mode shows no money, no limits, no publishing, no settings", !money, money ? money[0] : "nothing about money on the page a child sees");
   chk("sharing is behind the grown-up gate", /S\.grown\s*\?\s*'<button[^>]*id="share"/.test(src) || /S\.grown\)\s*on\("share"/.test(src));
   chk("the microphone falls back to /api/transcribe where the browser has no ear",

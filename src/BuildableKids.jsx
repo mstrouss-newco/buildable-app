@@ -1824,6 +1824,24 @@ export default function BuildableKids() {
   const [slingLevel, setSlingLevel] = useState(null); // which level index the Sling Journey launched into
   const [wrapLevel, setWrapLevel] = useState(null); // Session 7I: level index the shared journey hands to a wrapped engine (?level=)
   const [kidGame, setKidGame] = useState(null);     // Session CB1: the kid-made game row currently being played
+  const [houseStop, setHouseStop] = useState(null); // Session CB4: a house rule standing in front of a game
+
+  // CB4 — THE HOUSE-RULE GATE. Every door into a kid-made game goes through here.
+  // A family with no rules set never notices it: the gate answers yes and the game
+  // opens exactly as before. When a rule does apply the child gets a short list to
+  // tick or a goodnight, BEFORE the game rather than over the top of it, and a
+  // network wobble opens the game rather than blocking a child out of their own
+  // work. The rules themselves are set on /studio/grownups.
+  const openKidGame = (g) => {
+    const open = () => { setHouseStop(null); setKidGame(g); setScreen(SCREEN_KIDGAME); };
+    let famId = "dev_anon", kid = null;
+    try { famId = localStorage.getItem("deviceId") || famId; kid = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); } catch (e) {}
+    fetch("/api/cobuild-rules", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ op: "gate", familyId: famId, kidId: (kid && kid.id) || "default" }) })
+      .then((r) => r.json())
+      .then((j) => { if (!j || !j.ok || j.allowed) return open(); setHouseStop({ ...j, go: open }); })
+      .catch(open);
+  };
   const [boardDiff, setBoardDiff] = useState(null); // Session 7I: manifest tier index the shared board picker hands to a board engine (?diff=)
   const openLanding = (id) => { setLandingId(id); setScreen(SCREEN_GAME_LANDING); };
   const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
@@ -1990,7 +2008,7 @@ export default function BuildableKids() {
     onUseCharacter: useSavedCharacter,
     // CB1: My Stuff's games row opens a kid-made game in the shell's own frame.
     // (useSavedLevel above still serves the old AI road, which nothing routes to.)
-    onOpenKidGame: (g) => { setKidGame(g); setScreen(SCREEN_KIDGAME); },
+    onOpenKidGame: openKidGame,
     onBack: () => setScreen(returnTo || SCREEN_INTRO),
     onHome: goHome,
   };
@@ -2078,7 +2096,7 @@ export default function BuildableKids() {
           onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
           onExploreHub={() => setScreen(SCREEN_EXPLORE_HUB)}
           onMakeHub={() => setScreen(SCREEN_MAKE_HUB)}
-          onOpenKidGame={(g) => { setKidGame(g); setScreen(SCREEN_KIDGAME); }}
+          onOpenKidGame={openKidGame}
           onLessons={() => setScreen(SCREEN_LESSONS)}
           onPractice={() => setScreen(SCREEN_PRACTICE)}
         />
@@ -2264,7 +2282,7 @@ export default function BuildableKids() {
         onHome={() => { setRemixData(null); setScreen(SCREEN_HOME); }}
         onBack={() => { setRemixData(null); setScreen(returnTo || SCREEN_HOME); }}
         onRemix={startRemix}
-        onOpenKidGame={(g) => { setKidGame(g); setScreen(SCREEN_KIDGAME); }}
+        onOpenKidGame={openKidGame}
       />
     );
   }
@@ -2434,6 +2452,58 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  // Session CB4 — a HOUSE RULE standing in front of a game. Chores to tick, or a
+  // goodnight when the play clock is done. It renders BEFORE the game, never over
+  // the top of one, and there is no countdown anywhere: a child sees a short list
+  // or a kind ending, not a timer. Set on /studio/grownups; off by default.
+  if (houseStop) {
+    const chores = houseStop.chores || [];
+    const allDone = chores.length > 0 && chores.every((c) => c.done);
+    const tick = (id) => {
+      let famId = "dev_anon", kid = null;
+      try { famId = localStorage.getItem("deviceId") || famId; kid = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); } catch (e) {}
+      fetch("/api/cobuild-rules", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op: "chore", familyId: famId, kidId: (kid && kid.id) || "default", choreId: id, done: true }) })
+        .then((r) => r.json())
+        .then((j) => { if (j && j.ok) setHouseStop({ ...houseStop, chores: j.chores || [] }); })
+        .catch(() => {});
+    };
+    return (
+      <div style={{ minHeight: "100dvh", background: "#14122b", color: "#fff", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center", fontFamily: "Nunito, system-ui, sans-serif" }}>
+        <div style={{ width: "100%", maxWidth: 420 }}>
+          <h2 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 6px" }}>
+            {houseStop.why === "clock" ? "That is play for today" : "These first, then play"}
+          </h2>
+          <p style={{ color: "#B9AEEA", fontSize: 15, lineHeight: 1.5, margin: "0 0 18px" }}>
+            {houseStop.said || (houseStop.why === "clock" ? "See you tomorrow." : "Tap each one when it is done.")}
+          </p>
+          {chores.map((c) => (
+            <button key={c.id} onClick={() => !c.done && tick(c.id)}
+              style={{ display: "block", width: "100%", textAlign: "left", fontFamily: "inherit", fontWeight: 800, fontSize: 15,
+                color: c.done ? "#7EE0A0" : "#fff", background: c.done ? "rgba(126,224,160,.1)" : "#1d1b36",
+                border: "1px solid rgba(255,255,255,.12)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, cursor: c.done ? "default" : "pointer" }}>
+              {c.text}<span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#B9AEEA", marginTop: 2 }}>
+                {c.done ? "done" : "tap when it is done"}</span>
+            </button>
+          ))}
+          {houseStop.why !== "clock" && (
+            <button onClick={() => allDone && houseStop.go()} disabled={!allDone}
+              style={{ width: "100%", fontFamily: "inherit", fontWeight: 900, fontSize: 17, color: "#16142b",
+                background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", border: "none", borderRadius: 16, padding: "15px 26px",
+                opacity: allDone ? 1 : .45, cursor: allDone ? "pointer" : "default", marginTop: 6 }}>
+              All done, let me play
+            </button>
+          )}
+          <button onClick={() => { setHouseStop(null); setScreen(SCREEN_HOME); }}
+            style={{ width: "100%", fontFamily: "inherit", fontWeight: 900, fontSize: 15, color: "#cdbcff",
+              background: "rgba(155,123,255,.16)", border: "none", borderRadius: 16, padding: "12px 20px", marginTop: 10, cursor: "pointer" }}>
+            {houseStop.why === "clock" ? "Goodnight" : "Not now"}
+          </button>
+        </div>
+      </div>
+    );
   }
   // Session CB1 — a KID'S game. There is no new engine here: it is one of the
   // engines we already ship, opened with ?kg=<id> so the shared loader serves the

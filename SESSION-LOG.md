@@ -1,3 +1,53 @@
+## 2026-09-06 — CB4: the grown-up studio (plans, share sheet, house rules, real signup)
+
+**Shipped.** `db/create-cobuild-plans.sql` written AND applied to the live Supabase
+project in-session (verified against `information_schema`: `cobuild_plans` 12 columns,
+`cobuild_house_rules` 9, `cobuild_leads.notified_at` added). `api/cobuild-billing.js`
+with Stripe Checkout, a signed webhook and the meter. `api/cobuild-rules.js` with the
+three house rules and one shared gate. `api/cobuild-poster.js`, a real PDF built by
+hand. `/studio/grownups` (`public/studio-grownups.html`). The `cobuild_live` switch in
+`api/app-flags.js` and the landing page wired to it. A waitlist notifier in
+`api/cobuild-lead.js`. The studio and the app's game launcher wired to the meter and
+the gate. `qa-grownups.mjs`. `node qa-all.mjs` green, 50 harnesses. The app builds.
+
+**The thing I made sure of.** The sentence the grown-up page shows a parent, "N of M
+new games this month, renews <date>. Edits are always free", is produced by the same
+function that enforces it. A promise on a page and a meter behind it that disagree is
+how a family gets charged for something they were told was free, so there is one
+place that knows an edit costs nothing, and the test reads the sentence back.
+
+**Calls I made for you.**
+1. **Nothing charges, blocks or counts until you flip the switch.** `cobuild_live`
+   defaults to false. While it is off, `/cobuild` still logs clicks and takes names
+   exactly as it has been, the studio meters nothing, and no family can be blocked.
+   Flip it in the owner tools when the Stripe side is ready.
+2. **You still have to do the Stripe part.** I cannot open an account or handle keys.
+   The code reads `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_COBUILD`,
+   `STRIPE_PRICE_PREMIUM` and `STRIPE_PRICE_ADDON` by name from Vercel. Until they
+   exist every money button answers "the checkout is not switched on yet" and the
+   landing page falls back to the waitlist rather than a dead end.
+3. **A paid family is identified by their device, not yet by a Google account.** The
+   app has Google sign-in, but the landing page is a static page that cannot reach
+   it, and wiring the sign-in through checkout properly needs the Supabase redirect
+   set up. So checkout collects the email, stores it on the row, and the family lane
+   is the same device id the studio already uses. Linking that to a signed-in account
+   is the one real gap in this card and it needs your Supabase and Stripe settings.
+4. **The waitlist email is written but will not send by accident.** It needs the owner
+   code AND an explicit send flag; anything else returns the list of who WOULD be
+   emailed and changes nothing. Nobody can be emailed twice.
+5. **Vegetables first is not a new feature.** It applies the CB2 mathGate recipe to
+   the games you choose, so it goes through the recipe book, strict validation and
+   the robot like every other change, and turning it off takes the questions back out
+   rather than leaving them in the manifest.
+6. **The poster is a hand-written PDF.** No document library: one A4 page, the cover
+   re-encoded from its PNG, and the QR drawn as vector squares. I checked it parses
+   with a real PDF library and the test follows every xref offset, because a
+   hand-written PDF is exactly the kind of thing that looks fine and will not open.
+   Two small dependencies were added for it, `qrcode` and `pngjs`.
+7. **A house-rule check that fails opens the game.** If the gate cannot be reached, a
+   child gets their game. Locking a child out of their own work because a request
+   timed out is the worse mistake.
+
 ## 2026-09-06 — CB3: the studio (a child says it, the game appears, they change it by asking)
 
 **Shipped.** `/studio` and `/studio/<id>` (`public/studio.html`), the plan door
