@@ -62,7 +62,13 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const BASE = 'http://127.0.0.1:' + server.address().port + '/skyflyer-farm.html';
 
-const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+// A sandbox often ships a chromium build that does not match the pinned
+// playwright; scripts/qa-all.mjs hands us one it knows launches.
+const PW_EXE = process.env.PW_CHROMIUM || process.env.PW_EXE || process.env.QA_CHROMIUM || '';
+const browser = await chromium.launch({
+  ...(PW_EXE ? { executablePath: PW_EXE } : {}),
+  args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
+});
 const page = await browser.newPage({ viewport: { width: 1100, height: 780 } });
 const errs = [];
 page.on('pageerror', e => errs.push('pageerror: ' + e.message));

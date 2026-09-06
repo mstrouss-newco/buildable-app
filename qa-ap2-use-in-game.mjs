@@ -5,8 +5,22 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import pw from "/home/claude/.npm-global/lib/node_modules/playwright/index.js";
-const { chromium } = pw;
+// Resolve playwright wherever it lives. This used to be a hardcoded absolute
+// path into one particular sandbox's global npm folder, so the harness died with
+// ERR_MODULE_NOT_FOUND on every other machine, including CI. (Fixed session
+// QA-SUITE, 2026-09-06.)
+let chromium = null;
+for (const spec of ["playwright", "playwright-core",
+                    "/home/claude/.npm-global/lib/node_modules/playwright/index.js"]) {
+  try { chromium = (await import(spec)).chromium || (await import(spec)).default?.chromium; }
+  catch { /* try the next one */ }
+  if (chromium) break;
+}
+if (!chromium) { console.log("SKIP  playwright is not installed here - run: npm ci"); process.exit(0); }
+// A sandbox often ships a chromium build that does not match the pinned
+// playwright. scripts/qa-all.mjs hands us one it knows launches.
+const PW_EXE = process.env.PW_CHROMIUM || process.env.PW_EXE || process.env.QA_CHROMIUM || "";
+const LAUNCH = PW_EXE ? { executablePath: PW_EXE } : {};
 
 const ROOT = path.resolve("public");
 const TYPES = { ".html":"text/html", ".js":"text/javascript", ".json":"application/json", ".css":"text/css", ".png":"image/png", ".svg":"image/svg+xml", ".ico":"image/x-icon" };
@@ -27,7 +41,7 @@ const port = server.address().port;
 const fail = (m) => { console.error("FAIL: " + m); process.exitCode = 1; };
 const ok = (m) => console.log("PASS: " + m);
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(LAUNCH);
 const page = await browser.newPage();
 const errors = [];
 page.on("pageerror", e => errors.push(String(e)));

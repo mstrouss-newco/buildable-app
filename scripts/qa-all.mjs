@@ -64,18 +64,13 @@ const PUBLIC = path.join(ROOT, 'public');
 // Add an entry ONLY with a planner card id. An empty object is the goal state.
 // { 'qa-thing.mjs': { reason: 'why it cannot run', card: 'QA9' } }
 // ---------------------------------------------------------------------------
+// Released 2026-09-06 (session QA-SUITE): qa-lessons.mjs and qa-lessons-dom.mjs
+// were quarantined under card QA11 for pre-NV2 Home assertions. Both pass on
+// today's main, so they are back in the gate for real.
 const QUARANTINE = {
   'qa-ap2-use-in-game.mjs': {
     reason: 'asserts 2 .useg buttons on the Browse page; it now renders 307, so the stub no longer reflects the page',
     card: 'QA10',
-  },
-  'qa-lessons.mjs': {
-    reason: 'greps the pre-NV2 Home shape (id: "lessons"); the door is now id: "learn"',
-    card: 'QA11',
-  },
-  'qa-lessons-dom.mjs': {
-    reason: 'same pre-NV2 Home assertions as qa-lessons.mjs',
-    card: 'QA11',
   },
 };
 
@@ -246,10 +241,21 @@ async function liveCheck(serving) {
 // ---------------------------------------------------------------------------
 // 1) machine sweep
 // ---------------------------------------------------------------------------
+// Several harnesses drive a real browser and each resolves one differently
+// (PW_EXE, PW_CHROME, QA_CHROMIUM, or playwright's own default). A sandbox often
+// ships a chromium build that does not match the pinned playwright, so hand every
+// child the one we KNOW launches. Without this a working harness reports
+// "Executable doesn't exist" and reads as a product failure.
+const HARNESS_BROWSER_ENV = (() => {
+  const exe = chromiumPath();
+  if (!exe) return {};
+  return { PW_EXE: exe, PW_CHROME: exe, PW_CHROMIUM: exe, QA_CHROMIUM: exe };
+})();
+
 function runHarness(file) {
   return new Promise((resolve) => {
     const started = Date.now();
-    const child = spawn(process.execPath, [file, ROOT], { cwd: ROOT, env: process.env });
+    const child = spawn(process.execPath, [file, ROOT], { cwd: ROOT, env: { ...process.env, ...HARNESS_BROWSER_ENV } });
     let out = '';
     const cap = (b) => { out += b; if (out.length > 200000) out = out.slice(-200000); };
     child.stdout.on('data', cap);

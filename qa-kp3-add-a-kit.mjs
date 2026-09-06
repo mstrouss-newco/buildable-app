@@ -11,8 +11,22 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import pw from "/home/claude/.npm-global/lib/node_modules/playwright/index.js";
-const { chromium } = pw;
+// Resolve playwright wherever it lives. This used to be a hardcoded absolute
+// path into one particular sandbox's global npm folder, so the harness died with
+// ERR_MODULE_NOT_FOUND on every other machine, including CI. (Fixed session
+// QA-SUITE, 2026-09-06.)
+let chromium = null;
+for (const spec of ["playwright", "playwright-core",
+                    "/home/claude/.npm-global/lib/node_modules/playwright/index.js"]) {
+  try { chromium = (await import(spec)).chromium || (await import(spec)).default?.chromium; }
+  catch { /* try the next one */ }
+  if (chromium) break;
+}
+if (!chromium) { console.log("SKIP  playwright is not installed here - run: npm ci"); process.exit(0); }
+// A sandbox often ships a chromium build that does not match the pinned
+// playwright. scripts/qa-all.mjs hands us one it knows launches.
+const PW_EXE = process.env.PW_CHROMIUM || process.env.PW_EXE || process.env.QA_CHROMIUM || "";
+const LAUNCH = PW_EXE ? { executablePath: PW_EXE } : {};
 
 const REPO = path.resolve(process.argv[2] || ".");
 const PUB = path.join(REPO, "public");
@@ -56,7 +70,7 @@ const base = "http://127.0.0.1:" + server.address().port;
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const OWNER_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + b64({ email: "mstrouss@gmail.com", sub: "1cb8cd9e-fba0-4fcc-850a-5b6afb677b87", exp: 4102444800 }) + ".x";
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(LAUNCH);
 const ctx = await browser.newContext({ viewport: { width: 900, height: 1000 } });
 await ctx.addInitScript((t) => {
   try { localStorage.setItem("bk_parent_session_v1", JSON.stringify({ access_token: t, refresh_token: "r" })); } catch (e) {}
