@@ -45,6 +45,84 @@ into existence; if one comes back 503 the prompt or the duration needs a nudge, 
 in the game breaks meanwhile.
 
 ---
+## Hop Heroes: four worlds, a cast, and the shared Feel Kit (HH4 + HH5, September 6 2026)
+`public/play.html`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`, `qa-hopheroes-shot.mjs`.
+Phase **HH**, cards **HH4 + HH5**, branch `claude/hop-heroes-mario-feel-safrvp`.
+
+**Four worlds.** Whispering Woods, Frostpine Hollow, Sunbaked Dunes and Sugarplum
+Peaks, on art sets that already existed in `api/game-art`. Art is now a per-world set
+built the first time that world is played (it used to be ONE global set baked from
+`GAME_CONFIG.world` at load, which is why four worlds were impossible), and the sky,
+grass and dirt colours come from the world too. The boss lives on the last world only.
+
+**The fixed cast, Mike's call:** Bramble the Bunny, Pip the Fox, Waddle the Penguin and
+Ember the Dragon, all already in the shared character library. The picker is a
+start-screen choice, not a locker: four big faces, nothing to read, each falling back to
+that hero's colour if the art will not load, and the choice remembered on the device.
+
+**The shared start screen.** `buildable-startscreen.js` replaces the bespoke overlay:
+the four worlds as a level row with cleared / next / locked states, the hero with a
+Change button, the star count and the sound toggle. Clearing a world banks it and
+unlocks the next; clearing the last gives a You Win and returns to the world map.
+
+**The Feel Kit.** Sound and juice go through `buildable-feel.js` as palette names, so a
+Buildable coin sounds the same here as everywhere else: the shared gold burst on coins,
+the shared pop on stars and power-ups, the gentle amber nudge on a lost heart, the one
+shared win celebration. The built-in tone generator is the offline fallback only, and
+`qa-hopheroes.mjs` fails the build if anything calls it directly again.
+
+**QA.** All four worlds won, unhurt, 68 to 77 percent of coins on the ground path.
+`qa-hopheroes.mjs` is 63 checks. Fixed on the way: `qa/sim-node.mjs` read the level
+count from a `const` that is not a sandbox property and silently settled for one level,
+so four worlds could have shipped with only the first simulated.
+
+**Still shut:** the Hop Heroes tile is deliberately still coming-soon behind the 1111
+gate. Opening it puts the game in front of every kid, and Mike has not yet seen it.
+
+## Hop Heroes feels like Mario (HH1 + HH2 + HH3, September 6 2026)
+`public/play.html`, `public/buildable-hud.js`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`.
+Phase **HH**, cards **HH1, HH2, HH3**, branch `claude/hop-heroes-mario-feel-safrvp`.
+
+**Moving.** A run-up over about sixteen frames to a top speed of the recipe speed x
+1.55, a skid with dust and a lean when you turn around, six frames of coyote grace off
+a ledge, a jump buffered up to eight frames before landing, and a stomp that squashes
+the enemy flat and bounces you. Variable jump height and the double jump are unchanged.
+The level recipe grew 150 to 230 tiles so the perfect run stayed at about 47 seconds.
+Camera look-ahead scaled by speed, plus a clamped vertical follow.
+
+**Bramble's poses come from transforms, not new art.** `api/story-library` can only
+make FACE and MOOD variants of a character, never a run or a jump pose, and none of
+Bramble's are generated. Mike's call was to animate the one watercolour cutout: idle
+breathe, a two-beat run cycle, a stretch up, a brace down, land squash, skid lean-back.
+The drawn fallback body gets the same treatment, so a missing image is never broken.
+
+**Reading the screen.** Holes get a dark shaft, dirt walls, a shadow lip and grass over
+the edges. Background trees and bushes are skipped over a hole (they used to grow
+straight through the pits). Canopy and ferns are a frame at the screen edges, drawn
+under the hero. The HUD is the shared `buildable-hud.js` strip (which gained drawn coin
+and star chips) and the engine registers with `buildable-gamenav.js`. The world height
+stays 540 because level geometry is baked from it, but the VIEW is now W x VH and both
+follow the screen, so the canvas exactly fills any viewport with no letterbox: a wide
+screen shows more level, a tall phone gets more sky above the same world.
+
+**Mario ingredients.** Bonk blocks in short rows over solid ground, ? blocks popping a
+coin or a power-up. Coin arcs over every gap, crystal, critter, pipe and bounce pad,
+laid on the engine's own jump curve. Pipes as solid stand-on markers. A flag pole you
+slide down that runs straight into the next level.
+
+**QA.** `qa/sim-node.mjs` now checks that every level wins, that the perfect player
+finishes unhurt with all three hearts, and that 60%+ of its
+coins are reachable without leaving the floor (3 of 63 before, 224 of 290 now). New
+`qa-hopheroes.mjs`: 42 dependency-free checks driving the hero a frame at a time
+through a `BK_GAME.test` seam. Both green. Bugs fixed on the way: a bounce pad could push
+the ground off the bottom of the screen, replaying a level gave an empty world because
+nothing was reset, and the level generator spaced hazards using a tapped jump's air
+time while the QA bot always holds the button. The perfect player used to finish the
+level on its last heart; it now finishes with all three.
+
+**Not done.** No Vercel preview link (the connector in that session listed no
+projects). HH4 (worlds, the fixed hero cast, the picker) and HH5 remain, and the tile
+is still coming-soon behind the 1111 gate.
 
 ## AC2 — Ant City's ten missions, its gentle rain, and the door into the app (September 6 2026)
 `public/antcity-engine.html`, `qa-antcity.mjs` (new), `src/BuildableKids.jsx`, `qa-nv2.mjs`.
