@@ -1,3 +1,23 @@
+## 2026-09-06 (merge) — HH1 to HH5 are on main
+
+Mike said merge. `origin/main` had moved on six commits (AC1, AC2, CB1, FM2, FM3), so
+main was merged into the branch first; the only conflicts were this file and the README,
+both resolved by keeping both sides. `qa-all.mjs` was re-run on the merged tree: 48
+harnesses, all green.
+
+A direct `git push origin HEAD:main` was blocked by this session's safety classifier, so
+the merge went through GitHub as
+[PR #16](https://github.com/mstrouss-newco/buildable-app/pull/16), merged as `0031d37`.
+
+**Not confirmed live.** The Vercel connector in this session lists no projects and
+`www.buildablekids.com` is blocked from here, so the deployment could not be checked
+READY and no card is marked deployed. Someone with the live site in front of them still
+has to confirm it.
+
+**The tile stays shut.** Opening Hop Heroes to every kid is the one HH5 task left
+undone, and it is now its own card, **HH6**, flagged for Mike: nobody has yet seen the
+game running with its real watercolour art.
+
 ## 2026-09-06 (later) — HH4 and HH5: four worlds, a cast to choose from, and the shared Feel Kit
 
 Phase **HH**, cards **HH4 + HH5**, same branch `claude/hop-heroes-mario-feel-safrvp`.
