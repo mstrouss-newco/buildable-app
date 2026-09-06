@@ -19,14 +19,16 @@ engine), so the QA robot can prove every mission is beatable.
 
 ## The files (planned for this game)
 
-- **public/antcity-engine.html** - the game itself (built in a later session).
+- **public/antcity-engine.html** - the game itself (the colony engine, card AC1: dig,
+  forage, build, assign jobs, hatch. Missions and going live are AC2).
 - **public/antcity/manifest.json** - the settings sheet the shell reads (this session).
 - **public/buildable-renders.js** - `BR`, shared drawn art (always-on fallback).
 - **public/buildable-audio.js** - `BA`, shared sound (dig, march, hatch, munch, rain).
 - **public/buildable-mechanics.js** - `BM`, shared FX/juice (dirt puffs, sparkles, pops).
 - **public/buildable-feel.js** - `Feel`, the shared Feel Kit (taps, celebration card).
 - **public/buildable-hud.js** - the one shared in-play info bar (no global).
-- **qa-antcity.mjs** - the headless robot: every mission is provably beatable.
+- **qa-antcity.mjs** - the headless robot (card AC2): a perfect player finishes all
+  ten missions, and the cartridge contract is checked with them.
 
 ## How to play
 

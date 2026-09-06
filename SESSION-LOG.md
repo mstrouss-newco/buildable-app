@@ -158,6 +158,251 @@ produced, and screenshots with the art missing were sent instead. HH4 (worlds, t
 fixed hero cast, the hero picker) and HH5 wait. The game is still `soon: true` behind
 the 1111 gate in `src/BuildableKids.jsx`.
 
+## 2026-09-06 — AC2: Ant City's missions, its rain, and the door into the app
+
+**Shipped, and LIVE.** The ten tutorial missions from the manifest now run on the AC1
+colony, in order, handing off to free-build after the tenth. Each one pays its coins to
+the shared wallet, pops a calm celebration, and tells the buddy. Gentle setbacks: hunger
+and tiredness slow the colony and nothing else, and rain floods one tunnel at a time until
+a builder clears it. Milestones pay coins and open a room type early without blocking
+anything. A first launch plays a wordless show (a touch mark dragging down a dashed path);
+the `?` button replays it. Ant City has a tile in the Play picker and its own landing door,
+so kids can find it.
+
+**`qa-antcity.mjs` written in the same session, as the card required.** A perfect-player
+bot finishes all ten missions headlessly, and the harness checks the coins, the flood, the
+hunger, pause and resume, the manifest art URLs and the no-emoji rule. `node qa-all.mjs`
+is green: 47 harnesses.
+
+**The robot earned its keep immediately — it found three real bugs.**
+1. **Dig Deep was impossible.** The buried find only counted if the kid dug within one
+   column of it, so digging straight down never uncovered it. The bot sat there for 900
+   seconds of colony time. Depth is the goal, so depth uncovers it now.
+2. **Rainy Day taught nothing.** It could be completed by a flood that was already there,
+   so it flashed past in zero seconds. The mission brings its own rain and wants that
+   tunnel cleared.
+3. **Rain was a punishment, not a setback.** A browser run with no builders assigned ended
+   with eleven tunnels under water. One flood at a time now (two on the liveliest
+   difficulty).
+
+**Calls I made for you.**
+1. **No journey picker for Ant City.** Every other game's landing door lets a kid jump to
+   any level. The ten missions here teach one thing at a time and then get out of the way,
+   so jumping into mission seven would skip the teaching. The door has a demo box and the
+   Make-it-mine loadout; the missions live inside the colony.
+2. **The tile is drawn, not generated.** Like the Farm, its badge is the game's own shipped
+   art on its own meadow, so it needs no image API and always shows something.
+3. **`qa-nv2.mjs` now expects 22 live games.** That harness pins the Play door count, and
+   Ant City going live moves it by one.
+
+**What is left.** AC3 is the real per-kid save and away-time growth (today it is still this
+browser's localStorage). AC4 is the sounds, the music loop and the last art slots.
+
+## 2026-09-06 — AC1: the Ant City colony engine
+
+**Shipped.** `public/antcity-engine.html`, a new cartridge: a side-view ant colony the
+kid grows. Drag in the dirt to draw a tunnel and diggers carve it; tap the meadow to
+drop food and water and foragers carry it down; tap a tunnel and builders raise a
+nursery, storage room or resting den; slide one bar to move ants between diggers,
+foragers, nursery and builders. Eggs hatch into new ants, and more ants means more of
+everything, which is the loop. Routes for `/antcity-engine.html` and `/antcity/` added
+to `vercel.json` so the page is reachable at all.
+
+**How it stays cheap.** The colony is counts and rates on a fixed 1/60 step (a tycoon
+model), so the population can reach the hundreds; only a sample of at most 26 ants is
+ever drawn, and that sample is capped by how much space has actually been dug. Seeded
+random, no physics, so a headless run repeats a real play exactly — the ground AC2's
+mission robot needs.
+
+**Checked, not assumed.** A vm harness drove the colony through digging, foraging,
+building a nursery, hatching, and 40 simulated minutes of growth (58 ants, 226ms). Then
+a real Chromium session: dragged a tunnel with the mouse, dropped food on the meadow,
+slid the jobs bar, opened the build popup, and confirmed `pause` freezes the colony and
+`resume` continues it. Screenshots at phone size drove three look fixes (HUD chips ran
+off the edge, the engine's own buttons sat under the HUD, tunnel cells read as separate
+squares instead of one burrow).
+
+**Calls I made for you.**
+1. **The save is this browser only.** The card allows it; real per-kid saving and
+   away-time growth are AC3, which is where that risk belongs.
+2. **The Vercel routes came early.** They were written down under AC2, but without them
+   the page falls through to the landing page and you cannot look at it. The game is
+   still NOT live: no tile in the Games picker, no slug in `GAME_SLUGS`.
+3. **No coins or celebrations yet.** Those hang off the missions, and missions are AC2.
+   Awarding coins now would double up when AC2 wires the real milestones.
+
+**What AC2 picks up.** The ten tutorial missions on top of this engine, gentle setbacks
+(hunger, sleep, a rain flood), milestones and coins, the wordless first-launch demo,
+`qa-antcity.mjs`, the picker tile and slug, and going live.
+## 2026-09-06 (FM2 land + FM3): the farm gets its payoff, and its door
+
+**Phase FM, cards FM2 and FM3.** Two jobs in one session: land the FM2 branch
+that had been sitting unmerged since 2026-08-16, then build FM3 on top of it and
+close the four integration gaps FM1 left open.
+
+### Step 0 — FM2 landed
+`origin/claude/fm2-farm-animals-feeding-xbuk8s` was 5 commits ahead of `main` and
+55 behind. Merged `main` in by hand. Four conflicts, all of them both-sides-added
+at the top of a file: the README log head, the SESSION-LOG head, one cache-bust
+assertion in `qa-skyflyer.mjs`, and the two engine links in `BuildableKids.jsx`.
+Both dated entries kept on the README and the log, newest first; the cache-bust
+superseded main's `v=fl15`. A previous resolver on this branch swallowed a whole
+QA block once (restored by `cca5bea`), so the merge was checked by counting:
+`qa-skyflyer` went 382 (main) + 39 (FM2) = **421**, exactly. Nothing lost. The
+animals, the walk cycle and the feed-off-the-stack path all still run.
+
+### Step 1 — FM3: the crate, the unload, the plane
+A slatted wooden **crate** sits by a mown grass runway west of the field. Over it
+floats a picture wish-list: one silhouette slot per item wanted, lit to full
+colour with a green tick as it lands (FL5b tick/cross; the cross half is a shake
+across the unfilled slots when you arrive carrying the wrong thing). Every icon
+is the item's own drawn SVG — the same one the seed buttons use. No reading, no
+emojis.
+
+**The unload is the moment the mode was built for.** Walk to the crate and the
+carried tower comes off one item at a time, every 0.11s, each on its own fast
+flat arc, each landing with a pop, a slot flash, and a note a semitone higher
+than the last. Items the order did not ask for stay on the stack. A slot with an
+item already in the air is marked claimed — without that, three corn leaving in a
+third of a second all aim at slot one and two of them vanish on arrival (found in
+the first real browser run, not in review).
+
+When the order fills, the **plane** taxis out, accelerates down the strip, climbs
+away, and comes back with a burst of coins that fly up into the wallet pill. The
+whole trip is 13 seconds. It is the AR1Q plane's silhouette rebuilt in the farm's
+own `hb*` vocabulary, which needed a new helper: `hbAero` pulls the vertices of
+one segmented box in so the chord narrows toward the tip with a straight trailing
+edge. Two earlier passes built the wing out of stepped boxes and it rendered as a
+staircase, and before that as a plank — the plane read as a rocket both times.
+
+Orders scale gently (2 items, then 3, up to 6) and **may only ever ask for what
+the farm can make right now** — produce is only listed once the animal that makes
+it is in the pen. Forty rolls of that are asserted in QA, not promised in a
+comment.
+
+### The economy (Mike's call, this session)
+FM1 shipped seeds at 10/6/4 against harvest rewards of 8/5/3, so growing a crop
+visibly LOST coins. Mike picked the simplest fix: **crops are ingredients, not
+money.** Harvesting now pays nothing. Every seed costs the same 3 coins, so there
+is no sum to do. The only income is the crate and the plane, at 20 coins rising
+to 45. And the floor that makes being stuck impossible: **if a kid cannot afford
+a seed, the next seed is free** — the button turns into a green FREE badge rather
+than going dead.
+
+### The duck (also Mike's call)
+The long-term unlock is a **duck**, 120 coins, about five deliveries. She is a
+real library model: `PekinDuck`, cut out of `island-animals.glb` and added to the
+farm's own `farm-animals.glb` (the chicken in that cut is byte-identical to the
+one FM2 shipped, checked before swapping the file). She eats corn like the hens
+and lays a pale blue egg, which becomes a fourth thing an order can ask for — but
+only after she is bought. The shop button only appears once she is halfway
+affordable and disappears for good once she is bought.
+
+### Step 2 — the four gaps FM1 left open, all closed
+1. **The farm had no door.** `skyflyer-farm` appeared nowhere in
+   `src/BuildableKids.jsx` at all; the only way in was to type the URL. It is now
+   a generated catalog card like every other game, with its own screen, its own
+   route and its own `?v=fm3` cache-bust. Its badge is **drawn geometry**, not a
+   generated image — a new `TILE_ART` map and one `GameTileArt` component that
+   all four tile render sites now share, so the next drawn badge is wired once.
+2. **Coins were fake.** The local `var coins=50` and its private pill are gone.
+   The page loads `buildable-wallet.js` and shows the shell's real balance. This
+   needed a small addition to the shared wallet: a game may now **spend** inside
+   its own iframe, by checking the balance the shell last broadcast down and
+   announcing the deduction up as a negative `coins` delta. The shell clamps at
+   zero. Written into `CARTRIDGE-CONTRACT.md`, because that is where a message is
+   agreed. FM1's fifty starting coins survive as an `awardOnce`, so a kid is
+   never paid twice and never loses coins earned in another game.
+3. **No shared nav.** `buildable-gamenav.js` is loaded and registered, and the
+   page tags itself `bk-inshell` before `<body>` so the HUD never flashes in the
+   corner the shell is about to cover. Without this a touch on the shell's Home
+   button on iPhone routes into the page and does nothing — the Tennis bug,
+   exactly. `pause` and `resume` are honoured too.
+4. **No sound.** `buildable-audio.js` + `buildable-feel.js`, one palette map
+   pointing at Sky Flyer's own created clips, one shared `bk_muted` flag, and
+   audio that wakes on the first tap inside the page.
+
+### Step 3 — the picture gate
+FM1 was built by a session with no browser, so nothing had been looked at. Every
+new shape went on the `?zoo=1` stand first, and the renders changed the build
+three times: the runway shipped as a 44-unit bone-white slab and is now a mown
+hay strip; the crate was smaller than the kid loading it and is now 3.3 wide; the
+empty card slots sat at 34% opacity and were unreadable smudges at 40px, and are
+now dark silhouettes at 46px. Card states captured empty / half / full at phone,
+tablet and desktop.
+
+### QA
+`qa-farm.mjs` 78 checks green, including the whole FM3 loop played for real in
+Chromium: five corn carried to the crate, three taken, two left behind, the plane
+flown frame by frame through all six legs, the coins landed, the duck bought.
+`qa-skyflyer.mjs` 421 -> 466 checks green, with a block per integration gap so a
+closed gap cannot silently reopen. `qa-all.mjs` green. `vite build` clean.
+
+### Landed
+Mike saw the renders and said to land it, so FM3 went onto `main` as
+`482f1b6`. Two conflicts on the way in, both the same dated-entry-at-the-top
+shape, both kept. `qa-all` green on the merged `main`, and the farm robot and
+the Sky Flyer harness both re-run green on it. **Not marked deployed on the
+planner**: this session's network policy blocks buildablekids.com and the Vercel
+project list came back empty, so the live site could not be checked, and a push
+is not a deploy.
+
+Touched: `public/skyflyer-farm.html`, `public/buildable-wallet.js`,
+`public/models/skyflyer/animals/farm-animals.glb`, `src/BuildableKids.jsx`,
+`CARTRIDGE-CONTRACT.md`, `qa-farm.mjs`, `qa-skyflyer.mjs`.
+## 2026-09-06 — CB1: kid-made games (Cobuild)
+
+**Shipped.** `kid_games` table (migration written to `db/create-kid-games.sql` AND
+applied to the live Supabase project in-session, verified against
+`information_schema`). `api/kid-game.js` with save / load / list / delete / fork /
+share, gated by the shared manifest validator via `api/_manifestLib.js` — an invalid
+manifest is refused with its errors and never stored. `public/buildable-manifest.js`
+learned `?kg=<id>` once, so all four Cobuild engines play a kid's game with no
+per-engine code, and the loading screen reads the kid's own title plus
+"A GAME BY <kid> AND <grown-up>". My Games shelf on Home (above Play, MINE badge,
+1111 gate) and a games row in My Stuff replacing the dead levels tab. Old Breaker
+maker levels migrate out of localStorage on first load. Top Board Remix forks and
+opens the copy with `?kg=`. Share viewer at `/g/<slug>` with server-side OG tags
+(`api/g.js` + `public/g.html`), guest play, no account, play counted once.
+`qa-kidgames.mjs` added; `node qa-all.mjs` green (46 harnesses).
+
+**The one thing I nearly left half-done.** Step 4 says "stop writing to
+localStorage", and migrating the old list is only half of that: the Breaker maker
+itself still wrote every NEW level to `bk_breaker_levels_<kidId>`, so anything a kid
+built after the migration would never have reached My Games. The maker now posts the
+board to `/api/kid-game` as well, and the migration is keyed by level id rather than a
+one-shot marker, so nothing can be stranded. The board-to-manifest step lives in
+`public/buildable-manifest.js` as `breakerBoardToManifest` and the SERVER calls that
+same function through `api/_manifestLib.js` — one builder, so a board can only ever
+become one game. The maker's local shelf is kept as this browser's own standalone
+list; nothing reads it as the truth any more.
+
+**Calls I made for you.**
+1. **Delete is soft, not a real row delete.** A kid tapping Delete stamps `deleted_at`;
+   the game leaves My Games and its link stops working, and nothing is lost. A kids'
+   product should not have an irreversible delete, and AGENTS.md forbids destructive
+   statements outright.
+2. **Two engines needed a small manifest fix** (the card asked me to note this for CB2).
+   Sky Flyer read `/skyflyer/manifest.json` with its own `fetch`, so it never went
+   through the shell and `?kg=` could not reach it — it now calls
+   `BuildableManifest.rawManifest("skyflyer", ...)`. Breaker's manifest profile had no
+   way to carry a board a kid painted brick by brick, so `cells` is now an optional,
+   validated field on a Breaker level and `buildBricks` uses it. Sling Squad and Castle
+   Guard needed nothing.
+3. **My Stuff's existing "My Games" tab was renamed "Published Games."** It reads
+   `published_games` (the old AI road) and I left it working rather than removing it
+   (replace first, remove second); the new tab needed the name.
+4. **The share viewer keeps the 1111 gate**, as the card asked, which does mean a link
+   sent today shows a password box. The OG preview still unfurls correctly, so the
+   gate can be lifted later with no other change.
+
+**What CB2 needs to know.** `?kg=` is the only launch contract; add an engine by adding
+it to `ENGINES` in `api/kid-game.js` and `src/lib/kidGames.js` and giving it a level
+profile in `buildable-manifest.js`. Cover art is a free-text `cover` column that falls
+back to the engine's key art, so a real cover pipeline can land without a migration.
+`bk_grownup_name` in localStorage is where the grown-up's name comes from; nothing
+writes it yet, so credits currently read "A GAME BY <kid>".
+
 ## 2026-08-30 — QA-FIX: Practice is alive, Lessons is open, and there is finally a release gate
 
 The first fixing session off the QA3d/QA3e sweep. Mike picked the Practice fix plus
@@ -744,6 +989,129 @@ games sound fine and only the makers look broken. Owner's fix in Vercel.
 `vite build` clean (70 modules). `api/images.js` and `api/generate-song.js`
 import clean under node. Live re-QA of the song flow is blocked until the real
 `sk_` key is in Vercel.
+## 2026-08-16 (FM2): Farm 2 — the chickens, the cow, and feeding off the stack
+
+**Phase FM, card FM2.** The animals go into the farm corner FM1 built, east of
+the field, in `public/skyflyer-farm.html`. Flagged **needsReview**, per the
+card's own line — the renders are the thing to look at.
+
+### The mechanic, which is the whole card
+
+A hungry animal floats **a small 3D model of what it wants** over its head. That
+is the entire instruction: no menu, no tap, no words, nothing to read. Walk past
+carrying it and the **top matching item flies off the stack** on an arc to every
+animal in reach — corn to the chickens, wheat to the cow. After a short wait
+(**18s** for an egg, **26s** for milk, both well under the card's one-minute
+ceiling) the produce appears beside the animal wearing **the same sparkle a
+ready crop wears**, and walking over it hops it onto the stack exactly like a
+harvested crop.
+
+Two decisions worth writing down:
+
+- **Pickup reach is deliberately wider than the furthest an item is ever set
+  down** (2.0u vs 1.6u). The first build had it the other way round, and the
+  robot caught it: a kid could walk right up to the cow and still miss the
+  bottle standing beside her. Nobody aims in this game.
+- **One walk-by feeds every animal in reach, not one.** The three nests sit
+  close together, so walking into the coop yard with three cobs feeds all three
+  hens at once, three arcs in the air. That is the card's "the right item flies
+  off the stack **to each animal**", and it is much better to watch.
+
+**NOTHING CAN DIE, STARVE OR FAIL.** There is no hunger meter, no countdown, no
+health and no penalty anywhere in the FM2 code — QA greps for the words and
+asserts an animal's only possible states are waiting, feeding, making and ready.
+An unfed animal simply keeps waiting.
+
+### The animals
+
+- **The chickens are a REAL model.** `Chicken` cut out of the library into its
+  own **65KB** glb by `scripts/cut-animal-subset.mjs`. Its colour is entirely in
+  `COLOR_0`, so the merge in the page copies that attribute verbatim — the
+  flying engine's own `mergeByMaterial()` drops it and renders every animal
+  solid black. Sized by **longest dimension**, never height. Three hens settle
+  on nests, one struts a patrol loop.
+- **The cow is hand-built**, and this is the one thing to flag (see below).
+  Turned and lofted in code the way the flying engine builds its crab, parrot
+  and fish. Built straight against the note from the mock: **the head goes UP ON
+  A NECK, it has HORNS, and it has SURFACE SPOTS**, including one over an eye.
+  Those three are what stop it reading as a pig, and on the model stand it now
+  reads as a cow at a glance.
+- **They move**, on the AR1Q rig: every vertex sorted once into a band by where
+  it sits in the model's own box, then the bands pushed about each frame. A
+  puppeted animal gets **its own geometry copy**, or every hen in the yard walks
+  in lockstep off one shared buffer. New gaits: `strut` for the walking hen
+  (driven by the **head thrust**, not the feet — that is the thing that says
+  chicken), `nest` for a settled hen (breathing, with an occasional dip to the
+  straw), `graze` for the standing cow.
+
+### zoo(), and why it paid for itself immediately
+
+`?zoo=1` (or `window.FARM.zoo()`) hides the farm, stands every model on a
+turntable plinth at a fixed camera, and **normalises each one to the same
+longest dimension** so shapes are judged against each other rather than against
+however big they happened to be built. The card asked for it and it earned its
+place on the first render, catching three things a scene shot would have hidden:
+
+- the **coop roof splayed open like a book** — both slabs were rotated so the
+  OUTER edge rose to the ridge instead of the inner one;
+- the **hay bale reading as a brass barrel** — saturated gold with dark hoops;
+- the **egg sitting in an eggcup** — a shadow band drawn at the widest point.
+
+A second pass caught the stand itself: straight rows put the egg in front of the
+cow, so the rows are now staggered half a place sideways. Two more came from the
+scene renders — the hens were sized at life scale and read as brown specks from
+the overhead camera (now 1.4x life, the same ruler the flying engine uses), and
+the want-icons were too small to read.
+
+### The kits question — worth Mike knowing
+
+The card said to take the coop, fences, trough and hay from the Kenney kits on
+the KP1 shelf and only hand-build what the kits lack. **In the repo, the kits
+lack all four.** The shelf catalogues 241 kits, but only `2d-assets__tower-defense`
+is actually on disk; the 3D models that are here (pirate, survival, nature) are
+texture-atlas models with no vertex colour, and none of them is a coop, a
+trough or a bale. So all four are hand-built in the AR1P style, matching the
+fence FM1 already built the same way. Same story for the cow: **there is no cow
+in the repo's 18-animal cut**, and the 178-animal source file is Mike's local
+download, not in the repo. The nearest neighbours in the cut are Pig and Goat,
+and a repainted pig is exactly the failure the card warned about.
+
+If Mike wants a library cow later it is one command against his local file:
+`node scripts/cut-animal-subset.mjs <EverythingLibrary.glb> public/models/skyflyer/animals/farm-animals.glb Chicken Cow`
+and then point `ANIMAL_KINDS.cow` at the loaded model instead of `buildCow()`.
+
+### QA — what actually ran
+
+- **`qa-skyflyer.mjs`: 652 checks, ALL PASSED**, including the jsdom flight half
+  (`npm i --no-save jsdom` first). 40 of those are the new FM2 static block.
+- **`qa-farm.mjs`: 33 checks, ALL PASSED.** This is new, and it is the half a
+  static scan cannot do — the farm is a three.js scene that loads a glb, so
+  jsdom sees none of the mechanic. It drives real Chromium and plays the loop:
+  carry corn past a hen, watch the cob leave the stack mid-air, wait out the
+  egg, walk over it, carry it off; then the cow and the milk; then the wrong
+  crop, which correctly does nothing. It serves `public/` from its own tiny http
+  server so it needs no dev dependency beyond playwright, and it **fails loudly**
+  if playwright is missing rather than reporting a pass it never earned. Every
+  wait is on state, never on a sleep — the software rasteriser runs the flight
+  arc several times slower than a real device.
+
+Cache-bust bumped on **both** shell links in `src/BuildableKids.jsx`
+(`v=fl9` → `v=fm2`), and the FM1 check that guards it updated to match.
+
+**Why REVIEW:** the card says to flag it, and the look is Mike's call — the cow
+is hand-built rather than cut from the library, and the coop yard is hand-built
+rather than kit-dressed, both for the asset reasons above. Renders of the model
+stand, the feeding, the egg-and-milk and a tall mixed stack went to Mike before
+this was pushed.
+
+**What's next:** FM3 (the order crate and the plane payoff). It inherits the
+`ITEM()` lookup, so eggs and milk already ride the stack and already have SVG
+icons for a crate UI; `qa-farm.mjs` is the harness to extend.
+
+Touched: `public/skyflyer-farm.html` (+~900 lines),
+`public/models/skyflyer/animals/farm-animals.glb` (new, 64KB),
+`qa-skyflyer.mjs` (+40 FM2 assertions, cache-bust check updated),
+`qa-farm.mjs` (new), `src/BuildableKids.jsx` (cache-bust on both links).
 
 ## 2026-08-16 (FL9 re-land): two fixes for one bug, resolved into one
 

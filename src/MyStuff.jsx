@@ -5,11 +5,10 @@ import { useState, useEffect } from "react";
 import { shareCreation } from "./lib/shareSheet";
 import CoverThumb from "./lib/CoverThumb";
 import SongPlayer from "./lib/SongPlayer";
+import { listKidGames, deleteKidGame, kidGameCover, kidGameShareUrl, ENGINES as KID_ENGINES } from "./lib/kidGames";
 import {
   listCharacters,
   deleteCharacter,
-  listLevels,
-  deleteLevel,
   listSounds,
   onLibraryChange,
   getProgress,
@@ -44,10 +43,26 @@ function getKidProfileId() {
   } catch { return null; }
 }
 
-export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHome, initialTab }) {
+// A kid game shares by its private read-only viewer at /g/<id> — the same three
+// mechanisms every creation type uses (CREATIONS.md). Native share sheet where
+// there is one, clipboard everywhere else.
+function shareKidGameLink(g) {
+  const url = kidGameShareUrl(g);
+  const title = (g.name || "My game") + (g.kid_name ? " by " + g.kid_name : "");
+  try {
+    if (navigator.share) { navigator.share({ title, text: "Play the game I made!", url }).catch(() => {}); return; }
+  } catch { /* fall through */ }
+  try { navigator.clipboard.writeText(url); alert("Link copied! Send it to anyone:\n" + url); }
+  catch { window.prompt("Copy this link:", url); }
+}
+
+export default function MyStuffScreen({ onUseCharacter, onOpenKidGame, onBack, onHome, initialTab }) {
   const [tab, setTab] = useState(initialTab || "characters");
   const [characters, setCharacters] = useState(listCharacters());
-  const [levels, setLevels] = useState(listLevels());
+  // Session CB1 — the games this kid MADE. This row replaces the old "My Levels"
+  // tab, which read store.listLevels(): a localStorage list on the dead AI road
+  // that nothing has written to in months, so it was always empty.
+  const [kidGames, setKidGames] = useState([]);
   const [sounds, setSounds] = useState(listSounds());
   const [songs, setSongs] = useState([]);
   const [stories, setStories] = useState([]);
@@ -139,13 +154,16 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
       });
     } catch { /* keep optimistic */ }
   }
-  useEffect(() => { loadSongs(); loadStories(); loadGames(); loadArt(); }, []);
+  async function loadKidGames() { setKidGames(await listKidGames()); }
+  async function removeKidGame(id) {
+    try { await deleteKidGame(id); setKidGames((prev) => prev.filter((x) => x.id !== id)); } catch { /* ignore */ }
+  }
+  useEffect(() => { loadSongs(); loadStories(); loadGames(); loadArt(); loadKidGames(); }, []);
 
   // Refresh when the saved library finishes loading or anything is saved/deleted.
   useEffect(() => {
     const refresh = () => {
       setCharacters([...listCharacters()]);
-      setLevels([...listLevels()]);
       setSounds([...listSounds()]);
     };
     refresh();
@@ -156,17 +174,12 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
     deleteCharacter(id);
     setCharacters(listCharacters());
   };
-  const removeLevel = (id) => {
-    deleteLevel(id);
-    setLevels(listLevels());
-  };
-
   const tabs = [
     { id: "characters", label: "My Characters", count: characters.length },
-    { id: "levels", label: "My Levels", count: levels.length },
+    { id: "kidgames", label: "My Games", count: kidGames.length },
     { id: "songs", label: "My Songs", count: songs.length },
     { id: "stories", label: "My Stories", count: stories.length },
-    { id: "games", label: "My Games", count: games.length },
+    { id: "games", label: "Published Games", count: games.length },
     { id: "art", label: "My Art", count: arts.length },
   ];
 
@@ -229,31 +242,26 @@ export default function MyStuffScreen({ onUseCharacter, onUseLevel, onBack, onHo
         )
       )}
 
-      {/* ---------- Levels ---------- */}
-      {tab === "levels" && (
-        levels.length === 0 ? (
-          <div style={s.grid}><button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button></div>
+      {/* ---------- My Games (CB1: kid-made games) ---------- */}
+      {tab === "kidgames" && (
+        kidGames.length === 0 ? (
+          <div style={s.grid}><button style={s.addCard} onClick={onHome} aria-label="Make a game"><span style={s.addPlus}>+</span><span style={s.addText}>Make a game</span></button></div>
         ) : (
           <div style={s.grid}>
-            <button style={s.addCard} onClick={onHome} aria-label="Make something new"><span style={s.addPlus}>+</span><span style={s.addText}>Make new</span></button>
-            {levels.map((l) => (
-              <div key={l.id} style={s.card}>
-                {l.image ? (
-                  <img src={l.image} alt={l.name} style={s.cardImage} />
-                ) : (
-                  <div style={s.noImage}><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 18l5-6 4 4 3-4 6 6"/><circle cx="8" cy="7" r="2"/></svg></div>
-                )}
-                <h3 style={s.cardTitle}>{l.name}</h3>
+            <button style={s.addCard} onClick={onHome} aria-label="Make a game"><span style={s.addPlus}>+</span><span style={s.addText}>Make a game</span></button>
+            {kidGames.map((g) => (
+              <div key={g.id} style={s.card}>
+                <img src={kidGameCover(g)} alt="" style={s.cardImage} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                <h3 style={s.cardTitle}>{g.name || "My game"}</h3>
                 <p style={s.cardDesc}>
-                  {l.theme}{l.difficulty ? ` · ${l.difficulty}` : ""}
+                  {(KID_ENGINES[g.engine] || {}).label || "A game"}
+                  {g.source_game ? " · remixed" : ""}
+                  {g.plays ? ` · ${g.plays} play${g.plays === 1 ? "" : "s"}` : ""}
                 </p>
                 <div style={s.cardActions}>
-                  <button style={s.useBtn} onClick={() => onUseLevel && onUseLevel(l)}>
-                    Use
-                  </button>
-                  <button style={s.deleteBtn} onClick={() => removeLevel(l.id)}>
-                    Delete
-                  </button>
+                  <button style={s.useBtn} onClick={() => onOpenKidGame && onOpenKidGame(g)}>Play</button>
+                  <button style={s.shareBtn} onClick={() => shareKidGameLink(g)}>Share</button>
+                  <button style={s.deleteBtn} onClick={() => removeKidGame(g.id)}>Delete</button>
                 </div>
               </div>
             ))}

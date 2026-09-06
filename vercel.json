@@ -73,6 +73,24 @@
       "dest": "/antcity-art-gallery.html"
     },
     {
+      "src": "/antcity-engine.html",
+      "dest": "/antcity-engine.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/antcity/manifest.json",
+      "dest": "/antcity/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/antcity/(.*)",
+      "dest": "/antcity/$1"
+    },
+    {
       "src": "/asset-library.html",
       "dest": "/asset-library.html"
     },
@@ -905,6 +923,53 @@
     {
       "src": "/minutemath",
       "dest": "/minutemath.html"
+    },
+    {
+      "src": "/g/favicon.ico",
+      "dest": "/favicon.ico",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/g/favicon.svg",
+      "dest": "/favicon.svg",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/g/favicon-32.png",
+      "dest": "/favicon-32.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/g/favicon-16.png",
+      "dest": "/favicon-16.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/g/apple-touch-icon.png",
+      "dest": "/apple-touch-icon.png",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/g/site.webmanifest",
+      "dest": "/site.webmanifest"
+    },
+    {
+      "src": "/g/([A-Za-z0-9][A-Za-z0-9-]{1,63})",
+      "dest": "/api/g?id=$1"
+    },
+    {
+      "src": "/g.html",
+      "dest": "/g.html"
     },
     {
       "src": "/cobuild/(.*)",

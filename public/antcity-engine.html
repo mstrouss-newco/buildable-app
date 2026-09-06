@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=4" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ant City">
+<meta name="application-name" content="Ant City">
+<meta name="theme-color" content="#E9A23B">
+<title>Ant City</title>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+*{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+input,textarea{-webkit-user-select:text;user-select:text;}
+</style>
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#2b1d10;overflow:hidden;font-family:'Baloo 2','Nunito',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+  #start{position:absolute;inset:0;display:none;z-index:20;overflow:auto;}
+
+  /* ---- the jobs panel: the slide-to-assign bar + the four job cards ---- */
+  #panel{position:absolute;left:0;right:0;bottom:0;z-index:8;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+         background:linear-gradient(180deg,rgba(43,29,16,0) 0%,rgba(43,29,16,.72) 26%,rgba(43,29,16,.92) 100%);}
+  #panel.hidden{display:none;}
+  #bar{position:relative;height:26px;border-radius:13px;overflow:hidden;background:#3a2716;box-shadow:inset 0 2px 6px rgba(0,0,0,.35);touch-action:none;}
+  #bar .seg{position:absolute;top:0;bottom:0;}
+  #bar .gr{position:absolute;top:0;bottom:0;width:14px;margin-left:-7px;background:rgba(255,255,255,.85);border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.4);}
+  #jobs{display:flex;gap:6px;margin-top:7px;}
+  .job{flex:1 1 0;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:5px 4px 6px;text-align:center;color:#fff;}
+  .job .nm{font-size:11px;font-weight:800;letter-spacing:.2px;opacity:.92;white-space:nowrap;}
+  .job .ct{font-size:19px;font-weight:800;line-height:1.1;}
+  .job .btns{display:flex;gap:4px;justify-content:center;margin-top:2px;}
+  .job button{width:26px;height:24px;border:none;border-radius:8px;background:rgba(255,255,255,.20);color:#fff;font-size:15px;font-weight:800;line-height:1;cursor:pointer;}
+  .job button:active{background:rgba(255,255,255,.34);}
+  #tools{display:flex;gap:6px;margin-top:7px;align-items:center;}
+  .tool{flex:1 1 0;border:none;border-radius:12px;padding:9px 6px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
+  .tool.on{background:#ffd166;box-shadow:0 0 0 3px rgba(255,209,102,.35);}
+  #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);white-space:nowrap;
+        background:rgba(20,12,4,.86);color:#ffe9c2;font-size:13px;font-weight:700;padding:7px 14px;border-radius:999px;opacity:0;transition:opacity .25s;}
+  #hint.show{opacity:1;}
+
+  /* ---- build a room popup ---- */
+  #build{position:absolute;inset:0;z-index:12;display:none;align-items:center;justify-content:center;background:rgba(20,12,4,.5);}
+  #buildCard{background:#fff8ec;border-radius:20px;padding:16px 18px;width:min(340px,86vw);box-shadow:0 14px 40px rgba(0,0,0,.4);}
+  #buildCard h2{margin:0 0 10px;font-size:19px;color:#4a2f10;}
+  .room{display:flex;align-items:center;gap:10px;width:100%;border:none;background:#f0e0c6;border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;text-align:left;}
+  .room:disabled{opacity:.45;}
+  .room .rn{font-size:15px;font-weight:800;color:#4a2f10;}
+  .room .rd{font-size:12px;color:#7a5a30;}
+  .room svg{flex:0 0 34px;}
+  #buildCancel{width:100%;border:none;background:#e9a23b;color:#3a2600;font-weight:800;font-size:15px;padding:10px;border-radius:12px;cursor:pointer;font-family:inherit;}
+
+  /* the engine's own standalone buttons — the shared nav bridge hides these in-app */
+  .selfbtn{position:absolute;z-index:9;border:none;border-radius:999px;background:rgba(20,12,4,.55);color:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:8px 14px;cursor:pointer;}
+  #backBtn{top:58px;left:14px;}
+  #muteBtn{top:58px;right:14px;}
+  #helpBtn{top:100px;right:14px;}
+  .bk-inshell .selfbtn{display:none;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <button id="backBtn" class="selfbtn">Home</button>
+  <button id="muteBtn" class="selfbtn">Sound</button>
+  <button id="helpBtn" class="selfbtn">?</button>
+  <div id="panel" class="hidden">
+    <div id="hint"></div>
+    <div id="bar"></div>
+    <div id="jobs"></div>
+    <div id="tools">
+      <button class="tool on" id="toolFood" type="button">Drop food</button>
+      <button class="tool" id="toolWater" type="button">Drop water</button>
+    </div>
+  </div>
+  <div id="build"><div id="buildCard"><h2>Build a room</h2><div id="roomList"></div><button id="buildCancel" type="button">Not now</button></div></div>
+  <div id="start"></div>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-manifest.js"></script>
+<script src="buildable-hud.js?v=1"></script>
+<script src="buildable-gamenav.js"></script>
+<script src="buildable-wallet.js"></script>
+<script src="buildable-feel.js"></script>
+<script src="buildable-wincard.js"></script>
+<script>
+"use strict";
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var BA = window.BuildableAudio || { unlock:function(){}, sfx:function(){}, toggleMute:function(){return false;}, muted:false };
+  var BR = window.BuildableRenders || null;
+  var BS = window.BuildableStartScreen;
+  var BW = window.BuildableWallet;
+  var Feel = window.Feel;
+
+  var ACCENT = "#E9A23B";              // kept in sync with /antcity/manifest.json "color"
+
+  // ======================================================================
+  //  GAME_CONFIG — the recipe. Every number the colony runs on lives here,
+  //  so tuning Ant City never means rewriting it. The manifest may replace
+  //  the art and the feel presets; these rates stay the engine's own.
+  //  The colony is COUNTS + RATES (a tycoon/idle model), so the population
+  //  can climb into the hundreds while only a sample of ants is ever drawn.
+  // ======================================================================
+  var GAME_CONFIG = {
+    cols: 12,                 // colony width in cells (fixed; depth is what grows)
+    startRow: 2,              // the queen's first chamber
+    startAnts: 6,
+    startFood: 12,
+    startWater: 8,
+    sampleMax: 26,            // most ants drawn at once, however big the colony gets
+
+    dig:     { perAntPerSec: 0.55 },   // cells opened per digger per second
+    forage:  { perAntPerSec: 0.85 },   // food/water units carried down per forager per second
+    build:   { perAntPerSec: 0.42 },   // room progress per builder per second
+    nursery: { hatchPerAntPerSec: 0.14, layPerSec: 0.22, eggFood: 1 },
+    upkeep:  { foodPerAntPerSec: 0.035, waterPerAntPerSec: 0.018 },
+    hungryRate: 0.4,          // how much slower a hungry colony works (never stops, never punishes)
+
+    capacity: { foodBase: 25, foodPerStorage: 40, waterBase: 20, eggBase: 2, eggPerNursery: 8 },
+    denBonus: 0.10,           // each resting den speeds the colony a little (capped below)
+    denMax: 3,
+
+    rooms: {
+      nursery: { name:"Nursery",     desc:"Eggs are tended here",   food:6, color:"#f2a2c0" },
+      storage: { name:"Storage",     desc:"Holds more food",        food:8, color:"#e9c46a" },
+      den:     { name:"Resting Den", desc:"Tired ants recover",     food:8, color:"#9ad2f2" }
+    },
+
+    // ---- missions (AC2) ----------------------------------------------------
+    //  The manifest names the ten missions and their order; this maps each
+    //  manifest `layout` to the goal that finishes it, so the manifest stays the
+    //  recipe and the engine stays the fixed part. A goal is always something the
+    //  colony can reach from any state — nothing can be failed or missed.
+    goals: {
+      "tutorial-tunnel":    { type:"dug",   n:3 },
+      "forage":             { type:"food",  n:8 },
+      "build-room-nursery": { type:"room",  room:"nursery", n:1 },
+      "hatch":              { type:"born",  n:1 },
+      "grow-population":    { type:"ants" },        // the count comes from the level id
+      "build-room-storage": { type:"room",  room:"storage", n:1 },
+      "setback-rain":       { type:"flood", n:1 },
+      "build-room-den":     { type:"room",  room:"den", n:1 },
+      "dig-deep-find":      { type:"found", n:1 }
+    },
+    // which mission opens each room type (index into the mission list). A room the
+    // kid has not met yet is not offered; nothing is ever taken away again.
+    roomUnlock: { nursery:2, storage:5, den:8 },
+    // free rewards that never block building
+    milestones: [
+      { id:"deep-5",  type:"deep", n:5,  coins:20, unlock:"storage" },
+      { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" }
+    ],
+    // gentle setbacks: they pause work, they never take anything away
+    setback: {
+      floodEverySec: 100,        // divided by the difficulty's setback frequency
+      floodClearPerAntPerSec: 0.12,   // a few seconds of a builder's time, long enough to notice
+      restDrainPerSec: 0.007,    // the colony gets tired slowly
+      restPerDenPerSec: 0.030,   // a resting den brings it back
+      sleepyRate: 0.45           // how much slower a sleepy colony works
+    },
+    findRow: 11,                 // how deep the buried find is buried
+
+    // difficulty 1-5 -> colony pace + setback frequency
+    difficulty: [
+      { pace:0.70, setbacks:0.4 },
+      { pace:0.85, setbacks:0.7 },
+      { pace:1.00, setbacks:1.0 },
+      { pace:1.25, setbacks:1.3 },
+      { pace:1.55, setbacks:1.6 }
+    ]
+  };
+
+  var JOBS = [
+    { id:"digger",  name:"Diggers",  color:"#c98b4b" },
+    { id:"forager", name:"Foragers", color:"#7ec46a" },
+    { id:"nursery", name:"Nursery",  color:"#f2a2c0" },
+    { id:"builder", name:"Builders", color:"#6fc7e8" }
+  ];
+
+  // ======================================================================
+  //  Art. Cartridge rule: every picture is fetched at load time from the URL
+  //  the manifest resolves — nothing is baked in. Any slot that misses falls
+  //  back to clean drawn shapes, so a 404 can never break the colony.
+  // ======================================================================
+  var ART_FILES = {
+    "antcity/ant/classic-v1":     "/antcity/art/ant-classic.svg",
+    "antcity/ant/ruby-v1":        "/antcity/art/ant-ruby.svg",
+    "antcity/ant/emerald-v1":     "/antcity/art/ant-emerald.svg",
+    "antcity/hero/queen-v1":      "/antcity/art/queen.svg",
+    "antcity/prop/egg-v1":        "/antcity/art/egg.svg",
+    "antcity/prop/nursery-v1":    "/antcity/art/room-nursery.svg",
+    "antcity/prop/storage-v1":    "/antcity/art/room-storage.svg",
+    "antcity/prop/den-v1":        "/antcity/art/room-den.svg",
+    "antcity/prop/crumb-v1":      "/antcity/art/crumb.svg",
+    "antcity/prop/buried-find-v1":"/antcity/art/buried-find.svg",
+    "antcity/soil/sandy-v1":      "/antcity/art/soil-tile.svg",
+    "antcity/badge/v1":           "/antcity/art/badge.svg"
+  };
+  function artUrl(id){
+    if(!id || typeof id !== "string") return null;
+    if(id.charAt(0) === "/" || id.indexOf("http") === 0) return id;   // already a URL (asset studio)
+    if(ART_FILES[id]) return ART_FILES[id];
+    if(window.BuildableManifest && window.BuildableManifest.resolveAsset){
+      try{ return window.BuildableManifest.resolveAsset(id); }catch(e){}
+    }
+    return null;
+  }
+  var IMG = {};                       // slot -> HTMLImageElement (only once it really loaded)
+  function loadArt(slot, id){
+    var url = artUrl(id); if(!url || typeof Image !== "function") return;
+    var im = new Image();
+    im.onload = function(){ if(im.naturalWidth) IMG[slot] = im; };
+    im.onerror = function(){};        // keep the drawn fallback, never a broken slot
+    im.src = url;
+  }
+
+  // ---------- canvas ----------
+  var CV = $("cv"), X = CV.getContext("2d");
+  var W = 0, H = 0, DPR = 1;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    CV.width = Math.floor(W*DPR); CV.height = Math.floor(H*DPR);
+    X.setTransform(DPR,0,0,DPR,0,0);
+    layout();
+  }
+  // geometry: the meadow on top, the soil grid under it
+  var CS = 34, OX = 0, SKY = 120, PANEL = 132, camY = 0, camTarget = 0;
+  function layout(){
+    CS = Math.max(24, Math.min(64, Math.floor(W / GAME_CONFIG.cols)));
+    OX = Math.floor((W - CS*GAME_CONFIG.cols) / 2);
+    SKY = Math.max(96, Math.min(170, Math.round(H * 0.20)));
+    PANEL = state === "play" ? 132 : 0;
+  }
+  window.addEventListener("resize", resize);
+
+  // ---------- deterministic randomness (the world is scripted; the QA robot must repeat it) ----------
+  var _seed = 20260906;
+  function srand(){ _seed = (_seed + 0x6D2B79F5)|0; var t = _seed; t = Math.imul(t ^ (t>>>15), t|1); t ^= t + Math.imul(t ^ (t>>>7), t|61); return ((t ^ (t>>>14))>>>0) / 4294967296; }
+
+  // ======================================================================
+  //  The colony. Cells are stored sparsely: solid dirt is simply absent.
+  //    tunnel  { c, r, kind:"tunnel" }
+  //    plan    { c, r, kind:"plan", dig:0..1 }        a path the kid drew
+  //    room    { c, r, kind:"room", room:"nursery", build:0..1, done:bool }
+  // ======================================================================
+  var C = null;                 // the colony state
+  function key(c,r){ return c+","+r; }
+  function cellAt(c,r){ return C.cells[key(c,r)] || null; }
+  function isOpen(c,r){ var x = cellAt(c,r); return !!(x && !x.flooded && (x.kind === "tunnel" || (x.kind === "room"))); }
+
+  function freshColony(diff){
+    var g = GAME_CONFIG, col = {
+      cells:{}, plan:[], ants:g.startAnts, eggs:0, food:g.startFood, water:g.startWater,
+      jobs:{ digger:2, forager:2, nursery:1, builder:1 },
+      surface:[], sample:[],
+      layProg:0, hatchProg:0, deepest:g.startRow, difficulty:diff||3,
+      queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0,
+      // --- AC2: missions, milestones and the gentle setbacks ---
+      mission:0, done:{}, mBase:{}, freeBuild:false, hit:{},
+      carried:0, found:0, floods:0, floodT:0, rest:1
+    };
+    // the buried find for the last mission, waiting under the deep soil
+    col.find = { c:Math.floor(g.cols/2) + 2, r:g.findRow };
+    // the entrance shaft and the queen's first chamber, so there is always somewhere to start
+    var qc = col.queen.c;
+    for(var r=0; r<=g.startRow; r++) col.cells[key(qc,r)] = { c:qc, r:r, kind:"tunnel" };
+    col.cells[key(qc-1,g.startRow)] = { c:qc-1, r:g.startRow, kind:"tunnel" };
+    col.cells[key(qc+1,g.startRow)] = { c:qc+1, r:g.startRow, kind:"tunnel" };
+    return col;
+  }
+  function tune(){ return GAME_CONFIG.difficulty[Math.max(0,Math.min(4,(C.difficulty|0)-1))] || GAME_CONFIG.difficulty[2]; }
+
+  // capacities grow with the rooms the kid builds
+  function roomCount(kind){ var n=0; for(var k in C.cells){ var x=C.cells[k]; if(x.kind==="room" && x.done && x.room===kind) n++; } return n; }
+  function foodCap(){ return GAME_CONFIG.capacity.foodBase + roomCount("storage")*GAME_CONFIG.capacity.foodPerStorage; }
+  function waterCap(){ return GAME_CONFIG.capacity.waterBase + roomCount("storage")*20; }
+  function eggCap(){ return GAME_CONFIG.capacity.eggBase + roomCount("nursery")*GAME_CONFIG.capacity.eggPerNursery; }
+  function paceMul(){
+    var dens = Math.min(GAME_CONFIG.denMax, roomCount("den"));
+    var hungry = (C.food <= 0) ? GAME_CONFIG.hungryRate : 1;
+    var sleepy = (C.rest <= 0) ? GAME_CONFIG.setback.sleepyRate : 1;
+    return tune().pace * (1 + dens*GAME_CONFIG.denBonus) * hungry * sleepy;
+  }
+  // what is slowing the colony right now, in the kid's words. Never a failure,
+  // always a thing they can go and fix.
+  function setbackNow(){
+    if(C.food <= 0)  return "Your ants are hungry. Drop food up on the meadow.";
+    if(C.rest <= 0)  return "Your ants are sleepy. Build a resting den.";
+    if(floodCount())  return "Rain flooded a tunnel. Builders are clearing it.";
+    return null;
+  }
+  function floodCount(){ var n=0; for(var k in C.cells){ if(C.cells[k].flooded) n++; } return n; }
+  function jobCount(id){ return C.jobs[id]|0; }
+
+  // ---------- surface: the crumbs and water drops the kid leaves out ----------
+  function dropSurface(kind, x){
+    if(C.surface.length > 14) C.surface.shift();
+    C.surface.push({ kind:kind, x:x, amount:6, t:0 });
+  }
+
+  // ======================================================================
+  //  The simulation. Fixed 1/60 steps so a headless run and a real play
+  //  reach the same colony from the same taps — that is what lets the QA
+  //  robot prove a mission is beatable.
+  // ======================================================================
+  var STEP = 1/60;
+  function step(){
+    var g = GAME_CONFIG, dt = STEP, pace = paceMul();
+    C.t += dt;
+
+    // --- diggers carve the drawn path, one cell at a time, in the order it was drawn
+    var digWork = jobCount("digger") * g.dig.perAntPerSec * pace * dt;
+    while(digWork > 0 && C.plan.length){
+      var cell = C.cells[C.plan[0]];
+      if(!cell || cell.kind !== "plan"){ C.plan.shift(); continue; }
+      if(!hasOpenNeighbour(cell.c, cell.r)){                 // not reachable yet: wait for the cell before it
+        var moved = false;
+        for(var i=1;i<C.plan.length;i++){
+          var alt = C.cells[C.plan[i]];
+          if(alt && alt.kind === "plan" && hasOpenNeighbour(alt.c, alt.r)){ C.plan.splice(i,1); C.plan.unshift(alt.c+","+alt.r); moved = true; break; }
+        }
+        if(!moved) break;
+        continue;
+      }
+      var need = 1 - cell.dig, take = Math.min(need, digWork);
+      cell.dig += take; digWork -= take;
+      if(cell.dig >= 1){
+        cell.kind = "tunnel"; delete cell.dig; C.plan.shift(); C.dug++;
+        if(cell.r > C.deepest) C.deepest = cell.r;
+        puff(cell.c, cell.r);
+        // the last mission: dig deep enough and the ants turn up something buried
+        if(C.find && !C.find.gone && cell.r >= C.find.r){
+          C.find.gone = true; C.find.at = { c:cell.c, r:cell.r }; C.found++;
+          if(Feel){ try{ Feel.tap(); }catch(e){} }
+        }
+      }
+    }
+
+    // --- foragers carry the surface food and water down
+    var carry = jobCount("forager") * g.forage.perAntPerSec * pace * dt;
+    while(carry > 0 && C.surface.length){
+      var it = C.surface[0], take2 = Math.min(it.amount, carry);
+      it.amount -= take2; carry -= take2;
+      if(it.kind === "water") C.water = Math.min(waterCap(), C.water + take2);
+      else { C.food = Math.min(foodCap(), C.food + take2); C.carried += take2; }
+      if(it.amount <= 0.001) C.surface.shift();
+    }
+
+    // --- builders clear a flooded tunnel FIRST: it blocks the colony, so it is
+    //     the thing that most needs them. Nothing is lost while it sits there.
+    var bw = jobCount("builder") * g.build.perAntPerSec * pace * dt;
+    if(bw > 0){
+      for(var fk in C.cells){
+        var fc = C.cells[fk];
+        if(!fc.flooded) continue;
+        var cw = Math.min(1 - (fc.clear||0), bw * (g.setback.floodClearPerAntPerSec / g.build.perAntPerSec));
+        fc.clear = (fc.clear||0) + cw; bw -= cw * (g.build.perAntPerSec / g.setback.floodClearPerAntPerSec);
+        if(fc.clear >= 1){ delete fc.flooded; delete fc.clear; C.floods++; puff(fc.c, fc.r); if(Feel){ try{ Feel.tap(); }catch(e){} } }
+        if(bw <= 0) break;
+      }
+    }
+    if(bw > 0){
+      for(var k in C.cells){
+        var rm = C.cells[k];
+        if(rm.kind === "room" && !rm.done){
+          var t2 = Math.min(1 - rm.build, bw); rm.build += t2; bw -= t2;
+          if(rm.build >= 1){ rm.done = true; C.rooms++; puff(rm.c, rm.r); if(Feel){ try{ Feel.tap(); }catch(e){} } }
+          if(bw <= 0) break;
+        }
+      }
+    }
+
+    // --- the queen lays, the nursery hatches
+    if(C.food > 0 && C.eggs < eggCap()){
+      C.layProg += g.nursery.layPerSec * pace * dt;
+      while(C.layProg >= 1 && C.eggs < eggCap()){ C.layProg -= 1; C.eggs++; C.food = Math.max(0, C.food - g.nursery.eggFood); }
+    }
+    if(C.eggs > 0){
+      var tend = jobCount("nursery") * g.nursery.hatchPerAntPerSec * pace * dt * ((C.food > 0 && C.water > 0) ? 1 : 0.3);
+      C.hatchProg += tend;
+      while(C.hatchProg >= 1 && C.eggs > 0){
+        C.hatchProg -= 1; C.eggs--; C.ants++; C.born++;
+        C.jobs.forager++;                                  // a new ant joins the foragers; the kid slides it anywhere
+        spawnSample();
+        if(Feel){ try{ Feel.tap(); }catch(e){} }
+      }
+    }
+
+    // --- upkeep: the colony eats. Empty stores only slow it down, they never punish.
+    C.food  = Math.max(0, C.food  - C.ants * g.upkeep.foodPerAntPerSec  * dt);
+    C.water = Math.max(0, C.water - C.ants * g.upkeep.waterPerAntPerSec * dt);
+
+    // --- tiredness: it creeps in slowly, and a resting den brings it back
+    var dens2 = Math.min(g.denMax, roomCount("den"));
+    C.rest = Math.max(0, Math.min(1, C.rest - g.setback.restDrainPerSec*dt + dens2*g.setback.restPerDenPerSec*dt));
+
+    // --- rain: every so often a tunnel floods and blocks the way through it
+    C.floodT += dt * tune().setbacks;
+    if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
+
+    normalizeJobs();
+    checkMission();
+    walkSample(dt);
+  }
+  // One tunnel floods. Never the queen's chamber, never the entrance shaft, and
+  // never the only way in, so the colony can always keep working somewhere.
+  function rain(){
+    // ONE flooded tunnel at a time (two at the liveliest difficulty). A browser run
+    // with no builders assigned had eleven tunnels under water at once, which is a
+    // punishment, not a gentle setback.
+    var cap = tune().setbacks > 1.2 ? 2 : 1;
+    if(floodCount() >= cap) return null;
+    var pool = [], k, x;
+    for(k in C.cells){
+      x = C.cells[k];
+      if(x.kind !== "tunnel" || x.flooded) continue;
+      if(x.c === C.queen.c && x.r <= C.queen.r) continue;
+      pool.push(x);
+    }
+    if(!pool.length) return null;
+    var pick = pool[Math.floor(srand()*pool.length)];
+    pick.flooded = true; pick.clear = 0;
+    if(Feel){ try{ Feel.miss(); }catch(e){} }
+    hint("Rain flooded a tunnel. Builders will clear it.");
+    return pick;
+  }
+  function hasOpenNeighbour(c,r){
+    return isOpen(c-1,r) || isOpen(c+1,r) || isOpen(c,r-1) || isOpen(c,r+1) || r === 0;
+  }
+  // every ant always has a job; rounding drift goes to the foragers
+  function normalizeJobs(){
+    var sum = 0, i;
+    for(i=0;i<JOBS.length;i++) sum += C.jobs[JOBS[i].id]|0;
+    var diff = C.ants - sum;
+    if(diff !== 0){ C.jobs.forager = Math.max(0, (C.jobs.forager|0) + diff); }
+  }
+
+  // ---------- the ants you actually see (a lively sample, never the whole colony) ----------
+  function openCells(){ var out=[]; for(var k in C.cells){ var x=C.cells[k]; if(x.kind==="tunnel"||(x.kind==="room"&&x.done)) out.push(x); } return out; }
+  function spawnSample(){
+    if(C.sample.length >= GAME_CONFIG.sampleMax) return;
+    var cells = openCells(); if(!cells.length) return;
+    var s = cells[Math.floor(srand()*cells.length)];
+    C.sample.push({ c:s.c, r:s.r, tc:s.c, tr:s.r, p:0, job:JOBS[Math.floor(srand()*JOBS.length)].id,
+                    flip:srand()<0.5, bob:srand()*6, ox:(srand()-0.5)*0.5, oy:(srand()-0.5)*0.5 });
+  }
+  function walkSample(dt){
+    // keep the drawn crowd roughly in step with the real head count
+    var room = openCells().length * 2;
+    var want = Math.min(GAME_CONFIG.sampleMax, C.ants, Math.max(3, room));
+    while(C.sample.length < want) spawnSample();
+    while(C.sample.length > want) C.sample.pop();
+    var speed = 1.7 * tune().pace;
+    for(var i=0;i<C.sample.length;i++){
+      var a = C.sample[i];
+      a.p += speed * dt;
+      if(a.p >= 1){
+        a.p = 0; a.c = a.tc; a.r = a.tr;
+        var opts = [];
+        if(isOpen(a.c-1,a.r)) opts.push([a.c-1,a.r]);
+        if(isOpen(a.c+1,a.r)) opts.push([a.c+1,a.r]);
+        if(isOpen(a.c,a.r-1)) opts.push([a.c,a.r-1]);
+        if(isOpen(a.c,a.r+1)) opts.push([a.c,a.r+1]);
+        if(opts.length){ var pick = opts[Math.floor(srand()*opts.length)]; a.flip = pick[0] < a.c; a.tc = pick[0]; a.tr = pick[1]; }
+      }
+    }
+  }
+  var puffs = [];
+  function puff(c,r){ if(puffs.length > 30) puffs.shift(); puffs.push({ c:c, r:r, t:0 }); }
+
+  // ======================================================================
+  //  Missions (AC2). The ten tutorial missions come from the manifest and sit
+  //  ON TOP of the colony: they watch what it does, they never take it over.
+  //  Nothing can be failed, nothing expires, and finishing the tenth opens
+  //  free-build, which never ends.
+  // ======================================================================
+  var FALLBACK_MISSIONS = [   // kept in step with /antcity/manifest.json
+    { id:"first-tunnel",   name:"First Tunnel",   layout:"tutorial-tunnel",    coins:10 },
+    { id:"first-forage",   name:"First Forage",   layout:"forage",             coins:10 },
+    { id:"build-nursery",  name:"Build a Nursery",layout:"build-room-nursery", coins:15 },
+    { id:"hatch-a-baby",   name:"Hatch a Baby",   layout:"hatch",              coins:15 },
+    { id:"reach-10-ants",  name:"Reach 10 Ants",  layout:"grow-population",    coins:20 },
+    { id:"storage-room",   name:"Storage Room",   layout:"build-room-storage", coins:20 },
+    { id:"rainy-day",      name:"Rainy Day",      layout:"setback-rain",       coins:20 },
+    { id:"reach-25-ants",  name:"Reach 25 Ants",  layout:"grow-population",    coins:25 },
+    { id:"resting-den",    name:"Resting Den",    layout:"build-room-den",     coins:25 },
+    { id:"dig-deep",       name:"Dig Deep",       layout:"dig-deep-find",      coins:30 }
+  ];
+  var MISSIONS = FALLBACK_MISSIONS.slice();
+
+  function signal(kind, meta){
+    if(DEMO) return;
+    try{ if(window.parent && window.parent !== window) window.parent.postMessage(meta ? { source:"buildable", kind:kind, meta:meta } : { source:"buildable", kind:kind }, "*"); }catch(e){}
+  }
+  function missionAt(i){ return MISSIONS[i] || null; }
+  function currentMission(){ return C.freeBuild ? null : missionAt(C.mission); }
+  // the goal for a mission: the layout says which kind, the id carries any number
+  // ("reach-25-ants" -> 25), so a new mission needs no engine change.
+  function goalFor(m){
+    if(!m) return null;
+    var g = GAME_CONFIG.goals[m.layout]; if(!g) return null;
+    var n = g.n;
+    if(n == null){ var d = /(\d+)/.exec(m.id || ""); n = d ? +d[1] : 1; }
+    return { type:g.type, room:g.room, n:n };
+  }
+  function haveFor(g){
+    if(!g) return 0;
+    switch(g.type){
+      case "dug":   return C.dug - (C.mBase.dug||0);
+      case "food":  return Math.floor(C.carried - (C.mBase.carried||0));
+      case "born":  return C.born - (C.mBase.born||0);
+      case "flood": if(!C.mFlood) return 1;                      // nowhere to flood: nothing to clear
+                    var fc2 = C.cells[C.mFlood];
+                    return (!fc2 || !fc2.flooded) ? 1 : 0;
+      case "found": return C.found - (C.mBase.found||0);
+      case "ants":  return C.ants;
+      case "room":  return roomCount(g.room);
+      default:      return 0;
+    }
+  }
+  // one short line telling the kid what this mission wants
+  function missionLine(){
+    var m = currentMission(); if(!m) return "Free build: grow it as big as you like";
+    var g = goalFor(m); if(!g) return m.name;
+    var have = Math.max(0, haveFor(g)), n = g.n;
+    switch(g.type){
+      case "dug":   return "Draw a tunnel: " + Math.min(have,n) + " of " + n + " dug";
+      case "food":  return "Bring food home: " + Math.min(have,n) + " of " + n;
+      case "room":  return "Tap a tunnel to build a " + (GAME_CONFIG.rooms[g.room] ? GAME_CONFIG.rooms[g.room].name.toLowerCase() : g.room);
+      case "born":  return "Put ants on nursery duty and wait for an egg";
+      case "ants":  return "Grow to " + n + " ants: " + Math.min(have,n) + " so far";
+      case "flood": return "Clear the flooded tunnel";
+      case "found": return "Keep digging down to find what is buried";
+      default:      return m.name;
+    }
+  }
+  function startMission(i){
+    C.mission = i;
+    C.mBase = { dug:C.dug, carried:C.carried, born:C.born, floods:C.floods, found:C.found };
+    var m = missionAt(i);
+    C.mFlood = null;
+    // Rainy Day brings its own rain, and wants THAT tunnel cleared — a puddle that
+    // was already sitting there does not finish it. It can never be un-finishable:
+    // if there is nowhere to flood, the goal is already met.
+    if(m && m.layout === "setback-rain"){
+      var f = rain();
+      C.mFlood = f ? key(f.c, f.r) : null;
+    }
+    if(m) hint(missionLine());
+  }
+  function checkMission(){
+    if(C.freeBuild) return;
+    var m = currentMission(), g = goalFor(m);
+    if(!m || !g) { C.freeBuild = true; return; }
+    if(haveFor(g) >= g.n) completeMission();
+    checkMilestones();
+  }
+  function completeMission(){
+    var m = currentMission(); if(!m) return;
+    C.done[m.id] = true;
+    award("antcity:" + m.id, m.coins || 10);
+    celebrate(m.name, m.coins || 10);
+    signal(C.mission >= MISSIONS.length - 1 ? "win" : "levelup",
+           { game:"antcity", level:m.name, mission:C.mission + 1, of:MISSIONS.length, ants:C.ants });
+    if(C.mission >= MISSIONS.length - 1){ C.freeBuild = true; hint("Free build: no ending, just keep growing"); }
+    else startMission(C.mission + 1);
+    saveSoon();
+  }
+  // milestones: a free reward for growing, and they open a room type early. They
+  // never gate anything — a kid who ignores them loses nothing.
+  function checkMilestones(){
+    var ms = GAME_CONFIG.milestones || [], i;
+    for(i=0;i<ms.length;i++){
+      var ml = ms[i]; if(C.hit[ml.id]) continue;
+      var have = ml.type === "ants" ? C.ants : C.deepest;
+      if(have < ml.n) continue;
+      C.hit[ml.id] = true;
+      award("antcity:milestone:" + ml.id, ml.coins);
+      celebrate(ml.type === "ants" ? (ml.n + " ants!") : ("Dug " + ml.n + " levels deep!"), ml.coins);
+      signal("cheer", { game:"antcity", milestone:ml.id });
+      saveSoon();
+    }
+  }
+  var coinsAwarded = [];
+  function award(key, n){
+    if(DEMO || !n) return;
+    coinsAwarded.push({ key:key, n:n });
+    try{ if(BW && BW.awardOnce) BW.awardOnce(key, n); }catch(e){}
+  }
+  // a room the kid has not been introduced to yet is simply not offered
+  function roomUnlocked(id){
+    if(C.freeBuild) return true;
+    var ms = GAME_CONFIG.milestones || [], i;
+    for(i=0;i<ms.length;i++) if(ms[i].unlock === id && C.hit[ms[i].id]) return true;
+    var at = GAME_CONFIG.roomUnlock[id];
+    return at == null || C.mission >= at;
+  }
+  // the celebration: Feel does the juice, a plain card says what just happened
+  var party = { t:0, title:"", coins:0 };
+  function celebrate(title, coins){
+    if(DEMO) return;                      // the attract box stays a window on the colony
+    party.t = 2.6; party.title = title; party.coins = coins || 0;
+    if(Feel){ try{ Feel.celebrate(W, H); Feel.coinBurst(W/2, H*0.42, 14); }catch(e){} }
+  }
+  function tickParty(dt){ if(party.t > 0) party.t -= dt; }
+
+  // ======================================================================
+  //  Drawing
+  // ======================================================================
+  function cellX(c){ return OX + c*CS; }
+  function cellY(r){ return SKY + r*CS - camY; }
+  function draw(){
+    layout();
+    // camera follows the colony down as it deepens
+    var bottomLimit = H - PANEL - CS*1.2;
+    camTarget = Math.max(0, SKY + (C.deepest+2)*CS - bottomLimit);
+    camY += (camTarget - camY) * 0.06;
+
+    drawSky();
+    drawSoil();
+    drawCells();
+    drawSurfaceItems();
+    drawAnts();
+    drawPuffs();
+  }
+  function drawSky(){
+    var gsky = X.createLinearGradient(0,0,0,SKY);
+    gsky.addColorStop(0,"#8fd8f7"); gsky.addColorStop(1,"#d9f2ce");
+    X.fillStyle = gsky; X.fillRect(0,0,W,SKY);
+    // sun
+    X.fillStyle = "#ffe9a8"; X.beginPath(); X.arc(W-52, 44, 26, 0, 7); X.fill();
+    // meadow band + mushrooms and tufts (drawn, so the meadow is never a missing file)
+    var gy = SKY - 26;
+    X.fillStyle = "#79c46a"; X.fillRect(0, gy, W, 26 + 4);
+    X.fillStyle = "#63ad57";
+    for(var i=0;i<W;i+=26){ X.beginPath(); X.moveTo(i, gy+2); X.lineTo(i+7, gy-8); X.lineTo(i+13, gy+2); X.closePath(); X.fill(); }
+    for(var m=0;m<3;m++){
+      var mx = 40 + m*(W/3);
+      X.fillStyle = "#f6f1e2"; X.fillRect(mx-3, gy-12, 6, 12);
+      X.fillStyle = "#e2685f"; X.beginPath(); X.arc(mx, gy-12, 11, Math.PI, 0); X.fill();
+      X.fillStyle = "#fff4ea"; X.beginPath(); X.arc(mx-3, gy-15, 2.2, 0, 7); X.arc(mx+4, gy-13, 1.8, 0, 7); X.fill();
+    }
+  }
+  function drawSoil(){
+    var top = SKY, h = H - SKY;
+    var gd = X.createLinearGradient(0, top, 0, top + h);
+    gd.addColorStop(0, "#c58f52"); gd.addColorStop(1, "#7a4f26");
+    X.fillStyle = gd; X.fillRect(0, top, W, h);
+    // soil texture: either the tile art or drawn speckle, never nothing
+    var tile = IMG.soil;
+    if(tile){
+      var r0 = Math.floor(camY / CS), rN = r0 + Math.ceil(h / CS) + 1;
+      X.globalAlpha = 0.5;
+      for(var r=r0; r<rN; r++) for(var c=0;c<GAME_CONFIG.cols;c++) X.drawImage(tile, cellX(c), cellY(r), CS, CS);
+      X.globalAlpha = 1;
+    } else {
+      X.fillStyle = "rgba(255,255,255,.07)";
+      for(var i=0;i<160;i++){
+        var sx = ((i*97)%W), sy = top + ((i*53 + Math.floor(camY*0.4)) % h);
+        X.fillRect(sx, sy, 3, 3);
+      }
+    }
+  }
+  function drawCells(){
+    for(var k in C.cells){
+      var x = C.cells[k], px = cellX(x.c), py = cellY(x.r);
+      if(py < SKY - CS*2 || py > H + CS) continue;                 // off screen
+      if(x.kind === "plan"){
+        X.strokeStyle = "rgba(255,240,200,.85)"; X.lineWidth = 3; X.setLineDash([6,5]);
+        if(BR) { BR.rrect(X, px+3, py+3, CS-6, CS-6, 8); X.stroke(); } else X.strokeRect(px+3, py+3, CS-6, CS-6);
+        X.setLineDash([]);
+        if(x.dig > 0){ X.fillStyle = "rgba(255,240,200,.28)"; X.fillRect(px+4, py+CS-4-(CS-8)*x.dig, CS-8, (CS-8)*x.dig); }
+        continue;
+      }
+      // an open tunnel: a soft dark hollow
+      X.fillStyle = "#4a3016";
+      if(BR){ BR.rrect(X, px-1, py-1, CS+2, CS+2, 10); X.fill(); } else X.fillRect(px, py, CS, CS);
+      // square off the sides that touch another open cell so the burrow joins up
+      if(isOpen(x.c-1,x.r)) X.fillRect(px-1, py+2, CS*0.5, CS-4);
+      if(isOpen(x.c+1,x.r)) X.fillRect(px+CS*0.5, py+2, CS*0.5+1, CS-4);
+      if(isOpen(x.c,x.r-1)) X.fillRect(px+2, py-1, CS-4, CS*0.5);
+      if(isOpen(x.c,x.r+1)) X.fillRect(px+2, py+CS*0.5, CS-4, CS*0.5+1);
+      X.fillStyle = "rgba(0,0,0,.22)";
+      if(BR){ BR.rrect(X, px+3, py+3, CS-6, CS-8, 8); X.fill(); }
+      if(x.kind === "room") drawRoom(x, px, py);
+      if(x.flooded){
+        X.fillStyle = "rgba(98,182,242,.72)";
+        if(BR){ BR.rrect(X, px+2, py+2, CS-4, CS-4, 8); X.fill(); } else X.fillRect(px+2, py+2, CS-4, CS-4);
+        X.fillStyle = "rgba(255,255,255,.55)";
+        X.fillRect(px+4, py + CS*0.35 + Math.sin(C.t*3 + x.c)*CS*0.05, CS-8, 3);
+        X.fillStyle = "rgba(255,255,255,.9)"; X.fillRect(px+4, py+CS-7, (CS-8)*(x.clear||0), 3);
+      }
+    }
+    // whatever the ants turned up down deep
+    if(C.find && C.find.gone && C.find.at){
+      var fx2 = cellX(C.find.at.c)+CS/2, fy2 = cellY(C.find.at.r)+CS/2;
+      if(IMG.find) drawImg(IMG.find, fx2, fy2, CS*0.7);
+      else { X.fillStyle = "#ffd166"; X.beginPath(); X.arc(fx2, fy2, CS*0.24, 0, 7); X.fill();
+             X.fillStyle = "#fff3d6"; if(BR) BR.sparkle(X, fx2, fy2, CS*0.16, C.t); X.fill(); }
+    }
+    // the queen sits in her chamber
+    var q = C.queen, qx = cellX(q.c)+CS/2, qy = cellY(q.r)+CS/2;
+    if(IMG.queen) drawImg(IMG.queen, qx, qy, CS*0.86); else drawAntShape(qx, qy, CS*0.42, "#b0553f", false);
+  }
+  function drawRoom(x, px, py){
+    var def = GAME_CONFIG.rooms[x.room] || GAME_CONFIG.rooms.nursery;
+    var img = IMG["room_"+x.room];
+    if(!x.done){
+      X.globalAlpha = 0.35 + 0.5*x.build;
+      X.fillStyle = def.color;
+      if(BR){ BR.rrect(X, px+4, py+4, CS-8, CS-8, 8); X.fill(); } else X.fillRect(px+4, py+4, CS-8, CS-8);
+      X.globalAlpha = 1;
+      X.fillStyle = "rgba(255,255,255,.9)"; X.fillRect(px+5, py+CS-9, (CS-10)*x.build, 4);
+      return;
+    }
+    if(img) drawImg(img, px+CS/2, py+CS/2, CS*0.84);
+    else {
+      X.fillStyle = def.color;
+      if(BR){ BR.rrect(X, px+4, py+4, CS-8, CS-8, 9); X.fill(); } else X.fillRect(px+4, py+4, CS-8, CS-8);
+    }
+    if(x.room === "nursery" && C.eggs > 0){
+      var show = Math.min(3, C.eggs), i;
+      for(i=0;i<show;i++){
+        var ex = px + CS*0.3 + i*CS*0.2, ey = py + CS*0.72;
+        if(IMG.egg) drawImg(IMG.egg, ex, ey, CS*0.26);
+        else { X.fillStyle = "#fff3d6"; X.beginPath(); X.ellipse(ex, ey, CS*0.09, CS*0.12, 0, 0, 7); X.fill(); }
+      }
+    }
+  }
+  function drawSurfaceItems(){
+    for(var i=0;i<C.surface.length;i++){
+      var it = C.surface[i], y = SKY - 30;
+      if(it.kind === "water"){
+        X.fillStyle = "#62b6f2"; X.beginPath(); X.moveTo(it.x, y-9); X.quadraticCurveTo(it.x+7, y+1, it.x, y+7); X.quadraticCurveTo(it.x-7, y+1, it.x, y-9); X.fill();
+      } else if(IMG.crumb){ drawImg(IMG.crumb, it.x, y, 22); }
+      else { X.fillStyle = "#d9a05b"; X.beginPath(); X.arc(it.x, y, 7, 0, 7); X.fill(); }
+    }
+  }
+  function drawAnts(){
+    for(var i=0;i<C.sample.length;i++){
+      var a = C.sample[i];
+      var x0 = cellX(a.c)+CS/2, y0 = cellY(a.r)+CS/2;
+      var x1 = cellX(a.tc)+CS/2, y1 = cellY(a.tr)+CS/2;
+      var px = x0 + (x1-x0)*a.p + a.ox*CS, py = y0 + (y1-y0)*a.p + a.oy*CS;
+      if(py < SKY - CS || py > H + CS) continue;
+      var bob = Math.sin((C.t*7) + a.bob) * CS*0.03;
+      if(IMG.ant) drawImg(IMG.ant, px, py+bob, CS*0.44, a.flip);
+      else drawAntShape(px, py+bob, CS*0.16, jobColor(a.job), a.flip);
+      // a small job dot so the kid can see who is who
+      X.fillStyle = jobColor(a.job);
+      X.beginPath(); X.arc(px + (a.flip?CS*0.14:-CS*0.14), py+bob-CS*0.18, CS*0.04, 0, 7); X.fill();
+    }
+  }
+  function jobColor(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i].color; return "#fff"; }
+  function drawAntShape(x, y, r, col, flip){
+    X.save(); X.translate(x,y); if(flip) X.scale(-1,1);
+    X.fillStyle = "rgba(0,0,0,.18)"; X.beginPath(); X.ellipse(0, r*0.95, r*1.15, r*0.35, 0, 0, 7); X.fill();
+    X.strokeStyle = col; X.lineWidth = Math.max(1.4, r*0.22); X.lineCap = "round";
+    var lg = r*0.85, i;
+    for(i=-1;i<=1;i++){ X.beginPath(); X.moveTo(i*r*0.35, 0); X.lineTo(i*r*0.35 - lg*0.5, lg*0.8); X.stroke(); }
+    X.fillStyle = col;
+    X.beginPath(); X.ellipse(-r*0.85, 0, r*0.62, r*0.5, 0, 0, 7); X.fill();     // abdomen
+    X.beginPath(); X.ellipse(0, 0, r*0.4, r*0.36, 0, 0, 7); X.fill();           // thorax
+    X.beginPath(); X.arc(r*0.75, -r*0.05, r*0.46, 0, 7); X.fill();              // head
+    X.strokeStyle = col; X.lineWidth = Math.max(1, r*0.14);
+    X.beginPath(); X.moveTo(r*0.95, -r*0.35); X.lineTo(r*1.35, -r*0.85); X.stroke();
+    X.beginPath(); X.moveTo(r*1.05, -r*0.2);  X.lineTo(r*1.5,  -r*0.5);  X.stroke();
+    X.fillStyle = "#fff"; X.beginPath(); X.arc(r*0.9, -r*0.12, r*0.16, 0, 7); X.fill();
+    X.fillStyle = "#2b1d10"; X.beginPath(); X.arc(r*0.94, -r*0.12, r*0.08, 0, 7); X.fill();
+    X.restore();
+  }
+  function drawImg(img, cx, cy, size, flip){
+    var iw = img.naturalWidth||img.width, ih = img.naturalHeight||img.height; if(!iw||!ih) return;
+    var s = size / Math.max(iw, ih), w = iw*s, h = ih*s;
+    X.save(); X.translate(cx, cy); if(flip) X.scale(-1,1);
+    X.drawImage(img, -w/2, -h/2, w, h); X.restore();
+  }
+  // the mission celebration: a calm card, the Feel kit does the sparkle
+  function drawParty(){
+    if(party.t <= 0) return;
+    var a = Math.min(1, party.t / 0.4), cw = Math.min(320, W*0.8), ch = 116;
+    var cx = (W - cw)/2, cy = H*0.30;
+    X.globalAlpha = a;
+    X.fillStyle = "rgba(20,12,4,.55)"; X.fillRect(0, 0, W, H);
+    X.fillStyle = "#fff8ec";
+    if(BR){ BR.rrect(X, cx, cy, cw, ch, 20); X.fill(); } else X.fillRect(cx, cy, cw, ch);
+    X.fillStyle = "#4a2f10"; X.textAlign = "center";
+    X.font = "800 22px 'Baloo 2','Nunito',system-ui,sans-serif";
+    X.fillText(party.title, W/2, cy + 46);
+    if(party.coins){
+      X.fillStyle = "#c9862b"; X.font = "800 17px 'Baloo 2','Nunito',system-ui,sans-serif";
+      X.fillText("+" + party.coins + " coins", W/2, cy + 78);
+    }
+    X.textAlign = "left"; X.globalAlpha = 1;
+  }
+  function drawPuffs(){
+    for(var i=puffs.length-1;i>=0;i--){
+      var p = puffs[i]; p.t += STEP*2;
+      if(p.t >= 1){ puffs.splice(i,1); continue; }
+      var px = cellX(p.c)+CS/2, py = cellY(p.r)+CS/2;
+      X.globalAlpha = (1-p.t)*0.6; X.fillStyle = "#e8c9a0";
+      for(var j=0;j<4;j++){ var a2 = j*1.6 + p.t*2; X.beginPath(); X.arc(px + Math.cos(a2)*CS*0.5*p.t, py + Math.sin(a2)*CS*0.5*p.t, CS*0.13*(1-p.t), 0, 7); X.fill(); }
+      X.globalAlpha = 1;
+    }
+  }
+
+  // ======================================================================
+  //  HUD (shared bar) + the jobs panel
+  // ======================================================================
+  var _hud = null;
+  function HUD(){ try{ return _hud || (_hud = window.BuildableHUD.mount(CV)); }catch(e){ return { set:function(){}, show:function(){}, hide:function(){} }; } }
+  try{ if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT); }catch(e){}
+  function syncHud(){
+    var m = currentMission();
+    HUD().set({
+      left:  [{ text: m ? (m.name) : "Free build" }, { text:"Ants "+C.ants }],
+      right: [{ text:"Food "+Math.floor(C.food) }, { text:"Eggs "+C.eggs }]
+    });
+  }
+  var hintT = 0;
+  function hint(msg){
+    var el = $("hint"); if(!el) return;
+    el.textContent = msg; el.className = "show"; hintT = 3.2;
+  }
+  function tickHint(dt){ if(hintT > 0){ hintT -= dt; if(hintT <= 0){ var el=$("hint"); if(el) el.className = ""; } } }
+
+  function buildJobsUI(){
+    var host = $("jobs"); if(!host || host.childElementCount) return;
+    for(var i=0;i<JOBS.length;i++){
+      (function(j){
+        var d = document.createElement("div"); d.className = "job";
+        d.innerHTML = '<div class="nm" style="color:'+j.color+'">'+j.name+'</div><div class="ct" id="ct_'+j.id+'">0</div>'+
+                      '<div class="btns"><button type="button" data-j="'+j.id+'" data-d="-1">&minus;</button>'+
+                      '<button type="button" data-j="'+j.id+'" data-d="1">+</button></div>';
+        host.appendChild(d);
+      })(JOBS[i]);
+    }
+    host.addEventListener("click", function(ev){
+      var b = ev.target.closest ? ev.target.closest("button") : null; if(!b) return;
+      BA.unlock(); moveAnt(b.getAttribute("data-j"), +b.getAttribute("data-d"));
+    });
+  }
+  // move one ant into (+1) or out of (-1) a job; the foragers are the pool it comes from
+  function moveAnt(job, d){
+    if(DEMO) return;
+    if(d > 0){
+      var from = null, i;
+      for(i=JOBS.length-1;i>=0;i--){ var o=JOBS[i].id; if(o!==job && (C.jobs[o]|0) > 0){ if(o==="forager"){ from=o; break; } if(!from) from=o; } }
+      if(!from){ hint("Grow the colony first"); return; }
+      C.jobs[from]--; C.jobs[job] = (C.jobs[job]|0) + 1;
+    } else {
+      if((C.jobs[job]|0) <= 0) return;
+      C.jobs[job]--; C.jobs.forager = (C.jobs.forager|0) + 1;
+    }
+    if(Feel){ try{ Feel.tap(); }catch(e){} }
+    syncJobsUI(); saveSoon();
+  }
+  var _jobsKey = "";
+  function syncJobsUI(){
+    var k = C.ants + "|" + JOBS.map(function(j){ return C.jobs[j.id]|0; }).join(",");
+    if(k === _jobsKey) return;                 // called every frame: only redraw on a real change
+    _jobsKey = k;
+    for(var i=0;i<JOBS.length;i++){ var el = $("ct_"+JOBS[i].id); if(el) el.textContent = C.jobs[JOBS[i].id]|0; }
+    drawBar();
+  }
+  // the slide-to-assign bar: drag a divider to move ants between two jobs
+  function drawBar(){
+    var bar = $("bar"); if(!bar) return;
+    var total = Math.max(1, C.ants), acc = 0, html = "", cum = [];
+    for(var i=0;i<JOBS.length;i++){
+      var n = C.jobs[JOBS[i].id]|0, w = (n/total)*100;
+      html += '<div class="seg" style="left:'+acc+'%;width:'+w+'%;background:'+JOBS[i].color+'"></div>';
+      acc += w; if(i < JOBS.length-1) cum.push(acc);
+    }
+    for(var d=0;d<cum.length;d++) html += '<div class="gr" style="left:'+cum[d]+'%"></div>';
+    bar.innerHTML = html;
+  }
+  (function wireBar(){
+    var bar = $("bar"); if(!bar) return;
+    var dragging = -1;
+    function pct(ev){ var r = bar.getBoundingClientRect(); return Math.max(0, Math.min(1, ((ev.clientX!=null?ev.clientX:0) - r.left) / Math.max(1, r.width))); }
+    function cumFor(i){ var t = Math.max(1, C.ants), s = 0; for(var j=0;j<=i;j++) s += C.jobs[JOBS[j].id]|0; return s/t; }
+    bar.addEventListener("pointerdown", function(ev){
+      if(DEMO) return;
+      BA.unlock(); var p = pct(ev), best = -1, bd = 0.09;
+      for(var i=0;i<JOBS.length-1;i++){ var d = Math.abs(cumFor(i) - p); if(d < bd){ bd = d; best = i; } }
+      dragging = best;
+      if(dragging >= 0){ try{ bar.setPointerCapture(ev.pointerId); }catch(e){} }
+    });
+    bar.addEventListener("pointermove", function(ev){
+      if(dragging < 0) return;
+      var a = JOBS[dragging].id, b = JOBS[dragging+1].id;
+      var before = 0, i;
+      for(i=0;i<dragging;i++) before += C.jobs[JOBS[i].id]|0;
+      var pair = (C.jobs[a]|0) + (C.jobs[b]|0);
+      var want = Math.round(pct(ev) * C.ants) - before;
+      want = Math.max(0, Math.min(pair, want));
+      if(want !== (C.jobs[a]|0)){ C.jobs[a] = want; C.jobs[b] = pair - want; syncJobsUI(); saveSoon(); }
+    });
+    function end(){ dragging = -1; }
+    bar.addEventListener("pointerup", end); bar.addEventListener("pointercancel", end);
+  })();
+
+  // drop tool (food or water)
+  var TOOL = "food";
+  function setTool(t){ TOOL = t; $("toolFood").className = "tool" + (t==="food"?" on":""); $("toolWater").className = "tool" + (t==="water"?" on":""); }
+  $("toolFood").addEventListener("click", function(){ BA.unlock(); setTool("food"); });
+  $("toolWater").addEventListener("click", function(){ BA.unlock(); setTool("water"); });
+
+  // ======================================================================
+  //  Input — draw a tunnel path, drop food up top, tap a tunnel to build
+  // ======================================================================
+  var drag = null;
+  function cellFromEvent(ev){
+    var r = CV.getBoundingClientRect();
+    var x = (ev.clientX!=null?ev.clientX:0) - r.left, y = (ev.clientY!=null?ev.clientY:0) - r.top;
+    if(y < SKY - 20) return { surface:true, x:x, y:y };
+    var c = Math.floor((x - OX)/CS), rr = Math.floor((y - SKY + camY)/CS);
+    if(c < 0 || c >= GAME_CONFIG.cols || rr < 0) return null;
+    return { surface:false, c:c, r:rr, x:x, y:y };
+  }
+  function planCell(c, r){
+    if(cellAt(c,r)) return false;
+    var last = C.plan.length ? C.cells[C.plan[C.plan.length-1]] : null;
+    var okFromLast = last && Math.abs(last.c-c) + Math.abs(last.r-r) === 1;
+    if(!hasOpenNeighbour(c,r) && !okFromLast) return false;
+    C.cells[key(c,r)] = { c:c, r:r, kind:"plan", dig:0 };
+    C.plan.push(key(c,r));
+    return true;
+  }
+  CV.addEventListener("pointerdown", function(ev){
+    if(state !== "play" || DEMO || paused) return;
+    BA.unlock();
+    if(how.on){ endHow(); }
+    var g = cellFromEvent(ev); if(!g) return;
+    if(g.surface){ dropSurface(TOOL, g.x); if(Feel){ try{ Feel.tap(); }catch(e){} } saveSoon(); return; }
+    var here = cellAt(g.c, g.r);
+    if(here && (here.kind === "tunnel")){ drag = { mode:"tap", c:g.c, r:g.r }; return; }
+    if(here) return;                                    // a planned or built cell: nothing to do
+    if(planCell(g.c, g.r)){ drag = { mode:"dig" }; if(Feel){ try{ Feel.tap(); }catch(e){} } }
+    else { hint("Start next to a tunnel"); }
+  });
+  CV.addEventListener("pointermove", function(ev){
+    if(!drag || drag.mode !== "dig") return;
+    var g = cellFromEvent(ev); if(!g || g.surface) return;
+    planCell(g.c, g.r);
+  });
+  CV.addEventListener("pointerup", function(){
+    if(drag && drag.mode === "tap") openBuild(drag.c, drag.r);
+    if(drag) saveSoon();
+    drag = null;
+  });
+  CV.addEventListener("pointercancel", function(){ drag = null; });
+
+  // ---------- build a room ----------
+  var buildTarget = null;
+  function openBuild(c, r){
+    if(DEMO) return;
+    buildTarget = { c:c, r:r };
+    var list = $("roomList"); list.innerHTML = "";
+    Object.keys(GAME_CONFIG.rooms).forEach(function(id){
+      if(!roomUnlocked(id)) return;                 // not met yet: simply not offered
+      var def = GAME_CONFIG.rooms[id], can = C.food >= def.food;
+      var b = document.createElement("button");
+      b.className = "room"; b.type = "button"; b.disabled = !can;
+      b.innerHTML = '<svg width="34" height="34" viewBox="0 0 34 34"><rect x="3" y="3" width="28" height="28" rx="9" fill="'+def.color+'"/></svg>'+
+                    '<span><span class="rn">'+def.name+'</span><br><span class="rd">'+def.desc+' &middot; '+def.food+' food</span></span>';
+      b.addEventListener("click", function(){ startRoom(id); });
+      list.appendChild(b);
+    });
+    $("build").style.display = "flex";
+  }
+  function closeBuild(){ $("build").style.display = "none"; buildTarget = null; }
+  $("buildCancel").addEventListener("click", function(){ BA.unlock(); closeBuild(); });
+  function startRoom(id){
+    var def = GAME_CONFIG.rooms[id]; if(!buildTarget || !def) return;
+    if(C.food < def.food){ hint("Not enough food yet"); closeBuild(); return; }
+    var cell = cellAt(buildTarget.c, buildTarget.r); if(!cell || cell.kind !== "tunnel"){ closeBuild(); return; }
+    C.food -= def.food;
+    cell.kind = "room"; cell.room = id; cell.build = 0; cell.done = false;
+    closeBuild(); hint("Builders are on it"); saveSoon();
+  }
+
+  // ======================================================================
+  //  Save (this session: local only. Real per-kid saving + away-time growth
+  //  is card AC3, which replaces this with a stored colony.)
+  // ======================================================================
+  var SAVE_KEY = "bk_antcity_colony";
+  var saveT = 0;
+  function saveSoon(){ saveT = 1.2; }
+  function saveNow(){
+    saveT = 0;
+    try{
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        v:1, cells:C.cells, plan:C.plan, ants:C.ants, eggs:C.eggs, food:C.food, water:C.water,
+        jobs:C.jobs, deepest:C.deepest, difficulty:C.difficulty, queen:C.queen,
+        born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface,
+        mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
+        carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
+        seen:C.seen, savedAt:Date.now()
+      }));
+    }catch(e){}
+  }
+  function loadSaved(){
+    try{
+      var raw = localStorage.getItem(SAVE_KEY); if(!raw) return null;
+      var s = JSON.parse(raw); if(!s || s.v !== 1 || !s.cells) return null;
+      var col = freshColony(s.difficulty || 3);
+      col.cells = s.cells; col.plan = s.plan || []; col.ants = s.ants || col.ants; col.eggs = s.eggs || 0;
+      col.food = s.food || 0; col.water = s.water || 0; col.jobs = s.jobs || col.jobs;
+      col.deepest = s.deepest || col.deepest; col.queen = s.queen || col.queen;
+      col.born = s.born||0; col.dug = s.dug||0; col.rooms = s.rooms||0; col.surface = s.surface || [];
+      col.mission = s.mission||0; col.done = s.done||{}; col.mBase = s.mBase||{};
+      col.freeBuild = !!s.freeBuild; col.hit = s.hit||{}; col.carried = s.carried||0; col.mFlood = s.mFlood||null;
+      col.found = s.found||0; col.floods = s.floods||0; col.rest = (s.rest==null?1:s.rest);
+      col.find = s.find || col.find; col.seen = !!s.seen;
+      return col;
+    }catch(e){ return null; }
+  }
+
+  // ======================================================================
+  //  Screens, loop, nav
+  // ======================================================================
+  var state = "menu";      // menu | play
+  var paused = false, DEMO = false, last = 0, acc = 0, demoT = 0;
+  try{ var q = new URLSearchParams(location.search); DEMO = q.get("screen") === "demo"; }catch(e){}
+  if(DEMO){ BA = { unlock:function(){}, sfx:function(){}, toggleMute:function(){return false;}, muted:true }; }
+
+  function newColony(diff){
+    C = freshColony(diff);
+    C.surface = []; C.sample = [];
+    walkSample(0);
+  }
+  function startPlay(){
+    if(!C){ var saved = DEMO ? null : loadSaved(); C = saved || freshColony(3); }
+    if(!C.surface) C.surface = [];
+    if(!C.sample){ C.sample = []; walkSample(0); }
+    state = "play"; paused = false;
+    hideMenu(); $("panel").className = "";
+    buildJobsUI(); syncJobsUI(); HUD().show(); syncHud();
+    if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
+    if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
+    if(DEMO) return;
+    if(!C.seen){ C.seen = true; saveSoon(); showHow(); }      // first launch: show, don't tell
+    else hint(currentMission() ? missionLine() : "Free build: keep growing");
+  }
+  var startScreen = null;
+  function startCfg(){
+    return {
+      title:"Ant City", subtitle:"Draw tunnels, drop food, grow your colony",
+      coins: (BW ? BW.balance() : 0), sound: !BA.muted, showBack:true,
+      hero: IMG.queen ? { name:"The Queen", img:artUrl(ART_IDS.queen), progressText: C ? (C.ants + " ants") : "A brand new colony" } : null,
+      levels:[{ n:1, name:"Your Colony", color:"#8a5a2b", state:"next" }]
+    };
+  }
+  function showMenu(){
+    state = "menu"; $("panel").className = "hidden"; HUD().hide(); closeBuild();
+    var host = $("start"); host.style.display = "block";
+    if(!BS){ startPlay(); return; }
+    if(!startScreen) startScreen = BS.mount(host, startCfg(), {
+      onPlay:function(){ BA.unlock(); startPlay(); },
+      onSound:function(){ BA.unlock(); BA.toggleMute(); if(startScreen) startScreen.update(startCfg()); },
+      onBack:function(){ try{ if(window.parent && window.parent!==window) window.parent.postMessage({type:"nav:exit"},"*"); }catch(e){} }
+    });
+    else startScreen.update(startCfg());
+    if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
+  }
+  function hideMenu(){ var host = $("start"); if(host) host.style.display = "none"; }
+
+  function frame(now){
+    requestAnimationFrame(frame);
+    if(!last) last = now;
+    var dt = Math.min(0.25, (now - last)/1000); last = now;
+    if(state === "play" && !paused){
+      acc += dt;
+      var guard = 0;
+      while(acc >= STEP && guard < 12){ step(); acc -= STEP; guard++; }
+      if(acc > 0.5) acc = 0;
+      tickHint(dt); tickHow(dt); tickParty(dt);
+      if(saveT > 0 && !DEMO){ saveT -= dt; if(saveT <= 0) saveNow(); }
+      if(DEMO) demoStep(dt);
+      syncHud(); syncJobsUI();
+    }
+    if(C){ draw(); if(state === "play"){ drawHow(); drawParty(); } }
+  }
+  // attract mode: the colony plays itself, silent, input ignored (used by the picker)
+  function demoStep(dt){
+    demoT += dt;
+    if(demoT > 1.1){
+      demoT = 0;
+      var c = C.queen.c + (Math.floor(srand()*3) - 1), r = C.deepest + 1;
+      c = Math.max(0, Math.min(GAME_CONFIG.cols-1, c));
+      if(!planCell(c, r)) planCell(C.queen.c, r);
+      if(srand() < 0.5) dropSurface(srand() < 0.7 ? "food" : "water", 40 + srand()*(W-80));
+    }
+  }
+
+  // ======================================================================
+  //  The wordless show. On a first launch (and from the ? button) a hand moves
+  //  down the dirt and the cells it passes turn into a drawn path, so a kid who
+  //  cannot read still knows the one thing to do. No words, no emoji, and it
+  //  never blocks: the first tap on the screen ends it.
+  // ======================================================================
+  var how = { on:false, t:0, path:[] };
+  function showHow(){
+    how.on = true; how.t = 0; how.path = [];
+    var c = C.queen.c, r = C.deepest + 1, i;
+    for(i=0;i<4;i++) how.path.push({ c:c, r:r+i });
+  }
+  function endHow(){ how.on = false; }
+  function tickHow(dt){
+    if(!how.on) return;
+    how.t += dt;
+    if(how.t > 3.4){ endHow(); return; }
+  }
+  function drawHow(){
+    if(!how.on || !how.path.length) return;
+    var span = 2.6, p = Math.max(0, Math.min(1, (how.t - 0.4) / span));
+    var at = p * (how.path.length - 1), idx = Math.floor(at), fr = at - idx;
+    var a = how.path[Math.min(idx, how.path.length-1)], b = how.path[Math.min(idx+1, how.path.length-1)];
+    var x = cellX(a.c) + CS/2 + (cellX(b.c) - cellX(a.c)) * fr;
+    var y = cellY(a.r) + CS/2 + (cellY(b.r) - cellY(a.r)) * fr;
+    // where the tunnel is headed, so the shape of the idea is on screen at once
+    X.strokeStyle = "rgba(255,240,200,.5)"; X.lineWidth = 2.5; X.setLineDash([5,5]);
+    for(var i=0;i<how.path.length;i++){
+      var cc = how.path[i], cxp = cellX(cc.c), cyp = cellY(cc.r);
+      if(BR){ BR.rrect(X, cxp+4, cyp+4, CS-8, CS-8, 8); X.stroke(); } else X.strokeRect(cxp+4, cyp+4, CS-8, CS-8);
+    }
+    X.setLineDash([]);
+    // the trail the hand has covered so far
+    X.strokeStyle = "rgba(255,240,200,.8)"; X.lineWidth = Math.max(4, CS*0.28); X.lineCap = "round";
+    X.beginPath();
+    X.moveTo(cellX(how.path[0].c)+CS/2, cellY(how.path[0].r)+CS/2);
+    X.lineTo(x, y); X.stroke();
+    // the touch itself: a soft ring under a solid dot, the same mark a finger makes
+    // on every touchscreen. Drawn, so it needs no art and says nothing in words.
+    handDot(x, y);
+  }
+  function handDot(x,y){
+    var pulse = 0.75 + 0.25*Math.sin(how.t*6);
+    X.strokeStyle = "rgba(255,255,255,.55)"; X.lineWidth = 3;
+    X.beginPath(); X.arc(x, y, CS*0.42*pulse, 0, 7); X.stroke();
+    X.fillStyle = "rgba(255,255,255,.92)"; X.beginPath(); X.arc(x, y, CS*0.2, 0, 7); X.fill();
+  }
+
+  // ---------- shared nav bridge (Home exits, Sound, Help) ----------
+  if(window.BuildableGameNav){
+    window.BuildableGameNav.register({
+      hide:["backBtn","muteBtn","helpBtn"],
+      onSound:function(){ BA.unlock(); BA.toggleMute(); if(startScreen) startScreen.update(startCfg()); },
+      onMenu:function(){ showMenu(); },
+      onHelp:function(){ if(state === "play") showHow(); else hint("Tap play to open your colony"); },
+      soundOn:function(){ return !BA.muted; },
+      inGame:function(){ return state === "play"; }
+    });
+  }
+  $("muteBtn").addEventListener("click", function(){ BA.unlock(); BA.toggleMute(); });
+  $("helpBtn").addEventListener("click", function(){ if(state === "play") showHow(); });
+  $("backBtn").addEventListener("click", function(){ showMenu(); });
+
+  // ---------- cartridge contract: shell -> game ----------
+  window.addEventListener("message", function(ev){
+    var d = ev && ev.data; if(!d || !d.type) return;
+    if(d.type === "pause"){ paused = true; return; }                  // freeze NOW
+    if(d.type === "resume"){ paused = false; last = 0; acc = 0; return; }
+    if(d.type === "start"){ startPlay(); return; }
+  });
+  document.addEventListener("visibilitychange", function(){ if(document.hidden){ saveNow(); } else { last = 0; } });
+  window.addEventListener("pagehide", saveNow);
+
+  // ======================================================================
+  //  Boot: read the manifest for art + feel, keep every built-in fallback
+  // ======================================================================
+  var ART_IDS = {
+    ant:"antcity/ant/classic-v1", queen:"antcity/hero/queen-v1", soil:"antcity/soil/sandy-v1",
+    egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1", find:"antcity/prop/buried-find-v1",
+    room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1"
+  };
+  // The shell owns the kid's picks and hands the engine the option INDEX per slot
+  // (?ant=1&meadow=0&dirt=1), the same tiny-param handoff Breaker and Sky Flyer use.
+  function equippedLooks(){
+    var out = {};
+    try{
+      var q2 = new URLSearchParams(location.search);
+      ["ant","meadow","dirt"].forEach(function(k){ var v = q2.get(k); if(v != null && v !== "" && !isNaN(+v)) out[k] = +v; });
+    }catch(e){}
+    return out;
+  }
+  function applyManifest(m){
+    if(!m || typeof m !== "object") return;
+    try{
+      if(m.color) ACCENT = m.color;
+      var lv = (m.levels && m.levels[0]) || null, parts = (lv && lv.parts) || {};
+      if(parts.ant)  ART_IDS.ant  = parts.ant;
+      if(parts.soil) ART_IDS.soil = parts.soil;
+      if(m.art && m.art.hero) ART_IDS.queen = m.art.hero;
+      if(m.levels && m.levels.length){
+        MISSIONS = m.levels.map(function(l){ return { id:l.id, name:l.name, layout:l.layout, coins:l.coins || 10, difficulty:l.difficulty }; });
+      }
+      // the kid's equipped look wins over the level default
+      var looks = equippedLooks();
+      (m.customization||[]).forEach(function(slot){
+        var nm = String(slot.slot||"").toLowerCase();
+        var want = looks[nm]; if(want == null) return;
+        var o = (slot.options||[])[want]; if(!o || !o.asset) return;
+        if(nm === "ant")  ART_IDS.ant  = o.asset;
+        if(nm === "dirt") ART_IDS.soil = o.asset;
+      });
+      if(Feel) Feel.configure({ accent:ACCENT, feel:m.feel || { pace:"chill", celebration:"calm", haptics:"on" } });
+      if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT);
+    }catch(e){}
+  }
+  function loadAllArt(){ for(var slot in ART_IDS) loadArt(slot, ART_IDS[slot]); }
+
+  var booted = false;
+  function bootScreen(){
+    if(booted) return; booted = true;
+    loadAllArt();
+    if(DEMO){ newColony(3); startPlay(); }
+    else showMenu();
+  }
+  function boot(){
+    resize();
+    if(Feel){ try{ Feel.configure({ accent:ACCENT, feel:{ pace:"chill", celebration:"calm", haptics:"on" } }); }catch(e){} }
+    if(!C) C = (DEMO ? null : loadSaved()) || freshColony(3);
+    if(!C.surface) C.surface = []; if(!C.sample){ C.sample = []; walkSample(0); }
+    try{
+      if(window.BuildableManifest && window.BuildableManifest.rawManifest){
+        window.BuildableManifest.rawManifest("antcity", function(m){ applyManifest(m); bootScreen(); });
+        setTimeout(bootScreen, 1800);          // safety net if the manifest never answers
+      } else bootScreen();
+    }catch(e){ bootScreen(); }
+  }
+  boot();
+  requestAnimationFrame(frame);
+
+  // ======================================================================
+  //  The platform game handle. The QA robot (qa-antcity.mjs, card AC2) and
+  //  the shell drive the colony only through this.
+  // ======================================================================
+  window.ANTCITY_GAME = {
+    state: function(){ return state; },
+    play: function(diff){ if(diff) { newColony(diff); } startPlay(); },
+    newColony: function(diff){ newColony(diff||3); },
+    setDifficulty: function(d){ C.difficulty = Math.max(1, Math.min(5, d|0)); },
+    step: function(n){ n = n||1; for(var i=0;i<n;i++) step(); return this.dbg(); },
+    seconds: function(s){ var n = Math.round((s||1)/STEP); for(var i=0;i<n;i++) step(); return this.dbg(); },
+    dig: function(c, r){ return planCell(c, r); },
+    digDown: function(n){ var made = 0; for(var i=0;i<(n||1);i++){ if(planCell(C.queen.c, C.deepest + 1 + i)) made++; } return made; },
+    drop: function(kind, x){ dropSurface(kind === "water" ? "water" : "food", x != null ? x : W/2); return C.surface.length; },
+    assign: function(job, n){ if(!(job in C.jobs)) return null; var d = (n|0) - (C.jobs[job]|0); for(var i=0;i<Math.abs(d);i++) moveAnt(job, d > 0 ? 1 : -1); return C.jobs[job]; },
+    build: function(c, r, room){ var cell = cellAt(c, r); if(!cell || cell.kind !== "tunnel") return false;
+      var def = GAME_CONFIG.rooms[room]; if(!def || C.food < def.food) return false;
+      C.food -= def.food; cell.kind = "room"; cell.room = room; cell.build = 0; cell.done = false; return true; },
+    rooms: function(){ return { nursery:roomCount("nursery"), storage:roomCount("storage"), den:roomCount("den") }; },
+    // --- missions (AC2), for the robot and the shell ---
+    missions: function(){ return MISSIONS.map(function(m){ return { id:m.id, name:m.name, layout:m.layout, coins:m.coins, done:!!C.done[m.id] }; }); },
+    mission: function(){ var m = currentMission(); if(!m) return { free:true, line:missionLine() };
+      var g = goalFor(m); return { index:C.mission, id:m.id, name:m.name, layout:m.layout, coins:m.coins,
+        goal:g, have:Math.max(0, haveFor(g)), line:missionLine(), free:false }; },
+    freeBuild: function(){ return !!C.freeBuild; },
+    unlocked: function(id){ return roomUnlocked(id); },
+    rain: function(){ var c = rain(); return c ? { c:c.c, r:c.r } : null; },
+    // the first plain tunnel a room could go in (the robot builds there)
+    openTunnel: function(){ for(var k in C.cells){ var x = C.cells[k];
+      if(x.kind === "tunnel" && !x.flooded && !(x.c === C.queen.c && x.r <= C.queen.r)) return { c:x.c, r:x.r }; } return null; },
+    floods: function(){ return floodCount(); },
+    setback: function(){ return setbackNow(); },
+    find: function(){ return C.find ? { c:C.find.c, r:C.find.r, gone:!!C.find.gone } : null; },
+    how: function(){ return how.on; },
+    showHow: showHow,
+    dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
+                              jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
+                              dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
+                              mission:C.mission, free:!!C.freeBuild, carried:Math.round(C.carried*10)/10,
+                              floods:C.floods, flooded:floodCount(), found:C.found, rest:Math.round(C.rest*100)/100,
+                              coins:coinsAwarded.slice() }; },
+    _cfg: function(){ return GAME_CONFIG; },
+    _applyManifest: function(m){ applyManifest(m); loadAllArt(); },
+    _art: function(){ var o = {}; for(var s in ART_IDS) o[s] = artUrl(ART_IDS[s]); return o; },
+    _draw: function(){ try{ draw(); return "ok"; }catch(e){ return "ERR: " + (e && e.message || e); } },
+    _save: saveNow,
+    _reset: function(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} newColony(3); }
+  };
+  try{ window.BUILDABLE_GAME = window.ANTCITY_GAME; }catch(e){}
+})();
+</script>
+</body>
+</html>
