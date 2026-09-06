@@ -100,11 +100,31 @@ the no-login lane, and it is strictly better than telling a child their song doe
 not exist. Once a grown-up signs in, adoption gives every child their own row and
 the kid lane answers first.
 
+**Two extras the cards asked for and got.** `qa-kid-lane.mjs` also checks that an
+invite from the active kid returns **200** while a device-local guest id is still
+refused (QA43), and that the bell is genuinely rendered in the Home header with a
+badge built from the state Home already polls (QA44). QA53's Rename/Remove pills
+were spilling out of a 96px grid track and running together into one strip under
+a row of children; the track now fits the pair, each child sits on their own
+tinted card, and each button names its child in its `aria-label`.
+
+**Left open, deliberately, and noted on the card.** QA53 also mentions the My
+Stuff chip row clipping at the right edge. It could not be reproduced from the
+code — `tabRow` already sets `flexWrap: "wrap"` — and a Cowork session has no
+route to the live site to confirm it, so it was left rather than guessed at.
+QA53's fourth item, whether `/app/mystuff` should alias `/app/me`, points at QA19
+by the card's own words and belongs there. QA43 asks for an end-to-end Connect
+Four turn on the live site, which is the same no-live-access limit.
+
 **Not touched:** `public/cobuild.html`. No login was built — QA50 stands, and
 Mike's call on 2026-08-30 was to fix saving now and do proper login later,
 accepting the rework.
 
-Verified: `npm run build` clean, `node qa-all.mjs` green.
+Verified: `npm run build` clean. `node qa-all.mjs` — **46 harnesses run, 0
+failures, ALL CHECKS PASS** (10 skipped, they need a browser; the `--live`
+serving check needs network this machine does not have). Planner: QA42, QA43,
+QA44 and QA53 ticked with session notes; 202 cards in and 202 out, done 139 to
+143.
 
 ## 2026-09-06 — CB1: kid-made games (Cobuild)
 
