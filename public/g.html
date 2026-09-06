@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--BK_HEAD-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=4" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#7C5CFC" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#14122b; --card:#1d1b36; --line:rgba(255,255,255,.12); --accent:#9B7BFF; --dim:#B9AEEA; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:'Nunito',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+  #app{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+  #app.playing{padding:0;display:block}
+  .wrap{width:100%;max-width:420px}
+  .star{margin-bottom:6px}
+  h1{font-size:clamp(24px,7vw,38px);font-weight:900;margin:0 0 6px;line-height:1.1}
+  .by{font-size:clamp(11px,3vw,13px);font-weight:800;letter-spacing:2px;color:var(--dim);margin:0 0 20px}
+  .cover{width:min(240px,60vw);aspect-ratio:1;border-radius:24px;object-fit:cover;display:block;margin:0 auto 18px;background:var(--card);border:1px solid var(--line)}
+  .btn{font-family:inherit;font-weight:900;font-size:17px;color:#16142b;background:linear-gradient(160deg,#9B7BFF,#67E8F9);border:none;border-radius:16px;padding:15px 30px;cursor:pointer;margin:6px 4px}
+  .btn.alt{background:rgba(155,123,255,.16);color:#cdbcff;font-size:15px;padding:12px 22px}
+  .note{color:var(--dim);font-size:14px;line-height:1.5;margin-top:16px}
+  .err{color:#ff9a9a;font-size:14px;margin-top:10px;min-height:18px}
+  input{font-family:inherit;font-size:20px;padding:13px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:#fff;width:100%;max-width:240px;text-align:center;letter-spacing:6px;margin:12px 0}
+  /* full-screen engine frame: the game gets the whole window, exactly like the
+     6D guest play link. Nothing of ours draws over gameplay. */
+  #frame{position:fixed;inset:0;width:100%;height:100%;border:none;display:block;background:var(--bg)}
+</style>
+</head>
+<body>
+<div id="app"><div class="wrap" id="wrap">
+  <div class="note">Loading…</div>
+</div></div>
+
+<script>
+// ===========================================================================
+//  /g/<slug> — the SHARE VIEWER for a kid-made game (Session CB1).
+//  A guest with no account taps a link in a group chat and plays the game.
+//  This page IS the shell here: it owns everything outside gameplay (the cover,
+//  the credit, the "make your own" door), and hands the whole window to the
+//  engine once the guest taps Play. Follows the 6D guest-play-link pattern.
+//
+//  The row itself is injected server-side by /api/g.js (which also writes the
+//  OG tags and counts the play), so the preview in a group chat is right and
+//  this page never flashes an empty card first. If that injection is missing
+//  (someone opened /g.html directly) it falls back to fetching by ?id=.
+// ===========================================================================
+(function(){
+  "use strict";
+  var PRE = window.BK_KID_GAME || null;
+  var ENGINES = {
+    breaker:     { label:"Breaker",      entry:"/breaker-engine.html" },
+    sling:       { label:"Sling Squad",  entry:"/sling-squad.html" },
+    castleguard: { label:"Castle Guard", entry:"/castle-guard.html" },
+    skyflyer:    { label:"Sky Flyer",    entry:"/skyflyer-engine.html" }
+  };
+  var GATE_KEY = "bk_soon_ok_v1";      // the 1111 coming-soon preview, remembered
+  var wrap = document.getElementById("wrap"), app = document.getElementById("app");
+
+  function esc(s){ return String(s==null?"":s).replace(/[<>&"]/g,function(m){ return {"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[m]; }); }
+  function idFromUrl(){
+    var m = /^\/g\/([A-Za-z0-9][A-Za-z0-9-]{1,63})\/?$/.exec(location.pathname);
+    if(m) return m[1];
+    try{ return (new URLSearchParams(location.search)).get("id") || ""; }catch(e){ return ""; }
+  }
+  function credit(g){
+    var kid = (g && g.kid_name || "").trim(), up = (g && g.grownup_name || "").trim();
+    if(kid && up) return "A GAME BY " + kid.toUpperCase() + " AND " + up.toUpperCase();
+    if(kid) return "A GAME BY " + kid.toUpperCase();
+    return "MADE ON BUILDABLE KIDS";
+  }
+  var STAR = '<svg class="star" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="1.6" '+
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
+    '<path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>';
+
+  // A cover is a URL, a shared-studio asset id, or (for a fresh fork) nothing at
+  // all — in which case the engine's own key art stands in, so a share link is
+  // never a blank card. Mirrored server-side in api/g.js for the og:image.
+  function coverUrl(g){
+    if(!g) return "";
+    var c = g.cover || "";
+    if(/^https?:|^\//.test(c)) return c;
+    if(c.indexOf("studio:")===0) return "/api/asset-studio?asset=" + encodeURIComponent(c.slice(7));
+    if(c) return "/api/asset-studio?asset=" + encodeURIComponent(c);
+    return "/api/images?kind=game&id=" + encodeURIComponent(g.engine || "breaker");
+  }
+
+  function showMissing(msg){
+    app.className = "";
+    wrap.innerHTML = STAR + '<h1>This game is not here</h1>' +
+      '<p class="by">' + esc(msg || "THE LINK MAY HAVE EXPIRED") + '</p>' +
+      '<a class="btn" href="/cobuild">Build one with your kid</a>';
+  }
+
+  // ---- the 1111 coming-soon gate (same password as the app's Home shelf) ----
+  function gateOk(){ try{ return localStorage.getItem(GATE_KEY)==="1"; }catch(e){ return false; } }
+  function showGate(g, then){
+    app.className = "";
+    wrap.innerHTML = STAR +
+      '<h1>' + esc(g.name || "A kid-made game") + '</h1>' +
+      '<p class="by">' + esc(credit(g)) + '</p>' +
+      '<div class="note">Buildable Kids is not open to everyone yet. Enter the preview password to play this game.</div>' +
+      '<input id="pw" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">' +
+      '<div class="err" id="err"></div>' +
+      '<button class="btn" id="go">Play it</button>';
+    var pw = document.getElementById("pw"), err = document.getElementById("err");
+    var submit = function(){
+      if(pw.value.trim()==="1111"){ try{ localStorage.setItem(GATE_KEY,"1"); }catch(e){} then(); }
+      else { err.textContent = "Not that one. Try again."; }
+    };
+    document.getElementById("go").onclick = submit;
+    pw.addEventListener("keydown", function(e){ if(e.key==="Enter") submit(); });
+    pw.focus();
+  }
+
+  function showCover(g){
+    app.className = "";
+    var cu = coverUrl(g);
+    wrap.innerHTML = STAR +
+      (cu ? '<img class="cover" src="' + esc(cu) + '" alt="" onerror="this.style.display=\'none\'">' : "") +
+      '<h1>' + esc(g.name || "A kid-made game") + '</h1>' +
+      '<p class="by">' + esc(credit(g)) + '</p>' +
+      '<button class="btn" id="go">Play it</button><br>' +
+      '<a class="btn alt" href="/cobuild">Make one with your kid</a>' +
+      '<div class="note">Free to play. No account, no ads.</div>';
+    document.getElementById("go").onclick = function(){ play(g); };
+  }
+
+  function play(g){
+    var e = ENGINES[g.engine];
+    if(!e){ showMissing("WE CANNOT FIND THE GAME THIS WAS BUILT ON"); return; }
+    // kgplay=0: /api/g.js already counted this open, so the engine's own loader
+    // must not count it a second time.
+    var src = e.entry + "?kg=" + encodeURIComponent(g.id) + "&kgplay=0&guest=1&screen=play";
+    app.className = "playing";
+    app.innerHTML = '<iframe id="frame" src="' + esc(src) + '" allow="autoplay; fullscreen" title="' + esc(g.name || "A kid-made game") + '"></iframe>';
+  }
+
+  function start(g){
+    if(!g){ showMissing(); return; }
+    document.title = (g.name || "A kid-made game") + " by " + (g.kid_name || "a kid") + " — Buildable Kids";
+    if(!gateOk()){ showGate(g, function(){ showCover(g); }); return; }
+    showCover(g);
+  }
+
+  if(PRE && PRE.id){ start(PRE); return; }
+  var id = idFromUrl();
+  if(!id){ showMissing("NO GAME IN THAT LINK"); return; }
+  fetch("/api/kid-game?op=load&play=1&id=" + encodeURIComponent(id))
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ start(j && j.ok ? j.game : null); })
+    .catch(function(){ showMissing("WE COULD NOT REACH THE GAME"); });
+})();
+</script>
+</body>
+</html>

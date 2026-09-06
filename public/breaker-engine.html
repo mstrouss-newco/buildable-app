@@ -488,6 +488,11 @@ let stars=[]; function rebuildStars(){ stars.length=0; const r=mulberry(7); for(
 
 // ---------- SOLO: brick layout ----------
 function buildBricks(L, rng){
+  // Session CB1 — a kid-built board arrives as an explicit `cells` list on the
+  // manifest level (see the breaker profile in buildable-manifest.js). Those
+  // bricks are exactly what the maker painted, so they go through the same
+  // builder the maker's play-test uses rather than the pattern generator.
+  if(Array.isArray(L.cells) && L.cells.length) return buildCustomBricks({ cols:L.cols, rows:L.rows, cells:L.cells });
   const cols=L.cols, rows=L.rows, top=topBand()+8, marginX=clamp(Math.round(W*0.05),14,40), gap=6;
   const bw=(W-marginX*2-gap*(cols-1))/cols, bh=24, cset=GAME_CONFIG.brickColors, bricks=[];
   for(let r=0;r<rows;r++){ for(let cidx=0;cidx<cols;cidx++){ if(!inPattern(L.pattern,r,cidx,rows,cols)) continue;

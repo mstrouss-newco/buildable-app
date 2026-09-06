@@ -6,6 +6,43 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## CB1 — a kid's game is a row they own, not new engine code (September 6 2026)
+`db/create-kid-games.sql`, `api/kid-game.js`, `api/_manifestLib.js`, `api/g.js`,
+`public/g.html`, `public/buildable-manifest.js`, `public/skyflyer-engine.html`,
+`public/breaker-engine.html`, `src/lib/kidGames.js`, `src/BuildableKids.jsx`,
+`src/MyStuff.jsx`, `src/TopBoard.jsx`, `qa-kidgames.mjs`, `vercel.json`
+
+The first Cobuild card. A game a kid makes is now a **manifest the kid owns pointed at
+an engine we already ship** — `kid_games` holds the row, `/api/kid-game` is the only
+thing that touches it (service key, RLS on with no policy), and the shell launches any
+engine with `?kg=<id>` to play it. No new engine code, and no per-engine code anywhere:
+`public/buildable-manifest.js` learned the launch param once, so Breaker, Sling Squad,
+Castle Guard and Sky Flyer all play a kid's game without knowing they are.
+
+- **Nothing invalid is ever stored.** `save` and `fork` run the SAME shared validator
+  the browser and the QA robots run (`api/_manifestLib.js` loads
+  `public/buildable-manifest.js` in a vm), so an engine's own level rules apply and a
+  bad manifest comes back as errors instead of a broken game.
+- **`fork` is the remix door.** It copies one of our manifests, or another kid's row
+  when that row is public or in the same family, into a new row with `source_game` set.
+  The Top Board Remix button points here now; it used to walk the dead AI-maker road.
+- **My Games** sits above Play on Home with the same card and a MINE badge, plus a games
+  row in My Stuff replacing the levels tab that read `store.listLevels()` and was always
+  empty. Everything a kid built in the old Breaker maker migrates out of localStorage
+  into real rows on first load.
+- **Share:** `/g/<slug>` is served by `api/g.js` so the OG tags are in the bytes a group
+  chat reads, not written by JavaScript it never runs. A guest with no account plays it
+  full screen. The open counts once.
+- **Two engines needed a manifest fix.** Sky Flyer fetched `/skyflyer/manifest.json` by
+  hand and so ignored the shell entirely — it asks the shared loader now. Breaker's
+  profile dropped a kid-painted board, so `cells` now rides through and `buildBricks`
+  honours it. Both are minimal and additive.
+- Delete is **soft** (`deleted_at`): a kid's Delete must not be an irreversible row
+  removal.
+
+`qa-kidgames.mjs` covers save / validate / refuse / fork / load-by-`?kg=` on all four
+engines and the viewer, in jsdom. `node qa-all.mjs`: 46 harnesses, all green.
+
 ## Practice Round 2: the warm-up, the birds, and numbers (PT2 + PT3, August 30 2026)
 `public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
 `api/sfx.js`, `qa-practice.mjs`, `qa-practice-shot.mjs`,

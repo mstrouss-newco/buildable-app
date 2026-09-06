@@ -103,11 +103,31 @@
       fall:    THEME_FALL[theme] || "#2f6d3a"
     };
   }
+  // Session CB1 — a KID-BUILT Breaker board. The campaign says "layout: pyramid"
+  // and the engine draws the pattern; a board a child painted brick by brick is
+  // an explicit `cells` list instead. It is OPTIONAL and additive: a level with
+  // no cells is exactly the level it always was, and a level with cells still
+  // names a layout so board size and the art pack still come from one place.
+  var BRICK_CELL_TYPES = { ice:1, wood:1, metal:1, candy:1, star:1, bomb:1 };
+  function validateCells(lv, at, errors){
+    if(lv.cells==null) return;
+    if(!Array.isArray(lv.cells) || !lv.cells.length){ errors.push(at+" 'cells' must be a non-empty array when present"); return; }
+    if(lv.cells.length>400){ errors.push(at+" 'cells' has too many bricks (max 400)"); return; }
+    var t = TPL[lv.layout] || TPL.full, bad = 0;
+    lv.cells.forEach(function(c){
+      if(!c || typeof c!=="object"){ bad++; return; }
+      if(typeof c.r!=="number" || typeof c.c!=="number" || (c.r|0)!==c.r || (c.c|0)!==c.c){ bad++; return; }
+      if(c.r<0 || c.c<0 || c.r>=t.rows || c.c>=t.cols){ bad++; return; }
+      if(!BRICK_CELL_TYPES[c.type]){ bad++; }
+    });
+    if(bad) errors.push(at+" 'cells' has "+bad+" brick(s) that are off the board or not a known brick type");
+  }
   var breakerProfile = {
     validateLevel: function(lv, at, errors){
       if(!lv.layout || !TPL[lv.layout]) errors.push(at+" 'layout' must be one of "+Object.keys(TPL).join("/")+" (got "+lv.layout+")");
       if(!lv.parts || typeof lv.parts!=="object") errors.push(at+" missing 'parts' object");
       else if(!lv.parts.bricks) errors.push(at+" parts.bricks is required");
+      validateCells(lv, at, errors);
     },
     toLevel: function(lv){
       var t = TPL[lv.layout] || TPL.full;
@@ -124,6 +144,7 @@
         unlocked: !!lv.unlocked,
         journeyBadge: lv.journeyBadge || null,
         parts: lv.parts || null,
+        cells: (Array.isArray(lv.cells) && lv.cells.length) ? lv.cells : null,   // CB1: a kid-painted board
         art: resolvePack(lv.parts, theme)
       };
     },
@@ -712,37 +733,190 @@
     return cfg;
   }
 
+  // ===========================================================================
+  //  KID GAMES (?kg=<id>) — Session CB1. ONE shared change, no per-engine code.
+  // ===========================================================================
+  //  A kid-made game is a manifest the kid owns pointed at an engine we already
+  //  ship. So an engine does not learn anything new: it still asks this loader
+  //  for "its" manifest. When the page carries ?kg=<id>, the loader hands back
+  //  the KID'S manifest (from /api/kid-game) instead of the stock one, and puts
+  //  the kid's own cover over the screen while it lands.
+  //
+  //  Because both entry points go through here — load() for the engines that use
+  //  the shared loader, rawManifest() for an engine that fetches its own JSON —
+  //  adding ?kg= to any engine's URL is all it takes. Nothing below is
+  //  game-specific and nothing runs at all when the param is absent.
+  //
+  //  Headless-safe: with no document/fetch every function here no-ops.
+  var KG_CACHE = null;          // the row, once
+  var KG_PENDING = null;        // the in-flight promise-ish (array of callbacks)
+  var KG_COVER = null;          // the cover element, while it is up
+
+  function kidGameId(){
+    try{
+      if(typeof location==="undefined" || !location.search) return null;
+      var m = /[?&]kg=([A-Za-z0-9][A-Za-z0-9-]{1,63})(?:&|$)/.exec(location.search);
+      return m ? m[1] : null;
+    }catch(e){ return null; }
+  }
+
+  // Fetch the kid's row ONCE, whoever asks first. cb(row|null).
+  function kidGame(cb){
+    var id = kidGameId();
+    if(!id){ if(cb) cb(null); return; }
+    if(KG_CACHE !== null){ if(cb) cb(KG_CACHE || null); return; }
+    if(KG_PENDING){ if(cb) KG_PENDING.push(cb); return; }
+    if(typeof fetch!=="function"){ if(cb) cb(null); return; }
+    KG_PENDING = cb ? [cb] : [];
+    var done = function(row){
+      KG_CACHE = row || false;
+      var waiting = KG_PENDING || []; KG_PENDING = null;
+      for(var i=0;i<waiting.length;i++){ try{ waiting[i](row||null); }catch(e){} }
+    };
+    // Opening a kid's game counts as a play. The ONE exception is a page that has
+    // already counted it server-side (the /g/<id> share viewer, which counts the
+    // open while it builds the link preview) — it passes kgplay=0 so one visit is
+    // never two plays.
+    var count = "1";
+    try{ if(/[?&]kgplay=0(?:&|$)/.test(location.search)) count = "0"; }catch(e){}
+    fetch("/api/kid-game?op=load&play="+count+"&id="+encodeURIComponent(id))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ done(j && j.ok && j.game ? j.game : null); })
+      .catch(function(){ done(null); });
+  }
+
+  // ---- the kid's cover (the loading screen) --------------------------------
+  //  Drawn geometry only — no emoji anywhere, per the house rule. It goes up the
+  //  moment the page knows it is playing a kid's game, fills in the title and the
+  //  credit when the row lands, and comes down when the manifest is applied (or
+  //  after a hard timeout, so a failure can never leave a kid staring at a card).
+  function kgEsc(s){ return String(s==null?"":s).replace(/[<>&]/g,function(m){ return {"<":"&lt;",">":"&gt;","&":"&amp;"}[m]; }); }
+  function kgCredit(row){
+    var kid = (row && row.kid_name) ? String(row.kid_name).trim() : "";
+    var up  = (row && row.grownup_name) ? String(row.grownup_name).trim() : "";
+    if(kid && up) return "A GAME BY " + kid + " AND " + up;
+    if(kid) return "A GAME BY " + kid;
+    return "A GAME MADE RIGHT HERE";
+  }
+  function kgShowCover(){
+    if(typeof document==="undefined" || !document.body || KG_COVER) return;
+    var d = document.createElement("div");
+    d.id = "bkKidCover";
+    d.setAttribute("data-kid-cover","1");
+    d.style.cssText = "position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;"+
+      "align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;"+
+      "background:radial-gradient(circle at 50% 18%,#2b2456,#14122b 70%);color:#fff;"+
+      "font-family:'Nunito',system-ui,-apple-system,sans-serif;transition:opacity .45s ease";
+    d.innerHTML =
+      '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="1.6" '+
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
+        '<path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>'+
+      '<div data-kid-cover-name style="font-size:clamp(24px,7vw,40px);font-weight:900;line-height:1.1;max-width:14ch">Loading your game</div>'+
+      '<div data-kid-cover-by style="font-size:clamp(11px,3vw,14px);font-weight:800;letter-spacing:2px;color:#B9AEEA">ONE MOMENT</div>'+
+      '<div style="width:120px;height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden">'+
+        '<div data-kid-cover-bar style="width:35%;height:100%;border-radius:99px;background:linear-gradient(90deg,#9B7BFF,#67E8F9)"></div></div>';
+    document.body.appendChild(d);
+    KG_COVER = d;
+  }
+  function kgFillCover(row){
+    if(!KG_COVER || !row) return;
+    var n = KG_COVER.querySelector("[data-kid-cover-name]");
+    var b = KG_COVER.querySelector("[data-kid-cover-by]");
+    if(n) n.innerHTML = kgEsc(row.name || "My game");
+    if(b) b.innerHTML = kgEsc(kgCredit(row));
+  }
+  function kgHideCover(){
+    if(!KG_COVER) return;
+    var d = KG_COVER; KG_COVER = null;
+    try{ d.style.opacity = "0"; }catch(e){}
+    setTimeout(function(){ try{ if(d.parentNode) d.parentNode.removeChild(d); }catch(e){} }, 500);
+  }
+  // Put it up as early as the DOM allows, and never leave it up for good.
+  function kgBoot(){
+    if(!kidGameId() || typeof document==="undefined") return;
+    var start = function(){
+      kgShowCover();
+      setTimeout(kgHideCover, 8000);                 // hard floor: never a stuck cover
+      kidGame(function(row){
+        if(row) kgFillCover(row); else kgHideCover(); // no row = nothing to announce
+        // The kid gets a beat to read their own title before the game shows.
+        if(row) setTimeout(kgHideCover, 1400);
+      });
+    };
+    if(document.body) start();
+    else if(document.addEventListener) document.addEventListener("DOMContentLoaded", start);
+  }
+  kgBoot();
+
+  // ---- the RAW manifest for a game, honouring ?kg= --------------------------
+  //  For an engine that reads its own manifest JSON rather than going through
+  //  load() (Sky Flyer). cb(manifest|null) — the kid's when ?kg= names one on
+  //  this engine, the stock file otherwise. Never throws.
+  function rawManifest(id, cb){
+    var finish = function(m){ try{ if(cb) cb(m||null); }catch(e){} };
+    if(typeof fetch!=="function"){ finish(null); return; }
+    var fallback = function(){
+      fetch("/"+id+"/manifest.json").then(function(r){ return r.ok?r.json():null; }).then(finish).catch(function(){ finish(null); });
+    };
+    if(!kidGameId()){ fallback(); return; }
+    kidGame(function(row){
+      // A kid game only overrides the engine it was made for; a ?kg= meant for
+      // another engine is ignored rather than played on the wrong one.
+      if(row && row.engine===id && row.manifest && typeof row.manifest==="object"){ finish(row.manifest); return; }
+      fallback();
+    });
+  }
+
   // ---- browser loader: fetch -> validate -> onReady(engineCfg, manifest) ----
   function load(id, onReady, onError){
     var hasFetch = (typeof fetch==="function");
     if(!hasFetch){ if(onError) onError(["fetch unavailable (headless) — skipping load"]); return; }
-    // Session 4A: the level editor can save a LIVE override, served by /api/manifest. Read that
-    // first (an override wins; otherwise the endpoint returns the static file). If the endpoint is
-    // unreachable, fall straight back to the static /<id>/manifest.json so the game always loads.
-    var apiUrl    = "/api/manifest?game=" + encodeURIComponent(id) + "&v=" + Date.now();
-    var staticUrl = "/" + id + "/manifest.json?v=" + Date.now();
+
     function apply(m){
       var v = validate(m);
       if(v.warnings.length) try{ console.warn("["+id+"] manifest warnings:", v.warnings); }catch(e){}
       if(!v.ok){ if(onError) onError(v.errors); else try{ console.error("["+id+"] manifest invalid:", v.errors); }catch(e){} return; }
       if(onReady) onReady(toEngineConfig(m), m);
     }
-    function fromStatic(){
-      fetch(staticUrl).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-        .then(apply)
-        .catch(function(err){ if(onError) onError([String(err && err.message || err)]);
-          else try{ console.error("["+id+"] manifest load failed:", err); }catch(e){} });
+
+    // Session 4A: the level editor can save a LIVE override, served by /api/manifest. Read that
+    // first (an override wins; otherwise the endpoint returns the static file). If the endpoint is
+    // unreachable, fall straight back to the static /<id>/manifest.json so the game always loads.
+    function stock(){
+      var apiUrl    = "/api/manifest?game=" + encodeURIComponent(id) + "&v=" + Date.now();
+      var staticUrl = "/" + id + "/manifest.json?v=" + Date.now();
+      function fromStatic(){
+        fetch(staticUrl).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+          .then(apply)
+          .catch(function(err){ if(onError) onError([String(err && err.message || err)]);
+            else try{ console.error("["+id+"] manifest load failed:", err); }catch(e){} });
+      }
+      fetch(apiUrl).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+        .then(function(d){
+          var m = (d && d.manifest) ? d.manifest : d;
+          if(!m || typeof m!=="object" || (!m.levels && m.type!=="studio")) throw new Error("no manifest");
+          apply(m);
+        })
+        .catch(fromStatic);
     }
-    fetch(apiUrl).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-      .then(function(d){
-        var m = (d && d.manifest) ? d.manifest : d;
-        if(!m || typeof m!=="object" || (!m.levels && m.type!=="studio")) throw new Error("no manifest");
-        apply(m);
-      })
-      .catch(fromStatic);
+
+    // Session CB1 — ?kg=<id> means "play the KID'S game on this engine". The
+    // engine asked for its own manifest and gets the kid's instead; everything
+    // downstream (validate -> profile -> engine config) is unchanged, which is
+    // why no engine needed a code change to play a kid-made game.
+    if(kidGameId()){
+      kidGame(function(row){
+        if(row && row.engine===id && row.manifest && typeof row.manifest==="object"){ apply(row.manifest); return; }
+        // Not this engine's game (or the row would not load): fall back to the
+        // stock manifest so the engine still opens rather than sitting blank.
+        stock();
+      });
+      return;
+    }
+    stock();
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, rawManifest:rawManifest, kidGame:kidGame, kidGameId:kidGameId, kidGameCredit:kgCredit, hideKidCover:kgHideCover, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));
