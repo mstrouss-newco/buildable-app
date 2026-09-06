@@ -101,11 +101,11 @@ const GAME_CONFIG = (typeof window!=="undefined"&&window.GAME_CONFIG) || {
     {key:"shapes",   name:"Shapes",   count:24},
     {key:"stickers", name:"Stickers", count:20},
   ],
-  // 1 / 2 / 3 fire difficulty = board size (concentric stacked rectangles; all peelable)
+  // three difficulties = board size (concentric stacked rectangles; all peelable)
   levels:[
-    {key:"one",   name:"1 Fire", flames:1, foot:"Small board",  layers:[[6,4],[4,3]]},                 // 36 tiles
-    {key:"two",   name:"2 Fire", flames:2, foot:"Medium board", layers:[[8,5],[6,4],[4,2]]},           // 72 tiles
-    {key:"three", name:"3 Fire", flames:3, foot:"Big board",    layers:[[10,6],[8,4],[6,3],[4,1]]},    // 114 tiles
+    {key:"one",   name:"Easy", flames:1, foot:"Small board",  layers:[[6,4],[4,3]]},                 // 36 tiles
+    {key:"two",   name:"Tricky", flames:2, foot:"Medium board", layers:[[8,5],[6,4],[4,2]]},           // 72 tiles
+    {key:"three", name:"Super Tricky", flames:3, foot:"Big board",    layers:[[10,6],[8,4],[6,3],[4,1]]},    // 114 tiles
   ],
   // painted world behind the tiles — real hand-painted scene art under
   // /game-assets/mahjong-tiles/backgrounds/. grad = two-stop fallback shown while the
@@ -161,7 +161,7 @@ let mistakes=0, wonStars=3, wonCheer="";                    // wrong taps this g
 let matchAnims=[];                                          // matched tiles flying together as they pop
 let wrongFlash=[];                                          // {id,until,dur} red wobble on a wrong tap
 let combo=0, comboUntil=0, score=0;                        // chain matches for excitement + score
-let tray=[]; const TRAY_CAP=4; let trayShake=0;            // HARD (3 Fire) tray mode: parked unmatched tiles; overfill it and it's game over
+let tray=[]; const TRAY_CAP=4; let trayShake=0;            // HARD (Super Tricky) tray mode: parked unmatched tiles; overfill it and it's game over
 
 // ---------- BACKGROUND MUSIC (shared reusable lofi track — calm but upbeat) ----------
 function ensureMusic(){ if(!BA||!BA.setMusic) return;
@@ -187,7 +187,7 @@ let view={tileW:44,tileH:58,ox:0,oy:0,lx:6,ly:6};
 
 function curSet(){ return GAME_CONFIG.sets[PREFS.setIdx]||GAME_CONFIG.sets[0]; }
 function curLevel(){ return GAME_CONFIG.levels[PREFS.lvlIdx]||GAME_CONFIG.levels[0]; }
-function trayMode(){ return curLevel().flames>=3; }   // 3 Fire = holding-tray challenge (you can lose)
+function trayMode(){ return curLevel().flames>=3; }   // Super Tricky = holding-tray challenge (you can lose)
 function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i];a[i]=a[j];a[j]=t; } return a; }
 
 // ---------- LAYOUT (concentric stacked rectangles → classic look, always peelable) ----------
@@ -373,7 +373,7 @@ function tapTile(t){
     selId=b.id; combo=0; if(BA)BA.sfx("nomatch"); if(BM&&!headless) BM.shake(fx,0.18);
   }
 }
-// HARD (3 Fire) TRAY MODE: tapping a free tile sends it up to a holding tray. Tap its
+// HARD (Super Tricky) TRAY MODE: tapping a free tile sends it up to a holding tray. Tap its
 // match on the board and the pair clears from the tray. Park too many un-matched tiles
 // (tray already holds TRAY_CAP and you tap a non-match) and it's game over.
 function tapTray(t){
@@ -1083,7 +1083,7 @@ function simGreedy(opts){
 // Prove HARD tray mode is winnable with good play: playing the guaranteed solution
 // order (park a, then match b) keeps the tray tiny and always clears without a loss.
 function simTray(opts){
-  headlessBegin(Object.assign({}, opts||{}, {lvlIdx:2}));   // force 3 Fire (tray) level
+  headlessBegin(Object.assign({}, opts||{}, {lvlIdx:2}));   // force Super Tricky (tray) level
   let maxTray=0, moves=0;
   for(const pr of solution){
     const a=tileById(pr[0]), b=tileById(pr[1]);

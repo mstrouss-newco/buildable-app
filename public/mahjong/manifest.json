@@ -36,7 +36,7 @@
   "levels": [
     {
       "id": "one-fire",
-      "name": "1 Fire",
+      "name": "Easy",
       "desc": "Small board",
       "difficulty": 1,
       "unlocked": true,
@@ -47,7 +47,7 @@
     },
     {
       "id": "two-fire",
-      "name": "2 Fire",
+      "name": "Tricky",
       "desc": "Medium board",
       "difficulty": 3,
       "journeyBadge": "badges/two/v1",
@@ -57,7 +57,7 @@
     },
     {
       "id": "three-fire",
-      "name": "3 Fire",
+      "name": "Super Tricky",
       "desc": "Big board",
       "difficulty": 5,
       "journeyBadge": "badges/three/v1",
