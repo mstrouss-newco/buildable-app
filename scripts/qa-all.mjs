@@ -127,7 +127,11 @@ const OPT = {
   harnesses: !has('--pages-only') && !SERVING_ONLY,
   only: val('--only', null),
   jobs: Math.max(1, parseInt(val('--jobs', '4'), 10) || 4),
-  timeout: (parseInt(val('--timeout', '180'), 10) || 180) * 1000,
+  // 6 minutes, not 3. qa-lessons-dom.mjs drives a real browser through a whole
+  // placement run and takes ~200s on its own, more under a parallel sweep. At
+  // the old 180s default it was killed and reported as TIMEOUT, which reads as
+  // "the lessons player is broken" when the harness was passing all along.
+  timeout: (parseInt(val('--timeout', '360'), 10) || 360) * 1000,
   strict: has('--strict'),
   report: val('--report', path.join(ROOT, 'QA-SWEEP-REPORT.md')),
 };

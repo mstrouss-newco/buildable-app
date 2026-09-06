@@ -1,6 +1,6 @@
 # QA-SWEEP-REPORT.md
 
-Written by `scripts/qa-all.mjs` — 2026-09-06 15:28:08 UTC. Took 561s.
+Written by `scripts/qa-all.mjs` — 2026-09-06 16:07:09 UTC. Took 610s.
 
 This file is generated. Do not hand-edit it: re-run `npm run qa`.
 
@@ -16,66 +16,71 @@ This file is generated. Do not hand-edit it: re-run `npm run qa`.
 
 The live check did not run. Add `--live` before a release.
 
-## Machine sweep — 55 harnesses
+## Machine sweep — 60 harnesses
 
-**51 pass · 2 fail · 0 timeout · 2 quarantined**
+**59 pass · 0 fail · 0 timeout · 1 quarantined**
 
 | Harness | Result | Time |
 |---|---|---|
-| `qa-ap2-use-in-game.mjs` | QUAR | 0.1s |
-| `qa-art-browser.mjs` | PASS | 29.9s |
+| `qa-ap2-use-in-game.mjs` | QUAR | 4.7s |
+| `qa-art-browser.mjs` | PASS | 28.4s |
 | `qa-art.mjs` | PASS | 0.1s |
-| `qa-bingo.mjs` | PASS | 0.3s |
+| `qa-bingo.mjs` | PASS | 0.2s |
 | `qa-breaker.mjs` | PASS | 1.4s |
-| `qa-bubble.mjs` | PASS | 5.6s |
-| `qa-castleguard.mjs` | PASS | 10.4s |
-| `qa-checkers-dom.mjs` | PASS | 2.0s |
-| `qa-checkers.mjs` | PASS | 2.5s |
-| `qa-chess.mjs` | PASS | 52.2s |
+| `qa-bubble.mjs` | PASS | 5.1s |
+| `qa-castleguard.mjs` | PASS | 9.5s |
+| `qa-checkers-dom.mjs` | PASS | 1.2s |
+| `qa-checkers.mjs` | PASS | 2.4s |
+| `qa-chess.mjs` | PASS | 13.3s |
 | `qa-connectfour.mjs` | PASS | 0.8s |
 | `qa-croc.mjs` | PASS | 0.0s |
 | `qa-dive.mjs` | PASS | 0.1s |
-| `qa-dotsandboxes.mjs` | PASS | 1.7s |
+| `qa-dotsandboxes.mjs` | PASS | 1.5s |
 | `qa-explore.mjs` | PASS | 0.1s |
 | `qa-family-town.mjs` | PASS | 0.1s |
-| `qa-farm.mjs` | FAIL | 0.5s |
-| `qa-invite.mjs` | PASS | 0.0s |
+| `qa-farm.mjs` | PASS | 19.1s |
+| `qa-invite.mjs` | PASS | 0.1s |
 | `qa-kidspedia.mjs` | PASS | 0.1s |
 | `qa-kits.mjs` | PASS | 0.1s |
-| `qa-kp3-add-a-kit.mjs` | FAIL | 0.1s |
-| `qa-lessons-dom.mjs` | QUAR | 0.5s |
+| `qa-kp3-add-a-kit.mjs` | PASS | 6.1s |
+| `qa-lessons-dom.mjs` | PASS | 200.4s |
 | `qa-lessons.mjs` | PASS | 0.1s |
 | `qa-mahjong.mjs` | PASS | 0.7s |
-| `qa-mathcannon.mjs` | PASS | 0.1s |
-| `qa-maze.mjs` | PASS | 3.6s |
+| `qa-mathcannon.mjs` | PASS | 0.0s |
+| `qa-maze.mjs` | PASS | 3.1s |
 | `qa-memory.mjs` | PASS | 0.2s |
+| `qa-minutemath.mjs` | PASS | 0.1s |
 | `qa-music.mjs` | PASS | 0.1s |
 | `qa-nv1.mjs` | PASS | 0.1s |
 | `qa-nv2.mjs` | PASS | 0.1s |
 | `qa-nv3.mjs` | PASS | 0.1s |
 | `qa-nv4-dom.mjs` | PASS | 0.5s |
 | `qa-nv4.mjs` | PASS | 0.1s |
-| `qa-practice-shot.mjs` | PASS | 43.7s |
+| `qa-play-invite.mjs` | PASS | 0.1s |
+| `qa-play.mjs` | PASS | 0.1s |
+| `qa-practice-shot.mjs` | PASS | 42.9s |
 | `qa-practice.mjs` | PASS | 30.4s |
 | `qa-question-bank.mjs` | PASS | 0.1s |
 | `qa-quickgame.mjs` | PASS | 0.1s |
 | `qa-rileys.mjs` | PASS | 0.1s |
-| `qa-rn1.mjs` | PASS | 4.0s |
+| `qa-rn1.mjs` | PASS | 3.9s |
 | `qa-runner.mjs` | PASS | 0.1s |
-| `qa-skyflyer-hud.mjs` | PASS | 42.5s |
-| `qa-skyflyer-look.mjs` | PASS | 122.1s |
-| `qa-skyflyer-sky.mjs` | PASS | 16.5s |
-| `qa-skyflyer.mjs` | PASS | 67.3s |
-| `qa-sling.mjs` | PASS | 83.6s |
+| `qa-share-links.mjs` | PASS | 0.0s |
+| `qa-skyflyer-hud.mjs` | PASS | 36.7s |
+| `qa-skyflyer-look.mjs` | PASS | 115.3s |
+| `qa-skyflyer-sky.mjs` | PASS | 13.4s |
+| `qa-skyflyer.mjs` | PASS | 56.1s |
+| `qa-sling.mjs` | PASS | 75.8s |
 | `qa-snakes.mjs` | PASS | 0.4s |
-| `qa-stringmatch.mjs` | PASS | 3.0s |
-| `qa-survival.mjs` | PASS | 2.6s |
-| `qa-tank.mjs` | PASS | 4.1s |
+| `qa-soundboard.mjs` | PASS | 0.1s |
+| `qa-stringmatch.mjs` | PASS | 2.1s |
+| `qa-survival.mjs` | PASS | 2.9s |
+| `qa-tank.mjs` | PASS | 3.2s |
 | `qa-tennis.mjs` | PASS | 0.2s |
-| `qa-tictactoe.mjs` | PASS | 8.1s |
+| `qa-tictactoe.mjs` | PASS | 5.0s |
 | `qa-topic.mjs` | PASS | 0.2s |
-| `qa-tumble.mjs` | PASS | 13.6s |
-| `qa-typing.mjs` | PASS | 0.3s |
+| `qa-tumble.mjs` | PASS | 9.0s |
+| `qa-typing.mjs` | PASS | 0.1s |
 | `qa-weather.mjs` | PASS | 0.1s |
 
 ### Detail
@@ -83,85 +88,18 @@ The live check did not run. Add `--live` before a release.
 #### `qa-ap2-use-in-game.mjs` — QUAR (quarantined: asserts 2 .useg buttons on the Browse page; it now renders 307, so the stub no longer reflects the page, card QA10)
 
 ```
-node:internal/modules/esm/resolve:275
-    throw new ERR_MODULE_NOT_FOUND(
-          ^
-Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/claude/.npm-global/lib/node_modules/playwright/index.js' imported from /home/user/buildable-app/qa-ap2-use-in-game.mjs
-    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
-    at moduleResolve (node:internal/modules/esm/resolve:861:10)
-    at defaultResolve (node:internal/modules/esm/resolve:985:11)
-    at #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
-    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
-    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
-    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
-  code: 'ERR_MODULE_NOT_FOUND',
-  url: 'file:///home/claude/.npm-global/lib/node_modules/playwright/index.js'
-}
-Node.js v22.22.2
-```
-
-#### `qa-farm.mjs` — FAIL
-
-```
-node:internal/modules/run_main:123
-    triggerUncaughtException(
-    ^
-browserType.launch: Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell
-╔════════════════════════════════════════════════════════════╗
-║ Looks like Playwright was just installed or updated.       ║
-║ Please run the following command to download new browsers: ║
-║                                                            ║
-║     npx playwright install                                 ║
-║                                                            ║
-║ <3 Playwright Team                                         ║
-╚════════════════════════════════════════════════════════════╝
-    at /home/user/buildable-app/qa-farm.mjs:65:32 {
-  log: [],
-  name: 'Error'
-}
-Node.js v22.22.2
-```
-
-#### `qa-kp3-add-a-kit.mjs` — FAIL
-
-```
-node:internal/modules/esm/resolve:275
-    throw new ERR_MODULE_NOT_FOUND(
-          ^
-Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/claude/.npm-global/lib/node_modules/playwright/index.js' imported from /home/user/buildable-app/qa-kp3-add-a-kit.mjs
-    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
-    at moduleResolve (node:internal/modules/esm/resolve:861:10)
-    at defaultResolve (node:internal/modules/esm/resolve:985:11)
-    at #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
-    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
-    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
-    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
-  code: 'ERR_MODULE_NOT_FOUND',
-  url: 'file:///home/claude/.npm-global/lib/node_modules/playwright/index.js'
-}
-Node.js v22.22.2
-```
-
-#### `qa-lessons-dom.mjs` — QUAR (quarantined: same pre-NV2 Home assertions as qa-lessons.mjs, card QA11)
-
-```
-node:internal/modules/run_main:123
-    triggerUncaughtException(
-    ^
-browserType.launch: Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell
-╔════════════════════════════════════════════════════════════╗
-║ Looks like Playwright was just installed or updated.       ║
-║ Please run the following command to download new browsers: ║
-║                                                            ║
-║     npx playwright install                                 ║
-║                                                            ║
-║ <3 Playwright Team                                         ║
-╚════════════════════════════════════════════════════════════╝
-    at /home/user/buildable-app/qa-lessons-dom.mjs:112:32 {
-  log: [],
-  name: 'Error'
-}
-Node.js v22.22.2
+FAIL: expected 2 .useg buttons, got 307
+PASS: Game picker shows 22 games
+PASS: Fit filter: world offers Background, not Paddle/Bricks/Balls
+PASS: Apply wrote studio id into breaker level background live (studio:breaker/background/ocean/ocean-world)
+PASS: Other slots untouched by apply
+PASS: Open-game link deep-links to the level
+PASS: Undo restored the previous background live
+PASS: Character offers actor slots, never Background
+PASS: Signed-out apply prompts sign-in and writes nothing
+PASS: Build tab intact: no createView, World Builder populated, New Game toggles
+PASS: No JS errors on the page
+AP2 QA: FAILED
 ```
 
 ## Page sweep — every `public/**/*.html`
