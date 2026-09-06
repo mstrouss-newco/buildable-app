@@ -636,8 +636,13 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
         <>
           <h1 style={S.title}>{kids.length ? "Parents" : "Add your child"}</h1>
           <div style={S.card}>
+            {/* QA53 — this list is every PLAYER on the family account, and grown-ups
+                who play have profiles here too. Calling the heading "Add or edit
+                your kids" filed Dad and Mom as children. It says "players" now,
+                which is true of everyone in the list and still obviously about
+                setting the kids up. */}
             <p style={S.lead}>{kids.length
-              ? "Add or edit your kids, and organize what they've made."
+              ? "Everyone who plays on this account. Add a player for each child \u2014 a grown-up who plays can have one too."
               : "Just a first name and a face. Everything else can wait."}</p>
 
             {kids.length > 0 && (
@@ -658,7 +663,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             )}
 
             <form onSubmit={handleAddKid} style={S.addRow}>
-              <div style={S.fieldLabel}>Child's first name</div>
+              <div style={S.fieldLabel}>{kids.length ? "New player's first name" : "Child's first name"}</div>
               <input className="bk-light" style={S.input} value={newName} maxLength={40} autoFocus
                 onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Riley" />
               <div style={S.fieldLabel}>Pick a face</div>
@@ -686,7 +691,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   placeholder="Optional 4-digit PIN (for snoopy siblings)" />
               )}
               <button type="submit" style={S.primaryBig} disabled={busy || !newName.trim()}>
-                {kids.length ? "Add child" : "Start playing"}
+                {kids.length ? "Add player" : "Start playing"}
               </button>
             </form>
 

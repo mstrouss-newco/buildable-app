@@ -1608,7 +1608,11 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const People = () => (
+  // A drawn bell (dome + clapper), which is what this path has always been --
+  // it was just called "People", so the code read as if it drew two heads. The
+  // Home header wants a bell with a badge count for turns and invites, so the
+  // shape stays and the name now matches it. Pure SVG geometry, no emoji.
+  const Bell = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M18 9a6 6 0 10-12 0c0 6-2.5 7.5-2.5 7.5h17S18 15 18 9z" />
       <path d="M10.5 20a1.7 1.7 0 003 0" />
@@ -1665,7 +1669,7 @@ function FriendsPill({ chessTurns = 0, onChess, rtInvite, onJoinInvite, friendIn
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <button onClick={() => setOpen((o) => !o)} aria-label="Notifications" style={compact ? compactBtn : pillBtn}>
-        <People />{!compact && "Friends"}
+        <Bell />{!compact && "Alerts"}
         {count > 0 && <span style={compact ? compactBadge : badge}>{count}</span>}
         {!compact && (rtInvite || (friendInvites && friendInvites.length > 0)) && <span style={liveDot} />}
       </button>
@@ -3163,6 +3167,16 @@ function HomeScreen(props) {
 
   const kidName = (activeKid && activeKid.display_name) || "friend";
 
+  // QA44 — the notifications bell, live at last. FriendsPill had been written
+  // and then rendered NOWHERE in the repo. It reads the same four things the
+  // keep-playing card does (a chess turn, friend turns, friend invites, a
+  // realtime invite), but that card can only ever show the FIRST of them; the
+  // bell's menu reaches every one, which is the gap worth closing. It only
+  // appears when something is genuinely waiting, so a quiet Home stays quiet
+  // and no kid taps a bell to find an empty list.
+  const alertCount = (chessTurns > 0 ? chessTurns : 0) + (rtInvite ? 1 : 0) +
+    ((friendInvites && friendInvites.length) || 0) + ((friendTurns && friendTurns.length) || 0);
+
   // ---- Today's Brain Boost (Learning Mode only) ----
   const learningOn = (() => { try { return !!(getLearningSettings() && getLearningSettings().enabled); } catch (e) { return false; } })();
   const brainBoost = (() => { try { return dailyLearningProgress(); } catch (e) { return { count: 0, goal: 3, done: false, todayKey: "" }; } })();
@@ -3430,6 +3444,19 @@ function HomeScreen(props) {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            {alertCount > 0 && (
+              <FriendsPill
+                compact
+                chessTurns={chessTurns}
+                onChess={onChessResume || onChess}
+                rtInvite={rtInvite}
+                onJoinInvite={onJoinInvite}
+                friendInvites={friendInvites}
+                friendTurns={friendTurns}
+                onJoinFriendInvite={onJoinFriendInvite}
+                onOpenFriendMatch={onOpenFriendMatch}
+              />
+            )}
             <span aria-label="Coins" style={{
               display: "inline-flex", alignItems: "center", gap: 5, background: "#fff",
               border: "1px solid rgba(240,151,42,0.30)", borderRadius: 999, padding: "6px 10px",
