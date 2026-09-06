@@ -1,3 +1,83 @@
+## 2026-09-06 — QA54 / QA34 / QA35: Mahjong stops dead-ending, and two small ones
+
+Three cards, grouped because they live in two files. Branch
+`claude/mahjong-qa-fixes-05hfek`.
+
+**QA54 — the hardest Mahjong board could deal itself into a corner.** Reproduced
+before touching anything, exactly as asked: a loop over
+`G.simGreedy({lvlIdx:2, setIdx:0})` dead-ends on roughly **1 fresh board in 3,600**
+on the hardest level, and never on the two easier ones. So the bug was real and it
+was the layout, not the tile set.
+
+**Reverse removal was already there, and it was not the hole.** `assignSolvable`
+has always built the board by peeling free pairs off the full layout and recording
+the order, so a legal path exists by construction. The hole was in the **safety
+net**. When a player runs out of moves the game calls `autoShuffle`, which re-deals
+faces onto the tiles that are still standing. That only rescues a board while those
+tiles can still physically be taken off two at a time — and this engine's free rule
+is "nothing stacked on top of me", with no left/right rule, so the open edges of the
+board are takeable from the first tap. A greedy player strips those edges first and
+can leave a **buried pyramid**: one uncovered tile sitting on tiles that are every
+one of them covered. `freeTiles` returns 1, `assignSolvable` returns null, and no
+face deal on earth fixes it, because faces were never the problem — the *shape* was.
+The old mix could only ever change faces, so once the shape went bad the board was
+dead and stayed dead. Measured at the moment of death: 14 tiles left, 1 free.
+
+**The fix, in three pieces.**
+- `canPeel(tiles)` replays the safest possible peel — always take the two highest
+  free tiles — and answers whether a shape can still be cleared at all.
+- `settleFootprint(present)` re-lays the standing tiles into the lowest slots of the
+  level's layout. Full lower layers plus a part-filled top layer always leaves two
+  or more uncovered tiles, so what comes out is peelable by construction. This is
+  the piece that was missing: the mix can now change the shape, not just the paint.
+- `dealSolvable()` ties them together — settle an un-peelable shape, try a few
+  random peels so the board still looks random, then fall back to a deterministic
+  top-down peel that **cannot** fail on a peelable shape (it is the same order
+  `canPeel` proved). `build()` and `autoShuffle()` both go through it, so a solvable
+  board is now guaranteed from *any* state, not just from a fresh deal.
+
+`simGreedy` now calls the real `autoShuffle` instead of keeping its own inline copy
+of the remix, so the harness tests the code that actually ships. That was the other
+quiet problem: the sim and the game had drifted apart.
+
+**Why not Shuffle-when-stuck instead:** it already was Shuffle-when-stuck. The card
+offered reverse removal as the fix and reverse removal was already in the file, so
+the honest answer is that neither of the two options on the card was the bug. The
+fix is the third thing — giving the existing shuffle the power to move tiles when
+re-painting them cannot help.
+
+**One nuance worth writing down.** The hardest level runs *tray mode*: tapping a
+free tile parks it in a 4-slot holding tray, and overfilling the tray is the
+designed lose state. In tray mode a kid is never strictly stuck — they can always
+park — so `autoShuffle` is deliberately switched off there and stays off. What was
+genuinely broken is the board property the harness checks, and a kid meeting that
+14-tiles-1-free remnant on the hardest level was facing a near-certain loss even
+with the tray. Both are fixed at the source, because the shape can no longer go bad.
+
+**Evidence:** `qa-mahjong.mjs` run **40 times, zero failures**. A separate stress
+run over 20,000 fresh boards per level per player type (greedy, plus the recorded
+solution replayed move by move, plus 2,000 tray-mode games) came back clean: 60,000
+boards, **0 stuck**, worst mix count 5 on the hardest level. `node qa-all.mjs` green.
+
+**QA34 — real names for the Mahjong levels.** "1 Fire", "2 Fire" and "3 Fire" told a
+child nothing. They are now **Easy**, **Tricky** and **Super Tricky**, changed in the
+engine config and in `/mahjong/manifest.json` so the menu, the journey and the
+harness all agree. The flame icons still show the step up and the footnotes still
+say Small board / Medium board / Big board. Level **ids** (`one-fire`, `two-fire`,
+`three-fire`) are left alone on purpose: they are the `/mahjong/play/<id>` links and
+the keys saved stars and best scores live under.
+
+**QA35 — the developer debug badge is out of Maze Munchers.** The "Maze v8
+(tap=debug)" pill bottom-left, and the green readout it opened, are both gone, along
+with the frame / tap / turn counters and arrow formatters that only ever fed it. The
+`VERSION` string stays in the file as a record of which build it is; nothing draws it
+on screen.
+
+**Not done, and it needs Mike:** the planner could not be updated from this session.
+The sandbox's network policy allows GitHub and the package registries only, so
+`scripts/planner.mjs` gets a proxy 403 on `buildablekids.com`. The three cards were
+ticked directly in Supabase instead, with a note naming the branch.
+
 ## 2026-09-06 — CB1: kid-made games (Cobuild)
 
 **Shipped.** `kid_games` table (migration written to `db/create-kid-games.sql` AND

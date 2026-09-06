@@ -3441,6 +3441,28 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-06 (QA54 / QA34 / QA35: Mahjong stops dead-ending, and two small ones)
+
+**QA54.** Reproduced first: a loop over `G.simGreedy({lvlIdx:2, setIdx:0})` dead-ends on
+about 1 fresh board in 3,600 on Mahjong's hardest level, never on the two easier ones.
+Reverse-removal generation was already in the file and was not the hole - the *safety net*
+was. `autoShuffle` only re-dealt faces onto the tiles still standing, and a greedy player
+strips the open edges first and can leave a buried pyramid: one uncovered tile on tiles
+that are all covered. No face deal fixes that, because the *shape* was the problem.
+Added `canPeel` (can this shape still be cleared?), `settleFootprint` (re-lay the standing
+tiles into the layout's lowest slots, which is peelable by construction) and `dealSolvable`
+(settle, try random peels, fall back to the top-down peel that cannot fail). `build()` and
+`autoShuffle()` both go through it, so a solvable board is guaranteed from any state.
+`simGreedy` now calls the real `autoShuffle` instead of its own copy. `qa-mahjong.mjs` run
+40 times, zero failures; a 60,000-board stress run came back clean.
+
+**QA34.** Mahjong's levels are Easy, Tricky and Super Tricky instead of 1/2/3 Fire, in the
+engine and in `/mahjong/manifest.json`. Level ids are unchanged so saved stars survive.
+
+**QA35.** The "Maze v8 (tap=debug)" pill and its green readout are out of Maze Munchers.
+
+See SESSION-LOG.md for detail.
+
 ## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
 
 Mike found the Make section tiles unexciting. From four mocked options he picked
