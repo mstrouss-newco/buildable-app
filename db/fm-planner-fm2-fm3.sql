@@ -76,3 +76,38 @@ begin
 
   update planner_meta set data = d where id = 1;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Second pass, same day. Mike saw the renders and said to land it, so FM3 went
+-- onto main (commit 482f1b6) and the card follows: done, review cleared. Still
+-- NOT deployed, for the same reason as FM2 — this session cannot reach the live
+-- site to check, and a push is not a deploy.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  i_fm3 int;
+  d jsonb;
+  note jsonb := jsonb_build_object('at','2026-09-06T01:00:00Z','text',
+    'Landed on main 2026-09-06 (commit 482f1b6) on Mike''s say-so after he saw '
+ || 'the renders. The crate, the rapid-fire unload, the plane and the coin burst '
+ || 'are in; the four FM1 integration gaps are closed (the Play door with a drawn '
+ || 'tile, the shared wallet, the nav bridge, sound). Coins: seeds 3 flat, harvest '
+ || 'pays nothing, crate pays 20 rising to 45, free seed when broke. Duck 120 '
+ || 'coins, real PekinDuck model. qa-farm 78 and qa-skyflyer 466 green, qa-all '
+ || 'green. NOT marked deployed: the session could not reach the live site.');
+begin
+  select data into d from planner_meta where id = 1;
+  select (ord - 1) into i_fm3 from jsonb_array_elements(d->'roadmap'->'sessions')
+    with ordinality as t(s, ord) where s->>'id' = 'FM3';
+  if i_fm3 is null then
+    raise exception 'FM3 not found in the roadmap — refusing to touch anything';
+  end if;
+  d := jsonb_set(d, array['roadmap','sessions',i_fm3::text,'done'], 'true'::jsonb);
+  d := jsonb_set(d, array['roadmap','sessions',i_fm3::text,'needsReview'], 'false'::jsonb);
+  d := jsonb_set(d, array['roadmap','sessions',i_fm3::text,'reviewRequestedAt'], 'null'::jsonb);
+  if not (d #> array['roadmap','sessions',i_fm3::text,'notes'] @> jsonb_build_array(note)) then
+    d := jsonb_set(d, array['roadmap','sessions',i_fm3::text,'notes'],
+           (d #> array['roadmap','sessions',i_fm3::text,'notes']) || jsonb_build_array(note));
+  end if;
+  update planner_meta set data = d where id = 1;
+end $$;

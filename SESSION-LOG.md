@@ -102,6 +102,15 @@ flown frame by frame through all six legs, the coins landed, the duck bought.
 `qa-skyflyer.mjs` 421 -> 466 checks green, with a block per integration gap so a
 closed gap cannot silently reopen. `qa-all.mjs` green. `vite build` clean.
 
+### Landed
+Mike saw the renders and said to land it, so FM3 went onto `main` as
+`482f1b6`. Two conflicts on the way in, both the same dated-entry-at-the-top
+shape, both kept. `qa-all` green on the merged `main`, and the farm robot and
+the Sky Flyer harness both re-run green on it. **Not marked deployed on the
+planner**: this session's network policy blocks buildablekids.com and the Vercel
+project list came back empty, so the live site could not be checked, and a push
+is not a deploy.
+
 Touched: `public/skyflyer-farm.html`, `public/buildable-wallet.js`,
 `public/models/skyflyer/animals/farm-animals.glb`, `src/BuildableKids.jsx`,
 `CARTRIDGE-CONTRACT.md`, `qa-farm.mjs`, `qa-skyflyer.mjs`.

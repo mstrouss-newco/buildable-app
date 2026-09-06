@@ -53,6 +53,10 @@ bone-white slab, the crate came out smaller than the kid loading it, and the emp
 card slots were unreadable smudges. Card states captured empty / half / full at
 phone, tablet and desktop widths.
 
+**Landed on `main` as `482f1b6`** once Mike had seen the renders. Not marked
+deployed on the planner: this session could not reach the live site to check,
+and a push is not a deploy.
+
 `qa-farm.mjs` is 78 checks green (the whole loop played for real in Chromium),
 `qa-skyflyer.mjs` 466, `qa-all.mjs` green.
 ## CB1 — a kid's game is a row they own, not new engine code (September 6 2026)
