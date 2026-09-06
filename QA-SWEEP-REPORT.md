@@ -1,6 +1,6 @@
 # QA-SWEEP-REPORT.md
 
-Written by `scripts/qa-all.mjs` — 2026-09-06 16:07:09 UTC. Took 610s.
+Written by `scripts/qa-all.mjs` — 2026-09-06 16:32:08 UTC. Took 625s.
 
 This file is generated. Do not hand-edit it: re-run `npm run qa`.
 
@@ -10,44 +10,45 @@ This file is generated. Do not hand-edit it: re-run `npm run qa`.
 
 | Check | Result | Detail |
 |---|---|---|
-| the catch-all is last | PASS | route 198 of 198 |
+| the catch-all is last | PASS | route 206 of 206 |
 | every public/buildable-*.js is routed | PASS | 19 shared scripts |
-| every public/*.html is routed | PASS | 57 pages |
+| every public/*.html is routed | PASS | 58 pages |
 
 The live check did not run. Add `--live` before a release.
 
-## Machine sweep — 60 harnesses
+## Machine sweep — 61 harnesses
 
-**59 pass · 0 fail · 0 timeout · 1 quarantined**
+**60 pass · 0 fail · 0 timeout · 1 quarantined**
 
 | Harness | Result | Time |
 |---|---|---|
 | `qa-ap2-use-in-game.mjs` | QUAR | 4.7s |
-| `qa-art-browser.mjs` | PASS | 28.4s |
+| `qa-art-browser.mjs` | PASS | 28.2s |
 | `qa-art.mjs` | PASS | 0.1s |
 | `qa-bingo.mjs` | PASS | 0.2s |
-| `qa-breaker.mjs` | PASS | 1.4s |
-| `qa-bubble.mjs` | PASS | 5.1s |
+| `qa-breaker.mjs` | PASS | 1.6s |
+| `qa-bubble.mjs` | PASS | 5.2s |
 | `qa-castleguard.mjs` | PASS | 9.5s |
-| `qa-checkers-dom.mjs` | PASS | 1.2s |
-| `qa-checkers.mjs` | PASS | 2.4s |
-| `qa-chess.mjs` | PASS | 13.3s |
-| `qa-connectfour.mjs` | PASS | 0.8s |
-| `qa-croc.mjs` | PASS | 0.0s |
+| `qa-checkers-dom.mjs` | PASS | 1.3s |
+| `qa-checkers.mjs` | PASS | 2.5s |
+| `qa-chess.mjs` | PASS | 16.9s |
+| `qa-connectfour.mjs` | PASS | 0.7s |
+| `qa-croc.mjs` | PASS | 0.1s |
 | `qa-dive.mjs` | PASS | 0.1s |
 | `qa-dotsandboxes.mjs` | PASS | 1.5s |
 | `qa-explore.mjs` | PASS | 0.1s |
 | `qa-family-town.mjs` | PASS | 0.1s |
-| `qa-farm.mjs` | PASS | 19.1s |
+| `qa-farm.mjs` | PASS | 19.5s |
 | `qa-invite.mjs` | PASS | 0.1s |
+| `qa-kidgames.mjs` | PASS | 1.6s |
 | `qa-kidspedia.mjs` | PASS | 0.1s |
 | `qa-kits.mjs` | PASS | 0.1s |
 | `qa-kp3-add-a-kit.mjs` | PASS | 6.1s |
-| `qa-lessons-dom.mjs` | PASS | 200.4s |
+| `qa-lessons-dom.mjs` | PASS | 200.0s |
 | `qa-lessons.mjs` | PASS | 0.1s |
 | `qa-mahjong.mjs` | PASS | 0.7s |
-| `qa-mathcannon.mjs` | PASS | 0.0s |
-| `qa-maze.mjs` | PASS | 3.1s |
+| `qa-mathcannon.mjs` | PASS | 0.1s |
+| `qa-maze.mjs` | PASS | 3.4s |
 | `qa-memory.mjs` | PASS | 0.2s |
 | `qa-minutemath.mjs` | PASS | 0.1s |
 | `qa-music.mjs` | PASS | 0.1s |
@@ -56,28 +57,28 @@ The live check did not run. Add `--live` before a release.
 | `qa-nv3.mjs` | PASS | 0.1s |
 | `qa-nv4-dom.mjs` | PASS | 0.5s |
 | `qa-nv4.mjs` | PASS | 0.1s |
-| `qa-play-invite.mjs` | PASS | 0.1s |
+| `qa-play-invite.mjs` | PASS | 0.0s |
 | `qa-play.mjs` | PASS | 0.1s |
-| `qa-practice-shot.mjs` | PASS | 42.9s |
-| `qa-practice.mjs` | PASS | 30.4s |
+| `qa-practice-shot.mjs` | PASS | 43.1s |
+| `qa-practice.mjs` | PASS | 30.6s |
 | `qa-question-bank.mjs` | PASS | 0.1s |
 | `qa-quickgame.mjs` | PASS | 0.1s |
 | `qa-rileys.mjs` | PASS | 0.1s |
-| `qa-rn1.mjs` | PASS | 3.9s |
+| `qa-rn1.mjs` | PASS | 4.0s |
 | `qa-runner.mjs` | PASS | 0.1s |
 | `qa-share-links.mjs` | PASS | 0.0s |
-| `qa-skyflyer-hud.mjs` | PASS | 36.7s |
-| `qa-skyflyer-look.mjs` | PASS | 115.3s |
-| `qa-skyflyer-sky.mjs` | PASS | 13.4s |
-| `qa-skyflyer.mjs` | PASS | 56.1s |
-| `qa-sling.mjs` | PASS | 75.8s |
-| `qa-snakes.mjs` | PASS | 0.4s |
+| `qa-skyflyer-hud.mjs` | PASS | 36.5s |
+| `qa-skyflyer-look.mjs` | PASS | 115.1s |
+| `qa-skyflyer-sky.mjs` | PASS | 13.0s |
+| `qa-skyflyer.mjs` | PASS | 55.5s |
+| `qa-sling.mjs` | PASS | 75.6s |
+| `qa-snakes.mjs` | PASS | 0.3s |
 | `qa-soundboard.mjs` | PASS | 0.1s |
-| `qa-stringmatch.mjs` | PASS | 2.1s |
-| `qa-survival.mjs` | PASS | 2.9s |
-| `qa-tank.mjs` | PASS | 3.2s |
+| `qa-stringmatch.mjs` | PASS | 2.2s |
+| `qa-survival.mjs` | PASS | 2.1s |
+| `qa-tank.mjs` | PASS | 2.9s |
 | `qa-tennis.mjs` | PASS | 0.2s |
-| `qa-tictactoe.mjs` | PASS | 5.0s |
+| `qa-tictactoe.mjs` | PASS | 5.2s |
 | `qa-topic.mjs` | PASS | 0.2s |
 | `qa-tumble.mjs` | PASS | 9.0s |
 | `qa-typing.mjs` | PASS | 0.1s |
@@ -104,7 +105,7 @@ AP2 QA: FAILED
 
 ## Page sweep — every `public/**/*.html`
 
-**57 clean · 0 with problems** (console errors, uncaught errors, or missing files).
+**58 clean · 0 with problems** (console errors, uncaught errors, or missing files).
 
 | Page | Result | Problems | Expected-missing |
 |---|---|---|---|
@@ -128,6 +129,7 @@ AP2 QA: FAILED
 | `/editor.html` | PASS |  |  |
 | `/family-town.html` | PASS |  |  |
 | `/feedback.html` | PASS |  |  |
+| `/g.html` | PASS |  |  |
 | `/kidspedia.html` | PASS |  |  |
 | `/landing.html` | PASS |  |  |
 | `/lesson-review.html` | PASS |  |  |
