@@ -1090,6 +1090,22 @@
       }
     },
     {
+      "src": "/tile-shots.html",
+      "dest": "/tile-shots.html"
+    },
+    {
+      "src": "/tile-shots",
+      "dest": "/tile-shots.html"
+    },
+    {
+      "src": "/tile-shots/(.*)",
+      "dest": "/tile-shots/$1"
+    },
+    {
+      "src": "/buildable-tileshot.js",
+      "dest": "/buildable-tileshot.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/landing.html"
     }

@@ -6,6 +6,46 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## TS0 — the Tile Shots rig, proved on Survival and Castle Guard (September 6 2026)
+`public/buildable-tileshot.js`, `scripts/tile-shot.mjs`, `public/tile-shots.html`,
+`public/survival-engine.html`, `public/castle-guard.html`, `vercel.json`
+
+Every game tile shows an AI painting today. TS replaces those with a staged
+screenshot of the real game, taken by the game itself. TS0 builds the one-time rig
+and proves the look on one dark world and one bright world before eighteen more
+games get one.
+
+**Photo mode.** `?tileshot=1` on a game. It borrows the existing attract-mode
+plumbing (silent, all input ignored) but instead of playing it warms up for about
+two seconds so every sprite has really arrived, then poses the recipe and freezes:
+hero just left of centre, three foes coming in from the right, one thing caught
+mid-flight, one treat, no HUD, no words. Every pixel is the game's own art file.
+
+**The shared rig** is `buildable-tileshot.js`: the flag, the signature-colour wash
+rising from the bottom, a camera that crops in on the action, a "hold still" signal
+for the shutter, and a chrome-hider that removes everything on the page that is not
+the canvas. That last one matters — the first shots came out with the shared Home
+and Sound buttons baked into them. TS1-TS3 add a pose per game and reuse all of it.
+
+**The camera** is `scripts/tile-shot.mjs`. It serves `public/` itself and never
+touches the network, so it runs anywhere, and every shot is deterministic: the
+games freeze their clock in photo mode, so the coin is caught face-on rather than
+edge-on and a re-run gives the same picture. Output is exactly 1200x900. It writes
+PNGs and nothing else — swapping a tile's live art is a separate step that only
+happens after approval.
+
+**The contact sheet** is `/tile-shots`: each new picture beside the AI painting it
+would replace, plus how it reads at real tile size. Nothing on the live site has
+changed.
+
+**Two findings for the rollout.** The wash reads well on Space Survival (purple over
+a sunset sky) and all but disappears on Castle Guard (green over grass), so wash
+strength is a per-game question, not one setting. And tower defence has no coin on
+the field, so Castle Guard has no treat in its picture; its coins live in the info
+bar, which the photo hides.
+
+---
+
 ## CB1 — a kid's game is a row they own, not new engine code (September 6 2026)
 `db/create-kid-games.sql`, `api/kid-game.js`, `api/_manifestLib.js`, `api/g.js`,
 `public/g.html`, `public/buildable-manifest.js`, `public/skyflyer-engine.html`,

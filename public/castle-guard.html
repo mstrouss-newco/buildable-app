@@ -47,6 +47,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-wincard.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-tileshot.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script src="buildable-manifest.js"></script>
 
@@ -354,7 +355,11 @@ function drawSprite(ctx, name, cx, cy, h, t, opt) {
 /* Session 7I: ?screen=demo attract mode (self-playing, silent, input ignored) and
    ?level=N deep-link (N = 0-based index into the level list; clamped). */
 let DEMO = false, CG_LVL = null;
-try { const _q = new URLSearchParams(location.search); DEMO = _q.get("screen") === "demo";
+/* Session TS0: ?tileshot=1 photo mode — borrows the demo plumbing (silent, all
+   input ignored), but poses the tile recipe and holds still instead of playing. */
+const TS = (typeof window !== "undefined" && window.BuildableTileShot) || null;
+let SHOT = !!(TS && TS.on), shotPosed = false, shotWarm = 0;
+try { const _q = new URLSearchParams(location.search); DEMO = _q.get("screen") === "demo" || SHOT;
   const _lv = _q.get("level"); if (_lv != null && _lv !== "" && !isNaN(+_lv)) CG_LVL = +_lv; } catch (e) {}
 function sfx(n, o) { if (DEMO) return; try { if (BA) BA.sfx(n, o); } catch (e) {} }
 let _voiceEl = null;
@@ -727,9 +732,10 @@ function render() {
   const sh = BM ? BM.shakeOffset(fx) : { x: 0, y: 0 };
   ctx.translate(sh.x, sh.y);
 
+  if (SHOT && shotPosed) TS.camera(ctx, LW, LH, CG_SHOT_Z, cgShotFocus().x, cgShotFocus().y);
   drawWorld();
   if (S) {
-    drawSlots();
+    if (!SHOT) drawSlots();          // build pads are UI, not scenery
     drawCastle();
     // sort drawables by y for depth
     const draws = [];
@@ -744,11 +750,17 @@ function render() {
     const _w = curWorld(); if (_w && _w.wash) { ctx.save(); ctx.fillStyle = _w.wash; ctx.fillRect(0, 0, LW, LH); ctx.restore(); }
   }
   if (BM) BM.draw(ctx, fx, { W: LW, H: LH });
-  if (S) drawHUD();
+  if (S && !SHOT) drawHUD();
   drawToast();
   if (state === "retry" && !DEMO) drawRetry();
   if (state === "win" && !DEMO) drawWin();
-  if (DEMO) cgDemoDrawHand();
+  if (DEMO && !SHOT) cgDemoDrawHand();
+  // TS0: signature-colour wash + "hold still" signal, once the pose is set.
+  // Painted in logical space so it follows the letterbox, same as the world.
+  if (SHOT && shotPosed) {
+    ctx.setTransform(VIEW.scale, 0, 0, VIEW.scale, VIEW.ox, VIEW.oy);
+    TS.finish(ctx, LW, LH, cgShotColor());
+  }
 }
 
 function curWorld() { return (S && S.W && S.W.L && S.W.L.world) ? S.W.L.world : GAME_CONFIG.world; }
@@ -1124,8 +1136,10 @@ let last = 0;
 function frame(ts) {
   const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
   if (toastT > 0) toastT -= dt;
-  if (DEMO) cgDemoTick(dt);
-  if (state === "play") step(dt); else tickNonPlay(dt);
+  if (SHOT) cgShotTick(dt);
+  else if (DEMO) cgDemoTick(dt);
+  if (SHOT && shotPosed) { /* held still for the camera */ }
+  else if (state === "play") step(dt); else if (!SHOT) tickNonPlay(dt);
   render();
   requestAnimationFrame(frame);
 }
@@ -1136,7 +1150,8 @@ if (typeof document !== "undefined" && cv) {
   loadPrefs(); loadSprites(); resize();
   /* Session 7I: the castleguard manifest only renames the levels (count is fixed),
      so starting by index immediately is exactly what tapping that level card does. */
-  if (DEMO) { cgDemoStart(); }
+  if (SHOT) { cgShotStart(); }
+  else if (DEMO) { cgDemoStart(); }
   else if (CG_LVL != null) { cgHideStart(); startLevel(Math.max(0, Math.min(GAME_CONFIG.levels.length - 1, Math.floor(CG_LVL)))); }
   else { showMenu(); }
   requestAnimationFrame(frame);
@@ -1154,6 +1169,75 @@ function cgDemoStart() {
   cgHideStart();
   startLevel(0);
   cgHand.target = -1; cgHand.timer = 0.8; cgHand.press = 0;
+}
+/* ===================================================================== */
+/*  Session TS0: tile-shot photo mode (?tileshot=1)                      */
+/*  Real Tiny Swords art, no HUD, no words. Warms up for a couple of     */
+/*  seconds so the sprites and the wave are genuinely running, then      */
+/*  poses the tile recipe and freezes: an archer just left of centre,    */
+/*  three goblins marching up the road on the right, one arrow caught    */
+/*  mid-flight, a puff of sparkles so no corner is empty, castle right.  */
+/*  Tower defence has no coin on the field, so the sparkle burst is the  */
+/*  treat — flagged for Mike on the contact sheet.                       */
+/* ===================================================================== */
+const CG_SHOT_Z = 1.45;
+let cgShotF = null;
+function cgShotFocus() {
+  if (cgShotF) return cgShotF;
+  const g = S && S.defenders[0], c = S && S.W && S.W.castle;
+  if (!g || !c) return { x: LW / 2, y: LH / 2 };
+  cgShotF = { x: (g.x + c.x) / 2, y: (g.y + c.y) / 2 };
+  return cgShotF;
+}
+function cgShotColor() { try { const m = window.BUILDABLE_MANIFEST; if (m && m.color) return m.color; } catch (e) {} return "#2E8B57"; }
+function cgShotStart() {
+  cgHideStart();
+  const n = GAME_CONFIG.levels.length;
+  startLevel(Math.max(0, Math.min(n - 1, TS ? TS.level : 0)));
+  S.coins = 999;                       // the photo is not a game: never blocked on economy
+  const a = pointAtRaw(S.W.segs, S.W.total, S.W.total * 0.56);
+  const b = pointAtRaw(S.W.segs, S.W.total, S.W.total * 0.70);
+  cgShotPlaceArcher(a.x / LW, a.y / LH);   // the "hero", guarding the road to the castle
+  cgShotPlaceArcher(b.x / LW, b.y / LH);   // a second one for depth
+}
+function cgShotPlaceArcher(fx0, fy0) {
+  const tx = LW * fx0, ty = LH * fy0;
+  let bi = -1, bd = 1e9;
+  S.W.slots.forEach((sl, i) => { if (!sl.occupied) { const d = Math.hypot(sl.x - tx, sl.y - ty); if (d < bd) { bd = d; bi = i; } } });
+  if (bi >= 0) placeDefender(bi, "archer");
+}
+function cgShotSpawnBaddie() {
+  const kind = GAME_CONFIG.baddies.pawn;
+  S.baddies.push({ dist: 0, hp: kind.hits, max: kind.hits, speed: kind.speed,
+    kind, r: kind.r || 26, poof: 0, hit: 0, gone: false, bob: Math.random() * 6 });
+}
+function cgShotPose() {
+  if (!S) return;
+  while (S.baddies.length < 3) cgShotSpawnBaddie();
+  S.baddies.length = 3;
+  const picks = [S.W.total * 0.66, S.W.total * 0.78, S.W.total * 0.89];
+  S.baddies.forEach((b, i) => { b.dist = picks[i]; b.hp = b.max; b.poof = 0; b.hit = 0; b.gone = false; });
+  // one arrow frozen mid-flight, archer to the nearest goblin
+  S.arrows.length = 0;
+  const g = S.defenders[0], b0 = S.baddies[0];
+  if (g && b0) {
+    const p = pointAtRaw(S.W.segs, S.W.total, b0.dist);
+    const ang = Math.atan2((p.y - 34) - (g.y - 30), p.x - (g.x + 8));
+    S.arrows.push({ x: g.x + 8 + (p.x - g.x) * 0.45, y: (g.y - 30) + ((p.y - 34) - (g.y - 30)) * 0.45,
+      vx: Math.cos(ang) * 560, vy: Math.sin(ang) * 560, target: b0, dmg: 1, life: 1.4 });
+    g.shootT = 0.12; g.face = 1;       // caught in the shooting pose
+  }
+  S.bombs.length = 0;
+  S.tutSlot = -1;                       // no tutorial hand, no glowing "tap here"
+  // a puff of the game's own sparkles fills the quiet corner (no pop word)
+  if (BM && b0) { const p = pointAtRaw(S.W.segs, S.W.total, S.baddies[2].dist);
+    BM.explode(fx, p.x, p.y - 20, "#ffe08a", { n: 14 }); }
+  shotPosed = true;
+}
+function cgShotTick(dt) {
+  if (shotPosed) return;
+  shotWarm += dt;
+  if (shotWarm >= 2.2) cgShotPose();
 }
 function cgBestSlot() {
   let bi = -1, bd = 1e9;

@@ -1,3 +1,52 @@
+## 2026-09-06 — TS0: the Tile Shots rig (Survival + Castle Guard)
+
+**Shipped.** The one-time rig for the Tile Shots rollout, plus photo modes for the
+two proof games. `public/buildable-tileshot.js` (the shared flag, wash, camera,
+chrome-hider and shutter signal), `?tileshot=1` in `public/survival-engine.html` and
+`public/castle-guard.html`, the camera `scripts/tile-shot.mjs`, the approval page
+`public/tile-shots.html` at `/tile-shots`, and four routes in `vercel.json` so the
+new script, the page and the pictures are all reachable ahead of the catch-all.
+Four 1200x900 PNGs in `public/tile-shots/` (each game with and without the wash).
+
+**Nothing was swapped.** No live tile art changed and no `image_cache` row was
+written. That is deliberate: the plan says the contact sheet goes to Mike before any
+tile is replaced, and TS0 exists to find out whether the look is right at all.
+
+**What the first two attempts got wrong**, since TS1-TS3 will hit the same walls.
+(1) Screenshotting the canvas element still catches DOM overlays sitting on top of
+it, so the shared Home and Sound buttons and the drag-to-move hint were baked into
+the first shots. The rig now hides everything on the page that is not the canvas.
+(2) Both games draw their whole playfield to fit the screen, so the hero was a speck.
+A shot needs a camera that crops in, and the recipe has to be written in screen
+fractions and mapped back through the zoom, or the hero does not land where you
+asked. (3) The coin spins on the wall clock, so it was caught edge-on as a pale
+sliver; photo mode now freezes the clock at an instant chosen so the coin faces the
+camera, which also makes every shot reproducible.
+
+**Calls I made for you.**
+1. **Castle Guard gets no coin.** Tower defence keeps its coins in the info bar,
+   which the photo hides, and there is no coin sprite on the field. Rather than draw
+   a stand-in — the rule is real art only — its picture frames the castle instead.
+   Flagged on the contact sheet.
+2. **The Castle Guard shot looks up the road at the castle.** The recipe says bad
+   guys enter from the right, but every Castle Guard level marches left to right
+   toward the castle, so "from the right" would have meant shooting them in the back
+   with nothing recognisable in frame. The castle is the most recognisable thing in
+   the game, so the archer is left of centre and the goblins march between it and
+   the castle.
+3. **Output is 1200x900, not 2400x1800.** The games cap their own canvas at 2x
+   device pixels, so shooting bigger only inflated the file (2.9 MB down to 547 KB)
+   without adding detail. 1200x900 is what the card asked for.
+
+**Open for Mike, on `/tile-shots`.** Wash or no wash. Real screenshot or the AI
+painting. Both variants are on the page.
+
+**QA.** `node qa-all.mjs`: ALL CHECKS PASS — 46 harnesses, 10 browser-only ones skipped,
+and the serving check green (the four new routes sit ahead of the catch-all).
+`qa-survival.mjs` and `qa-castleguard.mjs` both pass, so photo mode did not disturb
+normal play; a separate no-flag boot check confirms both games still open on their
+start screen with no console errors and `TILESHOT_READY` unset.
+
 ## 2026-09-06 — CB1: kid-made games (Cobuild)
 
 **Shipped.** `kid_games` table (migration written to `db/create-kid-games.sql` AND

@@ -79,6 +79,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-levelthumb.js"></script>
 <script src="buildable-manifest.js?v=1"></script>
 <script src="buildable-hud.js?v=4"></script>
+<script src="buildable-tileshot.js"></script>
 <script>
 // ============================================================================
 //  FIXED ENGINE — never regenerated. A game = this engine + GAME_CONFIG (data).
@@ -147,6 +148,10 @@ const BA=(typeof window!=="undefined"&&window.BuildableAudio)||(typeof globalThi
 // Session 7I: ?screen=demo attract mode — the game plays ITSELF silently for the
 // landing demo box. No menus, no audio ever, all input ignored, quiet restart loop.
 var DEMO=false; try{ DEMO=(typeof location!=="undefined") && new URLSearchParams(location.search).get("screen")==="demo"; }catch(e){}
+// Session TS0: ?tileshot=1 photo mode. It borrows the demo plumbing (silent, all
+// input ignored) but instead of playing it poses the tile recipe and holds still.
+const TS=(typeof window!=="undefined"&&window.BuildableTileShot)||null;
+var SHOT=!!(TS&&TS.on); if(SHOT) DEMO=true;
 function sfx(n,o){ if(DEMO)return; if(BA)BA.sfx(n,o); }
 // shared FX/"juice" library (particles, flash, shake, explode) — headless-safe
 const BM=(typeof window!=="undefined"&&window.BuildableMechanics)||(typeof globalThis!=="undefined"&&globalThis.BuildableMechanics);
@@ -454,6 +459,7 @@ function botThink(){
 
 // ---------- update (pure logic, no canvas — so QA can run it headless) ----------
 function update(){
+  if(SHOT && shotPosed) return;                 // TS0: the tile scene is held still
   if(DEMO && (state==="win"||state==="lose") && !survDemoRestartT){
     survDemoRestartT=setTimeout(function(){ survDemoRestartT=null; survDemoStart(); },1200); }
   if(state==="win"||state==="lose"||state==="title"){ if(BM&&fx) BM.update(fx); return; }   // keep FX (shake/flash) settling so the win screen doesn't jitter forever
@@ -653,7 +659,8 @@ function drawBlackHole(h,t){ const R=h.r, fade=Math.max(0,Math.min(1, Math.min(h
   ctx.strokeStyle=P.spark||"#ffe27a"; ctx.lineWidth=3; ctx.beginPath();ctx.arc(h.x,h.y,26+Math.sin(t*6)*2,0,7);ctx.stroke();
   ctx.restore(); }
 function draw(){
-  const t=Date.now()/1000;
+  const t=(SHOT&&shotPosed)?SHOT_T:Date.now()/1000;
+  if(SHOT && shotPosed){ ctx.save(); TS.camera(ctx,W,H,SHOT_Z,W/2,H/2); }   // TS0: crop in on the action
   // background: this level's new "Survival dalle" sky (cover-fit), with a soft vignette
   // so the white HUD stays readable. Falls back to the old backdrop until it loads.
   const sky=bgFor(level);
@@ -718,7 +725,7 @@ function draw(){
   // power level, boss timer) now lives in the ONE shared bar; only the live XP
   // gauge stays painted on canvas. Shown during play, hidden on menus/overlays.
   var _hud=HUD();
-  if(state==="play"){
+  if(state==="play" && !SHOT){
     if(_hud) _hud.show();
     try{ _hud.set({
       left:[{ text:L.name, soft:"Lv "+(level+1)+"/"+GAME_CONFIG.levels.length }],
@@ -735,9 +742,11 @@ function draw(){
       drawPUicon(id,cr.x+cr.w/2,cr.y+86); ctx.fillStyle="#fff";ctx.font="bold 22px Fredoka,sans-serif";ctx.fillText(PU[id].name,cr.x+cr.w/2,cr.y+cr.h-46); ctx.fillStyle="#9fb0ff";ctx.font="16px Fredoka,sans-serif";ctx.fillText("Tap to choose",cr.x+cr.w/2,cr.y+cr.h-22); } }
   if(helpOpen) drawTutorial();   // in-game auto-demo removed (pre-level start screen already teaches it); only shows if help is opened
   if(state==="title"){ ctx.fillStyle="rgba(5,8,24,.55)";ctx.fillRect(0,0,W,H); ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 44px Fredoka,sans-serif";ctx.fillText(GAME_CONFIG.name,W/2,H/2-10); ctx.font="22px Fredoka,sans-serif";ctx.fillText("Drag to move · Tap to start",W/2,H/2+30); }
-  if(DEMO && state==="play") drawDemoHand();
+  if(DEMO && !SHOT && state==="play") drawDemoHand();
   if(!DEMO && state==="win"){ banner(level<GAME_CONFIG.levels.length-1?"Boss beaten!":"You Win!", level<GAME_CONFIG.levels.length-1?"Next level unlocked — tap to go on":"Tap to collect your coins"); }
   if(!DEMO && state==="lose"){ banner("Oops! Out of hearts","Tap to collect your coins"); }
+  // TS0: signature-colour wash + "hold still" signal, only once the pose is set
+  if(SHOT && shotPosed){ ctx.restore(); TS.finish(ctx,W,H,survShotColor()); }
 }
 
 // ===== menus, locker, runs, coins (DOM — guarded so headless QA never touches it) =====
@@ -801,10 +810,64 @@ function wireMenus(){ const bk=el("lockerBack"); if(bk)bk.onclick=showMenu;   //
 function showHelpBtn(on){ const hb=el("helpBtn"); if(hb)hb.style.display=on?"block":"none"; }
 function showMuteBtn(on){ const mb=el("muteBtn"); if(mb)mb.style.display=on?"block":"none"; }
 
-function frame(){ update(); draw(); requestAnimationFrame(frame); }
+/* ---------- Session TS0: tile-shot photo mode (?tileshot=1) ----------
+   Loads the game's own real art, lets it warm up for a moment so every sprite
+   and sky has actually arrived, then poses Mike's tile recipe and freezes:
+   hero just left of centre, three foes coming in from the right, one sparkle
+   caught mid-flight, one coin low-left so no corner is empty, no HUD, no words.
+   Nothing here touches normal play — it only runs behind the flag. */
+var shotPosed=false, shotWarm=0;
+function survShotColor(){ try{ var m=window.BUILDABLE_MANIFEST; if(m&&m.color) return m.color; }catch(e){} return "#7C4DFF"; }
+function survShotStart(){
+  runGems=0; runLevelsCleared=0; hero=null; stats=null;
+  startLevel(survClampLevel(TS?TS.level:0), false);
+  state="play"; botMode=true; started=true;
+  var s=el("start"); if(s)s.style.display="none";
+  show("locker",false); showHelpBtn(false); showMuteBtn(false);
+}
+// The recipe is written in SCREEN fractions, but the pose has to happen in world
+// units under the shot camera's zoom. These two turn one into the other, so
+// "hero at 0.34 across" means exactly that in the finished picture.
+var SHOT_Z=2.0, SHOT_T=0;
+function sxw(f){ return W/2 + (f-0.5)*W/SHOT_Z; }
+function syw(f){ return H/2 + (f-0.5)*H/SHOT_Z; }
+function survShotPose(){
+  if(!hero||!L) return;
+  // hero: just left of centre, facing the trouble
+  hero.x=sxw(0.34); hero.y=syw(0.56); hero.vx=0; hero.vy=0; invuln=0;
+  // three foes entering from the right, staggered so none hides another
+  while(enemies.length<3){ spawnEnemy(); }
+  enemies.length=3;
+  var spots=[[0.71,0.28],[0.86,0.54],[0.66,0.79]];
+  for(var i=0;i<enemies.length;i++){ var sp=spots[i]; var e=enemies[i];
+    e.x=sxw(sp[0]); e.y=syw(sp[1]); e.slowT=0; e.hp=e.maxHp; }
+  hero.aim=Math.atan2(enemies[1].y-hero.y, enemies[1].x-hero.x);
+  // one sparkle frozen mid-flight, hero to foe
+  projs.length=0;
+  var t0=enemies[1];
+  projs.push({ x:hero.x+(t0.x-hero.x)*0.46, y:hero.y+(t0.y-hero.y)*0.46, vx:0, vy:0,
+               life:999, dmg:stats.projDmg, r:18+stats.projR, pierce:0, hit:new Set() });
+  // one coin treat, low and left, so the quiet corner has something in it
+  gems.length=0;
+  var gx=sxw(0.27);
+  gems.push({ x:gx, y:syw(0.74), tier:2, val:tierVal(2), vx:0, vy:0, got:false });
+  // BR.coin spins on the clock, so pick the instant where it faces us square on
+  SHOT_T=(2*Math.PI*Math.ceil((gx+1)/(2*Math.PI)) - gx)/3;
+  // nothing else on screen: no drops, no rings, no boss bar, no tutorial
+  drops.length=0; rings.length=0; holes.length=0; bolts.length=0; parts.length=0;
+  boss=null; bossSpawned=false; helpOpen=false;
+  if(BM&&fx&&BM.reset) { try{ BM.reset(fx); }catch(e){} }
+  shotPosed=true;
+}
+function survShotTick(){
+  if(!SHOT||shotPosed) return;
+  if(++shotWarm>=140) survShotPose();          // ~2.3s of real play, then hold
+}
+function frame(){ survShotTick(); update(); draw(); requestAnimationFrame(frame); }
 // boot: load the saved character, wire menus, show the shared start screen
 if(typeof document!=="undefined" && document.getElementById("start")){
-  if(DEMO){ CHAR=defaultChar(); survDemoStart(); }   // attract mode: no music, no menus, no saves
+  if(SHOT){ CHAR=defaultChar(); survShotStart(); }    // TS0 photo mode: pose one still frame, never plays on
+  else if(DEMO){ CHAR=defaultChar(); survDemoStart(); }   // attract mode: no music, no menus, no saves
   else {
     if(BA){ BA.configure({sfxBase:GAME_CONFIG.sfxBase, map:GAME_CONFIG.sfx}); if(GAME_CONFIG.musicUrl)BA.setMusic(GAME_CONFIG.musicUrl); }
     CHAR=localLoadChar()||defaultChar(); applyShellUpgrades(); wireMenus(); showMenu(); loadChar();
