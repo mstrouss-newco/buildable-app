@@ -195,5 +195,59 @@ ok('the wordless show can be replayed', (G.showHow(), G.how() === true));
 // the game is still one colony the kid keeps: nothing above reset it
 ok('one colony the whole way through', G.dbg().ants > 0 && G.dbg().dug > 0);
 
+// --- 6) AC4: the sounds, the music and the art leftovers ----------------------
+console.log('\n--- SOUND, MUSIC AND ART (AC4) ---');
+const sfxSrc = fs.readFileSync(dir + '/api/sfx.js', 'utf8');
+const musicSrc = fs.readFileSync(dir + '/api/library-music.js', 'utf8');
+const { SOUNDS } = await import(new URL('file://' + fs.realpathSync(dir + '/api/sfx.js')).href);
+const { LIBRARY_MUSIC } = await import(new URL('file://' + fs.realpathSync(dir + '/api/library-music.js')).href);
+
+// the five sounds the card names, each registered AND long enough to be generated
+const WANT_SOUNDS = ['antcity_dig', 'antcity_march', 'antcity_hatch', 'antcity_munch', 'antcity_rain'];
+ok('the five Ant City sounds are registered in api/sfx.js',
+  WANT_SOUNDS.every((k) => typeof SOUNDS[k] === 'string' && SOUNDS[k].length > 20),
+  WANT_SOUNDS.filter((k) => !SOUNDS[k]).join(',') || 'all present');
+// every one-shot needs a duration of at least 0.5s or the generator refuses it and
+// the sound is silently missing in game — the trap the card warns about
+const durBlock = /const DURATIONS\s*=\s*{([\s\S]*?)\n};/.exec(sfxSrc);
+const durs = Object.fromEntries([...(durBlock ? durBlock[1] : '').matchAll(/([A-Za-z0-9_]+)\s*:\s*([0-9.]+)/g)].map((m) => [m[1], +m[2]]));
+ok('every Ant City sound has a duration of at least 0.5s',
+  WANT_SOUNDS.every((k) => durs[k] >= 0.5), WANT_SOUNDS.map((k) => `${k}=${durs[k]}`).join(' '));
+
+// one shared, reusable meadow loop, listed for every project by /api/list-audio
+const meadow = Object.keys(LIBRARY_MUSIC).filter((n) => /meadow_busy/.test(n));
+ok('a Sunny Meadow music loop is in the shared library', meadow.length === 1, meadow.join(','));
+ok('the loop is reusable, not Ant City only',
+  meadow.every((n) => LIBRARY_MUSIC[n].theme && LIBRARY_MUSIC[n].label && !/ant/i.test(n)), meadow.join(','));
+
+// the engine asks for them by name, and never ships the synth as the product
+ok('the engine routes Feel through /api/sfx', /sfxBase\s*[:=]\s*"\/api\/sfx\?s="/.test(html) || /SFX_BASE\s*=\s*"\/api\/sfx\?s="/.test(html));
+ok('the engine maps every one of its sounds', WANT_SOUNDS.every((k) => html.indexOf(k) > 0));
+ok('the engine plays the shared meadow loop', /library-music\?name=meadow_busy_bright/.test(html));
+
+// the art leftovers the card lists, each a real file the engine resolves
+const WANT_ART = {
+  'antcity/surface/meadow-v1': 'surface-meadow.svg',
+  'antcity/surface/meadow-rain-v1': 'surface-meadow-rain.svg',
+  'antcity/surface/meadow-berry-v1': 'surface-meadow-berry.svg',
+  'antcity/soil/deep-v1': 'soil-deep.svg',
+  'antcity/soil/loam-v1': 'soil-loam.svg',
+  'antcity/prop/flood-v1': 'flood.svg',
+  'antcity/prop/colony-v1': 'colony.svg',
+  'antcity/loading/v1': 'loading.svg',
+};
+const missingFiles = Object.values(WANT_ART).filter((f) => !fs.existsSync(dir + '/public/antcity/art/' + f));
+ok('every art leftover is a real file', missingFiles.length === 0, missingFiles.join(',') || 'all present');
+const unmapped = Object.keys(WANT_ART).filter((id) => html.indexOf(id) < 0);
+ok('the engine resolves each one from its manifest id', unmapped.length === 0, unmapped.join(',') || 'all mapped');
+// every manifest asset id the game names now resolves to something
+const ids = [...new Set([...JSON.stringify(manifest).matchAll(/"(antcity\/[a-z0-9\/-]+)"/g)].map((m) => m[1]))];
+const unresolved = ids.filter((id) => html.indexOf(id) < 0 && !/badges\//.test(id));
+ok('no manifest asset id is left with nothing behind it (a drawn one counts, if the engine says so)',
+  unresolved.length === 0, unresolved.join(',') || 'all resolve');
+ok('the deliberately drawn ids are declared, not just missing', /DRAWN_ART\s*=\s*\[/.test(html));
+// and the drawn fallback is still there for every slot
+ok('a drawn fallback still stands behind the art', /else\s*{[\s\S]{0,200}fillStyle/.test(html));
+
 console.log(fails ? `\n${fails} CHECK(S) FAILED` : '\nALL CHECKS PASS');
 process.exit(fails ? 1 : 0);

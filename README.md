@@ -6,6 +6,46 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AC4 — Ant City gets its own sounds, a meadow loop, and the last of its art (September 6 2026)
+`api/sfx.js`, `api/library-music.js`, `public/antcity-engine.html`, `public/antcity/art/` (8 new
+files), `qa-antcity.mjs`. Phase **AC**, card **AC4**. Taken out of order, ahead of AC3, because
+Mike asked for it and nothing in it depends on the save work.
+
+**Five sounds we created, not a synth.** `antcity_dig`, `antcity_march`, `antcity_hatch`,
+`antcity_munch` and `antcity_rain` are named in `api/sfx.js` with a duration each — every one
+comfortably over the 0.5s floor, which is the trap the card warns about: under it the generator
+refuses and the sound is silently gone in game. The engine hands Feel a `sfxBase` of `/api/sfx?s=`
+and a map, so `Feel.tap` plays marching feet, `Feel.coinBurst` plays the hatch chime, and the
+shared synth stays what it always was — a silent fallback, never the product.
+
+**One music loop, shared not owned.** `meadow_busy_bright` ("Sunny Meadow (Busy)") goes into
+`api/library-music.js` under theme `adventure`, so `/api/list-audio` lists it for every project
+and any game wanting a pottering-about feel can call it by name. Ant City plays it through
+`BA.setMusic` + `BA.playMusic` once the colony opens.
+
+**The art leftovers are done.** Eight new hand-drawn vectors in `public/antcity/art/`: the sunny
+meadow strip, the same meadow in the rain, the berry-bush meadow, deep soil, rich loam, the flood
+tile, the anthill icon and a loading screen. They fill the manifest ids that were still
+placeholders, the meadow turns rainy on screen while a tunnel is flooded, and the anthill rides
+on the celebration card for a population milestone. Every slot keeps its drawn fallback, and the
+one id that is drawn ON PURPOSE (the dig marker) is now declared in `DRAWN_ART` so "no picture"
+can be told apart from "forgotten".
+
+**What the robot now checks.** `qa-antcity.mjs` gained an audio and art section: the five sounds
+registered with a legal duration, the meadow loop in the shared library and not named after this
+game, the engine routing through `/api/sfx` and mapping every key, each art file existing and
+resolving from its manifest id, no manifest id left with nothing behind it, and the drawn fallback
+still standing. `node qa-all.mjs` green, 47 harnesses.
+
+**What I could NOT verify.** The card asks for a `fetch(/api/sfx?s=<key>)` returning 200
+audio/mpeg per sound. This session cannot reach buildablekids.com at all (network policy), and the
+first call is what generates the clip through the owner's ElevenLabs key, server-side. So the five
+clips are registered and wired but have never been generated. Opening the live game plays them
+into existence; if one comes back 503 the prompt or the duration needs a nudge, and nothing else
+in the game breaks meanwhile.
+
+---
+
 ## AC2 — Ant City's ten missions, its gentle rain, and the door into the app (September 6 2026)
 `public/antcity-engine.html`, `qa-antcity.mjs` (new), `src/BuildableKids.jsx`, `qa-nv2.mjs`.
 Phase **AC**, card **AC2**. **Ant City is LIVE.**

@@ -1,3 +1,39 @@
+## 2026-09-06 — AC4: Ant City's sounds, its meadow loop, and the last of its art
+
+**Shipped.** Five created sounds named in `api/sfx.js` (digging, marching feet, a hatch
+chime, munching, rain), each with a duration over the 0.5 second floor that the generator
+enforces. The engine routes the shared Feel kit at `/api/sfx` and maps every one, so the
+synth in `buildable-audio.js` stays a silent fallback and never the shipped product. One
+new shared music loop, `meadow_busy_bright` ("Sunny Meadow (Busy)"), lives in
+`api/library-music.js` under theme adventure, so every project can reuse it and
+`/api/list-audio` lists it automatically.
+
+**The art leftovers are finished.** Eight new hand-drawn vectors: the sunny meadow, the
+rainy meadow, the berry-bush meadow, deep soil, rich loam, the flood tile, the anthill icon
+and a loading screen. The meadow now turns rainy on screen whenever a tunnel is flooded, the
+anthill appears on a population milestone, and the loading art fronts the start screen. Every
+slot keeps its drawn fallback, and the dig marker (drawn on purpose, per the asset plan) is
+declared in `DRAWN_ART` so a deliberate drawing is not mistaken for a missing file.
+
+**Checked.** `qa-antcity.mjs` gained an audio and art section and is green, along with the
+whole suite (47 harnesses). A real Chromium run shows the meadow art in place and the rainy
+meadow appearing the moment rain floods a tunnel.
+
+**The one thing I could not do.** The card asks me to verify each sound with a live
+`fetch(/api/sfx?s=<key>)` returning 200 audio/mpeg. This session cannot reach
+buildablekids.com at all, and that first call is also what generates the clip through your
+ElevenLabs key on the server. So the sounds are registered and wired but have never been
+generated. Playing the game on the live site creates them. If one ever comes back as a 503,
+its prompt or its duration needs a nudge, and nothing else breaks in the meantime.
+
+**Calls I made for you.**
+1. **Taken out of order.** The card says "AFTER AC3", but you asked for AC4 and none of it
+   depends on the save work, so I did it now. AC3 is still open and untouched.
+2. **The music loop is not called "antcity".** The library is shared, so it is named for the
+   mood, `meadow_busy_bright`, and any future farm or town game can use it.
+3. **The celebration got calmer.** It was dimming the whole screen for 2.6 seconds on every
+   mission; this manifest asks for a calm celebration, so it is a lighter hush for 2 seconds.
+
 ## 2026-09-06 — AC2: Ant City's missions, its rain, and the door into the app
 
 **Shipped, and LIVE.** The ten tutorial missions from the manifest now run on the AC1

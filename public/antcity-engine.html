@@ -106,6 +106,35 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var ACCENT = "#E9A23B";              // kept in sync with /antcity/manifest.json "color"
 
   // ======================================================================
+  //  Sound (AC4). Every sound Ant City makes is one WE created, named in
+  //  api/sfx.js and served from /api/sfx. The shared synth in buildable-audio
+  //  is a silent fallback only: a clip that is not generated yet is simply not
+  //  heard. The music is one shared library loop, so any game can reuse it.
+  // ======================================================================
+  var SFX_BASE = "/api/sfx?s=";
+  //  The left column is the name the ENGINE (or the shared Feel kit) asks for —
+  //  Feel.tap plays "select", Feel.coinBurst plays "coin", Feel.celebrate plays
+  //  "win" — and the right column is the clip in api/sfx.js that answers it.
+  var SFX_MAP = {
+    dig:     "antcity_dig",      // a digger opens a cell
+    select:  "antcity_march",    // a tap: ants marching to a new job
+    munch:   "antcity_munch",    // a crumb reaches the colony
+    hatch:   "antcity_hatch",    // an egg opens
+    coin:    "antcity_hatch",    // the coin burst on a finished mission
+    rain:    "antcity_rain",     // a tunnel floods
+    win:     "antcity_hatch",    // Feel.celebrate
+    levelup: "antcity_hatch",
+    hurt:    "antcity_rain"      // Feel.miss — a setback, never a buzzer
+  };
+  var MUSIC_URL = "/api/library-music?name=meadow_busy_bright";
+  function sfx(name){ try{ if(BA && BA.sfx && !DEMO) BA.sfx(name); }catch(e){} }
+  var _music = null;
+  function ensureMusic(){
+    if(DEMO || !BA || !BA.setMusic || _music === MUSIC_URL) return;
+    try{ if(BA.stopMusic) BA.stopMusic(); BA.setMusic(MUSIC_URL); _music = MUSIC_URL; if(BA.playMusic) BA.playMusic(); }catch(e){}
+  }
+
+  // ======================================================================
   //  GAME_CONFIG — the recipe. Every number the colony runs on lives here,
   //  so tuning Ant City never means rewriting it. The manifest may replace
   //  the art and the feel presets; these rates stay the engine's own.
@@ -205,8 +234,20 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     "antcity/prop/crumb-v1":      "/antcity/art/crumb.svg",
     "antcity/prop/buried-find-v1":"/antcity/art/buried-find.svg",
     "antcity/soil/sandy-v1":      "/antcity/art/soil-tile.svg",
+    "antcity/soil/deep-v1":       "/antcity/art/soil-deep.svg",
+    "antcity/soil/loam-v1":       "/antcity/art/soil-loam.svg",
+    "antcity/surface/meadow-v1":       "/antcity/art/surface-meadow.svg",
+    "antcity/surface/meadow-rain-v1":  "/antcity/art/surface-meadow-rain.svg",
+    "antcity/surface/meadow-berry-v1": "/antcity/art/surface-meadow-berry.svg",
+    "antcity/prop/flood-v1":      "/antcity/art/flood.svg",
+    "antcity/prop/colony-v1":     "/antcity/art/colony.svg",
+    "antcity/loading/v1":         "/antcity/art/loading.svg",
     "antcity/badge/v1":           "/antcity/art/badge.svg"
   };
+  // Ids that are DRAWN GEOMETRY on purpose, not a missing file. The dig marker is
+  // the dashed outline the kid sees while a path is queued, and ASSET-PLAN says it
+  // stays drawn. Listed here so "no picture" can be told apart from "forgotten".
+  var DRAWN_ART = ["antcity/prop/dig-marker-v1"];
   function artUrl(id){
     if(!id || typeof id !== "string") return null;
     if(id.charAt(0) === "/" || id.indexOf("http") === 0) return id;   // already a URL (asset studio)
@@ -339,7 +380,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(cell.dig >= 1){
         cell.kind = "tunnel"; delete cell.dig; C.plan.shift(); C.dug++;
         if(cell.r > C.deepest) C.deepest = cell.r;
-        puff(cell.c, cell.r);
+        puff(cell.c, cell.r); sfx("dig");
         // the last mission: dig deep enough and the ants turn up something buried
         if(C.find && !C.find.gone && cell.r >= C.find.r){
           C.find.gone = true; C.find.at = { c:cell.c, r:cell.r }; C.found++;
@@ -355,7 +396,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       it.amount -= take2; carry -= take2;
       if(it.kind === "water") C.water = Math.min(waterCap(), C.water + take2);
       else { C.food = Math.min(foodCap(), C.food + take2); C.carried += take2; }
-      if(it.amount <= 0.001) C.surface.shift();
+      if(it.amount <= 0.001){ C.surface.shift(); sfx("munch"); }      // a crumb is home
     }
 
     // --- builders clear a flooded tunnel FIRST: it blocks the colony, so it is
@@ -393,8 +434,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       while(C.hatchProg >= 1 && C.eggs > 0){
         C.hatchProg -= 1; C.eggs--; C.ants++; C.born++;
         C.jobs.forager++;                                  // a new ant joins the foragers; the kid slides it anywhere
-        spawnSample();
-        if(Feel){ try{ Feel.tap(); }catch(e){} }
+        spawnSample(); sfx("hatch");                       // the hatch chime
       }
     }
 
@@ -431,8 +471,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
     if(!pool.length) return null;
     var pick = pool[Math.floor(srand()*pool.length)];
-    pick.flooded = true; pick.clear = 0;
-    if(Feel){ try{ Feel.miss(); }catch(e){} }
+    pick.flooded = true; pick.clear = 0; sfx("rain");
     hint("Rain flooded a tunnel. Builders will clear it.");
     return pick;
   }
@@ -588,7 +627,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(have < ml.n) continue;
       C.hit[ml.id] = true;
       award("antcity:milestone:" + ml.id, ml.coins);
-      celebrate(ml.type === "ants" ? (ml.n + " ants!") : ("Dug " + ml.n + " levels deep!"), ml.coins);
+      celebrate(ml.type === "ants" ? (ml.n + " ants!") : ("Dug " + ml.n + " levels deep!"), ml.coins, ml.type === "ants");
       signal("cheer", { game:"antcity", milestone:ml.id });
       saveSoon();
     }
@@ -608,11 +647,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return at == null || C.mission >= at;
   }
   // the celebration: Feel does the juice, a plain card says what just happened
-  var party = { t:0, title:"", coins:0 };
-  function celebrate(title, coins){
+  var party = { t:0, title:"", coins:0, icon:false };
+  function celebrate(title, coins, icon){
     if(DEMO) return;                      // the attract box stays a window on the colony
-    party.t = 2.6; party.title = title; party.coins = coins || 0;
+    party.t = 2.0; party.title = title; party.coins = coins || 0; party.icon = !!icon;
     if(Feel){ try{ Feel.celebrate(W, H); Feel.coinBurst(W/2, H*0.42, 14); }catch(e){} }
+    sfx("levelup");
   }
   function tickParty(dt){ if(party.t > 0) party.t -= dt; }
 
@@ -636,6 +676,17 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     drawPuffs();
   }
   function drawSky(){
+    // AC4: the meadow is a picture now, and it turns rainy while a flood is sitting
+    // there. The drawn meadow underneath is still the fallback for a missing file.
+    var art = (floodCount() && IMG.rainSurface) ? IMG.rainSurface : IMG.surface;
+    if(art){
+      var iw = art.naturalWidth || art.width, ih = art.naturalHeight || art.height;
+      if(iw && ih){
+        var h = SKY, w = h * (iw/ih), x0 = 0;
+        while(x0 < W){ X.drawImage(art, x0, 0, w, h); x0 += w - 1; }
+        return;
+      }
+    }
     var gsky = X.createLinearGradient(0,0,0,SKY);
     gsky.addColorStop(0,"#8fd8f7"); gsky.addColorStop(1,"#d9f2ce");
     X.fillStyle = gsky; X.fillRect(0,0,W,SKY);
@@ -696,10 +747,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(BR){ BR.rrect(X, px+3, py+3, CS-6, CS-8, 8); X.fill(); }
       if(x.kind === "room") drawRoom(x, px, py);
       if(x.flooded){
-        X.fillStyle = "rgba(98,182,242,.72)";
-        if(BR){ BR.rrect(X, px+2, py+2, CS-4, CS-4, 8); X.fill(); } else X.fillRect(px+2, py+2, CS-4, CS-4);
-        X.fillStyle = "rgba(255,255,255,.55)";
-        X.fillRect(px+4, py + CS*0.35 + Math.sin(C.t*3 + x.c)*CS*0.05, CS-8, 3);
+        if(IMG.flood) drawImg(IMG.flood, px+CS/2, py+CS/2, CS);
+        else {
+          X.fillStyle = "rgba(98,182,242,.72)";
+          if(BR){ BR.rrect(X, px+2, py+2, CS-4, CS-4, 8); X.fill(); } else X.fillRect(px+2, py+2, CS-4, CS-4);
+          X.fillStyle = "rgba(255,255,255,.55)";
+          X.fillRect(px+4, py + CS*0.35 + Math.sin(C.t*3 + x.c)*CS*0.05, CS-8, 3);
+        }
         X.fillStyle = "rgba(255,255,255,.9)"; X.fillRect(px+4, py+CS-7, (CS-8)*(x.clear||0), 3);
       }
     }
@@ -793,9 +847,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var a = Math.min(1, party.t / 0.4), cw = Math.min(320, W*0.8), ch = 116;
     var cx = (W - cw)/2, cy = H*0.30;
     X.globalAlpha = a;
-    X.fillStyle = "rgba(20,12,4,.55)"; X.fillRect(0, 0, W, H);
+    X.fillStyle = "rgba(20,12,4,.34)"; X.fillRect(0, 0, W, H);   // calm: a hush, not a blackout
     X.fillStyle = "#fff8ec";
     if(BR){ BR.rrect(X, cx, cy, cw, ch, 20); X.fill(); } else X.fillRect(cx, cy, cw, ch);
+    if(party.icon && IMG.colony) drawImg(IMG.colony, W/2, cy - 6, 54);
     X.fillStyle = "#4a2f10"; X.textAlign = "center";
     X.font = "800 22px 'Baloo 2','Nunito',system-ui,sans-serif";
     X.fillText(party.title, W/2, cy + 46);
@@ -1053,6 +1108,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
     if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
     if(DEMO) return;
+    ensureMusic();
     if(!C.seen){ C.seen = true; saveSoon(); showHow(); }      // first launch: show, don't tell
     else hint(currentMission() ? missionLine() : "Free build: keep growing");
   }
@@ -1062,7 +1118,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       title:"Ant City", subtitle:"Draw tunnels, drop food, grow your colony",
       coins: (BW ? BW.balance() : 0), sound: !BA.muted, showBack:true,
       hero: IMG.queen ? { name:"The Queen", img:artUrl(ART_IDS.queen), progressText: C ? (C.ants + " ants") : "A brand new colony" } : null,
-      levels:[{ n:1, name:"Your Colony", color:"#8a5a2b", state:"next" }]
+      levels:[{ n:1, name:"Your Colony", color:"#8a5a2b", img:artUrl(ART_IDS.loading), state:"next" }]
     };
   }
   function showMenu(){
@@ -1186,6 +1242,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var ART_IDS = {
     ant:"antcity/ant/classic-v1", queen:"antcity/hero/queen-v1", soil:"antcity/soil/sandy-v1",
     egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1", find:"antcity/prop/buried-find-v1",
+    surface:"antcity/surface/meadow-v1", rainSurface:"antcity/surface/meadow-rain-v1",
+    flood:"antcity/prop/flood-v1", colony:"antcity/prop/colony-v1", loading:"antcity/loading/v1",
     room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1"
   };
   // The shell owns the kid's picks and hands the engine the option INDEX per slot
@@ -1205,6 +1263,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var lv = (m.levels && m.levels[0]) || null, parts = (lv && lv.parts) || {};
       if(parts.ant)  ART_IDS.ant  = parts.ant;
       if(parts.soil) ART_IDS.soil = parts.soil;
+      if(parts.surface) ART_IDS.surface = parts.surface;
+      if(m.art && m.art.loadingScreen) ART_IDS.loading = m.art.loadingScreen;
       if(m.art && m.art.hero) ART_IDS.queen = m.art.hero;
       if(m.levels && m.levels.length){
         MISSIONS = m.levels.map(function(l){ return { id:l.id, name:l.name, layout:l.layout, coins:l.coins || 10, difficulty:l.difficulty }; });
@@ -1215,10 +1275,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         var nm = String(slot.slot||"").toLowerCase();
         var want = looks[nm]; if(want == null) return;
         var o = (slot.options||[])[want]; if(!o || !o.asset) return;
-        if(nm === "ant")  ART_IDS.ant  = o.asset;
-        if(nm === "dirt") ART_IDS.soil = o.asset;
+        if(nm === "ant")    ART_IDS.ant     = o.asset;
+        if(nm === "dirt")   ART_IDS.soil    = o.asset;
+        if(nm === "meadow") ART_IDS.surface = o.asset;
       });
-      if(Feel) Feel.configure({ accent:ACCENT, feel:m.feel || { pace:"chill", celebration:"calm", haptics:"on" } });
+      if(Feel) Feel.configure({ accent:ACCENT, feel:m.feel || { pace:"chill", celebration:"calm", haptics:"on" }, sfxBase:SFX_BASE, sfxMap:SFX_MAP });
       if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT);
     }catch(e){}
   }
@@ -1233,7 +1294,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   function boot(){
     resize();
-    if(Feel){ try{ Feel.configure({ accent:ACCENT, feel:{ pace:"chill", celebration:"calm", haptics:"on" } }); }catch(e){} }
+    if(Feel){ try{ Feel.configure({ accent:ACCENT, feel:{ pace:"chill", celebration:"calm", haptics:"on" }, sfxBase:SFX_BASE, sfxMap:SFX_MAP }); }catch(e){} }
     if(!C) C = (DEMO ? null : loadSaved()) || freshColony(3);
     if(!C.surface) C.surface = []; if(!C.sample){ C.sample = []; walkSample(0); }
     try{

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120">
+  <defs><linearGradient id="wetsky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8fa9bd"/><stop offset="1" stop-color="#c3d7c8"/></linearGradient></defs>
+  <rect width="240" height="120" fill="url(#wetsky)"/>
+  <g fill="#e9eef2" opacity="0.9"><ellipse cx="60" cy="24" rx="26" ry="13"/><ellipse cx="82" cy="22" rx="18" ry="11"/>
+    <ellipse cx="176" cy="20" rx="24" ry="12"/><ellipse cx="196" cy="23" rx="16" ry="9"/></g>
+  <g stroke="#bcd8ea" stroke-width="2.4" stroke-linecap="round" opacity="0.85">
+    <path d="M24 34 L19 50"/><path d="M52 42 L47 58"/><path d="M88 32 L83 48"/><path d="M118 46 L113 62"/>
+    <path d="M146 34 L141 50"/><path d="M176 44 L171 60"/><path d="M206 36 L201 52"/><path d="M228 48 L223 64"/></g>
+  <path d="M0 86 Q40 78 78 84 Q120 90 160 82 Q200 75 240 84 L240 120 L0 120 Z" fill="#6aae5d"/>
+  <path d="M0 96 Q60 90 120 96 Q180 102 240 95 L240 120 L0 120 Z" fill="#589a4d"/>
+  <g fill="#9fd0ea" opacity="0.85"><ellipse cx="36" cy="104" rx="13" ry="4"/><ellipse cx="140" cy="108" rx="16" ry="4.5"/>
+    <ellipse cx="212" cy="103" rx="11" ry="3.5"/></g>
+  <g><rect x="52" y="76" width="7" height="16" rx="3.5" fill="#eee9db"/>
+     <path d="M42 78 a13 11 0 0 1 26 0 z" fill="#c95a52"/></g>
+</svg>

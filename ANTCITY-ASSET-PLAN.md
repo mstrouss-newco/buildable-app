@@ -53,10 +53,12 @@ Preview: `public/antcity/art/_preview.svg`. Files and the manifest IDs they fill
 | `soil-tile.svg` | `antcity/soil/sandy-v1` (tiles cleanly for the huge colony) |
 | `badge.svg` | `antcity/badge/v1` |
 
-Still to do (follow-ups): loading screen, rainy-meadow + flood overlay, `colony`/anthill
-icon, and the Berry Bushes / Rich Loam customization variants. Registering these to the
-shared `community_*` tables happens once the game deploys (so the URLs resolve). Any piece
-can later be swapped for an AI-pipeline render without touching the engine.
+**Done in card AC4** (the follow-ups above): `surface-meadow.svg`, `surface-meadow-rain.svg`,
+`surface-meadow-berry.svg`, `soil-deep.svg`, `soil-loam.svg`, `flood.svg`, `colony.svg` and
+`loading.svg`, filling the last placeholder ids. `antcity/prop/dig-marker-v1` stays DRAWN on
+purpose and is declared in the engine's `DRAWN_ART` list. Registered to the shared
+`community_*` tables in the same session. Any piece can later be swapped for an AI-pipeline
+render without touching the engine.
 
 ## Delivered via the AI pipeline (LIVE in the shared library)
 
