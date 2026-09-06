@@ -14,3 +14,7 @@ live-bundle.js
 
 # Screenshots the practice QA writes for a human to look at (qa-practice-shot.mjs).
 qa-shots/
+
+# local scratch
+_*.mjs
+qa-shots/
