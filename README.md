@@ -3441,6 +3441,43 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-06 (QA-SUITE: the stranded QA suite lands, and there is one gate again)
+
+Cards QA1, QA2 and QA9. QA1 and QA2 had been ticked done in August but their
+deliverables never reached `main` — they lived only on
+`claude/planner-first-qa-card-iklo6t`, now 1,633 commits divergent. The four QA files
+were cherry-picked off commit `d98db8b` and nothing else came with them.
+
+Two gates had been running side by side, and they were complementary rather than
+duplicates: the branch one sweeps every page in headless Chromium but had no routing
+check; the repo-root one (written from scratch on 2026-08-30 when the branch could not
+be found) had the routing check but no page sweep. The routing check is now folded into
+`scripts/qa-all.mjs` and the root file is gone. **`npm run qa` is the only gate.** It
+runs the serving check, then all 60 harnesses, then all 57 pages in Chromium, writes
+`QA-SWEEP-REPORT.md` and exits non-zero on anything red. `AGENTS.md` and the `gate` job
+in `.github/workflows/editor-qa.yml` both point at it.
+
+The routing check was re-verified against the bug it exists for: with the
+`/buildable-practice.js` route removed the gate reports *"buildable-practice.js would be
+served as landing.html"* and exits 1.
+
+Three harnesses could not start a browser anywhere but the machine they were written on
+(two imported Playwright from a hardcoded absolute path, one launched with no
+`executablePath`). Fixed, and the gate now hands every child harness a Chromium it knows
+launches. With that, `qa-lessons.mjs` and `qa-lessons-dom.mjs` pass and their QA11
+quarantine is lifted; only `qa-ap2-use-in-game.mjs` (card QA10) is still quarantined.
+The harness timeout went from 180s to 360s because `qa-lessons-dom.mjs` genuinely takes
+about 200.
+
+QA9 added five harnesses for the kid-facing pages that had none: `qa-minutemath.mjs`
+(10,000 generated problems checked for correct answers), `qa-soundboard.mjs` (all 133
+pads play a sound the API knows), `qa-play-invite.mjs`, `qa-share-links.mjs` and
+`qa-play.mjs`. `QA-MAP.md` was re-checked against `main` and every drift is marked
+`[2026-09-06]`.
+
+Full detail in `SESSION-LOG.md`.
+
+---
 ## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
 
 Mike found the Make section tiles unexciting. From four mocked options he picked

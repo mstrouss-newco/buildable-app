@@ -51,6 +51,92 @@ back to the engine's key art, so a real cover pipeline can land without a migrat
 `bk_grownup_name` in localStorage is where the grown-up's name comes from; nothing
 writes it yet, so credits currently read "A GAME BY <kid>".
 
+## 2026-09-06 — QA-SUITE: the stranded QA suite is on main, and there is one gate again
+
+Cards **QA1**, **QA2** and **QA9**.
+
+**QA1 and QA2 were ticked done in August and their deliverables were not on `main`.**
+They lived only on `claude/planner-first-qa-card-iklo6t`, commit `d98db8b`: `QA-MAP.md`
+(444 lines), `scripts/qa-all.mjs` (453 lines), `QA-SWEEP-REPORT.md` and an `npm run qa`
+script. QA2's own note from 29 August asked whether to merge it and nobody answered.
+That branch is now **1,633 commits divergent** from `main`, so merging it was never an
+option. The four QA files were cherry-picked off it and nothing else came across.
+
+**Meanwhile a second, simpler gate had been written from scratch.** When the branch
+could not be found on 2026-08-30, session QA-FIX wrote a 191-line `qa-all.mjs` at the
+repo root, and that became the live release gate. The two were **complementary, not
+duplicates**: the branch one loads every page in headless Chromium and fails on console
+errors, keeps a quarantine list keyed to planner card ids, and writes
+`QA-SWEEP-REPORT.md`, but has no routing check; the root one checks that every
+`public/buildable-*.js` and `public/*.html` is routed in `vercel.json` ahead of the
+`/(.*)` catch-all, but has no page sweep. So the routing check was **folded into**
+`scripts/qa-all.mjs` and the root file deleted. One gate, three parts: serving check,
+then all 60 harnesses, then all 57 pages in headless Chromium.
+
+**The routing check was verified against the bug it was written for.** With the
+`/buildable-practice.js` route removed, the gate goes red with *"buildable-practice.js
+would be served as landing.html"* and exits 1. Route restored, green. That check is why
+Practice will not ship dead twice.
+
+`AGENTS.md` and the `gate` job in `.github/workflows/editor-qa.yml` now both say
+`npm run qa`. `npm ci` stays in CI, two harnesses need jsdom, and a Chromium install was
+added so the page sweep actually runs there instead of reporting "green but incomplete".
+
+**Three harnesses could not start a browser on any machine but the one they were written
+on.** `qa-kp3-add-a-kit.mjs` and `qa-ap2-use-in-game.mjs` imported Playwright from a
+hardcoded absolute path inside one sandbox's global npm folder; `qa-farm.mjs` launched
+with no `executablePath`. All three now resolve properly, and the gate hands every child
+harness one Chromium it knows launches. With that fixed, `qa-lessons.mjs` and
+`qa-lessons-dom.mjs` both pass, so their **QA11 quarantine entries are gone and they are
+back in the gate for real**. Only `qa-ap2-use-in-game.mjs` is still quarantined, and its
+reason (card QA10) was re-checked and is still exactly right: it asserts 2 `.useg`
+buttons on a page that renders 307.
+
+**One real timeout, and it was the harness clock, not the code.** `qa-lessons-dom.mjs`
+takes about 200 seconds to drive a whole placement run. The gate's default was 180, so
+it was being killed and reported as TIMEOUT — which reads as "the lessons player is
+broken" when the harness was passing all along. Default raised to 360.
+
+**QA9: every kid-facing page that had no harness now has one.** Five new files, each
+opening with the same reachability check the gate runs, because a harness passing on a
+page the server never serves is exactly how Practice shipped dead:
+
+- `qa-minutemath.mjs` — lifts `makeProblem()` out of the page and runs 10,000 draws.
+  Every answer correct, no negative subtraction, no division by zero, no ragged
+  fractions, focus number honoured. A generator that gets its own answer wrong marks a
+  kid wrong for being right.
+- `qa-soundboard.mjs` — all **133 pads across 10 packs** play a key `api/sfx.js` actually
+  knows (it knows 348), so a pad cannot become a silent dead button.
+- `qa-play-invite.mjs` — the guest "grandma flow" front end. `qa-invite.mjs` covered only
+  the backend; this checks the page a relative actually sees, and that every action it
+  sends is one the API handles.
+- `qa-share-links.mjs` — `song.html` and `story.html` together, because they are one
+  system: the pretty share route resolves and really lands on the page, directly or
+  through the og-tag API that serves it.
+- `qa-play.mjs` — the Hop Heroes engine page, whose only script tag is *relative*.
+
+`/practice` and `/lessons` were already covered and both assert their own routing —
+`qa-practice.mjs`, `qa-practice-shot.mjs`, `qa-lessons.mjs`, `qa-lessons-dom.mjs`.
+
+**`QA-MAP.md` had drifted and is now current**, with every change marked `[2026-09-06]`.
+53 pages → 57 (Practice, Minute Math, Cobuild and the two audio tools arrived;
+`chess-look-mock.html` was deleted in `51d96cb`). 51 harnesses → 60. 87 API functions →
+88. `feedback.html` is routed now, so the "every page has a route except feedback.html"
+line was simply wrong; card QA4's route half is done, but nothing still links to it.
+Pages with no harness: 16 → 13, and 11 of those 13 are mocks, internal tools or
+grown-up pages where that is the right answer. The two that still carry real behaviour
+with no check are `landing.html` and `question-review.html`.
+
+**Cards QA5, QA6, QA7 and QA8 were re-verified against today's `main` and are all still
+open and still true**: Snakes and Ladders is still orphaned (`onSnakes` is still passed
+and still never consumed), `croc-engine.html` is still dead and still routed,
+`play.html` is still titled "Buildable Runner — engine", and ten games still have no
+shared nav.
+
+**What remains in the QA phase:** QA3a–QA3e (the journey sweeps), QA4's second half (a
+link to `/feedback`), QA5, QA6, QA7, QA8 and QA10. Nothing here touched
+`public/cobuild.html`.
+
 ## 2026-08-30 — QA-FIX: Practice is alive, Lessons is open, and there is finally a release gate
 
 The first fixing session off the QA3d/QA3e sweep. Mike picked the Practice fix plus
