@@ -224,14 +224,16 @@ function freeTiles(arr){ const f=[]; for(const t of arr){ if(isFree(t,arr)) f.pu
 // ---------- SOLVABLE GENERATOR (reverse "peel": remove free pairs from the full board) ----------
 // Playing back the recorded pair order (a1,b1)..(am,bm) from the FULL board is always valid,
 // because right before pair k is played the board equals the state pair k was free in.
-function assignSolvable(arr, faceCount){
+function assignSolvable(arr, faceCount, topDown){
   arr.forEach(t=>{ t.gone=false; t.face=-1; });
   const order=[]; let remaining=arr.length, guard=0;
   while(remaining>0){
     if(++guard>arr.length*4) return null;
     const free=freeTiles(arr);
-    if(free.length<2) return null;                 // not peelable (never happens for these layouts)
+    if(free.length<2) return null;                 // this SHAPE can't be peeled — see canPeel
     shuffleArr(free);
+    if(topDown) free.sort((a,b)=>b.z-a.z);         // highest tiles first: the one order that
+                                                   // always works on a peelable shape
     const a=free[0], b=free[1];
     a.gone=true; b.gone=true; order.push([a.id,b.id]); remaining-=2;
   }
@@ -244,13 +246,51 @@ function assignSolvable(arr, faceCount){
   return order;
 }
 
+// ---------- STUCK-PROOFING: the SHAPE has to be peelable, not just the faces ----------
+// Re-dealing faces onto the tiles that are still standing only helps while those tiles
+// can physically be taken off two at a time. Greedy play (grab any match you can see)
+// strips the open edges first and can leave a buried pyramid: ONE uncovered tile sitting
+// on tiles that are every one of them covered. No face deal can rescue that shape, and
+// that — not the tile set — is how a hardest-level board used to dead-end.
+// canPeel replays the safest possible peel (always take the two highest free tiles). If
+// that order clears the board, a top-down assignSolvable is guaranteed to succeed too.
+function canPeel(arr){
+  const sim=arr.map(t=>({x:t.x,y:t.y,z:t.z,gone:false}));
+  let left=sim.length;
+  while(left>0){
+    const free=sim.filter(t=>!t.gone&&!covered(t,sim));
+    if(free.length<2) return false;
+    free.sort((a,b)=>b.z-a.z);
+    free[0].gone=true; free[1].gone=true; left-=2;
+  }
+  return true;
+}
+// Settle the standing tiles back into the lowest slots of this level's layout. Full lower
+// layers plus a part-filled top layer always leaves two or more uncovered tiles, so the
+// footprint that comes out of here is peelable by construction.
+function settleFootprint(present){
+  const slots=buildLayout(curLevel());
+  for(let i=0;i<present.length&&i<slots.length;i++){
+    present[i].x=slots[i].x; present[i].y=slots[i].y; present[i].z=slots[i].z;
+  }
+}
+// Hand back a solvable deal for these tiles, whatever state they are in: settle an
+// un-peelable shape, try a few pretty random peels, then fall back to the top-down peel
+// that cannot fail on a peelable shape.
+function dealSolvable(present, faceCount){
+  if(!canPeel(present)) settleFootprint(present);
+  let ord=null;
+  for(let n=0;n<8&&!ord;n++) ord=assignSolvable(present, faceCount);
+  if(!ord) ord=assignSolvable(present, faceCount, true);
+  if(!ord){ settleFootprint(present); ord=assignSolvable(present, faceCount, true); }
+  return ord;
+}
+
 // ---------- BUILD A GAME ----------
 function build(){
   const lvl=curLevel(), set=curSet();
   tiles=buildLayout(lvl);
-  let ord=null;
-  for(let tryN=0; tryN<8 && !ord; tryN++) ord=assignSolvable(tiles, set.count);
-  solution=ord||[];
+  solution=dealSolvable(tiles, set.count)||[];
   selId=-1; hintPair=null; state="play";
   history=[]; undosLeft=CAP; hintsLeft=CAP; mixesLeft=CAP; tray=[]; trayShake=0;
   startedAt=Date.now(); elapsedMs=0; isNewBest=false; wonBest=0;
@@ -357,10 +397,12 @@ function loseGame(){
 }
 function autoShuffle(){
   const present=tiles.filter(t=>!t.gone);
-  // re-run the peel generator on just the remaining tiles → solvable from here on
-  let ord=null; for(let n=0;n<8 && !ord;n++) ord=assignSolvable(present, curSet().count);
+  // Re-deal the tiles that are still standing → solvable from here on. dealSolvable
+  // settles the shape first if it has stopped being peelable, so this always works.
+  solution=dealSolvable(present, curSet().count)||[];
   selId=-1; hintPair=null; history=[]; combo=0; if(BA)BA.sfx("shuffle");   // scramble is an undo reset point
-  if(BM&&!headless){ BM.flash(fx,"#67E8F9",0.4); updateChrome(); }
+  if(!headless){ layout();                        // tiles may have settled: re-measure
+    if(BM) BM.flash(fx,"#67E8F9",0.4); updateChrome(); }
 }
 // Recall: put the last matched pair back on the board.
 function doUndo(){
@@ -1033,8 +1075,7 @@ function simGreedy(opts){
   while(remaining()>0){ if(++guard>tiles.length*20) break;
     const m=availableMatch();
     if(m){ tileById(m[0]).gone=true; tileById(m[1]).gone=true; moves++; }
-    else { const present=tiles.filter(t=>!t.gone); let o=null;
-      for(let n=0;n<8&&!o;n++) o=assignSolvable(present,curSet().count); mixes++;
+    else { autoShuffle(); mixes++;               // the same safety net real play uses
       if(mixes>60) break; }
   }
   return { result: remaining()===0?"win":"stuck", cleared: remaining()===0, moves, mixes };
