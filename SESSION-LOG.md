@@ -1,3 +1,54 @@
+## 2026-09-06 — RB1: a Run builder in the planner
+
+**What it is.** The Roadmap tab has a **Build a run** button. It opens a sheet where Mike
+ticks the cards he wants worked, puts them in the order he wants them done, groups two or
+more into ONE session, sets how they should be worked, and saves. Saving writes a single
+`ready` row to a new `planner_runs` table. **Nothing executes from the page** — the runner
+that claims a ready row is card RB2, deliberately not built here.
+
+**Picking.** The sheet lists only phases that still have open cards, and inside each phase
+only cards that are open (never a done or parked one). A card can be added on its own or
+a whole phase at once. Cards waiting on Mike's review are offered but carry an amber
+"needs your review" flag.
+
+**Ordering and grouping.** Every picked card becomes a numbered step. Steps reorder by
+drag on a mouse and by up/down arrows everywhere else, because a long-press drag inside a
+scrolling sheet is a fight on a phone. Ticking two or more steps and pressing Group folds
+them into one session, shown as `RB1 + RB2`; Split undoes it. That is the GROUPED law in
+AGENTS.md made clickable: one clone, one deploy, one QA pass, each card ticked as its part
+lands.
+
+**The warnings are the point.** Before saving, the sheet says out loud, in plain
+sentences: a card that is waiting on review, a card whose text says it comes AFTER another
+card that is later in the run or missing from it entirely, a grouped pair that has to be
+done in a set order inside its session, and a session holding more than three cards. The
+dependency check reads the "AFTER RB2" phrasing straight off the card text, so nobody has
+to maintain a second list of what depends on what.
+
+**Settings per run.** Ship it or Park it (park keeps the whole run on one branch), Carry
+on or Stop when a card needs Mike (carry on must leave a one-line question), give up after
+N failures, a hard stop of none / after N hours / at a clock time, and Start now or at a
+time. A time like 07:00 resolves to the next 07:00 that has not happened yet.
+
+**Server side.** `api/planner.js` gains `GET ?scope=runs`, `op:'saveRun'` and
+`op:'cancelRun'`. Card ids are checked against the live roadmap **on the server**, so a
+stale phone tab cannot save a run pointing at cards that no longer exist; a card cannot
+appear twice; a session holds at most 6 cards and a run at most 20 sessions; settings are
+clamped and unknown values fall back to safe defaults. Only ONE run may be waiting or
+running at a time, otherwise two runs would race for the same cards. A ready run shows in
+a bar above the planner header with a Cancel button; a running one cannot be cancelled
+from the page, so the page and the runner can never fight over the row.
+
+**Database.** `db/create-planner-runs.sql` — idempotent, additive, no DROP or DELETE. It
+was **applied to Buildable Kids (`fmguhfmfntvohtnccmap`) in this session** and verified by
+reading the column list back, so the table exists before the feature ships.
+
+**QA.** New `qa-runbuilder.mjs`, 50 checks, all pass. Half drives the real page in jsdom
+(picking, ordering, grouping, dragging, every warning, and the exact payload the save
+posts) and half drives the real `saveRun` handler with a stubbed fetch, proving the
+validation that stands between a stale tab and the roadmap. Also rendered at 390px in
+headless Chromium: no horizontal overflow, and the whole sheet is usable one-handed.
+
 ## 2026-09-06 — AC4: Ant City's sounds, its meadow loop, and the last of its art
 
 **Shipped.** Five created sounds named in `api/sfx.js` (digging, marching feet, a hatch

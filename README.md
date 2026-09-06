@@ -3864,6 +3864,20 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-06 (RB1: a Run builder in the planner)
+
+The Roadmap tab gains **Build a run**: tick the cards you want worked, drag or arrow them
+into order, group two or more into ONE session, set Ship-or-Park / Carry-on-or-Stop / give
+up after N failures / a hard stop / start now or at a time, and save. Saving writes one
+`ready` row to the new `planner_runs` table and nothing else — the page never starts
+anything, which is card RB2's job. Before saving it says out loud what is wrong: a card
+waiting on review, a card whose text says it comes AFTER one that is later in the run or
+missing, a grouped pair that needs a set order, a session holding more than three cards.
+`api/planner.js` gains `?scope=runs`, `saveRun` and `cancelRun`, all validating card ids
+against the live roadmap server-side and allowing only one waiting run at a time.
+`db/create-planner-runs.sql` was written AND applied to Buildable Kids in the same session.
+New `qa-runbuilder.mjs`: 50 checks, all pass. See SESSION-LOG.md for detail.
+
 ## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
 
 Mike found the Make section tiles unexciting. From four mocked options he picked
