@@ -2375,8 +2375,8 @@ chk('FM1: no textures (no ImageLoader / TextureLoader / .jpg / .png loaded in-pa
 chk('FM1: three crop recipes — corn, carrot, wheat, no fourth crop',
   /CROP_RECIPES\s*=\s*\{[\s\S]*?corn:[\s\S]*?carrot:[\s\S]*?wheat:/.test(farm) &&
   (farm.match(/^\s{2}(corn|carrot|wheat|potato|tomato|apple|berry):\s*\{/gm)||[]).length === 3);
-chk('FM1: each crop has a coin price and a coin reward',
-  /price:\s*\d+/.test(farm) && /reward:\s*\d+/.test(farm));
+chk('FM1: each crop has a coin price and a harvest reward (FM3 set both by name)',
+  /price:\s*SEED_PRICE/.test(farm) && /reward:\s*0/.test(farm) && /var SEED_PRICE = \d+/.test(farm));
 chk('FM1: growth is 30-60 seconds max per the card',
   (function(){
     var m = farm.match(/growSec:\s*(\d+)/g) || [];
@@ -2430,11 +2430,11 @@ chk('FM1: a QA handle (window.FARM) exposes patches, stack and seed picker so a 
   /patches:\s*function\(\)/.test(farm) &&
   /stack:\s*function\(\)/.test(farm) &&
   /openSeedPicker:\s*function/.test(farm));
-chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fm2)',
+chk('FM1: the shell cache-bust is bumped on BOTH engine links in BuildableKids.jsx (v=fm3)',
   (function(){
     const jsx = read('src/BuildableKids.jsx');
-    const hits = jsx.match(/skyflyer-engine\.html\?v=fm2/g) || [];
-    return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fl9|fl9b|fl13|fl15|fl8c)\b/.test(jsx);
+    const hits = jsx.match(/skyflyer-engine\.html\?v=fm3/g) || [];
+    return hits.length >= 2 && !/skyflyer-engine\.html\?v=(fm1|fm2|fl9|fl9b|fl13|fl15|fl8c)\b/.test(jsx);
   })());
 
 // ==========================================================================
@@ -2560,7 +2560,7 @@ chk('FM2: feeding is triggered by WALKING PAST, never by a tap or a menu',
 chk('FM2: the item FLIES OFF THE STACK on an arc, and it is the topmost match',
   /function flyOffStack\(kind, A\)/.test(farm) &&
   /for\(i=stack\.length-1;i>=0;i--\)/.test(farm) &&
-  /Math\.sin\(u\*Math\.PI\)\*1\.15/.test(farm));
+  /Math\.sin\(u\*Math\.PI\)\*\(F\.slot\?0\.85:1\.15\)/.test(farm));
 chk('FM2: taking an item out of the stack renumbers the whip-lag above it',
   /function reindexStack\(\)/.test(farm) &&
   /stack\[i\]\.userData\.tOffset=STACK_LAG_PER\*i/.test(farm) &&
@@ -2580,7 +2580,7 @@ chk('FM2: produce rides the stack on the same terms as a crop (one ITEM lookup)'
 chk('FM2: the wait for an egg or milk is well under a minute',
   (function(){
     const m = farm.match(/makeSec:\s*(\d+)/g) || [];
-    if(m.length !== 2) return false;
+    if(m.length !== 3) return false;      // FM3 added the duck
     return m.every(s => { const n = parseInt(s.replace(/[^0-9]/g,''),10); return n > 0 && n < 60; });
   })(),
   (farm.match(/makeSec:\s*\d+/g)||[]).join(', '));
@@ -2596,7 +2596,7 @@ chk('FM2: pickup reach is WIDER than the furthest an item is ever set down (nobo
   (function(){
     const R = parseFloat((farm.match(/var PICKUP_R=([\d.]+)/)||[])[1]);
     const outs = (farm.match(/produceOut:([\d.]+)/g)||[]).map(s => parseFloat(s.split(':')[1]));
-    return R > 0 && outs.length === 2 && outs.every(o => o < R);
+    return R > 0 && outs.length === 3 && outs.every(o => o < R);   // FM3 added the duck
   })(),
   'PICKUP_R=' + (farm.match(/var PICKUP_R=([\d.]+)/)||[])[1] +
   ' vs ' + (farm.match(/produceOut:[\d.]+/g)||[]).join(', '));
@@ -2636,7 +2636,7 @@ chk('FM2: the stand keeps the lights on (hiding them would show silhouettes)',
 
 // ---- the handle a robot plays it through
 chk('FM2: the QA handle exposes the animals, the feed and the model stand',
-  /version:\s*"fm2"/.test(farm) &&
+  /version:\s*"fm3"/.test(farm) &&
   /animals:\s*function\(\)/.test(farm) &&
   /animalKinds:\s*function\(\)/.test(farm) &&
   /giveItem:\s*function\(kind, n\)/.test(farm) &&
@@ -2645,6 +2645,148 @@ chk('FM2: the QA handle exposes the animals, the feed and the model stand',
 chk('FM2: advanceTime pulls the animals\' timers back too, so QA never waits 26s',
   /if\(ANIMALS\[i\]\.state==="making"\) ANIMALS\[i\]\.fedAt -= sec/.test(farm));
 chk('FM2: still no emojis, still no textures, after everything FM2 added',
+  !emoji.test(farm) && !/TextureLoader|ImageLoader|loadTexture/.test(farm));
+
+// ==========================================================================
+//  FM3 — THE ORDER CRATE, THE PLANE, AND THE FOUR THINGS FM1 LEFT OPEN.
+//
+//  qa-farm.mjs is the half that PLAYS it in a real browser. This is the half
+//  that reads the file: the laws, the wiring, and the four integration gaps —
+//  the door, the wallet, the nav bridge and the sound. A gap closed by a source
+//  line that a later session can silently delete is a gap that will reopen, so
+//  each one is nailed down here.
+// ==========================================================================
+console.log('\n--- FM3: the crate, the plane, and the four gaps FM1 left open ---');
+
+chk('FM3: the farm reports itself as the FM3 build',
+  /version:\s*"fm3"/.test(farm));
+
+// ---- GAP 1: the door on the Play page --------------------------------------
+const jsxF = read('src/BuildableKids.jsx');
+chk('FM3 gap 1: the farm has a real door — it is in the shell at all now',
+  /skyflyer-farm/.test(jsxF));
+chk('FM3 gap 1: it is a generated catalog card, not a hand-placed button',
+  /id:\s*"farm"[^\n]*handler:\s*"onFarm"/.test(jsxF) &&
+  /onFarm=\{\(\) => openLanding\("farm"\)\}/.test(jsxF));
+chk('FM3 gap 1: the card is opened from BOTH pickers, like every other game',
+  (jsxF.match(/onFarm=\{\(\) => openLanding\("farm"\)\}/g) || []).length >= 2);
+chk('FM3 gap 1: it routes to a screen of its own that frames the page',
+  /SCREEN_FARM\s*=\s*"farm"/.test(jsxF) &&
+  /function FarmScreen/.test(jsxF) &&
+  /screen === SCREEN_FARM/.test(jsxF));
+chk('FM3 gap 1: the link carries its OWN cache-bust, not the flying engine\'s',
+  /skyflyer-farm\.html\?v=fm3/.test(jsxF));
+chk('FM3 gap 1: the tile is DRAWN geometry, and there is not an emoji in it',
+  (function(){
+    const m = jsxF.match(/const TILE_ART = \{[\s\S]*?\n\};/);
+    return !!m && /<svg/.test(m[0]) && !emoji.test(m[0]) &&
+           /tile:\s*"farm"/.test(jsxF);
+  })());
+chk('FM3 gap 1: one component draws every catalog tile, so a badge is wired once',
+  /function GameTileArt/.test(jsxF) &&
+  (jsxF.match(/<GameTileArt g=\{g\} \/>/g) || []).length >= 3);
+
+// ---- GAP 2: the shell owns the wallet --------------------------------------
+chk('FM3 gap 2: the local coin variable is GONE — no `var coins=` left in the farm',
+  !/^var\s+coins\s*=\s*\d/m.test(farm));
+chk('FM3 gap 2: the farm loads the shared wallet and reads the real balance',
+  /buildable-wallet\.js/.test(farm) &&
+  /window\.BuildableWallet/.test(farm) &&
+  /function walletBalance/.test(farm));
+chk('FM3 gap 2: planting SPENDS through the wallet and the plane PAYS into it',
+  /spendCoins\(r\.price\)/.test(farm) && /function payTheOrder/.test(farm) &&
+  /addCoins\(pay\)/.test(farm));
+chk('FM3 gap 2: the pill repaints when the shell broadcasts a new balance down',
+  /addEventListener\("bk-wallet",\s*paintCoins\)/.test(farm));
+chk('FM3 gap 2: the fifty starting coins are an award-ONCE, not a hardcoded balance',
+  /awardOnce\("farm:seedmoney",\s*50\)/.test(farm));
+chk('FM3 gap 2: the shared wallet really can be spent from inside a game now',
+  (function(){
+    const w = read('public/buildable-wallet.js');
+    return /function annSpend\(n\)/.test(w) && /cachedBal<n\) return false/.test(w) &&
+           /delta:-n/.test(w) && /o\.balance=Math\.max\(0,o\.balance\+n\)/.test(w);
+  })());
+chk('FM3 gap 2: and the contract says so, because that is where a message is agreed',
+  /may be NEGATIVE/.test(read('CARTRIDGE-CONTRACT.md')));
+
+// ---- GAP 3: the shared nav bridge ------------------------------------------
+chk('FM3 gap 3: buildable-gamenav is loaded, so the shell\'s Home reaches the page',
+  /buildable-gamenav\.js/.test(farm) && /BuildableGameNav[\s\S]{0,80}register\(/.test(farm));
+chk('FM3 gap 3: the page tags itself in-shell BEFORE <body>, so nothing flashes',
+  farm.indexOf("classList.add('bk-inshell')") > -1 &&
+  farm.indexOf("classList.add('bk-inshell')") < farm.indexOf('\n<body>'));
+chk('FM3 gap 3: the HUD hangs off the strip the bridge publishes, not off a guess',
+  /\.bk-inshell \.pill\s*\{top:calc\(var\(--bk-nav-bottom/.test(farm));
+chk('FM3 gap 3: pause and resume are honoured, as the contract requires',
+  /kind==="pause"/.test(farm) && /kind==="resume"/.test(farm) && /if\(PAUSED\)/.test(farm));
+
+// ---- GAP 4: sound ----------------------------------------------------------
+chk('FM3 gap 4: the shared audio and Feel kits are loaded',
+  /buildable-audio\.js/.test(farm) && /buildable-feel\.js/.test(farm));
+chk('FM3 gap 4: every sound is a PALETTE NAME, never a raw tone (GAME-FEEL law 6)',
+  /var SFX_MAP\s*=\s*\{/.test(farm) &&
+  !/createOscillator|OscillatorNode/.test(farm));
+chk('FM3 gap 4: there is ONE mute flag, and it is the shared bk_muted one',
+  /BA\.muted/.test(farm) && !/localStorage[\s\S]{0,40}muted/.test(farm));
+chk('FM3 gap 4: audio only wakes on the first tap INSIDE the page',
+  /function tapUnlock/.test(farm) && /BA\.unlock/.test(farm) &&
+  /pointerdown"[\s\S]{0,140}tapUnlock/.test(farm));
+
+// ---- the crate, the unload, the plane --------------------------------------
+chk('FM3: the crate is a hand-built slatted box in the AR1P style, textures nowhere',
+  /function buildCrate/.test(farm) && !/TextureLoader|ImageLoader/.test(farm));
+chk('FM3: the wish-list slots are drawn from the ITEM recipes, per the FL5b law',
+  /r\.svg\(46\)/.test(farm) && /function renderOrder/.test(farm));
+chk('FM3: a filled slot gets a TICK, and the wrong load gets the cross language',
+  /TICK_SVG/.test(farm) && /function flashNope/.test(farm) && /\.nope/.test(farm));
+chk('FM3: the unload is RAPID FIRE — one item every tenth of a second or so',
+  /UNLOAD_GAP\s*=\s*0\.1[0-9]?/.test(farm));
+chk('FM3: each item gets its own note, rising as the run goes',
+  /sfx\("deliver",\{rate:Math\.min/.test(farm));
+chk('FM3: a slot with an item already in the air is spoken for, so none are lost',
+  /!it\.claimed/.test(farm) && /slot\.claimed=true/.test(farm));
+chk('FM3: the plane is the AR1Q silhouette rebuilt in the farm\'s own hb* shapes',
+  /function buildPlaneModel/.test(farm) && /hbTurn\(\[\s*\n?\s*\[0\.02,-4\.9\]/.test(farm));
+chk('FM3: the plane really taxis, rolls, climbs, goes away, comes back and parks',
+  ['taxi','roll','climb','away','back','park'].every(k => new RegExp('PL\\.phase==="'+k+'"').test(farm)));
+chk('FM3: the coins fly into the wallet pill — a reward the body feels (feel law 3)',
+  /function coinBurstToPill/.test(farm) && /\.pill/.test(farm));
+
+// ---- the guardrails, as numbers rather than promises -----------------------
+chk('FM3: the whole flight is well under a minute',
+  (function(){
+    const m = farm.match(/var PLANE_LEGS=\{([^}]*)\}/);
+    if(!m) return false;
+    const total = (m[1].match(/[\d.]+/g)||[]).reduce((a,b)=>a+parseFloat(b),0);
+    return total > 0 && total < 60;
+  })());
+chk('FM3: an order may only ever ask for what the farm can actually make',
+  /function orderableKinds/.test(farm) &&
+  /for\(i=0;i<ANIMALS\.length;i\+\+\)[\s\S]{0,140}gives/.test(farm));
+chk('FM3: harvesting pays no coins at all — a crop is an ingredient, not money',
+  /reward:\s*0/.test(farm) && !/addCoins\(rr\.reward\)/.test(farm));
+chk('FM3: one seed price for all three crops, so a kid never has to compare',
+  (farm.match(/price:\s*SEED_PRICE/g)||[]).length === 3 && /var SEED_PRICE = 3/.test(farm));
+chk('FM3: a kid with no coins gets a FREE seed rather than a locked button',
+  /function seedIsFree/.test(farm) && /el\.classList\.remove\("locked"\)/.test(farm));
+chk('FM3: there is still nothing here that can fail',
+  /canFail: function\(\)\{ return false; \}/.test(farm));
+chk('FM3: no real money anywhere near it',
+  !/\bprice\s*:\s*["'$]|stripe|checkout|purchase|\$\d/i.test(farm));
+
+// ---- the duck -------------------------------------------------------------
+chk('FM3: the duck is a REAL library model, cut into the farm\'s own glb',
+  /anmGet\("PekinDuck"/.test(farm) &&
+  fs.existsSync('public/models/skyflyer/animals/farm-animals.glb'));
+chk('FM3: she eats corn like the hens and lays a different egg',
+  /duck:\s*\{[\s\S]{0,120}wants:"corn",\s*gives:"duckegg"/.test(farm));
+chk('FM3: the duck egg is its own recipe, drawn from the same shapes as the rest',
+  /duckegg:\s*\{/.test(farm) && /PRODUCE_RECIPES\.duckegg/.test(farm));
+chk('FM3: she costs about five deliveries, and the shop only sells her once',
+  /var DUCK_PRICE = 120/.test(farm) && /if\(DUCK_BOUGHT\) return false/.test(farm));
+chk('FM3: every new shape goes on the model stand before it goes in the world',
+  ['duck (model)','duck egg','crate','plane'].every(n => farm.includes('name:"'+n+'"')));
+chk('FM3: still no emojis, still no textures, after everything FM3 added',
   !emoji.test(farm) && !/TextureLoader|ImageLoader|loadTexture/.test(farm));
 
 

@@ -82,7 +82,7 @@ try {
 
   console.log('--- THE FARM: the scene stands up in a real browser ---');
   chk('the farm scene boots with a WebGL context and no page errors', errs.length === 0, errs.join(' | '));
-  chk('it is the FM2 build', (await ev(() => window.FARM.version)) === 'fm2');
+  chk('it is the FM3 build', (await ev(() => window.FARM.version)) === 'fm3');
 
   console.log('\n--- THE CAST ---');
   const animals = await ev(() => window.FARM.animals());
@@ -215,6 +215,168 @@ try {
   chk('a tall stack mixing crops AND produce carries fine, with no cap', tall >= 14, 'height=' + tall);
   chk('and it never fell over — every item is still above the ground',
     (await ev(() => window.FARM.stack())).every(s => s.y > 1.0));
+
+  // ======================================================================
+  //  FM3 — THE ORDER CRATE, THE UNLOAD, THE PLANE, THE PAYOUT AND THE SHOP.
+  //
+  //  The unload is the moment the whole mode was built toward, so it is tested
+  //  the way it is played: load a real stack, walk to the crate, and watch what
+  //  the card and the stack actually do — never by calling an internal.
+  // ======================================================================
+  console.log('\n--- FM3: THE COIN ECONOMY (Mike\'s call) ---');
+  const econ = await ev(() => window.FARM.economy());
+  chk('every seed costs the same, so there is no sum for a kid to do',
+    econ.seedPrice === 3, 'seed=' + econ.seedPrice);
+  chk('harvesting pays NOTHING — a crop is an ingredient, not money',
+    econ.harvestPays === 0);
+  chk('the plane is the only income, and it pays far more than a seed costs',
+    econ.payBase >= econ.seedPrice * 5, 'pay ' + econ.payBase + ' vs seed ' + econ.seedPrice);
+  chk('the payout stops growing, so orders never turn into a grind',
+    econ.payMax > econ.payBase && econ.payMax <= 60, 'max=' + econ.payMax);
+  const w0 = await ev(() => window.FARM.wallet());
+  chk('the coin pill is the SHELL\'S shared wallet, not a local variable',
+    w0.shared === true && (w0.role === 'owner' || w0.role === 'announcer'), 'role=' + w0.role);
+  chk('the farm still opens with fifty coins, granted once through the wallet',
+    w0.balance === 50, 'balance=' + w0.balance);
+  chk('the pill on screen shows that same number',
+    (await page.textContent('#coins')) === String(w0.balance));
+
+  console.log('\n--- FM3: THE ORDER, AND WHAT IT IS ALLOWED TO ASK FOR ---');
+  const ord0 = await ev(() => window.FARM.order());
+  chk('an order is waiting the moment the farm opens', !!ord0 && ord0.items.length >= 2);
+  chk('the card is up, with one silhouette slot per item wanted',
+    ord0.cardUp && ord0.slots.length === ord0.items.length,
+    ord0.items.map(i => i.kind).join('+'));
+  chk('no slot starts out filled', ord0.slots.every(s => !s.full));
+  chk('the order shows what it pays', ord0.pay >= econ.payBase);
+  const allowed = await ev(() => window.FARM.orderableKinds());
+  chk('an order may only ask for things this farm can actually make',
+    allowed.includes('corn') && allowed.includes('egg') && allowed.includes('milk') &&
+    !allowed.includes('duckegg'), allowed.join(','));
+  // 40 rolls, because the guardrail has to hold for EVERY order, not the first
+  const rolls = await ev(() => { const out = []; for (let i = 0; i < 40; i++) out.push(window.FARM.newOrder()); return out; });
+  chk('and that holds over forty fresh orders — never once a duck egg',
+    rolls.every(r => r.every(k => allowed.includes(k))));
+  chk('no order is ever bigger than six slots, which is all that reads at a glance',
+    rolls.every(r => r.length >= 2 && r.length <= 6));
+
+  console.log('\n--- FM3: THE UNLOAD (the moment the genre is built on) ---');
+  await park();
+  await ev(() => window.FARM.clearStack());
+  await ev(() => window.FARM.setOrder(['corn', 'corn', 'corn']));
+  await ev(() => window.FARM.giveItem('corn', 5));
+  await settle();
+  chk('five corn are on the kid\'s head and the crate wants three of them',
+    (await ev(() => window.FARM.stackHeight())) === 5);
+  const crate = await ev(() => window.FARM.crate());
+  chk('the crate\'s reach is generous — nobody has to aim', crate.r >= 3);
+  await ev(([x, z]) => window.FARM.moveKidTo(x, z), [crate.x, crate.z]);
+  await page.waitForFunction(() => { const o = window.FARM.order(); return o && o.full; }, { timeout: 15000 });
+  const ordF = await ev(() => window.FARM.order());
+  chk('walking to the crate emptied the wanted corn off the stack, all three',
+    ordF.items.filter(i => i.filled).length === 3);
+  chk('and every slot on the card lit up with it — one item, one slot',
+    ordF.slots.filter(s => s.full).length === 3);
+  chk('the two spare corn STAYED on the stack: the crate takes only what it asked for',
+    (await ev(() => window.FARM.stackHeight())) === 2);
+  await park();     // step away, or the kid unloads into the NEXT order too
+
+  console.log('\n--- FM3: THE PLANE ---');
+  const legs = await ev(() => window.FARM.planeLegs());
+  const flight = await ev(() => window.FARM.flightSeconds());
+  chk('the plane leaves the moment the order fills — no button to find',
+    (await ev(() => window.FARM.plane())).busy === true);
+  chk('the whole flight is well under a minute, like everything else here',
+    flight < 60, flight.toFixed(1) + 's');
+  chk('it has a real trip: taxi, roll, climb, away, back, park',
+    ['taxi', 'roll', 'climb', 'away', 'back', 'park'].every(k => legs[k] > 0));
+  // drive the frames by hand rather than waiting the flight out in wall clock
+  const seen = await ev(async () => {
+    const s = new Set();
+    for (let i = 0; i < 900; i++) { window.FARM.tick(1 / 60); s.add(window.FARM.plane().phase); }
+    return [...s];
+  });
+  chk('and it really passes through every one of them',
+    ['taxi', 'roll', 'climb', 'away', 'back', 'park', 'parked'].every(k => seen.includes(k)), seen.join('>'));
+  await page.waitForFunction(() => window.FARM.plane().phase === 'parked', { timeout: 30000 });
+  const w1 = await ev(() => window.FARM.wallet());
+  chk('it came back and the coins landed in the shared wallet',
+    w1.balance === 50 + ordF.pay, 'balance=' + w1.balance);
+  chk('the pill shows the new balance', (await page.textContent('#coins')) === String(w1.balance));
+  chk('one delivery is on the board', (await ev(() => window.FARM.ordersDone())) === 1);
+  const ord2 = await ev(() => window.FARM.order());
+  chk('a fresh order is already waiting, worth a little more than the last',
+    !!ord2 && ord2.pay > ordF.pay && ord2.items.every(i => !i.filled),
+    ord2.pay + ' vs ' + ordF.pay);
+  chk('and it is bigger than the first one was, gently',
+    ord2.items.length >= ordF.items.length);
+
+  console.log('\n--- FM3: NOTHING HERE CAN FAIL, AND NOBODY CAN GET STUCK ---');
+  chk('there is still no fail state anywhere', (await ev(() => window.FARM.canFail())) === false);
+  chk('carrying the wrong thing to the crate costs nothing at all', await (async () => {
+    await park();
+    await ev(() => { window.FARM.clearStack(); window.FARM.giveItem('wheat', 3); });
+    await ev(() => window.FARM.setOrder(['milk']));
+    const before = await ev(() => window.FARM.stackHeight());
+    const c = await ev(() => window.FARM.crate());
+    await ev(([x, z]) => window.FARM.moveKidTo(x, z), [c.x, c.z]);
+    await page.waitForTimeout(1200);
+    const after = await ev(() => window.FARM.stackHeight());
+    const o = await ev(() => window.FARM.order());
+    return after === before && o.slots.every(s => !s.full);
+  })());
+  chk('a kid with no coins is handed a free seed rather than being stuck', await (async () => {
+    await ev(() => { const b = window.FARM.wallet().balance; if (b > 0) window.FARM.addCoins(-b); });
+    return (await ev(() => window.FARM.seedIsFree())) === true;
+  })());
+  chk('and the seed buttons stay tappable when they are free — never greyed out',
+    (await ev(() => { window.FARM.openSeedPicker(0); return window.FARM.seedButtons(); })).every(b => !b.locked));
+  await ev(() => window.FARM.closeSeedPicker());
+
+  console.log('\n--- FM3: THE SHOP AND THE DUCK ---');
+  const shop0 = await ev(() => window.FARM.shop());
+  chk('the shop stays hidden while a duck is out of reach — nothing is dangled',
+    shop0.btnShown === false && shop0.duckBought === false);
+  chk('a duck costs about five deliveries, not a season\'s work',
+    shop0.price >= 100 && shop0.price <= 160, shop0.price + ' coins');
+  chk('you cannot buy one you have not saved for',
+    (await ev(() => window.FARM.buyDuck())) === false);
+  await ev(() => window.FARM.addCoins(window.FARM.shop().price));
+  chk('once the coins are there the shop button appears',
+    (await ev(() => window.FARM.shop())).btnShown === true);
+  chk('buying the duck works, and takes the coins', await (async () => {
+    const before = (await ev(() => window.FARM.wallet())).balance;
+    const bought = await ev(() => window.FARM.buyDuck());
+    const after = (await ev(() => window.FARM.wallet())).balance;
+    return bought === true && after === before - shop0.price;
+  })());
+  await page.waitForTimeout(900);
+  const withDuck = await ev(() => window.FARM.animals());
+  const duck = withDuck.find(a => a.kind === 'duck');
+  chk('a duck is in the coop now', !!duck);
+  chk('and she is the real library model, not the drawn spare', !!duck && duck.real === true);
+  chk('she eats corn like the hens and lays a DIFFERENT egg',
+    !!duck && duck.wants === 'corn' && duck.gives === 'duckegg');
+  chk('her egg waits well under a minute, like everything else', !!duck && duck.makeSec < 60);
+  chk('the shop button is gone once she is bought — it never sells a second one',
+    (await ev(() => window.FARM.shop())).btnShown === false);
+  chk('and NOW an order may ask for a duck egg, but not one second before',
+    (await ev(() => window.FARM.orderableKinds())).includes('duckegg'));
+
+  console.log('\n--- FM3: THE SHELL CONTRACT ---');
+  chk('the shared nav bridge is loaded, so the shell\'s Home button reaches us',
+    (await ev(() => window.FARM.navRegistered())) === true);
+  chk('the farm honours the shell\'s pause and resume', await (async () => {
+    await ev(() => dispatchEvent(new MessageEvent('message', { data: { kind: 'pause' } })));
+    const p = await ev(() => window.FARM.paused());
+    await ev(() => dispatchEvent(new MessageEvent('message', { data: { kind: 'resume' } })));
+    return p === true && (await ev(() => window.FARM.paused())) === false;
+  })());
+  const map = await ev(() => window.FARM.sfxMap);
+  chk('every sound is a PALETTE NAME pointing at a created clip, never a raw tone',
+    Object.keys(map).length >= 10 && Object.values(map).every(v => /^sky_/.test(v)));
+  chk('the unload, the takeoff, the landing and the payout each have their own sound',
+    !!map.deliver && !!map.whoosh && !!map.land && !!map.collect);
 
   console.log('\n--- THE MODEL STAND ---');
   const zooPage = await browser.newPage({ viewport: { width: 1100, height: 780 } });

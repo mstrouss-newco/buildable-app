@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Sky Flyer — Farm corner (FM2)</title>
+<title>Sky Flyer — Farm corner (FM3)</title>
 <!--
   FM1 — the farm corner of Sunny Islands, built in the Sky Flyer engine style.
   Standalone scene: same three.min.js, same hand-built vertex-colored models
@@ -46,7 +46,34 @@
     - zoo(): ?zoo=1 (or window.FARM.zoo()) stands every farm model on a
       turntable at a fixed camera, so a model is judged BEFORE it is placed.
 
-  FM3 (order crate/plane) builds on this file.
+  FM3 — THE ORDER CRATE AND THE PLANE PAYOFF. West of the field:
+    - a wooden CRATE beside a grass runway. Over it floats a picture wish-list:
+      one silhouette slot per item wanted (3 corn + 2 eggs is five slots), and
+      each slot lights up to full colour with a tick the moment that item lands
+      in it. FL5b tick/cross language, icons drawn in code from the same
+      recipes as the 3D crops. No reading, NO EMOJIS.
+    - WALK TO THE CRATE AND THE WHOLE STACK WHOOSHES OFF, one item at a time,
+      rapid fire, each on its own arc into its slot. This unload is the moment
+      the genre is built on, so it gets the works: a pop and a spin per item,
+      a sound per item rising in pitch as the run goes, the slot flashing as it
+      fills, and a nudge of the camera on the last one. An item the order does
+      not want stays on the stack — the crate flashes a cross on it and moves on.
+    - WHEN THE ORDER FILLS the plane taxis out, rolls down the runway, climbs
+      away, and comes back a moment later with a burst of coins that fly up
+      into the wallet pill.
+    - Orders scale gently (2 items, then 3, then 4, up to 6) and may only ever
+      ask for something the kid can grow or collect RIGHT NOW.
+    - Coins buy seeds, and at 120 coins they buy a DUCK for the coop — a real
+      model out of island-animals.glb. She eats corn like the hens and lays a
+      pale blue egg, which becomes a fourth thing an order can ask for.
+    - Guardrails held: nothing here has a timer over a minute, nothing can fail,
+      nothing costs real money, and a kid who runs out of coins gets their next
+      seed free rather than being stuck.
+
+  FM3 also closed the four things FM1 left open: the farm now has a door on the
+  Play page, the coins are the SHELL'S shared wallet (not a local variable), the
+  shared nav bridge is loaded so Home works on iPhone, and the shared Feel Kit
+  gives it sound.
 -->
 <style>
   html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#B3E58C;
@@ -63,7 +90,12 @@
     left:calc(96px + env(safe-area-inset-left));
     background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px;
     font-weight:800;font-size:14px;color:#33566e;box-shadow:0 3px 10px rgba(30,60,90,.18)}
-  #hint{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);
+  /* The order card owns the bottom of the screen now, so the hint is hung off
+     the SAME variable rather than a percentage that happened to clear it before
+     FM3 existed. The first render had the card sitting on top of the sentence
+     telling a kid what to do. */
+  :root{--fm-card-b:calc(20px + env(safe-area-inset-bottom))}
+  #hint{position:absolute;left:50%;bottom:calc(var(--fm-card-b) + 150px);transform:translateX(-50%);
     background:rgba(255,252,240,.94);border-radius:20px;padding:12px 22px;
     text-align:center;color:#33566e;font-weight:800;font-size:16px;
     box-shadow:0 4px 14px rgba(30,60,90,.2);transition:opacity .5s;
@@ -101,9 +133,105 @@
   #seedCard .seed .price{display:inline-flex;align-items:center;gap:4px;
     background:#fff7d6;border-radius:999px;padding:2px 8px;margin-top:4px;
     font-weight:800;font-size:13px;color:#8a6a12}
+  /* FM3: when a kid is broke the price badge turns into a green FREE badge
+     rather than the button going dead. Nobody is ever locked out of planting. */
+  #seedCard .seed .price.free{background:#eaf7e4;color:#3f8f46}
+  #seedCard .seed .price.free svg{display:none}
+  #seedCard .seed .price.free::after{content:"FREE"}
+  #seedCard .seed .price.free>span{display:none}
   #seedCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
     border:none;background:transparent;cursor:pointer}
   #seedCard .close svg{display:block}
+
+  /* FL9/HUD-AND-NAV: in the shell the top strip belongs to Home / Sound, so the
+     coin pill and the title drop below whatever depth the nav bridge publishes.
+     The 96px fallback is the depth a two-button strip resolves to, so the very
+     first frame is already right and nothing jumps when the bridge answers. */
+  .bk-inshell .pill      {top:calc(var(--bk-nav-bottom,96px) + 10px)}
+  .bk-inshell #titlePill {top:calc(var(--bk-nav-bottom,96px) + 10px)}
+
+  /* FM3 — THE ORDER CARD. One silhouette slot per item the crate wants; a slot
+     fills to full colour with a tick as that item lands. No emojis: every icon
+     is the crop's own drawn SVG, the same one the seed buttons use (FL5b).
+     It lives bottom-centre. On a phone the joystick owns the bottom-left, so
+     below 640px the card lifts clear ABOVE the stick rather than shrinking into
+     a strip too small to read. */
+  #orderCard{position:absolute;left:50%;transform:translateX(-50%) scale(.96);
+    bottom:var(--fm-card-b);
+    background:#fffef7;border-radius:22px;padding:9px 12px 11px;
+    box-shadow:0 10px 30px rgba(30,60,90,.3),0 2px 0 #d9c99a inset;
+    width:max-content;max-width:min(392px,calc(100vw - 190px));
+    opacity:0;visibility:hidden;transition:opacity .2s,transform .2s,visibility .2s;
+    pointer-events:none;z-index:8}
+  #orderCard.up{opacity:1;visibility:visible;transform:translateX(-50%) scale(1)}
+  #orderCard.done{box-shadow:0 10px 30px rgba(60,150,80,.45),0 0 0 3px #63C466 inset}
+  #orderCard .cap{text-align:center;font-weight:900;font-size:12px;color:#8a7a4a;
+    letter-spacing:.6px;text-transform:uppercase;padding:0 0 6px}
+  #orderCard .slots{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+  #orderCard .slot{width:58px;height:64px;border-radius:15px;background:#f1e7c8;
+    border:2px dashed #cbb887;display:flex;align-items:center;justify-content:center;
+    position:relative;transition:transform .12s,background .18s,border-color .18s}
+  /* The empty state has to stay READABLE. The first pass sat at 34% opacity on a
+     cream card and the wheat and the egg both came out as pale smudges — the one
+     thing a child who cannot read has to go on, and it was barely there. A dark
+     grey silhouette on a warm ground reads; a pale one does not. */
+  #orderCard .slot svg{width:46px;height:46px;display:block;
+    filter:grayscale(1) brightness(.55) contrast(1.15);opacity:.6;
+    transition:filter .2s,opacity .2s}
+  #orderCard .slot.full{background:#eaf7e4;border-style:solid;border-color:#8ed08a}
+  #orderCard .slot.full svg{filter:none;opacity:1}
+  /* A six-item order wrapped 5 + 1 with the last slot stranded on its own line,
+     which reads as a mistake. The slots shrink instead, so an order is always
+     ONE row however big it gets. */
+  #orderCard[data-n="5"] .slot,#orderCard[data-n="6"] .slot{width:50px;height:56px}
+  #orderCard[data-n="5"] .slot svg,#orderCard[data-n="6"] .slot svg{width:38px;height:38px}
+  #orderCard .slot.pop{transform:scale(1.22)}
+  #orderCard .slot .mark{position:absolute;right:-3px;bottom:-3px;width:22px;height:22px;
+    opacity:0;transform:scale(.5);transition:opacity .16s,transform .16s}
+  #orderCard .slot.full .mark{opacity:1;transform:scale(1)}
+  #orderCard .slot.nope{animation:nope .34s ease}
+  @keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}
+    60%{transform:translateX(5px)}}
+  #orderCard .payline{display:flex;align-items:center;justify-content:center;gap:4px;
+    margin-top:7px;font-weight:800;font-size:13px;color:#8a6a12}
+  @media (max-width:640px){
+    :root{--fm-card-b:calc(174px + env(safe-area-inset-bottom))}
+    #orderCard{max-width:min(392px,96vw)}
+  }
+
+  /* FM3 — the coins that fly up into the wallet when the plane lands. */
+  .flyCoin{position:absolute;width:22px;height:22px;pointer-events:none;z-index:9}
+
+  /* FM3 — THE SHOP. One card, one thing in it: the duck. Same AR1R shape as
+     the seed picker so the farm only ever teaches one card. */
+  #shopBtn{position:absolute;right:14px;
+    top:calc(58px + env(safe-area-inset-top));
+    background:rgba(255,252,240,.92);border:none;border-radius:999px;
+    padding:7px 13px 7px 9px;display:none;align-items:center;gap:6px;
+    box-shadow:0 3px 10px rgba(30,60,90,.18);font-weight:800;font-size:13px;
+    color:#5b4a1f;pointer-events:auto;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #shopBtn.on{display:flex}
+  .bk-inshell #shopBtn{top:calc(var(--bk-nav-bottom,96px) + 56px)}
+  #shopCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+    background:#fffef7;border-radius:26px;padding:14px 14px 18px;
+    box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
+    width:min(340px,92vw);max-width:340px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:11;text-align:center}
+  #shopCard.up{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+  #shopCard .title{font-weight:900;font-size:17px;color:#5b4a1f;padding:2px 0 8px}
+  #shopCard .buy{background:#f6efd6;border:2px solid #e7d9a4;border-radius:18px;
+    padding:10px 8px 12px;cursor:pointer;user-select:none;
+    -webkit-tap-highlight-color:transparent;transition:transform .08s}
+  #shopCard .buy:active{transform:translateY(2px)}
+  #shopCard .buy.locked{opacity:.42;cursor:not-allowed}
+  #shopCard .buy .art{height:96px;display:flex;align-items:center;justify-content:center}
+  #shopCard .buy .price{display:inline-flex;align-items:center;gap:4px;
+    background:#fff7d6;border-radius:999px;padding:3px 10px;margin-top:6px;
+    font-weight:800;font-size:14px;color:#8a6a12}
+  #shopCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
+    border:none;background:transparent;cursor:pointer}
 
   /* Joystick — a soft touch pad kids can use, and drag-anywhere on the world
      also works. Kept clear of the top strip (HUD-AND-NAV rules). */
@@ -116,6 +244,14 @@
     box-shadow:0 4px 10px rgba(30,60,90,.25);
     transform:translate(-50%,-50%);transition:opacity .2s}
 </style>
+<script>
+  // FL9: tag the page in-shell HERE, before <body> is parsed, so the class is on
+  // <html> in time for first paint and the coin pill never flashes up in the
+  // corner the shell is about to draw its Home button over. buildable-gamenav.js
+  // sets the same class later and stays the only source of the real geometry;
+  // classList.add is idempotent, so the two cannot drift.
+  try { if (window.parent && window.parent !== window) document.documentElement.classList.add('bk-inshell'); } catch(e){}
+</script>
 </head>
 <body>
 <div id="hud">
@@ -146,9 +282,51 @@
     <div class="title">Plant a seed</div>
     <div class="row" id="seedRow"><!-- three .seed cells injected --></div>
   </div>
+
+  <!-- FM3 — THE ORDER CARD. One slot per item wanted, drawn as a greyed
+       silhouette of that item's own SVG and lit to full colour with a green
+       tick as it lands. Slots are injected from the live order. -->
+  <div id="orderCard" aria-label="What the crate wants">
+    <div class="cap">Crate wants</div>
+    <div class="slots" id="orderSlots"></div>
+    <div class="payline">
+      <svg width="15" height="15" viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>
+      </svg><span id="orderPay">0</span>
+    </div>
+  </div>
+
+  <!-- FM3 — THE SHOP. Appears only once a duck is affordable-ish, so it never
+       dangles something a kid cannot have. -->
+  <button id="shopBtn" aria-label="Shop">
+    <svg width="20" height="20" viewBox="0 0 24 24">
+      <path d="M4 8 h16 l-1.6 11 a2 2 0 0 1 -2 1.7 H7.6 a2 2 0 0 1 -2 -1.7 Z"
+            fill="#F6E3B0" stroke="#B08A3C" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M8.6 8 V6.2 a3.4 3.4 0 0 1 6.8 0 V8" fill="none" stroke="#B08A3C" stroke-width="1.8"/>
+    </svg>Shop
+  </button>
+  <div id="shopCard" role="dialog" aria-label="Shop">
+    <button class="close" id="shopClose" aria-label="Close">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="title">A new friend for the coop</div>
+    <div class="buy" id="buyDuck"></div>
+  </div>
 </div>
 <script src="/three.min.js"></script>
 <script src="/GLTFLoader.js"></script>
+<!-- FM3 closed three of the four gaps FM1 left open, and they are all here:
+     buildable-audio + buildable-feel give the farm the shared sound palette and
+     the shared juice (GAME-FEEL.md), buildable-wallet makes the coin pill the
+     SHELL'S real balance instead of a local variable, and buildable-gamenav is
+     the nav bridge — without it a touch on the shell's Home button on iPhone
+     routes into this page and does nothing, which is exactly the Tennis bug. -->
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-feel.js"></script>
+<script src="/buildable-wallet.js"></script>
+<script src="/buildable-gamenav.js"></script>
 <script>
 (function(){
 "use strict";
@@ -235,6 +413,29 @@ function hbTurn(profile,c,tf,sg){
   return hbPaint(new THREE.LatheGeometry(pts,sg||12),c,tf);
 }
 function hbMesh(geo){ return new THREE.Mesh(geo,HB_MAT); }
+// FM3 — a TAPERED aerofoil. Everything else in this file is a lathe or a ball
+// and neither can make a wing. A single BOX can, but a box reads as a plank,
+// and building one out of stepped boxes reads as a staircase — the first two
+// renders showed exactly that. So this takes one segmented box and pulls its
+// VERTICES in: the chord shrinks smoothly toward the tip while the trailing
+// edge stays straight, which is the shape a paper plane has and the shape the
+// eye recognises as a wing. `up` builds a fin standing on its root instead.
+function hbAero(span, rootChord, tipChord, thick, color, tf, up){
+  var g = up ? new THREE.BoxGeometry(thick, span, rootChord, 1, 16, 1)
+             : new THREE.BoxGeometry(span, thick, rootChord, 16, 1, 1);
+  var pa=g.attributes.position, i;
+  for(i=0;i<pa.count;i++){
+    var t = up ? (pa.getY(i)+span/2)/span : Math.abs(pa.getX(i))/(span/2);
+    t = t<0?0:(t>1?1:t);
+    var chord = rootChord+(tipChord-rootChord)*t;
+    // scale the chord about the centre, then slide it back so the TRAILING
+    // edge stays on one straight line and only the leading edge sweeps
+    pa.setZ(i, pa.getZ(i)*(chord/rootChord) - (rootChord-chord)/2);
+  }
+  g.computeVertexNormals();
+  return hbPaint(g, color, tf);
+}
+
 
 // -------------------------------------------------------------------------
 // Grass ground, big enough that a walking kid never sees the edge on iPad.
@@ -367,10 +568,31 @@ scene.add(buildField());
 //   svg(size)      -> a string of <svg>...</svg> for the picker button
 //   colors         -> {main, accent, stem} used by both
 // -------------------------------------------------------------------------
+// =========================================================================
+//  FM3 — THE COIN ECONOMY (Mike's call, 2026-09-06).
+//
+//  FM1 shipped prices 10/6/4 against harvest rewards 8/5/3, so growing a crop
+//  visibly LOST coins. A child reads that as a punishment for doing the thing
+//  the game just told them to do. The fix Mike picked is the simplest one:
+//
+//    CROPS ARE INGREDIENTS, NOT MONEY. Harvesting pays nothing at all.
+//    A seed costs the same 3 coins whatever it is, so there is no sum to do.
+//    The ONLY way to earn is filling the crate and sending the plane.
+//
+//  And the floor that makes it impossible to get stuck: if a kid cannot afford
+//  a seed, the next seed is FREE. There is no state in this farm from which a
+//  child cannot carry on playing.
+// =========================================================================
+var SEED_PRICE = 3;           // every seed, the same price, on purpose
+var ORDER_PAY_BASE = 20;      // what the first delivery pays
+var ORDER_PAY_STEP = 5;       // each later one pays a little more
+var ORDER_PAY_MAX = 45;       // and it stops there, so orders never get grindy
+var DUCK_PRICE = 120;         // about five deliveries
+
 var CROP_RECIPES = {
   corn: {
-    price: 10,
-    reward: 8,
+    price: SEED_PRICE,
+    reward: 0,
     growSec: 34,
     colors: {main:0xF6C64A, accent:0xE0A82E, stem:0x4FB05B},
     parts:function(s){
@@ -412,8 +634,8 @@ var CROP_RECIPES = {
     }
   },
   carrot: {
-    price: 6,
-    reward: 5,
+    price: SEED_PRICE,
+    reward: 0,
     growSec: 30,
     colors: {main:0xF08A2E, accent:0xC66220, stem:0x4FB05B},
     parts:function(s){
@@ -448,8 +670,8 @@ var CROP_RECIPES = {
     }
   },
   wheat: {
-    price: 4,
-    reward: 3,
+    price: SEED_PRICE,
+    reward: 0,
     growSec: 42,
     colors: {main:0xE0C25A, accent:0xB48A26, stem:0xC7B15C},
     parts:function(s){
@@ -693,6 +915,28 @@ var PRODUCE_RECIPES = {
         '</svg>';
     }
   },
+  // FM3 — the duck's egg. A DIFFERENT COLOUR from the hen's, because the crate
+  // has to be able to ask for one and not the other, and a four-year-old tells
+  // them apart by colour long before size. Pale blue, and a shade bigger.
+  duckegg: {
+    from: "duck",
+    colors: {main:0xCFE6F2, accent:0xA8C9DC},
+    parts:function(s){
+      var C=this.colors, p=[];
+      p.push(hbTurn([
+        [0.001,-0.40*s],[0.21*s,-0.26*s],[0.28*s,-0.02*s],
+        [0.26*s,0.20*s],[0.17*s,0.34*s],[0.001,0.42*s]
+      ], C.main, {p:[0, 0.40*s, 0]}, 14));
+      return p;
+    },
+    svg:function(size){
+      size = size || 82;
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        '<ellipse cx="41" cy="45" rx="23" ry="29" fill="#CFE6F2" stroke="#7FA6BC" stroke-width="2.5"/>'+
+        '<path d="M22 52 Q41 61 60 52" fill="none" stroke="#A8C9DC" stroke-width="3"/>'+
+        '</svg>';
+    }
+  },
   milk: {
     from: "cow",
     colors: {main:0xFFFFFF, accent:0xD24B4B, glass:0xDCEAF2},
@@ -791,7 +1035,7 @@ function loadFarmAnimals(done){
     gl.scene.children.slice().forEach(function(o){
       if(o.name) try{ ANM[o.name]=anmPrep(o); }catch(e){}
     });
-    ANM_ON=!!ANM.Chicken;
+    ANM_ON=!!ANM.Chicken;   // the hen is the gate; the duck rides in the same file
     done(ANM_ON);
   },null,function(){ done(false); });
 }
@@ -1172,15 +1416,27 @@ var ANIMAL_KINDS={
     makeSec:26,
     size:4.10,
     wantAt:3.55, mouthAt:2.30, produceOut:1.60
+  },
+  // FM3 — the bought animal. She eats corn like the hens so nothing new has to
+  // be learned to feed her; only what she leaves behind is different.
+  duck: {
+    wants:"corn", gives:"duckegg",
+    makeSec:20,
+    size:1.95,
+    wantAt:1.85, mouthAt:0.85, produceOut:1.20
   }
 };
 
 function makeAnimalBody(kind){
-  if(kind==="chicken"){
-    var real = ANM_ON ? anmGet("Chicken", ANIMAL_KINDS.chicken.size) : null;
+  if(kind==="chicken"||kind==="duck"){
+    var node = (kind==="duck") ? "PekinDuck" : "Chicken";
+    var real = ANM_ON ? anmGet(node, ANIMAL_KINDS[kind].size) : null;
     if(real) return {obj:real, real:true};
+    // The duck falls back to the drawn hen tinted white-and-orange rather than
+    // to nothing, so a missing file costs a look and never the mechanic.
     var fb=buildChickenFallback();
     var w=new THREE.Group(); w.add(fb);
+    if(kind==="duck") w.scale.setScalar(ANIMAL_KINDS.duck.size/ANIMAL_KINDS.chicken.size);
     return {obj:w, real:false};
   }
   // the cow, normalised the same way a loaded model is: sized by its LONGEST
@@ -1211,7 +1467,8 @@ function addAnimal(kind, x, z, facing, gait, opts){
     patrol:(opts&&opts.patrol)||null,
     patrolT:Math.random()*6.283
   };
-  A.rig=puppet(obj, gait, kind==="cow"?1.5:3.6);
+  A.baseScale=obj.scale.x;      // anmGet normalised it; a pop-in must not undo that
+  A.rig=puppet(obj, gait, kind==="cow"?1.5:(kind==="duck"?2.9:3.6));
   ANIMALS.push(A);
   return A;
 }
@@ -1268,13 +1525,14 @@ function updateFlying(dt, now){
     // it flies OUT and OVER, so it reads as thrown rather than teleported
     F.obj.position.x=lerp(F.from.x,F.to.x,u);
     F.obj.position.z=lerp(F.from.z,F.to.z,u);
-    F.obj.position.y=lerp(F.from.y,F.to.y,u)+Math.sin(u*Math.PI)*1.15;
-    F.obj.rotation.y+=dt*7.0;
-    F.obj.rotation.x+=dt*4.5;
+    F.obj.position.y=lerp(F.from.y,F.to.y,u)+Math.sin(u*Math.PI)*(F.slot?0.85:1.15);
+    F.obj.rotation.y+=dt*(F.slot?11.0:7.0);
+    F.obj.rotation.x+=dt*(F.slot?7.5:4.5);
     if(u>=1){
       scene.remove(F.obj);
       FLYING.splice(i,1);
-      onFed(F.animal, now);
+      if(F.slot) onCrateLanded(F);           // FM3: it landed in the crate
+      else onFed(F.animal, now);             // FM2: an animal ate it
     }
   }
 }
@@ -1318,6 +1576,14 @@ function collectProduce(A){
 function updateAnimals(dt, now){
   for(var i=0;i<ANIMALS.length;i++){
     var A=ANIMALS[i], K=ANIMAL_KINDS[A.kind];
+    // FM3: a bought animal grows in from nothing rather than blinking into
+    // existence — a thing you saved 120 coins for gets an entrance.
+    if(A.popIn!=null && A.popIn<1){
+      A.popIn=Math.min(1, A.popIn+dt*1.6);
+      var e=1+Math.sin(Math.min(1,A.popIn)*Math.PI)*0.22;
+      A.obj.scale.setScalar(A.baseScale*(0.15+0.85*A.popIn)*e);
+      if(A.popIn>=1) A.obj.scale.setScalar(A.baseScale);
+    }
 
     // the one chicken that walks: a slow loop around the yard
     if(A.patrol){
@@ -1382,6 +1648,531 @@ function updateAnimals(dt, now){
 // freely, because being stuck is a way to fail.
 var COOP_C={x:16.5,z:-5.5}, PEN_C={x:15.5,z:8.5};
 
+// =========================================================================
+//  FM3 — THE ORDER CRATE, THE UNLOAD, AND THE PLANE.
+//
+//  This is the payoff the whole mode was built toward. The kid grows and
+//  collects, carries a leaning tower of it on their head, walks it to a crate,
+//  and the tower WHOOSHES off into a picture wish-list one item at a time.
+//  Fill the list and a plane taxis, takes off, and comes back with coins.
+//
+//  Two rules shaped every decision below:
+//    1. NO READING. The wish-list is silhouettes of the items themselves, lit
+//       to full colour with a green tick as they land. FL5b tick/cross.
+//    2. NO FAILING. There is no timer on the order, no way to spoil it, and no
+//       way to be left with nothing to do. An order never asks for something
+//       the kid cannot grow or collect right now.
+// =========================================================================
+// Placement, redone after the first real render. The first pass put a 44-unit
+// bone-white strip 6.8 wide across the whole west side and it read as a
+// concrete ramp dropped on a farm — the brightest thing on screen, and the
+// first thing the eye went to. This is a MOWN GRASS strip: shorter, narrower,
+// and only a shade off the field it is cut into.
+var RUNWAY={x:-19.0, z:0, halfL:15.0, halfW:2.6};
+var CRATE={x:-10.5, z:1.5};
+var CRATE_R=3.2;               // generously wide, per feel law 5. Nobody aims.
+var UNLOAD_GAP=0.11;           // seconds between items — rapid fire, on purpose
+
+// ------------------------------------------------------------- the runway
+function buildRunway(){
+  var p=[], i;
+  // the mown strip itself: a warm hay colour, a shade off the grass, sunk a
+  // hair in so it never z-fights
+  p.push(hbBox(RUNWAY.halfW*2, 0.06, RUNWAY.halfL*2, 0xCFCE86, {p:[RUNWAY.x,0.03,RUNWAY.z]}));
+  // a mown border either side, so the strip has an edge without needing paint
+  [-1,1].forEach(function(sx){
+    p.push(hbBox(0.5, 0.05, RUNWAY.halfL*2, 0xB9BE6E, {p:[RUNWAY.x+sx*(RUNWAY.halfW+0.25), 0.025, RUNWAY.z]}));
+  });
+  // centre dashes: the whole reason the strip reads as a runway and not a path.
+  // Cream, not white — white is the loudest thing a screen can do.
+  for(i=-5;i<=5;i++){
+    p.push(hbBox(0.26, 0.02, 1.3, 0xF4EFCE, {p:[RUNWAY.x, 0.08, RUNWAY.z + i*(RUNWAY.halfL/5.6)]}));
+  }
+  // little wooden marker posts, spaced wide so they read as markers not litter
+  for(i=-2;i<=2;i++){
+    [-1,1].forEach(function(sx){
+      p.push(hbTube(0.09,0.11,0.50,0xEDDDA8,{p:[RUNWAY.x+sx*(RUNWAY.halfW+0.85), 0.25, RUNWAY.z+i*(RUNWAY.halfL/2.3)]},8));
+      p.push(hbBall(0.13,0xE2604F,{p:[RUNWAY.x+sx*(RUNWAY.halfW+0.85), 0.52, RUNWAY.z+i*(RUNWAY.halfL/2.3)]},8));
+    });
+  }
+  return hbMesh(hbBake(p));
+}
+
+// -------------------------------------------------------------- the crate
+// Slatted, open topped, with the near slats lower so a kid can see INTO it.
+function buildCrate(){
+  var p=[], i;
+  // Sized against the kid, who is about 2.5 tall: the first pass was 2.3 wide
+  // and a child stood taller than the thing they were loading, which made it
+  // read as a toolbox. A crate a plane could carry has to look like one.
+  var W=3.3, D=2.5, H=1.9;
+  // four corner posts
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(c){
+    p.push(hbBox(0.26,H,0.26,WOOD_D,{p:[c[0]*(W/2-0.08), H/2, c[1]*(D/2-0.08)]}));
+  });
+  // three slats a side; the front wall stops one slat short so the load shows
+  for(i=0;i<3;i++){
+    var y=0.34+i*0.62;
+    p.push(hbBox(W,0.42,0.16,WOOD,{p:[0,y,-(D/2-0.06)]}));              // back
+    if(i<2) p.push(hbBox(W,0.42,0.16,WOOD,{p:[0,y,(D/2-0.06)]}));       // front, lower
+    p.push(hbBox(0.16,0.42,D,WOOD,{p:[-(W/2-0.06),y,0]}));
+    p.push(hbBox(0.16,0.42,D,WOOD,{p:[(W/2-0.06),y,0]}));
+  }
+  // floor, and a straw bed so an empty crate is not a black hole
+  p.push(hbBox(W-0.24,0.12,D-0.24,WOOD_D,{p:[0,0.12,0]}));
+  p.push(hbBox(W-0.7,0.12,D-0.7,STRAW,{p:[0,0.23,0]}));
+  return hbMesh(hbBake(p));
+}
+
+var crateObj=null, crateBob=0;
+
+// --------------------------------------------------------------- the plane
+// The AR1Q plane, rebuilt in the farm's hb* vocabulary: same silhouette (high
+// wing on struts, cowled nose, bubble canopy, tall fin, spatted wheels) so a
+// kid who has flown it recognises it sitting on the grass. Everything is baked
+// into one geometry except the propeller, which has to turn.
+var PLANE_BODY=0xE2604F, PLANE_TRIM=0xF7E3B8, PLANE_WING=0xF2F0E4, PLANE_GLASS=0xBFE3F0;
+function buildPlaneModel(){
+  var p=[], prop;
+  var s=0.62;    // the farm's plane sits at kid scale, not flight scale
+  // fuselage: a lathe laid on its side, nose at +Z
+  p.push(hbTurn([
+    [0.02,-4.9],[0.32,-4.5],[0.66,-3.85],[1.02,-2.8],[1.30,-1.4],
+    [1.46,0.2],[1.46,1.5],[1.34,2.7],[1.12,3.6],[0.84,4.2],
+    [0.58,4.55],[0.32,4.74],[0.02,4.82]
+  ], PLANE_BODY, {r:[Math.PI/2,0,0], s:[s,s,s], p:[0,1.55,0]}, 14));
+  // cowl over the nose, in the trim colour
+  p.push(hbTurn([
+    [0.58,3.4],[1.22,3.45],[1.28,4.05],[1.10,4.45],[0.78,4.68],[0.38,4.82],[0.02,4.88]
+  ], PLANE_TRIM, {r:[Math.PI/2,0,0], s:[s,s,s], p:[0,1.55,0]}, 14));
+  // HIGH WING on two struts. A low wing on a taildragger reads as a dart, and
+  // a RECTANGULAR one reads as a plank — the first render came out as a rocket
+  // with a shelf on it. So the wing is built in segments that narrow toward the
+  // tips, which is what makes a shape read as a wing at a glance.
+  p.push(hbAero(8.6*s, 2.5*s, 1.15*s, 0.22*s, PLANE_WING, {p:[0, 1.55+1.72*s, 0.45*s]}));
+  [-1,1].forEach(function(sx){
+    p.push(hbBox(0.16*s,1.5*s,0.7*s,PLANE_TRIM,{r:[0,0,sx*0.18],p:[sx*1.55*s,1.55+1.05*s,0.45*s]}));
+  });
+  // tailplane, tapered the same way, and a SWEPT fin (an upright slab reads as
+  // a sail; the sweep is what says aeroplane)
+  p.push(hbAero(5.0*s, 1.35*s, 0.65*s, 0.18*s, PLANE_WING, {p:[0, 1.55+0.55*s, -3.85*s]}));
+  p.push(hbAero(2.4*s, 1.9*s, 0.75*s, 0.18*s, PLANE_BODY, {p:[0, 1.55+1.60*s, -4.05*s]}, true));
+  // bubble canopy, forward of the wing's leading edge or the wing buries it
+  p.push(hbTurn([
+    [0.02,-1.0],[0.64,-0.7],[0.92,0.2],[0.94,1.0],[0.72,1.7],[0.30,2.1],[0.02,2.2]
+  ], PLANE_GLASS, {r:[Math.PI/2,0,0], s:[s*1.12,s*1.05,s], p:[0,1.55+1.00*s,1.75*s]}, 12));
+  // WHEELS, in spats. Spats in the wing colour: in the body colour they read
+  // as lumps falling off the plane (the AR1Q note, and it still holds here).
+  // WHEELS. AR1Q spats it, but at farm scale a white teardrop beside a red
+  // fuselage read as a floatplane pontoon, so this is a plain leg and a wheel.
+  [[-1.62,1.20],[1.62,1.20]].forEach(function(w){
+    p.push(hbTube(0.19*s,0.23*s,1.85*s,PLANE_TRIM,{r:[0,0,w[0]>0?-0.26:0.26],p:[w[0]*0.82*s,1.55-0.85*s,w[1]*s]},8));
+    p.push(hbTube(0.54*s,0.54*s,0.34*s,0x4A4A4A,{r:[0,0,Math.PI/2],p:[w[0]*s,1.55-1.78*s,w[1]*s]},12));
+  });
+  p.push(hbTube(0.28*s,0.28*s,0.22*s,0x4A4A4A,{r:[0,0,Math.PI/2],p:[0,1.55-2.47*s,-3.60*s]},10));
+  p.push(hbTube(0.11*s,0.13*s,0.7*s,PLANE_TRIM,{p:[0,1.55-2.10*s,-3.60*s]},7));
+
+  var g=new THREE.Group();
+  g.add(hbMesh(hbBake(p)));
+  // the propeller turns, so it cannot be baked in with the rest
+  prop=hbMesh(hbBake([
+    hbBox(0.14*s, 3.4*s, 0.30*s, 0x3B3B3B, null),
+    hbBall(0.30*s, PLANE_TRIM, null, 10)
+  ]));
+  prop.position.set(0, 1.55, 5.0*s);
+  g.add(prop);
+  g.userData.prop=prop;
+  return g;
+}
+
+// The plane's whole trip, as one little state machine. Every leg is seconds,
+// and the WHOLE THING is 13 seconds — nothing in this farm has a timer over a
+// minute, and a payoff a kid has to wait out is not a payoff.
+var PLANE_LEGS={ taxi:2.2, roll:2.4, climb:2.6, away:1.4, back:2.8, park:1.6 };
+var plane=null;
+var PL={ phase:"parked", t:0, pay:0 };
+// The camera sits 22 units behind the kid and looks down, so anything much past
+// z+6 is off the bottom of the screen. The first pass parked the plane 15 units
+// south of the strip and a kid standing at the crate never saw it at all — the
+// payoff was happening off screen. It now sits between the crate and the strip.
+var PARK={x:RUNWAY.x+4.0, z:RUNWAY.z+4.0, yaw:-1.15};
+
+function buildPlane(){
+  plane=buildPlaneModel();
+  plane.position.set(PARK.x, 0, PARK.z);
+  plane.rotation.y=PARK.yaw;
+  scene.add(plane);
+}
+
+function planeBusy(){ return PL.phase!=="parked"; }
+
+function sendPlane(pay){
+  if(planeBusy()) return false;
+  PL.phase="taxi"; PL.t=0; PL.pay=pay;
+  sfx("whoosh"); haptic("light");
+  return true;
+}
+
+function updatePlane(dt){
+  if(!plane) return;
+  if(plane.userData.prop) plane.userData.prop.rotation.z += dt*(planeBusy()?38:2.2);
+  if(PL.phase==="parked") return;
+  PL.t+=dt;
+  var L=PLANE_LEGS, u;
+  var startZ=RUNWAY.z+RUNWAY.halfL-2.0;      // hold-short end
+  var endZ=RUNWAY.z-RUNWAY.halfL+2.0;        // where the wheels leave the grass
+
+  if(PL.phase==="taxi"){
+    u=clamp(PL.t/L.taxi,0,1);
+    plane.position.x=lerp(PARK.x, RUNWAY.x, u);
+    plane.position.z=lerp(PARK.z, startZ, u);
+    plane.position.y=0;
+    plane.rotation.y=lerp(PARK.yaw, Math.PI, u);   // line up down the strip
+    plane.rotation.x=0;
+    if(u>=1){ PL.phase="roll"; PL.t=0; sfx("mission"); }
+    return;
+  }
+  if(PL.phase==="roll"){
+    u=clamp(PL.t/L.roll,0,1);
+    var acc=u*u;                                   // it ACCELERATES, or it drifts
+    plane.position.x=RUNWAY.x;
+    plane.position.z=lerp(startZ, endZ, acc);
+    plane.position.y=Math.max(0,(acc-0.72)/0.28)*1.1;
+    plane.rotation.x=-Math.max(0,(acc-0.72)/0.28)*0.22;
+    if(u>=1){ PL.phase="climb"; PL.t=0; }
+    return;
+  }
+  if(PL.phase==="climb"){
+    u=clamp(PL.t/L.climb,0,1);
+    plane.position.x=RUNWAY.x - u*u*14;
+    plane.position.z=endZ - u*62;
+    plane.position.y=1.1 + u*26;
+    plane.rotation.x=-0.30;
+    plane.rotation.z=-u*0.5;
+    if(u>=1){ PL.phase="away"; PL.t=0; plane.visible=false; }
+    return;
+  }
+  if(PL.phase==="away"){
+    if(PL.t>=L.away){ PL.phase="back"; PL.t=0; plane.visible=true; sfx("land"); }
+    return;
+  }
+  if(PL.phase==="back"){
+    u=clamp(PL.t/L.back,0,1);
+    plane.position.x=lerp(RUNWAY.x-16, RUNWAY.x, u);
+    plane.position.z=lerp(endZ-70, startZ-6, u);
+    plane.position.y=lerp(28, 0, u*u);
+    plane.rotation.x=lerp(0.16, 0, u);
+    plane.rotation.z=0;
+    plane.rotation.y=Math.PI;
+    if(u>=1){ PL.phase="park"; PL.t=0; payTheOrder(PL.pay); }
+    return;
+  }
+  if(PL.phase==="park"){
+    u=clamp(PL.t/L.park,0,1);
+    plane.position.x=lerp(RUNWAY.x, PARK.x, u);
+    plane.position.z=lerp(startZ-6, PARK.z, u);
+    plane.rotation.y=lerp(Math.PI, PARK.yaw+Math.PI*2, u);
+    if(u>=1){
+      PL.phase="parked"; PL.t=0;
+      plane.rotation.y=PARK.yaw;
+      newOrder();                                 // the next wish-list, straight away
+    }
+  }
+}
+
+// =========================================================================
+//  THE ORDER
+// =========================================================================
+var ORDERS_DONE=0;
+var order=null;                 // {items:[{kind,filled,el}], pay}
+var orderCardEl=document.getElementById("orderCard");
+var orderSlotsEl=document.getElementById("orderSlots");
+var orderPayEl=document.getElementById("orderPay");
+
+// THE GUARDRAIL WITH TEETH: an order may only ever name something the kid can
+// get RIGHT NOW. Crops are always growable because the patches are always
+// there; produce is only listed once the animal that makes it is in the farm.
+function orderableKinds(){
+  var out=["corn","carrot","wheat"], i, seen={};
+  for(i=0;i<ANIMALS.length;i++){
+    var gives=ANIMALS[i].gives;
+    if(gives && !seen[gives]){ seen[gives]=1; out.push(gives); }
+  }
+  return out;
+}
+
+function orderPay(){
+  return Math.min(ORDER_PAY_MAX, ORDER_PAY_BASE + ORDERS_DONE*ORDER_PAY_STEP);
+}
+
+function newOrder(){
+  var pool=orderableKinds().slice(), pick=[], i, n;
+  // gently bigger each time: two items, then three, and never more than six —
+  // six silhouettes is the most that still reads at a glance on a phone.
+  var size=Math.min(6, 2+ORDERS_DONE);
+  var distinct=Math.min(pool.length, size<=2?1:(size<=4?2:3));
+  for(i=pool.length-1;i>0;i--){ n=Math.floor(Math.random()*(i+1)); var t=pool[i]; pool[i]=pool[n]; pool[n]=t; }
+  var kinds=pool.slice(0,distinct);
+  var counts=[]; for(i=0;i<distinct;i++) counts.push(1);
+  for(i=distinct;i<size;i++) counts[Math.floor(Math.random()*distinct)]++;
+  var items=[];
+  for(i=0;i<distinct;i++){ for(n=0;n<counts[i];n++) items.push({kind:kinds[i], filled:false, el:null}); }
+  order={ items:items, pay:orderPay(), sent:false };   // items carry no claim yet
+  renderOrder();
+  return order;
+}
+
+var TICK_SVG='<svg class="mark" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#63C466"/>'+
+  '<path d="M7 12.5 L10.6 16 L17 8.6" fill="none" stroke="#fff" stroke-width="2.8" '+
+  'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function renderOrder(){
+  orderSlotsEl.innerHTML="";
+  if(!order){ orderCardEl.classList.remove("up"); return; }
+  order.items.forEach(function(it){
+    var r=ITEM(it.kind);
+    var el=document.createElement("div");
+    el.className="slot"+(it.filled?" full":"");
+    el.dataset.kind=it.kind;
+    el.innerHTML=(r?r.svg(46):"")+TICK_SVG;
+    orderSlotsEl.appendChild(el);
+    it.el=el;
+  });
+  orderCardEl.dataset.n=order.items.length;
+  orderPayEl.textContent=order.pay;
+  orderCardEl.classList.toggle("done", order.items.every(function(it){return it.filled;}));
+  orderCardEl.classList.add("up");
+}
+
+// A slot that has an item ALREADY IN THE AIR toward it is spoken for. Without
+// this the rapid fire is its own bug: three corn leave the stack in a third of
+// a second, all three aim at slot one, and two of them vanish on arrival.
+function orderNeeds(kind){
+  if(!order || order.sent) return false;
+  for(var i=0;i<order.items.length;i++){
+    var it=order.items[i];
+    if(!it.filled && !it.claimed && it.kind===kind) return true;
+  }
+  return false;
+}
+function orderFull(){
+  if(!order) return false;
+  for(var i=0;i<order.items.length;i++) if(!order.items[i].filled) return false;
+  return true;
+}
+// The next empty slot for this kind — the one the flying item is aimed at.
+function claimSlot(kind){
+  for(var i=0;i<order.items.length;i++){
+    var it=order.items[i];
+    if(!it.filled && !it.claimed && it.kind===kind) return it;
+  }
+  return null;
+}
+
+// =========================================================================
+//  THE UNLOAD — the moment the whole genre is built on.
+//
+//  Walk to the crate and the tower comes off your head one item at a time,
+//  fast, each on its own arc, each landing with a pop and a note a little
+//  higher than the one before. It is the ONLY thing in this file that gets a
+//  per-item sound, because it is the only thing that has earned one.
+// =========================================================================
+var unload={ running:false, gap:0, run:0, missT:0 };
+
+function crateNear(){
+  return Math.hypot(kid.position.x-CRATE.x, kid.position.z-CRATE.z) < CRATE_R;
+}
+
+function pullOneIntoCrate(){
+  var i;
+  // the TOPMOST wanted item, because that is the one a child can see leave
+  for(i=stack.length-1;i>=0;i--){
+    var kind=stack[i].userData.kind;
+    if(!orderNeeds(kind)) continue;
+    var slot=claimSlot(kind); if(!slot) continue;
+    var it=stack.splice(i,1)[0];
+    reindexStack();
+    FLYING.push({
+      obj:it,
+      from:it.position.clone(),
+      to:new THREE.Vector3(CRATE.x + (Math.random()-0.5)*0.9, 0.85, CRATE.z + (Math.random()-0.5)*0.7),
+      t:0, dur:0.34, slot:slot, note:unload.run
+    });
+    slot.claimed=true;
+    unload.run++;
+    return true;
+  }
+  return false;
+}
+
+// A slot fills the instant its item lands in the crate, not when it left the
+// stack — the tick has to be caused by something the eye followed.
+function onCrateLanded(F){
+  var slot=F.slot;
+  slot.filled=true;
+  if(slot.el){
+    slot.el.classList.add("full","pop");
+    setTimeout(function(){ if(slot.el) slot.el.classList.remove("pop"); }, 140);
+  }
+  sfx("deliver",{rate:Math.min(1.55, 1 + F.note*0.055)});
+  haptic("light");
+  crateBob=0.16;
+  if(orderFull() && !order.sent){
+    order.sent=true;
+    orderCardEl.classList.add("done");
+    sfx("mission");
+    haptic("success");
+    sendPlane(order.pay);
+  }
+}
+
+// The cross half of the FL5b language: you walked up carrying things the crate
+// does not want. Nothing is taken, nothing is lost, the card just shakes once.
+function flashNope(){
+  if(unload.missT>0) return;
+  unload.missT=1.1;
+  var els=orderSlotsEl.querySelectorAll(".slot:not(.full)");
+  Array.prototype.forEach.call(els,function(el){
+    el.classList.remove("nope"); void el.offsetWidth; el.classList.add("nope");
+  });
+  sfx("hit"); 
+}
+
+function updateCrate(dt){
+  if(unload.missT>0) unload.missT-=dt;
+  // Nothing else in the farm has collision and nothing needs it, but a kid can
+  // walk clean into an open-topped crate and stand in it, which reads as being
+  // stuck in the box rather than loading it. One soft push to the rim, so it is
+  // never a wall you bump — you just cannot end up inside.
+  if(crateObj){
+    var dx=kid.position.x-CRATE.x, dz=kid.position.z-CRATE.z;
+    var d=Math.hypot(dx,dz), OUT=2.15;   // clear of the walls, not just the middle
+    if(d < OUT){
+      if(d < 0.001){ dx=0; dz=1; d=1; }   // dead centre has no direction to push
+      var k=OUT/d;
+      kid.position.x=CRATE.x+dx*k;
+      kid.position.z=CRATE.z+dz*k;
+      kidState.pos.set(kid.position.x, 0, kid.position.z);
+    }
+  }
+  if(crateObj){
+    crateBob*=0.86;
+    crateObj.position.y=crateBob;
+  }
+  if(!order || order.sent || !crateNear()){ unload.running=false; unload.run=0; return; }
+  if(!unload.running){ unload.running=true; unload.gap=0; unload.run=0; }
+  unload.gap-=dt;
+  if(unload.gap>0) return;
+  unload.gap=UNLOAD_GAP;
+  if(!pullOneIntoCrate()){
+    unload.running=false;
+    if(stack.length) flashNope();
+  }
+}
+
+// =========================================================================
+//  THE PAYOFF — coins fly from the plane up into the wallet pill.
+// =========================================================================
+function payTheOrder(pay){
+  addCoins(pay);
+  ORDERS_DONE++;
+  flashToast("+"+pay);
+  sfx("collect"); haptic("success");
+  coinBurstToPill(pay);
+  order=null;
+  renderOrder();
+  updateShopButton();
+}
+
+// A real burst, aimed at the number it is going into. GAME-FEEL law 3: coins
+// are a reward the body feels, never a number that quietly ticks up.
+var COIN_SVG='<svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#F7C948" '+
+  'stroke="#D89B1C" stroke-width="2.5"/><circle cx="13" cy="13" r="6" fill="none" '+
+  'stroke="#D89B1C" stroke-width="2"/></svg>';
+function coinBurstToPill(pay){
+  var hud=document.getElementById("hud"); if(!hud) return;
+  var pill=document.querySelector(".pill"); if(!pill) return;
+  var pr=pill.getBoundingClientRect();
+  var n=Math.max(6, Math.min(14, Math.round(pay/3)));
+  var sx=innerWidth*0.5, sy=innerHeight*0.42;
+  if(plane && plane.visible && camera){
+    var v=plane.position.clone().project(camera);
+    sx=(v.x*0.5+0.5)*innerWidth; sy=(-v.y*0.5+0.5)*innerHeight;
+  }
+  for(var i=0;i<n;i++) oneFlyCoin(hud, sx, sy, pr.left+pr.width*0.32, pr.top+pr.height*0.5, i);
+}
+function oneFlyCoin(hud, sx, sy, tx, ty, i){
+  var el=document.createElement("div");
+  el.className="flyCoin"; el.innerHTML=COIN_SVG;
+  el.style.left=(sx-11)+"px"; el.style.top=(sy-11)+"px";
+  hud.appendChild(el);
+  var jx=(Math.random()-0.5)*120, jy=-40-Math.random()*70;
+  var t0=performance.now(), dur=520+i*45;
+  function fly(){
+    var u=Math.min(1,(performance.now()-t0)/dur);
+    var e=u*u;
+    el.style.transform="translate("+((tx-sx)*e + jx*(1-e)*u*2)+"px,"+((ty-sy)*e + jy*(1-e))+"px) scale("+(1-0.35*u)+")";
+    el.style.opacity=String(1-Math.max(0,(u-0.82)/0.18));
+    if(u<1) requestAnimationFrame(fly); else if(el.parentNode) el.parentNode.removeChild(el);
+  }
+  requestAnimationFrame(fly);
+}
+
+// =========================================================================
+//  THE SHOP — one thing in it, the duck, for the coins the plane brings back.
+// =========================================================================
+var DUCK_BOUGHT=false;
+var shopBtnEl=document.getElementById("shopBtn");
+var shopCardEl=document.getElementById("shopCard");
+var shopCloseEl=document.getElementById("shopClose");
+var buyDuckEl=document.getElementById("buyDuck");
+var DUCK_SVG='<svg width="96" height="96" viewBox="0 0 96 96">'+
+  '<ellipse cx="46" cy="60" rx="27" ry="19" fill="#FBF7EF" stroke="#C9BFA8" stroke-width="2.5"/>'+
+  '<path d="M66 62 Q80 58 84 44 Q76 52 68 52 Z" fill="#FBF7EF" stroke="#C9BFA8" stroke-width="2.5"/>'+
+  '<circle cx="32" cy="36" r="13" fill="#FBF7EF" stroke="#C9BFA8" stroke-width="2.5"/>'+
+  '<path d="M20 37 Q10 39 12 44 Q18 45 21 42 Z" fill="#F0A62E" stroke="#C8801C" stroke-width="2"/>'+
+  '<circle cx="29" cy="33" r="2.4" fill="#241E1A"/>'+
+  '<path d="M40 78 L40 84 M52 78 L52 84" stroke="#F0A62E" stroke-width="4" stroke-linecap="round"/>'+
+  '</svg>';
+function renderShop(){
+  var afford=walletBalance()>=DUCK_PRICE;
+  buyDuckEl.className="buy"+(afford?"":" locked");
+  buyDuckEl.innerHTML=
+    '<div class="art">'+DUCK_SVG+'</div>'+
+    '<div class="price"><svg width="15" height="15" viewBox="0 0 26 26">'+
+      '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
+      '</svg>'+DUCK_PRICE+'</div>';
+}
+function updateShopButton(){
+  if(!shopBtnEl) return;
+  // it only ever appears once it is worth appearing: never dangle a thing a
+  // child cannot have, and never once they already have it.
+  var show = !DUCK_BOUGHT && walletBalance() >= Math.round(DUCK_PRICE*0.5);
+  shopBtnEl.classList.toggle("on", show);
+  if(shopCardEl.classList.contains("up")) renderShop();
+}
+function openShop(){ renderShop(); shopCardEl.classList.add("up"); }
+function closeShop(){ shopCardEl.classList.remove("up"); }
+function buyDuck(){
+  if(DUCK_BOUGHT) return false;
+  if(!spendCoins(DUCK_PRICE)){ flashToast("Keep saving"); sfx("hit"); return false; }
+  DUCK_BOUGHT=true;
+  closeShop();
+  updateShopButton();
+  var d=addAnimal("duck", COOP_C.x+0.8, COOP_C.z+1.9, -0.6, "strut",
+    {patrol:{cx:COOP_C.x+0.6, cz:COOP_C.z+1.6, r:1.4, speed:0.34}});
+  d.obj.scale.setScalar(d.baseScale*0.15);       // she arrives with a pop
+  d.popIn=0;
+  flashToast("A duck!");
+  sfx("celebrate"); haptic("success");
+  return true;
+}
+if(shopBtnEl) shopBtnEl.addEventListener("click", function(){ tapUnlock(); openShop(); });
+if(shopCloseEl) shopCloseEl.addEventListener("click", closeShop);
+if(shopCardEl) shopCardEl.addEventListener("click", function(e){ if(e.target===shopCardEl) closeShop(); });
+if(buyDuckEl) buyDuckEl.addEventListener("click", buyDuck);
+
+
 function buildFarmyard(){
   var g=new THREE.Group(), i;
 
@@ -1431,6 +2222,15 @@ function buildFarmyard(){
 
   // ---- THE COW
   addAnimal("cow", PEN_C.x, PEN_C.z, -1.2, "graze");
+
+  // ---- FM3: the runway, the crate and the plane, west of the field
+  var rw=buildRunway(); scene.add(rw);
+  crateObj=buildCrate();
+  crateObj.position.set(CRATE.x, 0, CRATE.z);
+  crateObj.rotation.y=0.28;
+  scene.add(crateObj);
+  buildPlane();
+  newOrder();
 }
 
 // The models arrive on the wire, so the yard is built once we know whether the
@@ -1466,7 +2266,13 @@ function zoo(){
     {name:"trough", make:buildTrough},
     {name:"hay bale", make:buildHayBale},
     {name:"egg", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.egg.parts(1))); }},
-    {name:"milk bottle", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.milk.parts(1))); }}
+    {name:"milk bottle", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.milk.parts(1))); }},
+    // FM3 — judged on the stand before any of them went into the world, same
+    // rule that caught the cow reading as a pig.
+    {name:"duck (model)", make:function(){ return ANM_ON?anmGet("PekinDuck",1.0):null; }},
+    {name:"duck egg", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.duckegg.parts(1))); }},
+    {name:"crate", make:buildCrate},
+    {name:"plane", make:buildPlaneModel}
   ];
   // EVERY EXHIBIT IS NORMALISED TO THE SAME LONGEST DIMENSION, which is the
   // whole point of a stand: a shape is judged against the others rather than
@@ -1542,7 +2348,7 @@ function buildSeedPicker(){
       '<div class="price">'+
         '<svg width="14" height="14" viewBox="0 0 26 26">'+
           '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
-        '</svg>'+r.price+
+        '</svg><span>'+r.price+'</span>'+
       '</div>';
     el.addEventListener("click",function(){ tryPlant(k); });
     seedRowEl.appendChild(el);
@@ -1562,19 +2368,28 @@ function closeSeedPicker(){
 seedCloseEl.addEventListener("click",closeSeedPicker);
 seedCardEl.addEventListener("click",function(e){ if(e.target===seedCardEl) closeSeedPicker(); });
 
+// FM3 — THE FLOOR THAT MAKES BEING STUCK IMPOSSIBLE. If a kid cannot afford a
+// seed, the next seed is free. Nothing else in this farm has a fail state, and
+// "you have no coins and nothing growing" would have been the only one.
+function seedIsFree(){ return walletBalance() < SEED_PRICE; }
+
 function updateSeedAffordability(){
+  if(!seedRowEl) return;
+  var free=seedIsFree();
   var kids=seedRowEl.querySelectorAll(".seed");
   kids.forEach(function(el){
-    var k=el.dataset.kind, r=CROP_RECIPES[k];
-    if(coins < r.price) el.classList.add("locked"); else el.classList.remove("locked");
+    var priceEl=el.querySelector(".price");
+    if(priceEl) priceEl.classList.toggle("free", free);
+    el.classList.remove("locked");     // never locked: it is affordable or it is free
   });
 }
 
 function tryPlant(kind){
   if(!openPatch) return;
   var r=CROP_RECIPES[kind]; if(!r) return;
-  if(coins < r.price){ flashToast("Not enough coins"); return; }
-  addCoins(-r.price);
+  tapUnlock();
+  if(!seedIsFree() && !spendCoins(r.price)){ flashToast("Not enough coins"); sfx("hit"); return; }
+  sfx("select"); haptic("light");
   openPatch.state="growing";
   openPatch.seed=kind;
   openPatch.plantedAt=performance.now()/1000;
@@ -1590,16 +2405,129 @@ function tryPlant(kind){
 // -------------------------------------------------------------------------
 // Coins + toasts
 // -------------------------------------------------------------------------
-var coins=50;
+// FM3 — GAP 2 CLOSED. FM1 kept a plain local coins number and a pill of its
+// own, which is
+// exactly what CARTRIDGE-CONTRACT.md says a cartridge may not do: the SHELL
+// owns the wallet, there is ONE balance per kid, and a game only announces
+// against it. buildable-wallet.js works out its own role — inside the shell it
+// is an announcer that posts deltas up and caches what comes back down; opened
+// on its own it owns the number itself — so this same code is right both ways.
+var BW = window.BuildableWallet || null;
 var coinsEl=document.getElementById("coins");
 var toastEl=document.getElementById("toast");
 var hintEl=document.getElementById("hint");
 var hintHidden=false;
-function addCoins(n){
-  coins=Math.max(0,coins+n);
-  coinsEl.textContent=coins;
-  updateSeedAffordability();
+
+// A tiny local mirror, so a page with no wallet script (headless QA, a cold
+// offline load) still has a number to show rather than throwing.
+var localCoins = 50;
+function walletBalance(){
+  if(BW){ try{ return BW.balance(); }catch(e){} }
+  return localCoins;
 }
+function paintCoins(){
+  var v=walletBalance();
+  if(coinsEl) coinsEl.textContent=v;
+  updateSeedAffordability();
+  updateShopButton();
+}
+function addCoins(n){
+  n=Math.round(n||0);
+  if(n>0){ if(BW){ try{ BW.add(n); }catch(e){} } else localCoins+=n; }
+  else if(n<0){ spendCoins(-n); return; }
+  paintCoins();
+}
+function spendCoins(n){
+  n=Math.round(n||0); if(n<=0) return true;
+  var ok;
+  if(BW){ try{ ok=BW.spend(n); }catch(e){ ok=false; } }
+  else { ok = localCoins>=n; if(ok) localCoins-=n; }
+  paintCoins();
+  return !!ok;
+}
+// FM1's fifty starting coins survive the move to the shared wallet, but as a
+// ONE-TIME grant rather than a hardcoded balance: awardOnce is exactly the
+// mechanism the contract already has for "credit this, and only ever once".
+// A kid arriving with coins from another game keeps them and gets the fifty on
+// top; a kid coming back to the farm is not paid twice.
+function grantSeedMoney(){
+  if(BW){ try{ BW.awardOnce("farm:seedmoney", 50); }catch(e){} }
+  paintCoins();
+}
+
+// The shell broadcasts the real balance down whenever it changes, and the
+// wallet re-fires it here as a plain event. Repaint on it or the pill drifts
+// away from the truth the moment coins are earned in another game.
+try{ addEventListener("bk-wallet", paintCoins); }catch(e){}
+grantSeedMoney();
+paintCoins();
+
+// ============ FM3 — GAP 4 CLOSED: sound, through the shared Feel Kit ============
+// GAME-FEEL law 6: a game triggers PALETTE NAMES, never a raw tone. These names
+// resolve to Sky Flyer's own created ElevenLabs one-shots (api/sfx.js), because
+// the farm is the same cartridge as the flying engine and shares its voice.
+var FEEL = window.BuildableFeel || null;
+var BA   = window.BuildableAudio || null;
+var SFX_MAP = {
+  select:  "sky_coin",       // a tap, a small yes
+  coin:    "sky_coin",
+  collect: "sky_coinrun",    // a whole burst of coins at once
+  pickup:  "sky_pickup",     // one thing hopping onto the stack
+  deliver: "sky_deliver",    // ONE item landing in the crate (the unload note)
+  mission: "sky_mission",    // the order is full
+  whoosh:  "sky_takeoff",
+  land:    "sky_land",
+  levelup: "sky_bank",
+  sparkle: "sky_bank",
+  hit:     "sky_bump",       // the soft "not that one" — never a buzzer
+  pop:     "sky_bump",
+  win:     "sky_win",
+  celebrate:"sky_win"
+};
+// The single shared mute flag. bk_muted is read by buildable-audio itself, so
+// the farm never keeps a second idea of whether sound is on.
+function soundOn(){ try{ return !(BA && BA.muted); }catch(e){ return true; } }
+function sfx(name,opt){ if(!soundOn()) return; try{ if(FEEL) FEEL.sfx(name,opt); else if(BA) BA.sfx(name,opt); }catch(e){} }
+function haptic(kind){ if(!soundOn()) return; try{ if(FEEL&&FEEL.haptic) FEEL.haptic(kind); }catch(e){} }
+try{ if(FEEL&&FEEL.configure) FEEL.configure({accent:"#8ED08A", feel:{pace:"chill",celebration:"big",haptics:"on"}, sfxMap:SFX_MAP});
+     else if(BA&&BA.configure) BA.configure({map:SFX_MAP}); }catch(e){}
+// Audio only ever wakes on the first tap INSIDE this page — a browser will not
+// start it any other way, and a farm that is silent until the kid happens to
+// hit the right control is a bug report waiting to happen.
+var audioWoken=false;
+function tapUnlock(){
+  if(audioWoken) return; audioWoken=true;
+  try{ if(BA&&BA.unlock) BA.unlock(); }catch(e){}
+}
+try{
+  ["pointerdown","touchstart","keydown"].forEach(function(ev){
+    addEventListener(ev, tapUnlock, {once:false, passive:true});
+  });
+}catch(e){}
+
+// ============ FM3 — GAP 3 CLOSED: the shared nav bridge ============
+// Without this the page has no Home pill of its own AND, on iPhone, a touch on
+// the SHELL'S Home button routes into this page and does nothing at all. That
+// is precisely the Tennis bug, and the farm had it.
+try{
+  if(window.BuildableGameNav){
+    window.BuildableGameNav.register({
+      hide:["helpBtn"],                 // the farm teaches itself; there is no help screen
+      onSound:function(){ try{ if(BA&&BA.toggleMute) BA.toggleMute(); }catch(e){} },
+      soundOn:soundOn,
+      inGame:function(){ return true; }
+    });
+  }
+}catch(e){}
+// The shell may pause us (a quiz gate, a parent interruption, a tab switch).
+// Every game MUST honour it — CARTRIDGE-CONTRACT.md.
+var PAUSED=false;
+addEventListener("message",function(ev){
+  var d=ev&&ev.data;
+  var kind=(typeof d==="string")?d:(d&&(d.type||d.kind));
+  if(kind==="pause") PAUSED=true;
+  else if(kind==="resume"){ PAUSED=false; last=performance.now()/1000; }
+});
 function flashToast(text){
   toastEl.textContent=text;
   toastEl.classList.remove("show");
@@ -1680,6 +2608,14 @@ var last=performance.now()/1000;
 var speed=6.4;   // world units per second
 function step(){
   var now=performance.now()/1000, dt=Math.min(0.05, now-last); last=now;
+
+  // The shell may freeze us (a quiz gate, a parent interruption, a tab switch).
+  // Freeze means freeze: the clock is still read so nothing lurches on resume.
+  if(PAUSED){
+    if(!NODRAW) renderer.render(scene,camera);
+    requestAnimationFrame(step);
+    return;
+  }
 
   // FM2 — the model stand takes the whole frame: no kid, no farm, no camera
   // follow, just the exhibits turning under a fixed camera.
@@ -1775,10 +2711,10 @@ function step(){
       // harvest? kid within pickup radius of this patch
       var kd=Math.hypot(kid.position.x-P.x, kid.position.z-P.z);
       if(kd < PATCH_R*0.95){
-        // pay and add to the stack
-        var rr=CROP_RECIPES[P.seed];
-        addCoins(rr.reward);
-        flashToast("+"+rr.reward);
+        // FM3: NO COINS HERE. A crop is an ingredient, not money — the coins
+        // all come from the crate and the plane. What harvesting gives is the
+        // hop onto the stack, which is the thing a kid is actually playing for.
+        sfx("pickup"); haptic("light");
         pushOntoStack(P.seed, new THREE.Vector3(P.x, 0.9, P.z));
         // clear the patch back to empty
         scene.remove(P.crop); P.crop=null;
@@ -1796,6 +2732,10 @@ function step(){
   updateFlying(dt, now);
   stepPuppets(now);
 
+  // FM3 — the crate takes the stack, and the plane takes the order away
+  updateCrate(dt);
+  updatePlane(dt);
+
   if(!NODRAW) renderer.render(scene,camera);
   requestAnimationFrame(step);
 }
@@ -1805,7 +2745,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm2",
+  version: "fm3",
   coins: function(){ return coins; },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
@@ -1870,12 +2810,70 @@ window.FARM = {
     return c;
   },
   flying: function(){ return FLYING.length; },
+  // A testing lever, the same kind as giveItem and advanceTime: put the tower
+  // back to nothing so one check does not inherit the last one's leftovers.
+  clearStack: function(){ var n=stack.length;
+    while(stack.length){ scene.remove(stack.pop()); }
+    reindexStack(); return n; },
   feedRadius: function(){ return FEED_R; },
   pickupRadius: function(){ return PICKUP_R; },
   // there is no lose state to report: nothing here can starve, die or expire
   canFail: function(){ return false; },
   zoo: zoo,
-  inZoo: function(){ return ZOO_ON; }
+  inZoo: function(){ return ZOO_ON; },
+
+  // ---- FM3 ---------------------------------------------------------------
+  // Everything a robot needs to prove the crate, the unload, the plane, the
+  // payout and the shop without a renderer and without waiting out a flight.
+  economy: function(){ return { seedPrice:SEED_PRICE, payBase:ORDER_PAY_BASE,
+    payStep:ORDER_PAY_STEP, payMax:ORDER_PAY_MAX, duckPrice:DUCK_PRICE,
+    harvestPays:CROP_RECIPES.corn.reward }; },
+  wallet: function(){ return { balance:walletBalance(),
+    role:(BW&&BW.role)||"none", shared:!!BW }; },
+  seedIsFree: function(){ return seedIsFree(); },
+  crate: function(){ return { x:CRATE.x, z:CRATE.z, r:CRATE_R,
+    near:crateNear(), unloading:unload.running }; },
+  order: function(){ return order ? {
+    pay:order.pay, sent:!!order.sent, full:orderFull(),
+    items:order.items.map(function(it){ return { kind:it.kind, filled:!!it.filled }; }),
+    slots:Array.prototype.slice.call(orderSlotsEl.querySelectorAll(".slot")).map(function(el){
+      return { kind:el.dataset.kind, full:el.classList.contains("full") };
+    }),
+    cardUp:orderCardEl.classList.contains("up")
+  } : null; },
+  ordersDone: function(){ return ORDERS_DONE; },
+  orderableKinds: orderableKinds,
+  newOrder: function(){ return newOrder().items.map(function(it){ return it.kind; }); },
+  // Force an order the test can actually fill, so a run is not at the mercy of
+  // the shuffle. Only ever accepts kinds the farm really offers.
+  setOrder: function(kinds){
+    var ok=orderableKinds(), items=[];
+    (kinds||[]).forEach(function(k){ if(ok.indexOf(k)>=0) items.push({kind:k,filled:false,el:null}); });
+    if(!items.length) return null;
+    order={items:items, pay:orderPay(), sent:false};
+    renderOrder();
+    return items.map(function(it){ return it.kind; });
+  },
+  plane: function(){ return { phase:PL.phase, pay:PL.pay, busy:planeBusy(),
+    x:plane?+plane.position.x.toFixed(2):null,
+    y:plane?+plane.position.y.toFixed(2):null,
+    z:plane?+plane.position.z.toFixed(2):null,
+    visible:plane?plane.visible:false }; },
+  planeLegs: function(){ return PLANE_LEGS; },
+  // Whole flight in seconds, so the "no timer over a minute" guardrail is a
+  // number a harness can assert rather than a promise in a comment.
+  flightSeconds: function(){ var t=0; for(var k in PLANE_LEGS) t+=PLANE_LEGS[k]; return t; },
+  shop: function(){ return { duckBought:DUCK_BOUGHT, price:DUCK_PRICE,
+    btnShown:shopBtnEl?shopBtnEl.classList.contains("on"):false,
+    cardUp:shopCardEl?shopCardEl.classList.contains("up"):false }; },
+  openShop: openShop, closeShop: closeShop, buyDuck: buyDuck,
+  // Drive the world clock by hand: the harness owns the frame, so a 13-second
+  // flight is proved in 13 ticks and not in 13 seconds.
+  tick: function(dt){ var d=typeof dt==="number"?dt:1/30; updateCrate(d); updatePlane(d); updateFlying(d, performance.now()/1000); },
+  paused: function(){ return PAUSED; },
+  sfxMap: SFX_MAP,
+  soundOn: soundOn,
+  navRegistered: function(){ return !!window.BuildableGameNav; }
 };
 })();
 </script>

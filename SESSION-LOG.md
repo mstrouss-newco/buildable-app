@@ -1,3 +1,111 @@
+## 2026-09-06 (FM2 land + FM3): the farm gets its payoff, and its door
+
+**Phase FM, cards FM2 and FM3.** Two jobs in one session: land the FM2 branch
+that had been sitting unmerged since 2026-08-16, then build FM3 on top of it and
+close the four integration gaps FM1 left open.
+
+### Step 0 — FM2 landed
+`origin/claude/fm2-farm-animals-feeding-xbuk8s` was 5 commits ahead of `main` and
+55 behind. Merged `main` in by hand. Four conflicts, all of them both-sides-added
+at the top of a file: the README log head, the SESSION-LOG head, one cache-bust
+assertion in `qa-skyflyer.mjs`, and the two engine links in `BuildableKids.jsx`.
+Both dated entries kept on the README and the log, newest first; the cache-bust
+superseded main's `v=fl15`. A previous resolver on this branch swallowed a whole
+QA block once (restored by `cca5bea`), so the merge was checked by counting:
+`qa-skyflyer` went 382 (main) + 39 (FM2) = **421**, exactly. Nothing lost. The
+animals, the walk cycle and the feed-off-the-stack path all still run.
+
+### Step 1 — FM3: the crate, the unload, the plane
+A slatted wooden **crate** sits by a mown grass runway west of the field. Over it
+floats a picture wish-list: one silhouette slot per item wanted, lit to full
+colour with a green tick as it lands (FL5b tick/cross; the cross half is a shake
+across the unfilled slots when you arrive carrying the wrong thing). Every icon
+is the item's own drawn SVG — the same one the seed buttons use. No reading, no
+emojis.
+
+**The unload is the moment the mode was built for.** Walk to the crate and the
+carried tower comes off one item at a time, every 0.11s, each on its own fast
+flat arc, each landing with a pop, a slot flash, and a note a semitone higher
+than the last. Items the order did not ask for stay on the stack. A slot with an
+item already in the air is marked claimed — without that, three corn leaving in a
+third of a second all aim at slot one and two of them vanish on arrival (found in
+the first real browser run, not in review).
+
+When the order fills, the **plane** taxis out, accelerates down the strip, climbs
+away, and comes back with a burst of coins that fly up into the wallet pill. The
+whole trip is 13 seconds. It is the AR1Q plane's silhouette rebuilt in the farm's
+own `hb*` vocabulary, which needed a new helper: `hbAero` pulls the vertices of
+one segmented box in so the chord narrows toward the tip with a straight trailing
+edge. Two earlier passes built the wing out of stepped boxes and it rendered as a
+staircase, and before that as a plank — the plane read as a rocket both times.
+
+Orders scale gently (2 items, then 3, up to 6) and **may only ever ask for what
+the farm can make right now** — produce is only listed once the animal that makes
+it is in the pen. Forty rolls of that are asserted in QA, not promised in a
+comment.
+
+### The economy (Mike's call, this session)
+FM1 shipped seeds at 10/6/4 against harvest rewards of 8/5/3, so growing a crop
+visibly LOST coins. Mike picked the simplest fix: **crops are ingredients, not
+money.** Harvesting now pays nothing. Every seed costs the same 3 coins, so there
+is no sum to do. The only income is the crate and the plane, at 20 coins rising
+to 45. And the floor that makes being stuck impossible: **if a kid cannot afford
+a seed, the next seed is free** — the button turns into a green FREE badge rather
+than going dead.
+
+### The duck (also Mike's call)
+The long-term unlock is a **duck**, 120 coins, about five deliveries. She is a
+real library model: `PekinDuck`, cut out of `island-animals.glb` and added to the
+farm's own `farm-animals.glb` (the chicken in that cut is byte-identical to the
+one FM2 shipped, checked before swapping the file). She eats corn like the hens
+and lays a pale blue egg, which becomes a fourth thing an order can ask for — but
+only after she is bought. The shop button only appears once she is halfway
+affordable and disappears for good once she is bought.
+
+### Step 2 — the four gaps FM1 left open, all closed
+1. **The farm had no door.** `skyflyer-farm` appeared nowhere in
+   `src/BuildableKids.jsx` at all; the only way in was to type the URL. It is now
+   a generated catalog card like every other game, with its own screen, its own
+   route and its own `?v=fm3` cache-bust. Its badge is **drawn geometry**, not a
+   generated image — a new `TILE_ART` map and one `GameTileArt` component that
+   all four tile render sites now share, so the next drawn badge is wired once.
+2. **Coins were fake.** The local `var coins=50` and its private pill are gone.
+   The page loads `buildable-wallet.js` and shows the shell's real balance. This
+   needed a small addition to the shared wallet: a game may now **spend** inside
+   its own iframe, by checking the balance the shell last broadcast down and
+   announcing the deduction up as a negative `coins` delta. The shell clamps at
+   zero. Written into `CARTRIDGE-CONTRACT.md`, because that is where a message is
+   agreed. FM1's fifty starting coins survive as an `awardOnce`, so a kid is
+   never paid twice and never loses coins earned in another game.
+3. **No shared nav.** `buildable-gamenav.js` is loaded and registered, and the
+   page tags itself `bk-inshell` before `<body>` so the HUD never flashes in the
+   corner the shell is about to cover. Without this a touch on the shell's Home
+   button on iPhone routes into the page and does nothing — the Tennis bug,
+   exactly. `pause` and `resume` are honoured too.
+4. **No sound.** `buildable-audio.js` + `buildable-feel.js`, one palette map
+   pointing at Sky Flyer's own created clips, one shared `bk_muted` flag, and
+   audio that wakes on the first tap inside the page.
+
+### Step 3 — the picture gate
+FM1 was built by a session with no browser, so nothing had been looked at. Every
+new shape went on the `?zoo=1` stand first, and the renders changed the build
+three times: the runway shipped as a 44-unit bone-white slab and is now a mown
+hay strip; the crate was smaller than the kid loading it and is now 3.3 wide; the
+empty card slots sat at 34% opacity and were unreadable smudges at 40px, and are
+now dark silhouettes at 46px. Card states captured empty / half / full at phone,
+tablet and desktop.
+
+### QA
+`qa-farm.mjs` 78 checks green, including the whole FM3 loop played for real in
+Chromium: five corn carried to the crate, three taken, two left behind, the plane
+flown frame by frame through all six legs, the coins landed, the duck bought.
+`qa-skyflyer.mjs` 421 -> 466 checks green, with a block per integration gap so a
+closed gap cannot silently reopen. `qa-all.mjs` green. `vite build` clean.
+
+Touched: `public/skyflyer-farm.html`, `public/buildable-wallet.js`,
+`public/models/skyflyer/animals/farm-animals.glb`, `src/BuildableKids.jsx`,
+`CARTRIDGE-CONTRACT.md`, `qa-farm.mjs`, `qa-skyflyer.mjs`.
+
 ## 2026-08-30 — QA-FIX: Practice is alive, Lessons is open, and there is finally a release gate
 
 The first fixing session off the QA3d/QA3e sweep. Mike picked the Practice fix plus

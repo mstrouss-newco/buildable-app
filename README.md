@@ -6,6 +6,56 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Farm 3 — the order crate, the plane payoff, and the farm's front door (FM2 + FM3, September 6 2026)
+`public/skyflyer-farm.html`, `public/buildable-wallet.js`,
+`public/models/skyflyer/animals/farm-animals.glb`, `src/BuildableKids.jsx`,
+`CARTRIDGE-CONTRACT.md`, `qa-farm.mjs`, `qa-skyflyer.mjs`. Phase **FM**, cards
+**FM2 + FM3**.
+
+**FM2 landed first.** Its branch had been sitting unmerged since August 16, five
+commits ahead of `main` and fifty-five behind. Merged by hand; the four conflicts
+were all both-sides-added at the top of a file, and both dated entries were kept
+on the README and the session log. Checked by counting rather than by eye, because
+an earlier resolver on this branch swallowed a QA block once: `qa-skyflyer` came
+out at exactly 382 + 39 = 421.
+
+**The payoff loop.** A slatted **crate** by a mown grass runway shows a picture
+wish-list — one silhouette slot per item wanted, lit to full colour with a tick as
+it lands. Walking to it **whooshes the whole carried stack off one item at a
+time**, rapid fire, each with its own pop and a note a step higher than the last;
+anything the order did not ask for stays on your head. Fill it and the **plane**
+taxis, rolls, climbs away and comes back thirteen seconds later with a burst of
+coins that fly into the wallet pill. Orders grow gently from two items to six and
+can only ever ask for something the farm can make that minute.
+
+**The economy, Mike's call.** FM1 priced seeds above what harvesting paid back, so
+every crop lost money. Now **crops are ingredients, not money**: harvesting pays
+nothing, every seed costs the same 3 coins, and the crate is the only income. If a
+kid cannot afford a seed the next one is **free** — there is no state in the farm
+you cannot play out of.
+
+**The duck.** 120 coins, about five deliveries, buys a real `PekinDuck` model for
+the coop (cut out of `island-animals.glb`). She eats corn like the hens and lays a
+pale blue egg, which becomes a fourth thing an order can ask for — but only once
+she exists.
+
+**The four gaps FM1 left open are closed.** The farm now has a real door on the
+Play page with a **drawn** tile badge (no generated image, no emoji) and its own
+`?v=fm3` cache-bust; the coin pill is the **shell's shared wallet**, which grew
+the ability for a game to spend inside its own iframe (a negative `coins` delta,
+now written into `CARTRIDGE-CONTRACT.md`); `buildable-gamenav.js` is wired, so the
+shell's Home button reaches the page on iPhone instead of dying in it; and the
+shared audio and Feel kits give it sound on one `bk_muted` flag.
+
+**Looked at, not just reviewed.** Every new shape went on the `?zoo=1` stand
+first, and the renders changed the build three times: the runway shipped as a
+bone-white slab, the crate came out smaller than the kid loading it, and the empty
+card slots were unreadable smudges. Card states captured empty / half / full at
+phone, tablet and desktop widths.
+
+`qa-farm.mjs` is 78 checks green (the whole loop played for real in Chromium),
+`qa-skyflyer.mjs` 466, `qa-all.mjs` green.
+
 ## Practice Round 2: the warm-up, the birds, and numbers (PT2 + PT3, August 30 2026)
 `public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
 `api/sfx.js`, `qa-practice.mjs`, `qa-practice-shot.mjs`,
