@@ -116,6 +116,17 @@ QA53's fourth item, whether `/app/mystuff` should alias `/app/me`, points at QA1
 by the card's own words and belongs there. QA43 asks for an end-to-end Connect
 Four turn on the live site, which is the same no-live-access limit.
 
+**Checked against CB1, which landed on main mid-session.** The new `kid_games`
+lane is NOT affected: it stores `kid_id` as free `text` with no foreign key to
+`kid_profiles`, so a guest id writes and reads back consistently instead of being
+silently nulled. Two things for whoever touches it next. If `kid_games.kid_id`
+ever gains a foreign key, it inherits this exact bug and should call
+`ensureServerKidProfile()` the way the makers now do. And in the rare case where
+adoption has to mint a NEW id — a legacy `kid_xxx` profile id, which cannot be a
+uuid primary key — kid games written under the old id are not re-pointed;
+`crypto.randomUUID` ids, which is nearly all of them, keep the same id and are
+unaffected.
+
 **Not touched:** `public/cobuild.html`. No login was built — QA50 stands, and
 Mike's call on 2026-08-30 was to fix saving now and do proper login later,
 accepting the rework.
