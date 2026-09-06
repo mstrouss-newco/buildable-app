@@ -1,3 +1,45 @@
+## 2026-09-06 — CB1: kid-made games (Cobuild)
+
+**Shipped.** `kid_games` table (migration written to `db/create-kid-games.sql` AND
+applied to the live Supabase project in-session, verified against
+`information_schema`). `api/kid-game.js` with save / load / list / delete / fork /
+share, gated by the shared manifest validator via `api/_manifestLib.js` — an invalid
+manifest is refused with its errors and never stored. `public/buildable-manifest.js`
+learned `?kg=<id>` once, so all four Cobuild engines play a kid's game with no
+per-engine code, and the loading screen reads the kid's own title plus
+"A GAME BY <kid> AND <grown-up>". My Games shelf on Home (above Play, MINE badge,
+1111 gate) and a games row in My Stuff replacing the dead levels tab. Old Breaker
+maker levels migrate out of localStorage on first load. Top Board Remix forks and
+opens the copy with `?kg=`. Share viewer at `/g/<slug>` with server-side OG tags
+(`api/g.js` + `public/g.html`), guest play, no account, play counted once.
+`qa-kidgames.mjs` added; `node qa-all.mjs` green (46 harnesses).
+
+**Calls I made for you.**
+1. **Delete is soft, not a real row delete.** A kid tapping Delete stamps `deleted_at`;
+   the game leaves My Games and its link stops working, and nothing is lost. A kids'
+   product should not have an irreversible delete, and AGENTS.md forbids destructive
+   statements outright.
+2. **Two engines needed a small manifest fix** (the card asked me to note this for CB2).
+   Sky Flyer read `/skyflyer/manifest.json` with its own `fetch`, so it never went
+   through the shell and `?kg=` could not reach it — it now calls
+   `BuildableManifest.rawManifest("skyflyer", ...)`. Breaker's manifest profile had no
+   way to carry a board a kid painted brick by brick, so `cells` is now an optional,
+   validated field on a Breaker level and `buildBricks` uses it. Sling Squad and Castle
+   Guard needed nothing.
+3. **My Stuff's existing "My Games" tab was renamed "Published Games."** It reads
+   `published_games` (the old AI road) and I left it working rather than removing it
+   (replace first, remove second); the new tab needed the name.
+4. **The share viewer keeps the 1111 gate**, as the card asked, which does mean a link
+   sent today shows a password box. The OG preview still unfurls correctly, so the
+   gate can be lifted later with no other change.
+
+**What CB2 needs to know.** `?kg=` is the only launch contract; add an engine by adding
+it to `ENGINES` in `api/kid-game.js` and `src/lib/kidGames.js` and giving it a level
+profile in `buildable-manifest.js`. Cover art is a free-text `cover` column that falls
+back to the engine's key art, so a real cover pipeline can land without a migration.
+`bk_grownup_name` in localStorage is where the grown-up's name comes from; nothing
+writes it yet, so credits currently read "A GAME BY <kid>".
+
 ## 2026-08-30 — QA-FIX: Practice is alive, Lessons is open, and there is finally a release gate
 
 The first fixing session off the QA3d/QA3e sweep. Mike picked the Practice fix plus

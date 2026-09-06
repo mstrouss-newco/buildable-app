@@ -54,6 +54,13 @@ maker.
 | Song  | yes (`saved_songs`, MyStuff "My Songs") | yes (`/song.html`) | yes (`publish-creation` kind=song) |
 | Story | yes (`saved_stories`) | yes (`/story.html`) | yes (`publish-creation` kind=story) |
 | Game  | yes (`saved_games`/`published_games`) | **GAP — no share** | yes (`publish-game` + `publish-creation` kind=game) |
+| Kid game (Cobuild, CB1) | yes (`kid_games`; Home "My Games" + MyStuff) | yes (`/g/<slug>`, server-rendered OG) | flag on the row (`public`); gallery listing is CB2 |
+
+A **kid game** (Session CB1) is a manifest the child owns pointed at an engine we
+already ship: the row lives in `kid_games`, `/api/kid-game` is the only thing that
+touches it, and any engine plays it with `?kg=<id>`. Its private link is `/g/<slug>`,
+served by `api/g.js` so the Open Graph tags are in the bytes a group chat reads.
+Remixing is `op:"fork"` — a copy into a row the forker owns, with `source_game` set.
 
 **Open gaps to close (tracked):**
 1. **Games can't be shared by a private link.** `shareSheet.js` only handles song/story

@@ -479,6 +479,7 @@
 <script src="/buildable-wallet.js"></script>
 <script src="/buildable-buddy.js"></script>
 <script src="/buildable-gamenav.js"></script>
+<script src="/buildable-manifest.js"></script>
 <script>
 (function(){
 "use strict";
@@ -4159,8 +4160,16 @@ function readManifest(m){
              subjects:(Array.isArray(L.subjects)&&L.subjects.length)?L.subjects:["math"] };
   if(musicOn){ musicOn=false; startMusic(); }   // a manifest track swap re-beds the music
 }
+// Session CB1 — Sky Flyer was the one Cobuild engine that read its own manifest
+// file directly, so it ignored the shell entirely and a kid's game (?kg=) could
+// never reach it. The minimal fix: ask the SHARED loader for "the skyflyer
+// manifest" instead of fetching the file by hand. rawManifest hands back the
+// kid's manifest when ?kg= names a Sky Flyer game and the stock file otherwise,
+// so nothing else in this engine changed.
 try{
-  if(typeof fetch==="function")
+  if(window.BuildableManifest && window.BuildableManifest.rawManifest)
+    window.BuildableManifest.rawManifest("skyflyer", function(j){ if(j) readManifest(j); });
+  else if(typeof fetch==="function")
     fetch("/skyflyer/manifest.json").then(function(r){ return r.ok?r.json():null; })
       .then(function(j){ if(j) readManifest(j); }).catch(function(){});
 }catch(e){}

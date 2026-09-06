@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import SongPlayer from "./lib/SongPlayer";
 import CoverThumb from "./lib/CoverThumb";
+import { forkKidGame, ENGINES as KID_ENGINES } from "./lib/kidGames";
 
 const FRED = "'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 const NUN = "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -69,11 +70,33 @@ function Thumb({ item }) {
   return art ? <ArtThumb item={item} src={art} /> : <GlyphTile item={item} />;
 }
 
-export default function TopBoard({ onHome, onBack, onRemix }) {
+export default function TopBoard({ onHome, onBack, onRemix, onOpenKidGame }) {
   const [tab, setTab] = useState("song");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Session CB1 — which row is mid-remix, and anything that went wrong on it.
+  const [remixing, setRemixing] = useState(null);
+  const [remixNote, setRemixNote] = useState(null);   // { id, text }
   const deviceId = getDeviceId();
+
+  // THE REMIX DOOR (CB1). Remix used to drop the kid into the AI game maker
+  // (CreatorScreen), a road nothing else in the app still uses. Now it FORKS:
+  // the game's manifest is copied into a row this kid owns, and their copy opens
+  // straight away with ?kg=<their new id>. Songs and stories keep the old path.
+  async function remixGame(item) {
+    setRemixNote(null);
+    setRemixing(item.id);
+    try {
+      // A kid game forks by its own link; one of OUR games forks by its engine id.
+      const source = KID_ENGINES[item.id] ? item.id : (item.kid_game_id || item.id);
+      const mine = await forkKidGame(source);
+      setRemixing(null);
+      if (onOpenKidGame) onOpenKidGame(mine);
+    } catch (err) {
+      setRemixing(null);
+      setRemixNote({ id: item.id, text: "This one can't be remixed yet." });
+    }
+  }
 
   async function load(kind) {
     setLoading(true);
@@ -151,8 +174,17 @@ export default function TopBoard({ onHome, onBack, onRemix }) {
                 ) : (
                   <button style={s.playBtn} onClick={() => play(item)}><PlayTri />{item.kind === "story" ? "Read" : "Play"}</button>
                 )}
-                <button style={s.remixBtn} onClick={() => onRemix && onRemix(item)}>Remix</button>
+                {item.kind === "game" ? (
+                  <button style={s.remixBtn} disabled={remixing === item.id} onClick={() => remixGame(item)}>
+                    {remixing === item.id ? "Copying…" : "Remix"}
+                  </button>
+                ) : (
+                  <button style={s.remixBtn} onClick={() => onRemix && onRemix(item)}>Remix</button>
+                )}
               </div>
+              {remixNote && remixNote.id === item.id && (
+                <div style={s.remixNote}>{remixNote.text}</div>
+              )}
             </div>
           ))
         )}
@@ -171,7 +203,7 @@ const s = {
   tab: { fontFamily: FRED, fontWeight: 600, fontSize: 17, color: "#fff", border: "none", borderRadius: 999, padding: "10px 26px", cursor: "pointer" },
   board: { width: "100%", maxWidth: 900, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(155,126,221,0.22)", borderRadius: 22, overflow: "hidden" },
   empty: { padding: "60px 24px", textAlign: "center", color: "#bdb6d8", fontSize: 16, lineHeight: 1.6 },
-  row: { display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
+  row: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 14, padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
   info: { flex: 1, minWidth: 0 },
   title: { fontFamily: FRED, fontSize: 18, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   creator: { fontSize: 13, color: "#9b95ba" },
@@ -179,5 +211,6 @@ const s = {
   heartBtn: { display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "6px 8px", minWidth: 64 },
   actions: { display: "flex", alignItems: "center", gap: 8 },
   playBtn: { display: "inline-flex", alignItems: "center", gap: 6, background: "#7C5CFC", color: "#fff", border: "none", borderRadius: 999, padding: "9px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: NUN },
+  remixNote: { width: "100%", color: "#ffb4b4", fontSize: 13, fontWeight: 700, paddingLeft: 44 },
   remixBtn: { display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "9px 16px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: NUN },
 };
