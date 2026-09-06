@@ -81,7 +81,10 @@ async function open(w, h) {
   });
   await page.goto(URL_, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction('window.BK_GAME');
-  await page.locator('#howto').dispatchEvent('pointerdown');   // the Play button pulses, so never "stable"
+  // The shared start screen: tap the world that is playable (the one marked "next").
+  const play = page.locator('.bss-lv.next').first();
+  if (await play.count()) await play.click({ force: true });
+  else await page.evaluate(() => { if (window.BK_GAME && BK_GAME.test) BK_GAME.test.boot(0); });
   return page;
 }
 

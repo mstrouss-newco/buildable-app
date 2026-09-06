@@ -65,8 +65,9 @@ if (!BK) { console.error('FAIL: BK_GAME not exposed'); process.exit(2); }
 const T = BK.test;
 if (!T) { console.error('FAIL: BK_GAME.test hooks not exposed — qa-hopheroes cannot drive the hero'); process.exit(2); }
 const K = T.consts();
-const cfg = sandbox.GAME_CONFIG;
-const nLevels = (cfg && cfg.levels && cfg.levels.length) || 1;
+// GAME_CONFIG is a const inside the engine, so it is not a sandbox property. Ask the
+// engine how many levels there are rather than quietly settling for one.
+const nLevels = (BK.levelCount && BK.levelCount()) || 1;
 
 // ------------------------------------------------- 1. every level is clearable
 console.log('--- a perfect player still clears every level ---');

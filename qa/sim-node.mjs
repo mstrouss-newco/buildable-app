@@ -46,9 +46,12 @@ vm.runInContext(scripts, sandbox, { filename:'play.html-engine' });
 const BK = sandbox.BK_GAME || (sandbox.window && sandbox.window.BK_GAME);
 if(!BK){ console.error('FAIL: BK_GAME not exposed'); process.exit(2); }
 
-// how many levels?
-const cfg = sandbox.GAME_CONFIG || (sandbox.window && sandbox.window.GAME_CONFIG);
-const nLevels = (cfg && cfg.levels && cfg.levels.length) || 1;
+// How many levels? GAME_CONFIG is a const inside the engine, so it is NOT a property of
+// the sandbox and reading it here silently gave 1 — which is why four worlds could have
+// shipped with only the first one ever simulated. Ask the engine instead.
+const nLevels = (BK.levelCount && BK.levelCount())
+  || ((sandbox.GAME_CONFIG || (sandbox.window && sandbox.window.GAME_CONFIG) || {}).levels || []).length
+  || 1;
 // Two things have to hold for every level. (1) A perfect player wins it — the
 // clearability guarantee buildLevel exists to provide. (2) At least 60% of the level's
 // coins are reachable WITHOUT leaving the floor, because the bot never climbs: that is

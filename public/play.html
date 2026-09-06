@@ -39,19 +39,20 @@
   #bMute svg{width:20px;height:20px;display:block}
   #bMusic{position:fixed;right:14px;top:106px;z-index:6;width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,30,50,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   #bMusic svg{width:20px;height:20px;display:block}
-  #howto{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:22px 0 32px;background:radial-gradient(ellipse at 50% 42%, rgba(8,12,28,.05), rgba(8,12,28,.5));-webkit-tap-highlight-color:transparent;cursor:pointer}
-  #howto .ttl{color:#fff;font:700 30px Fredoka,sans-serif;text-shadow:0 2px 12px rgba(0,0,0,.55);margin-top:4px;letter-spacing:.4px}
-  #demoGest{position:relative;width:130px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;pointer-events:none}
-  #demoGest .finger{position:absolute;left:45px;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff,#dbe4ff);box-shadow:0 0 0 9px rgba(255,255,255,.16),0 8px 18px rgba(0,0,0,.4);animation:bkswipe 2.6s ease-in-out infinite}
-  #demoGest .chev{width:30px;height:30px;border-right:7px solid #fff;border-bottom:7px solid #fff;border-radius:5px}
-  #demoGest .chev.up{transform:rotate(-135deg);animation:bkglowUp 2.6s ease-in-out infinite}
-  #demoGest .chev.down{transform:rotate(45deg);animation:bkglowDn 2.6s ease-in-out infinite}
-  @keyframes bkswipe{0%,10%{top:96px;opacity:.4}24%{opacity:1}40%,54%{top:8px;opacity:1}68%{opacity:1}84%,100%{top:96px;opacity:.4}}
-  @keyframes bkglowUp{0%,48%{opacity:1;filter:drop-shadow(0 0 7px #fff)}58%,100%{opacity:.3;filter:none}}
-  @keyframes bkglowDn{0%,54%{opacity:.3;filter:none}74%,90%{opacity:1;filter:drop-shadow(0 0 7px #fff)}100%{opacity:.3}}
-  #play{display:block;background:#3bbf73;color:#fff;border:none;border-radius:18px;padding:16px 68px;font:700 26px Fredoka,sans-serif;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.45),0 0 0 5px rgba(255,255,255,.18);animation:bkpulse 1.6s ease-in-out infinite}
-  #play:active{background:#33a866}
-  @keyframes bkpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  /* the shared start screen mounts INTO this; it brings its own look */
+  #menu{position:fixed;inset:0;z-index:10}
+  #menu[hidden]{display:none}
+  /* the hero chooser: four big faces, no reading required */
+  #heroPick{position:fixed;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;background:rgba(8,10,20,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  #heroPick[hidden]{display:none}
+  .hpCard{background:#1d1b36;border:1px solid rgba(255,255,255,.10);border-radius:24px;padding:22px;max-width:min(92vw,540px);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .hpTtl{color:#fff;font:700 22px Fredoka,sans-serif;text-align:center;margin-bottom:16px}
+  .hpRow{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+  .hpBtn{width:112px;background:#131229;border:3px solid rgba(255,255,255,.10);border-radius:20px;padding:10px 6px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .hpBtn.on{border-color:#7CF6B0;background:#1a2b28}
+  .hpFace{width:74px;height:74px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .hpFace img{width:100%;height:100%;object-fit:contain;display:block}
+  .hpName{color:#fff;font:700 15px Fredoka,sans-serif;text-align:center}
 </style>
 <style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
 html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -71,17 +72,11 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     <div id="ddown" class="ctl small"><span class="ar arD"></span></div>
     <div id="djump" class="ctl jump"><span class="ar arU"></span></div>
   </div>
-  <div id="howto">
-    <div class="ttl">Bramble&#39;s Dash</div>
-    <div id="demoGest" aria-hidden="true">
-      <span class="chev up"></span>
-      <span class="finger"></span>
-      <span class="chev down"></span>
-    </div>
-    <button id="play">Play!</button>
-  </div>
+  <div id="menu"></div>
+  <div id="heroPick" hidden><div class="hpCard"><div class="hpTtl">Who is playing?</div><div class="hpRow"></div></div></div>
 <div id="hint">Move with the arrows · JUMP to hop · reach the flag</div>
 <script src="buildable-wincard.js"></script>
+<script src="buildable-startscreen.js"></script>
 <script src="buildable-hud.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script>
@@ -91,17 +86,41 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 //  so gaps are always jumpable => a level can never be unclearable.
 // ============================================================================
 const GAME_CONFIG = window.GAME_CONFIG || {
-  name: "Bramble's Dash",
-  world: "enchanted-forest", artStyle: "watercolor", musicKey: "ocean",
+  name: "Hop Heroes",
+  artStyle: "watercolor", musicKey: "ocean",
   artBase: "https://www.buildablekids.com/api/game-art",
-  heroUrl: "https://www.buildablekids.com/api/story-library?img=character:bunny&style=watercolor&emo=happy",
-  bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
+  libBase: "https://www.buildablekids.com/api/story-library",
+  // HH4 — THE FIXED CAST. Not the kid's own generated hero: these four, always, so the
+  // game has characters a child comes back to. All four already live in the shared
+  // character library, so nothing new has to be drawn.
+  cast: [
+    { slug:"bunny",   name:"Bramble", colour:"#b9b2a8" },
+    { slug:"fox",     name:"Pip",     colour:"#e07a3c" },
+    { slug:"penguin", name:"Waddle",  colour:"#3a4a63" },
+    { slug:"dragon",  name:"Ember",   colour:"#6cc36a" },
+  ],
+  // HH4 — FOUR WORLDS. Each level names its own world, so its art set, its sky and its
+  // ground colours all come from the world rather than one global setting. Difficulty
+  // climbs gently across the four; the boss lives on the last one only (a level that
+  // does not say either way lets the engine decide, and it only says yes for the last).
+  looks: {
+    "enchanted-forest": { sky:["#bcdfff","#cfeaff","#dff0d6","#eef6dc"], ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332" },
+    "snowy-village":    { sky:["#a9c8ee","#c8ddf5","#e2eef8","#f2f7fb"], ground:"#cfe0ea", groundTop:"#ffffff", dirt:"#6a6f7d" },
+    "desert-oasis":     { sky:["#ffd9a0","#ffe7bd","#fdf0cf","#f7ecc9"], ground:"#c9a15a", groundTop:"#e3c078", dirt:"#8a6437" },
+    "candy-land":       { sky:["#ffc7e6","#ffdcf0","#ffeaf6","#fff2f8"], ground:"#e569a8", groundTop:"#ff9bcb", dirt:"#8e4470" },
+  },
   palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#b8477e", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
-    { name:"Whispering Woods", speed:3.2, length:230, gapChance:0.58, gapMax:2, obstacleChance:0.26, enemyChance:0.30, lowChance:0.20, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, boss:true, bossHp:3 },
+    { name:"Whispering Woods", world:"enchanted-forest", speed:3.2, length:230, gapChance:0.58, gapMax:2, obstacleChance:0.26, enemyChance:0.30, lowChance:0.20, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, bossHp:3 },
+    { name:"Frostpine Hollow", world:"snowy-village",    speed:3.4, length:230, gapChance:0.60, gapMax:2, obstacleChance:0.30, enemyChance:0.32, lowChance:0.20, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.80, vineChance:0.4, bossHp:3 },
+    { name:"Sunbaked Dunes",   world:"desert-oasis",     speed:3.6, length:235, gapChance:0.62, gapMax:2, obstacleChance:0.32, enemyChance:0.34, lowChance:0.22, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.85, vineChance:0.3, bossHp:3 },
+    { name:"Sugarplum Peaks",  world:"candy-land",       speed:3.8, length:240, gapChance:0.64, gapMax:2, obstacleChance:0.34, enemyChance:0.36, lowChance:0.22, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.90, vineChance:0.5, bossHp:4 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
+const CAST = GAME_CONFIG.cast || [{ slug:"bunny", name:"Bramble", colour:"#b9b2a8" }];
+const LIB_BASE = GAME_CONFIG.libBase || "https://www.buildablekids.com/api/story-library";
+function heroUrl(slug){ return LIB_BASE+"?img=character:"+slug+"&style="+(GAME_CONFIG.artStyle||"watercolor")+"&emo=happy"; }
 
 let W=900, VH=540; const H=540, TILE=60;       // H is the WORLD height and never moves (every platform y is baked from it).
                                                // W and VH are the VIEW: both follow the screen so the canvas always fills it.
@@ -191,18 +210,38 @@ const Music=(()=>{
 })();
 
 // --- assets ---
-const hero=new Image(); hero.crossOrigin="anonymous"; hero.src=GAME_CONFIG.heroUrl;
-const bg=new Image();   bg.crossOrigin="anonymous";   bg.src=GAME_CONFIG.bgUrl;
-// world-piece cutouts for the parallax layers
-const WORLD=GAME_CONFIG.world||"enchanted-forest", ARTSTYLE=GAME_CONFIG.artStyle||"watercolor", ART_BASE=GAME_CONFIG.artBase||"https://www.buildablekids.com/api/game-art";
+const ARTSTYLE=GAME_CONFIG.artStyle||"watercolor", ART_BASE=GAME_CONFIG.artBase||"https://www.buildablekids.com/api/game-art";
+// The hero picture follows whoever the kid chose. Swapping it is one assignment, and a
+// failure just leaves the drawn fallback body in place — never a broken image.
+const hero=new Image(); hero.crossOrigin="anonymous";
+let heroSlug=CAST[0].slug;
+function setHero(slug){ if(!CAST.some(c=>c.slug===slug)) slug=CAST[0].slug; heroSlug=slug; hero.src=heroUrl(slug); }
+function heroInfo(){ return CAST.find(c=>c.slug===heroSlug) || CAST[0]; }
+setHero(heroSlug);
+const bg=new Image(); bg.crossOrigin="anonymous";
+// HH4 — one art set PER WORLD, built the first time that world is played and kept after.
+// Four worlds used to be impossible here because the piece images were one global set
+// baked from GAME_CONFIG.world at load.
 const PIECE_NAMES=["far","tree_a","tree_b","bush_a","bush_b","fern","mushroom","canopy"];
-const PC={}; for(const nm of PIECE_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+WORLD+":"+nm+"&style="+ARTSTYLE; PC[nm]=im; }
+const WORLD_PROP_NAMES=["coin","gem","critter","boss"];
 const PROP_NAMES=["coin","gem","critter","vines","spring","flag"];
 const PR={}; for(const nm of PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img=props:"+nm+"&style="+ARTSTYLE; PR[nm]=im; }
+const ART_SETS={};
+function artSet(world){
+  world = world || "enchanted-forest";
+  if(ART_SETS[world]) return ART_SETS[world];
+  const set={ world, pc:{}, wp:{} };
+  for(const nm of PIECE_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+world+":"+nm+"&style="+ARTSTYLE; set.pc[nm]=im; }
+  for(const nm of WORLD_PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+world+":"+nm+"&style="+ARTSTYLE; set.wp[nm]=im; }
+  ART_SETS[world]=set; return set;
+}
+let ART=artSet((GAME_CONFIG.levels[0]||{}).world);
 // per-world themed gameplay props (coin/gem/critter); fall back to the generic props set if a world lacks one
-const WORLD_PROP_NAMES=["coin","gem","critter","boss"];
-const WP={}; for(const nm of WORLD_PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+WORLD+":"+nm+"&style="+ARTSTYLE; WP[nm]=im; }
-function propImg(nm){ const wi=WP[nm]; if(wi&&wi.complete&&wi.naturalWidth) return wi; const im=PR[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+function propImg(nm){ const wi=ART.wp[nm]; if(wi&&wi.complete&&wi.naturalWidth) return wi; const im=PR[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+// The sky and the ground take their colours from the world too, so Frostpine Hollow is
+// not a green forest with snow art pasted on it.
+const DEFAULT_LOOK={ sky:["#bcdfff","#cfeaff","#dff0d6","#eef6dc"], ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332" };
+function worldLook(){ return ((GAME_CONFIG.looks||{})[ART.world]) || DEFAULT_LOOK; }
 
 // --- deterministic RNG so a level is reproducible (and QA-able) ---
 function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -424,7 +463,7 @@ function buildLevel(lv, idx){
   ground.push({x0:n*TILE, x1:n*TILE+3000, y:GROUND_Y});
   const goalX=n*TILE - TILE*1.4;
   return { ground, obstacles, enemies, coins, lowBars, decos, powerups, platforms, bounces, stars, swings, blocks, pipes,
-           boss, barrierX, goalX, poleX:goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
+           boss, barrierX, goalX, poleX:goalX, worldEnd:n*TILE, name:lv.name, world:lv.world||"enchanted-forest", speed:lv.speed||RUN_BASE };
 }
 
 // --- scatter the world pieces across parallax layers (cosmetic; separate RNG so QA is unaffected) ---
@@ -458,6 +497,8 @@ let poleT=0;                                       // flag-pole finish: slide, f
 
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
+  ART=artSet(L.world);                                  // the world's own trees, coins, critters and boss
+  { const u=LIB_BASE+"?img=world:"+L.world+"&style="+ARTSTYLE; if(bg.dataset===undefined || bg.src!==u) bg.src=u; }
   player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null,
           coyote:COYOTE_FRAMES, buf:0, skid:0, runPhase:0, idleT:0};
   camX=0; camY=0; invuln=0; state="play"; coinsGot=0;
@@ -507,7 +548,7 @@ function doJump(){
 }
 function doSlide(){ if(!started){started=true;return;} if(player.onGround && player.slide<=0){ player.slide=SLIDE_FRAMES; } }
 addEventListener('keydown',e=>{
-  if(demoMode && (e.code==='ArrowLeft'||e.code==='ArrowRight'||e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='Space')) startPlay();
+  if(demoMode && (e.code==='ArrowLeft'||e.code==='ArrowRight'||e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='Space')) startPlay();   // any key starts the world you are up to
   if(e.code==='ArrowLeft'){inputLeft=true;started=true;}
   else if(e.code==='ArrowRight'){inputRight=true;started=true;}
   else if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();started=true;doJump();}
@@ -533,12 +574,94 @@ c.addEventListener('pointerdown',()=>{
   if(state==="win"){ if(poleT>0){ poleT=0; startLevel(li<LEVELS.length-1?li+1:li); } else { hearts=3; startLevel(li); } }
   else if(state==="lose"){ hearts=3; startLevel(li); }
 });
-// how-to overlay
-const howto=document.getElementById('howto');
-function startDemo(){ if(typeof hintEl!=='undefined'&&hintEl){hintEl.style.opacity='';hintGone=false;} demoMode=true; botMode=false; hearts=3; startLevel(0); started=false; paused=false; demoRestartT=0; howto.style.display='flex'; }  // start screen: idle hero + finger-swipe, NO auto-play
-function startPlay(){ demoMode=false; botMode=false; howto.style.display='none'; hearts=3; startLevel(0); started=false; paused=false; inputLeft=false; inputRight=false; try{window.focus();}catch{} actx(); if(soundOn&&musicOn) Music.start(); }
-// tap the Play button OR anywhere on the overlay to start (pre-reader friendly)
-howto.addEventListener('pointerdown',(e)=>{ e.preventDefault(); startPlay(); });
+// ===========================================================================
+//  HH4 — the start screen. The shared one (buildable-startscreen.js), so Hop Heroes
+//  launches like every other game: the four worlds as its level row, the chosen hero
+//  with a Change button, coins, and the sound toggle. The bespoke swipe overlay it
+//  replaces is gone. Everything here is guarded so headless QA (no document.body,
+//  no BuildableStartScreen) never touches it.
+// ===========================================================================
+const BS = (typeof window!=="undefined" && window.BuildableStartScreen) || null;
+const SAVE_KEY = "bk_hopheroes_v1";
+function loadSave(){
+  try{ const raw=localStorage.getItem(SAVE_KEY); const o=raw?JSON.parse(raw):null;
+    return { hero:(o&&o.hero)||CAST[0].slug, cleared:Math.max(0,Math.min(LEVELS.length,(o&&o.cleared)|0)), stars:(o&&o.stars)||{} };
+  }catch(e){ return { hero:CAST[0].slug, cleared:0, stars:{} }; }
+}
+function saveNow(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} }
+let SAVE = loadSave();
+setHero(SAVE.hero);
+
+const menuEl = document.getElementById('menu');
+const heroPick = document.getElementById('heroPick');
+let screen=null;
+
+function starsBanked(){ let n=0; for(const k in SAVE.stars) n+=SAVE.stars[k]|0; return n; }
+function screenSpec(){
+  const h=heroInfo();
+  return {
+    title: GAME_CONFIG.name || "Hop Heroes",
+    subtitle: "Reach the flag in every world",
+    coins: starsBanked(),
+    sound: soundOn,
+    hero: { name:h.name, img:heroUrl(h.slug),
+            progressText: SAVE.cleared+" of "+LEVELS.length+" worlds cleared" },
+    levels: LEVELS.map((lv,i)=>({
+      n: i+1, name: lv.name, color: (GAME_CONFIG.looks[lv.world]||{}).ground,
+      stars: SAVE.stars[i]|0, maxStars: 3,
+      state: i<SAVE.cleared ? "done" : (i===SAVE.cleared ? "next" : "locked"),
+    })),
+  };
+}
+function paintMenu(){
+  if(!BS || !menuEl || !menuEl.appendChild) return;
+  if(screen && screen.update){ screen.update(screenSpec()); return; }
+  try{
+    screen = BS.mount(menuEl, screenSpec(), {
+      onPlay: (n)=>startPlay((n|0)-1),
+      onHero: ()=>openHeroPick(),
+      onSound: (on)=>{ soundOn=!!on; musicOn=soundOn; actx(); if(soundOn&&musicOn) Music.start(); else Music.stop(); paintMute(); },
+    });
+  }catch(e){ screen=null; }
+}
+// --- the hero chooser: four big faces, nothing to read ---
+function openHeroPick(){
+  if(!heroPick || !heroPick.querySelector) return;
+  const row=heroPick.querySelector('.hpRow'); if(!row) return;
+  row.innerHTML = CAST.map(c=>
+    '<div class="hpBtn'+(c.slug===heroSlug?' on':'')+'" data-slug="'+c.slug+'">'+
+      '<div class="hpFace" style="background:'+c.colour+'"><img alt="" src="'+heroUrl(c.slug)+'" onerror="this.remove()"></div>'+
+      '<div class="hpName">'+c.name+'</div>'+
+    '</div>').join('');
+  row.querySelectorAll('.hpBtn').forEach(el=>{
+    el.addEventListener('pointerdown',(ev)=>{ ev.preventDefault();
+      const slug=el.getAttribute('data-slug'); setHero(slug); SAVE.hero=slug; saveNow();
+      heroPick.hidden=true; paintMenu(); });
+  });
+  heroPick.hidden=false;
+}
+if(heroPick) heroPick.addEventListener('pointerdown',(e)=>{ if(e.target===heroPick) heroPick.hidden=true; });
+
+// The play furniture (thumb pads, the engine's own buttons, the hint, the HUD strip)
+// belongs to PLAY. On the start screen it was drawing straight over the world list.
+const PLAY_CHROME=["pad","actions","hint","bMute","bMusic","bHelp"];
+function showPlayChrome(on){
+  for(const id of PLAY_CHROME){ const el=document.getElementById(id); if(el&&el.style) el.style.display = on ? "" : "none"; }
+  try{ if(hud){ if(on) hud.show(); else hud.hide(); } }catch(e){}
+}
+function startDemo(){
+  if(typeof hintEl!=='undefined'&&hintEl){hintEl.style.opacity='';hintGone=false;}
+  demoMode=true; botMode=false; hearts=3; startLevel(Math.min(SAVE.cleared, LEVELS.length-1));
+  started=false; paused=false; demoRestartT=0;
+  if(menuEl) menuEl.hidden=false; showPlayChrome(false); paintMenu();
+}
+function startPlay(idx){
+  demoMode=false; botMode=false; if(menuEl) menuEl.hidden=true; if(heroPick) heroPick.hidden=true;
+  showPlayChrome(true);
+  hearts=3; startLevel(idx==null ? Math.min(SAVE.cleared, LEVELS.length-1) : idx);
+  started=false; paused=false; inputLeft=false; inputRight=false;
+  try{window.focus();}catch{} actx(); if(soundOn&&musicOn) Music.start();
+}
 // mute / sound toggle
 const SPK_ON='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4,9 4,15 8,15 13,19 13,5 8,9" fill="#fff" stroke="none"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const SPK_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4,9 4,15 8,15 13,19 13,5 8,9" fill="#fff" stroke="none"/><line x1="16" y1="9" x2="22" y2="15"/><line x1="22" y1="9" x2="16" y2="15"/></svg>';
@@ -589,7 +712,18 @@ function update(){
     // HH4 brings the worlds that make this go somewhere new.)
     if(state==="win" && poleT>0){
       poleT++;
-      if(poleT>POLE_SLIDE+POLE_FANFARE){ poleT=0; startLevel(li<LEVELS.length-1?li+1:li); }
+      if(poleT>POLE_SLIDE+POLE_FANFARE){
+        poleT=0;
+        // Banking the world is what makes the start screen mean anything: the next world
+        // unlocks, and the best star count for this one is kept.
+        if(typeof SAVE!=="undefined"){
+          SAVE.stars[li]=Math.max(SAVE.stars[li]|0, starsGot);
+          if(li+1>SAVE.cleared) SAVE.cleared=Math.min(LEVELS.length, li+1);
+          saveNow();
+        }
+        if(li<LEVELS.length-1) startLevel(li+1);      // straight on into the next world
+        else startDemo();                              // last world cleared: back to the map
+      }
     }
     return;
   }
@@ -748,8 +882,10 @@ function loseHeart(fell){
 function defeatBoss(){ const b=L.boss; if(!b||b.defeated)return; b.defeated=true; b.happy=140; SFX.power(); }
 
 // --- draw ---
+function hexA(hex,a){ const h=String(hex||"#ffffff").replace("#",""); const n=parseInt(h.length===3?h[0]+h[0]+h[1]+h[1]+h[2]+h[2]:h,16);
+  if(isNaN(n)) return "rgba(255,255,255,"+a+")"; return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"; }
 function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
-function pieceImg(nm){ const im=PC[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+function pieceImg(nm){ const im=ART.pc[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 function drawPiece(im, sx, baseY, h, flip){ const w=h*(im.naturalWidth/im.naturalHeight); ctx.save(); ctx.translate(sx,0); if(flip)ctx.scale(-1,1); ctx.drawImage(im,-w/2,baseY-h,w,h); ctx.restore(); }
 function drawTopPiece(im, sx, h, flip){ const w=h*(im.naturalWidth/im.naturalHeight); ctx.save(); ctx.translate(sx,0); if(flip)ctx.scale(-1,1); ctx.drawImage(im,-w/2,-12,w,h); ctx.restore(); }
 function star5(cx,cy,r){ ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5; const rr=i%2?r*0.45:r; ctx.lineTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);} ctx.closePath(); ctx.fill(); }
@@ -767,7 +903,8 @@ function drawPU(x,y,kind,r){ r=r||15; const col={shield:"#4aa3ff",magnet:"#e0566
 }
 function heart(x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*0.3);ctx.bezierCurveTo(x,y,x-s,y,x-s,y+s*0.35);ctx.bezierCurveTo(x-s,y+s*0.7,x,y+s*0.9,x,y+s*1.15);ctx.bezierCurveTo(x,y+s*0.9,x+s,y+s*0.7,x+s,y+s*0.35);ctx.bezierCurveTo(x+s,y,x,y,x,y+s*0.3);ctx.closePath();ctx.fill();}
 function draw(){
-  const P=GAME_CONFIG.palette;
+  const LK=worldLook();
+  const P=Object.assign({}, GAME_CONFIG.palette, { ground:LK.ground, groundTop:LK.groundTop, dirt:LK.dirt });
   // HH1 camera: a little look-ahead in the direction of travel (so you see what you are
   // running into), never scrolling left of the start, and a gentle vertical follow that
   // only kicks in on the tall two-tier climbs so the top platforms stay on screen.
@@ -786,9 +923,10 @@ function draw(){
   // LAYER 1 — sky gradient (drawn OUTSIDE the camera shift so the top never goes blank)
   // The sky covers the WHOLE view. Its stops are placed relative to the sky pad, so on a
   // tall phone the extra space reads as real high sky rather than a stretched gradient.
-  { const p0=skyPad()/VH, sky=ctx.createLinearGradient(0,0,0,VH);
-    sky.addColorStop(0,"#bcdfff"); sky.addColorStop(Math.max(0.001,p0*0.96),"#cfeaff");
-    sky.addColorStop(Math.min(0.999,p0+(1-p0)*0.55),"#dff0d6"); sky.addColorStop(1,"#eef6dc");
+  { const LK=worldLook(), c4=LK.sky||DEFAULT_LOOK.sky;
+    const p0=skyPad()/VH, sky=ctx.createLinearGradient(0,0,0,VH);
+    sky.addColorStop(0,c4[0]); sky.addColorStop(Math.max(0.001,p0*0.96),c4[1]);
+    sky.addColorStop(Math.min(0.999,p0+(1-p0)*0.55),c4[2]); sky.addColorStop(1,c4[3]);
     ctx.fillStyle=sky; ctx.fillRect(0,0,W,VH); }
   // soft god-rays — drawn over the whole view so the tall sky is never dead space
   ctx.save(); ctx.globalCompositeOperation="lighter";
@@ -814,8 +952,8 @@ function draw(){
   ctx.restore();
   // a thin sky-coloured veil over the mid layer: it pushes the trees back behind the
   // play lane so the hero, the platforms and the pit edges are the sharpest things on screen
-  { const vg=ctx.createLinearGradient(0,0,0,GROUND_Y+30);
-    vg.addColorStop(0,"rgba(207,234,255,0.34)"); vg.addColorStop(0.62,"rgba(223,240,214,0.30)"); vg.addColorStop(1,"rgba(238,246,220,0.16)");
+  { const vg=ctx.createLinearGradient(0,0,0,GROUND_Y+30), c4=LK.sky||DEFAULT_LOOK.sky;
+    vg.addColorStop(0,hexA(c4[1],0.34)); vg.addColorStop(0.62,hexA(c4[2],0.30)); vg.addColorStop(1,hexA(c4[3],0.16));
     ctx.fillStyle=vg; ctx.fillRect(0,-200,W,GROUND_Y+230); }
   // LAYER 4 — near bushes / mushrooms (parallax 0.66)
   for(const nr of SC.near){ const sx=nr.x-camX*0.66 + Math.sin(t*0.8+nr.ph)*2; if(sx<-160||sx>W+160)continue;
@@ -1068,7 +1206,8 @@ function draw(){
   if(musicToast>0){ musicToast--; const nm=Music.current(); ctx.save(); ctx.font="bold 16px Fredoka,sans-serif"; ctx.textAlign="center"; const tw=ctx.measureText(nm).width+50, x=W/2, y=Math.round(VH*0.16)+20; ctx.globalAlpha=Math.max(0,Math.min(1,musicToast/30)); ctx.fillStyle="rgba(20,30,50,.74)"; rrect(x-tw/2,y-16,tw,30,15); ctx.fill(); ctx.fillStyle="#ffd23f"; ctx.beginPath(); ctx.arc(x-tw/2+18,y+4,3.4,0,7); ctx.fill(); ctx.fillRect(x-tw/2+20.4,y-8,2,12); ctx.fillStyle="#fff"; ctx.fillText(nm, x+8, y+5); ctx.restore(); }
   // banners
   if(state==="win" && (poleT===0 || poleT>POLE_SLIDE)){
-    banner("Level Complete!", "You found "+starsGot+"/"+totalStars+" stars  \u00b7  "+coinsGot+" coins");
+    banner(li<LEVELS.length-1 ? "World Complete!" : "You Win!",
+           "You found "+starsGot+"/"+totalStars+" stars  \u00b7  "+coinsGot+" coins");
   }
   if(state==="lose"){ banner("Try Again!","Tap to restart this level"); }
 }
@@ -1108,7 +1247,7 @@ startDemo();
 requestAnimationFrame(frame);
 
 // expose for QA / picker
-window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{demoMode=false;botMode=b;started=true;paused=false;}, state:()=>state, level:()=>li,
+window.BK_GAME = { startLevel:(i)=>startLevel(i), levelCount:()=>LEVELS.length, cast:()=>CAST.slice(), setBot:(b)=>{demoMode=false;botMode=b;started=true;paused=false;}, state:()=>state, level:()=>li,
   dbg:()=>({px:Math.round(player.x), goal:Math.round(L.goalX), started, runV:player.runV, hp:hearts, onG:player.onGround, vy:Math.round(player.vy), state}),
   // QA harness: run a "perfect player" headlessly (no rAF) through a level.
   frameStep:(n)=>{ demoMode=false; paused=false; for(let i=0;i<(n||1);i++){ update(); draw(); } },
