@@ -19,7 +19,7 @@
 // + api/friends.js (shared, not per-game). No free-text chat -- ever.
 // ==================================================================
 import { useEffect, useRef, useState } from "react";
-import { isSignedIn, getActiveKid, getSession } from "./lib/accounts";
+import { isSignedIn, getActiveKid, getSession, ensureServerKidProfile } from "./lib/accounts";
 import {
   listFriends, sendInvite, cancelInvite, pollInvite, acceptInvite,
   inboxInvites,
@@ -56,7 +56,34 @@ const C = {
   note: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 18, color: "#cfc9e6", lineHeight: 1.5 },
   center: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24 },
   ava: { width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, flex: "0 0 auto" },
+  // A kid must SEE it when a tap fails. This sits fixed at the bottom of the
+  // lobby so it cannot be scrolled past -- the old banner lived at the top of
+  // one screen only, so tapping "Start game" further down set an error the kid
+  // never saw and the game simply appeared to do nothing at all.
+  alert: {
+    position: "fixed", left: 12, right: 12, bottom: 14, zIndex: 60, margin: "0 auto", maxWidth: 596,
+    display: "flex", alignItems: "flex-start", gap: 12, textAlign: "left",
+    background: "#FFE9EC", border: "2px solid #FF8095", borderRadius: 18, padding: "14px 16px",
+    color: "#5B1220", fontWeight: 700, fontSize: 15, lineHeight: 1.4,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+  },
+  alertClose: {
+    flex: "0 0 auto", marginLeft: "auto", width: 30, height: 30, borderRadius: 999, cursor: "pointer",
+    background: "rgba(91,18,32,0.10)", border: "none", color: "#5B1220", fontWeight: 900, fontSize: 16, lineHeight: 1,
+  },
 };
+
+// Turn a server error into something a child can act on. The lobby used to show
+// the raw text ("not your player"), which means nothing to a kid and nothing to
+// the grown-up sitting next to them either.
+function kidWords(raw) {
+  const m = String((raw && raw.message) || raw || "").toLowerCase();
+  if (m.includes("not your player")) return "We couldn't start that game for this player. Ask a grown-up to tap Grown-ups and pick who's playing, then try again.";
+  if (m.includes("not an approved friend")) return "You can only play with friends a grown-up has approved. Ask them to add your friend under Grown-ups.";
+  if (m.includes("sign in required")) return "Ask a grown-up to sign in on this device, then try again.";
+  if (m.includes("missing fields")) return "Something was missing, so that game didn't start. Try again in a moment.";
+  return String((raw && raw.message) || raw || "That didn't work. Try again in a moment.");
+}
 
 const avatarText = (name) => (name || "?").trim().charAt(0).toUpperCase();
 
@@ -109,7 +136,10 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   async function loadFriends() {
     setLoading(true); setErr("");
     try {
-      const [fr, inv] = await Promise.all([listFriends(me.id), inboxInvites()]);
+      // Same reason as invite(): ask the friends list about a player the server
+      // has actually heard of.
+      const myKidId = (await ensureServerKidProfile()) || me.id;
+      const [fr, inv] = await Promise.all([listFriends(myKidId), inboxInvites()]);
       const rank = (x) => (x.online ? 0 : 1);
       setFriends((fr || []).slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)));
       // Only show invites addressed to THE ACTIVE KID for this game. Siblings share
@@ -145,7 +175,12 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   async function invite(friend) {
     setErr("");
     try {
-      const r = await sendInvite({ fromKid: me.id, toKid: friend.kidId, game: game.slug, transport, world: game.world || null });
+      // The inviter must be a player the SERVER knows. A device-only guest
+      // profile is what made /api/friends answer 403 "not your player" while
+      // the kid saw nothing happen at all. Adopt first, then invite with the id
+      // that now exists.
+      const fromKid = (await ensureServerKidProfile()) || me.id;
+      const r = await sendInvite({ fromKid, toKid: friend.kidId, game: game.slug, transport, world: game.world || null });
       // Turn-based: the match already exists -> start playing right away, even if
       // the friend is offline. They get a "join" nudge and play on their turn.
       if (transport === "turns" && r && r.matchId) {
@@ -155,7 +190,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
       // Real-time (tennis): keep the live handshake -- both must be connected.
       setOutInvite({ id: r.inviteId, toName: friend.name, online: friend.online });
       setPhase("waiting");
-    } catch (e) { setErr((e && e.message) || "Could not send the invite."); }
+    } catch (e) { setErr(kidWords(e) || "Could not send the invite."); }
   }
   async function cancelWaiting() {
     if (outInvite) { try { await cancelInvite(outInvite.id); } catch (e) {} }
@@ -164,7 +199,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   async function joinInvite(iv) {
     setErr("");
     try { const matchId = await acceptInvite(iv.id); enterMatch(await getFriendMatch(matchId)); }
-    catch (e) { setErr((e && e.message) || "Could not join."); }
+    catch (e) { setErr(kidWords(e) || "Could not join."); }
   }
 
   // ================= PLAYING: board iframe + turn-based bridge =================
@@ -320,9 +355,19 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   }
 
   // ============================ RENDER ============================
+  // Rendered in EVERY phase. A failed tap has to say something, wherever the kid
+  // happened to be standing when they tapped.
+  const errBanner = err ? (
+    <div style={C.alert} role="alert" data-lobby-error>
+      <span>{err}</span>
+      <button style={C.alertClose} onClick={() => setErr("")} aria-label="Close">&times;</button>
+    </div>
+  ) : null;
+
   if (phase === "playing" && match) {
     return (
       <div style={C.wrap}>
+        {errBanner}
         <button style={C.back} onClick={leaveGame}>&larr; Back</button>
         <iframe
           ref={iframeRef}
@@ -347,6 +392,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   if (phase === "waiting") {
     return (
       <div style={C.wrap}>
+        {errBanner}
         <button style={C.back} onClick={cancelWaiting}>&larr; Back</button>
         <div style={C.center}>
           <div style={{ width: 66, height: 66, borderRadius: 999, border: "4px solid rgba(167,139,255,0.35)", borderTopColor: "#A78BFF", animation: "bkspin 1s linear infinite" }} />
@@ -381,6 +427,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
     );
     return (
       <div style={C.wrap}>
+        {errBanner}
         <button style={C.back} onClick={() => (entry === "friends" ? onHome() : setPhase("mode"))}>&larr; Back</button>
         <div style={C.pad}>
           <h1 style={C.h1}>Family &amp; friends</h1>
@@ -402,8 +449,6 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
 
           {signedIn && (
             <>
-              {err && <div style={{ ...C.note, borderColor: "rgba(255,120,120,0.4)", color: "#ffd0d0", marginBottom: 12 }}>{err}</div>}
-
               {inbox.length > 0 && (
                 <>
                   <div style={C.sect}>Someone wants to play!</div>
@@ -442,6 +487,7 @@ export default function GameLobby({ game, activeKid, onHome, onSameDevice, onAdd
   // ---- default: MODE SELECT ----
   return (
     <div style={C.wrap}>
+      {errBanner}
       <button style={C.back} onClick={onHome}>&larr; Home</button>
       <div style={C.pad}>
         <h1 style={C.h1}>{game.title}</h1>
