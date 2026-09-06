@@ -1,3 +1,111 @@
+## 2026-09-06 — QA42/43/44/53: the guest-kid hole, four symptoms and one cause
+
+Mike found this on the live site on 2026-08-30 and it looked like four unrelated
+bugs. It was one.
+
+**The cause.** A child can be playing under a profile that exists only in this
+browser — stored in `bk_guest_kid_profiles_v1`, pointed at by `bk_active_kid_v1`
+— with **no row in `kid_profiles`**, while a grown-up IS signed in. That id
+means nothing to the database, and every single thing downstream failed quietly:
+
+- **Songs (QA42).** The app said *"Saved to My Songs!"* and the tab still read
+  **(0)**. The insert hit a foreign-key error, `save-song.js` deliberately
+  retried with `kid_profile_id` null, and still answered a bare `ok:true` with a
+  `note`. The client checked only `j.ok`, so it cheered. The song was on the
+  server the whole time: `/api/list-songs?deviceId=…` returned it,
+  `?kidProfileId=…` returned nothing, and every gallery lists by kid.
+- **Drawings (QA42).** Identical: *"Saved to your gallery!"* then *"No saved art
+  yet"*.
+- **Friends (QA43).** Tapping **Start game** in Play a friend did nothing at all.
+  `POST /api/friends {action:'invite', fromKid:<guest id>}` returned 403
+  *"not your player"*, `GameLobby.jsx` caught it into `setErr`, and that banner
+  rendered only at the top of one screen — tap a friend halfway down the list and
+  the message appeared off-screen behind you.
+- **Presence.** The `kid_profiles` PATCH heartbeat 503'd every 30 seconds, same
+  reason.
+- **Parents page (QA53).** The child who was actually playing was **not in the
+  list at all**, because the list reads `kid_profiles` and this child had no row.
+
+**The rule we chose: ADOPT, don't evict.** The two options were to give a guest
+kid a real row the first time they save, or to forbid a guest kid from being
+active while a parent is signed in. We adopt. Evicting throws a child back to a
+picker mid-game, loses the profile they had been playing as, and does nothing for
+the no-login lane, where the same bad id was being sent. Adoption keeps the child
+playing and makes saves, friends, presence, and the Parents list all line up on
+one id.
+
+Concretely, `ensureServerKidProfile()` in `lib/accounts.js` gives the active
+player a real `kid_profiles` row the moment a grown-up is signed in — **keeping
+the same id** when it is a uuid (which `crypto.randomUUID` makes, so nearly
+always), so anything already saved under that id lines up the instant the row
+exists. It carries grade, PIN and buddy across, and drops the device copy so one
+child never appears twice on the picker. It runs on app load, before the presence
+heartbeat, before a friends call, and on the first save. With **no** grown-up
+signed in there is no family to belong to, so the child stays a guest and
+everything saves to the **device lane on purpose** — a lane that genuinely works
+(see `CREATIONS.md`). Profiles now carry a `lane` label, `"account"` or
+`"guest"`, and `getServerKidId()` is the only thing allowed to hand an id to the
+server.
+
+**Stop lying about where a save went.** `save-song`, `save-art` and `save-story`
+now name the lane they really used (`lane: "kid" | "device"`, plus `savedToKid`),
+and the makers say where it went: a device-lane save reads *"Saved to this
+tablet. Ask a grown-up to sign in so it follows you everywhere."* The fallback
+itself stays — losing a child's song would be worse — it just no longer pretends.
+
+**Nothing a kid made can vanish.** `list-songs`, `list-art` and `list-stories`
+fall back to the device lane **when the kid lane is empty**, so work stranded
+before adoption still comes back. Only when empty, deliberately: a child who has
+songs of their own is never handed a sibling's list. `MusicMaker.refresh()` also
+asked by kid **only**, which is exactly why the tab read (0); it asks by both now.
+
+**QA43, the visible half.** One error banner, fixed to the bottom of the lobby,
+rendered in **every** phase, with a close button. It cannot be scrolled past.
+`kidWords()` turns server errors into something a child or the grown-up next to
+them can act on — *"not your player"* now reads *"ask a grown-up to pick who's
+playing"*. The 403 should not happen any more; the banner is the safety net.
+
+**QA44 — FriendsPill.** It was written at `BuildableKids.jsx:1597` and rendered
+**nowhere in the repo**. Kept, and put in the Home header beside the coins. The
+keep-playing card already reads the same four things (a chess turn, friend turns,
+friend invites, a realtime invite) but can only ever show the **first** of them;
+the bell's menu reaches every one, and the roadmap's Home design (3E) asks for
+exactly this. It appears only when something is waiting, so a quiet Home stays
+quiet. Its icon was a **bell drawn under the name `People`** — the shape was
+right and the name was wrong, so the glyph is now `Bell`. Pure SVG geometry, no
+emoji, rule intact.
+
+**QA53 — grown-ups filed as children.** The Parents list is every **player** on
+the family account, and a grown-up who plays has a profile there too, so heading
+it *"Add or edit your kids"* filed Dad and Mom as children. It now reads
+*"Everyone who plays on this account. Add a player for each child — a grown-up
+who plays can have one too."*, with **Add player** on the button. The other half
+of that card, the child who was playing being missing entirely, is fixed by
+adoption.
+
+**The new gate: `qa-kid-lane.mjs`.** Mike asked for a check that saves something,
+lists it back by kid, and fails if the count did not go up. It drives the real
+`save-*` and `list-*` handlers against an in-memory PostgREST that **enforces the
+foreign key**, the way the live database does. Verified it is a real gate, not
+decoration: with the device-lane fallback and the honest `lane` field removed it
+reports *"it comes BACK when listed (got 0) — this is the 'Saved to My Songs!'
+then (0) bug"* and exits 1; with them back, green. It also checks the makers only
+ever send an id gated on `lane === "account"`, since the prevention lives in the
+browser where this harness cannot go.
+
+**A tradeoff worth writing down.** The device-lane fallback means two guest
+profiles sharing one tablet, with no grown-up signed in, can see each other's
+work when one of them has none of their own. That is the pre-existing shape of
+the no-login lane, and it is strictly better than telling a child their song does
+not exist. Once a grown-up signs in, adoption gives every child their own row and
+the kid lane answers first.
+
+**Not touched:** `public/cobuild.html`. No login was built — QA50 stands, and
+Mike's call on 2026-08-30 was to fix saving now and do proper login later,
+accepting the rework.
+
+Verified: `npm run build` clean, `node qa-all.mjs` green.
+
 ## 2026-09-06 — CB1: kid-made games (Cobuild)
 
 **Shipped.** `kid_games` table (migration written to `db/create-kid-games.sql` AND

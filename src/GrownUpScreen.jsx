@@ -654,8 +654,11 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                       <span style={S.kidName}>{k.display_name}</span>
                     </div>
                     <div style={S.kidActions}>
-                      <button type="button" style={S.miniBtn} onClick={() => handleRename(k)}>Rename</button>
-                      <button type="button" style={S.miniBtnDanger} onClick={() => handleDeleteKid(k)}>Remove</button>
+                      {/* Name the child in the label too, so a screen reader (and
+                          anyone glancing at a row of three) can tell whose Remove
+                          button this is. */}
+                      <button type="button" style={S.miniBtn} aria-label={"Rename " + k.display_name} onClick={() => handleRename(k)}>Rename</button>
+                      <button type="button" style={S.miniBtnDanger} aria-label={"Remove " + k.display_name} onClick={() => handleDeleteKid(k)}>Remove</button>
                     </div>
                   </div>
                 ))}
@@ -1557,11 +1560,20 @@ const S = {
     color: "#eafff0", background: "rgba(40,160,90,0.22)", borderRadius: 10,
     padding: "8px 12px", fontSize: 14, margin: "10px 0 0", lineHeight: 1.4,
   },
+  // QA53 — the Rename/Remove pills used to run together into one long strip
+  // under a row of children, so you could not tell which pair belonged to which
+  // child. The track was 96px wide and the two pills need more than that, so
+  // they spilled out of their own cell. Widen the track to fit the pair, and put
+  // each child on their own tinted card so the pairing is unmistakable.
   kidGrid: {
-    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
-    gap: 14, margin: "6px 0 16px", justifyItems: "center",
+    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(138px, 1fr))",
+    gap: 12, margin: "6px 0 16px", justifyItems: "stretch",
   },
-  kidManageWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
+  kidManageWrap: {
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 18, padding: "12px 8px",
+  },
   kidWrap: {
     display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
     background: "transparent", border: "none", cursor: "pointer", color: "#fff",
@@ -1574,7 +1586,7 @@ const S = {
     boxShadow: "0 8px 18px rgba(0,0,0,0.4)",
   },
   kidName: { fontSize: 14, fontWeight: 700, maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  kidActions: { display: "flex", gap: 6 },
+  kidActions: { display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" },
   miniBtn: {
     background: "rgba(255,255,255,0.10)", color: "#fff", border: "none", borderRadius: 999,
     padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: NUN,
