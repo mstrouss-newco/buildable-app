@@ -1,12 +1,24 @@
 #!/usr/bin/env node
 // scripts/qa-all.mjs — THE RELEASE GATE (Session QA2).
 //
-// One command, one honest table. It does two things:
+// One command, one honest table. It does three things:
 //
-//   1) MACHINE SWEEP — runs every qa-*.mjs in the repo root, captures its exit
+//   1) SERVING CHECK — every public/buildable-*.js and every public/*.html must
+//      have a route in vercel.json AHEAD of the "/(.*)" catch-all. This check
+//      exists because Practice shipped completely dead: qa-practice.mjs passed
+//      the whole time, but buildable-practice.js had no route, so the catch-all
+//      served landing.html in its place and the browser threw
+//      "Unexpected token '<'". A passing harness does not mean the thing is
+//      reachable. It is a file-system sweep, not a list somebody has to
+//      remember to update, so a new file cannot be forgotten. With --live it
+//      goes further and fetches each one from production, failing if HTML comes
+//      back where JavaScript was expected.
+//      (Folded in from the root qa-all.mjs, session QA-FIX 2026-08-30, which
+//      this file replaces.)
+//   2) MACHINE SWEEP — runs every qa-*.mjs in the repo root, captures its exit
 //      code, and reports pass/fail per harness. Exit 0 = pass is the house
 //      convention every harness already follows.
-//   2) PAGE SWEEP — serves public/ statically, opens EVERY public/**/*.html in
+//   3) PAGE SWEEP — serves public/ statically, opens EVERY public/**/*.html in
 //      headless Chromium, and fails on a console error, an uncaught page error,
 //      or a missing file (a static request that 404s).
 //
@@ -15,7 +27,10 @@
 // card done — see AGENTS.md.
 //
 //   node scripts/qa-all.mjs                  everything
-//   node scripts/qa-all.mjs --no-pages       harnesses only (no browser needed)
+//   node scripts/qa-all.mjs --no-pages       serving check + harnesses (no browser)
+//   node scripts/qa-all.mjs --serving-only   just the routing check, nothing else
+//   node scripts/qa-all.mjs --live           ALSO fetch each file from production
+//   node scripts/qa-all.mjs --no-serving     skip the routing check
 //   node scripts/qa-all.mjs --pages-only     just the browser sweep
 //   node scripts/qa-all.mjs --only maze      harnesses whose name contains "maze"
 //   node scripts/qa-all.mjs --jobs 1         run harnesses one at a time
@@ -31,6 +46,9 @@
 //     than "green". --strict turns that into a failure (use it in CI).
 //   - /api/* requests are NOT counted as missing files: there is no backend in
 //     front of a static server. Everything else under public/ is fair game.
+//   - --live needs real network. A sandbox whose egress proxy answers 403 to
+//     everything is not a broken site, so the live half probes once and prints
+//     SKIP loudly rather than inventing fifty failures.
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -104,9 +122,14 @@ const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
 const val = (f, d) => { const i = argv.indexOf(f); return i === -1 ? d : argv[i + 1]; };
 
+const SERVING_ONLY = has('--serving-only');
+
 const OPT = {
-  pages: !has('--no-pages'),
-  harnesses: !has('--pages-only'),
+  serving: !has('--no-serving'),
+  live: has('--live'),
+  site: val('--site', null) || process.env.QA_SITE_URL || 'https://buildablekids.com',
+  pages: !has('--no-pages') && !SERVING_ONLY,
+  harnesses: !has('--pages-only') && !SERVING_ONLY,
   only: val('--only', null),
   jobs: Math.max(1, parseInt(val('--jobs', '4'), 10) || 4),
   timeout: (parseInt(val('--timeout', '180'), 10) || 180) * 1000,
@@ -119,6 +142,106 @@ const C = process.stdout.isTTY
   : { g: (s) => s, r: (s) => s, y: (s) => s, d: (s) => s, b: (s) => s };
 
 const paint = (st) => st === 'PASS' ? C.g(st) : st === 'FAIL' || st === 'TIMEOUT' ? C.r(st) : C.y(st);
+
+// ---------------------------------------------------------------------------
+// 0) serving check — is every file we ship actually reachable?
+//
+// Folded in from the root qa-all.mjs (session QA-FIX, 2026-08-30). vercel.json
+// uses legacy `routes` with no `handle: filesystem` phase, so the final
+// "/(.*)" -> /landing.html catch-all swallows anything that has no route of its
+// own ahead of it. That is exactly how Practice shipped dead.
+// ---------------------------------------------------------------------------
+function servingCheck() {
+  const rows = [];
+  const add = (status, what, detail) => {
+    rows.push({ name: what, status, detail: detail || '' });
+    process.stdout.write(`  ${paint(status.padEnd(7))} ${what}${detail ? C.d('  ' + detail) : ''}\n`);
+  };
+
+  process.stdout.write(C.b('\nSERVING CHECK — every shipped file has a route in vercel.json\n'));
+
+  let routes = [];
+  try {
+    routes = (JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8')).routes || []).map((r) => r.src);
+  } catch (err) {
+    add('FAIL', 'vercel.json is valid JSON', String(err.message).split('\n')[0]);
+    return { rows, shared: [], pages: [], live: null };
+  }
+
+  // The catch-all is meant to be LAST and sends everything unmatched to the
+  // marketing page. Anything that must be served as itself comes before it.
+  const catchAllAt = routes.indexOf('/(.*)');
+  if (catchAllAt === -1) add('PASS', 'there is no blanket catch-all to fall through');
+  else add('PASS', 'the catch-all is last', `route ${catchAllAt + 1} of ${routes.length}`);
+
+  const routedBefore = (p) => {
+    const i = routes.findIndex((src) => {
+      if (src === p) return true;
+      if (!src.includes('(')) return false;
+      try { return new RegExp('^' + src + '$').test(p); } catch { return false; }
+    });
+    return i !== -1 && (catchAllAt === -1 || i < catchAllAt);
+  };
+
+  const shared = fs.readdirSync(PUBLIC).filter((f) => /^buildable-.*\.js$/.test(f)).sort();
+  const pages = fs.readdirSync(PUBLIC).filter((f) => f.endsWith('.html')).sort();
+
+  const missingShared = shared.filter((f) => !routedBefore('/' + f));
+  if (missingShared.length) add('FAIL', 'every public/buildable-*.js is routed', missingShared.join(', ') + ' would be served as landing.html');
+  else add('PASS', 'every public/buildable-*.js is routed', `${shared.length} shared scripts`);
+
+  // landing.html is the catch-all's own destination, so it is reached without a
+  // route of its own. Everything else needs one or it silently becomes landing.
+  const missingPages = pages.filter((f) => f !== 'landing.html' && !routedBefore('/' + f));
+  if (missingPages.length) add('FAIL', 'every public/*.html is routed', missingPages.join(', ') + ' would be served as landing.html');
+  else add('PASS', 'every public/*.html is routed', `${pages.length} pages`);
+
+  return { rows, shared, pages, live: null };
+}
+
+// The live half: does production actually answer with the right thing? Needs
+// real network, so it says SKIP loudly on a machine that cannot reach the site.
+async function liveCheck(serving) {
+  const SITE = OPT.site;
+  const rows = [];
+  const add = (status, what, detail) => {
+    rows.push({ name: what, status, detail: detail || '' });
+    process.stdout.write(`  ${paint(status.padEnd(7))} ${what}${detail ? C.d('  ' + detail) : ''}\n`);
+  };
+  process.stdout.write(C.b(`\nLIVE SERVING CHECK — what ${SITE} really returns\n`));
+
+  const probe = await fetch(SITE + '/?stay=1').then((r) => r.status).catch(() => 0);
+  if (probe === 403 || probe === 0) {
+    const why = `cannot reach ${SITE} from here (probe returned ${probe || 'no response'}) — run --live from CI, where the network is open`;
+    process.stdout.write(`  ${paint('SKIP'.padEnd(7))} ${why}\n`);
+    return { rows, skipped: why };
+  }
+
+  const looksHtml = (t) => /^\s*<!doctype html/i.test(t) || /^\s*<html/i.test(t);
+  for (const f of serving.shared) {
+    try {
+      const r = await fetch(`${SITE}/${f}`, { headers: { 'Cache-Control': 'no-store' } });
+      const body = await r.text();
+      const ct = (r.headers.get('content-type') || '').split(';')[0];
+      if (!r.ok) add('FAIL', `/${f} is served`, `HTTP ${r.status}`);
+      else if (looksHtml(body) || /html/.test(ct)) add('FAIL', `/${f} is served as JavaScript`, `got ${ct}, ${body.length} bytes of HTML — the catch-all ate it`);
+      else add('PASS', `/${f} is served as JavaScript`, `${ct}, ${body.length} bytes`);
+    } catch (err) { add('FAIL', `/${f} is reachable`, String(err.message).split('\n')[0]); }
+  }
+
+  // A page that only ever renders the marketing site is indistinguishable from
+  // a fall-through, so pages are checked by byte-identity against the landing.
+  const landing = await fetch(SITE + '/?stay=1').then((r) => r.text()).catch(() => '');
+  for (const f of serving.pages) {
+    if (f === 'landing.html') continue;
+    try {
+      const t = await fetch(`${SITE}/${f}`, { headers: { 'Cache-Control': 'no-store' } }).then((r) => r.text());
+      if (landing && t.length === landing.length) add('FAIL', `/${f} is its own page`, 'identical to landing.html — it is falling through the catch-all');
+      else add('PASS', `/${f} is its own page`, `${t.length} bytes`);
+    } catch (err) { add('FAIL', `/${f} is reachable`, String(err.message).split('\n')[0]); }
+  }
+  return { rows, skipped: null };
+}
 
 // ---------------------------------------------------------------------------
 // 1) machine sweep
@@ -154,7 +277,7 @@ function runHarness(file) {
 }
 
 async function machineSweep() {
-  let files = fs.readdirSync(ROOT).filter((f) => /^qa-.*\.mjs$/.test(f)).sort();
+  let files = fs.readdirSync(ROOT).filter((f) => /^qa-.*\.mjs$/.test(f) && f !== 'qa-all.mjs').sort();
   if (OPT.only) files = files.filter((f) => f.includes(OPT.only));
   if (!files.length) return [];
 
@@ -329,7 +452,7 @@ function tally(rows) {
   return t;
 }
 
-function writeReport(harnesses, pageRes, started) {
+function writeReport(serving, liveRes, harnesses, pageRes, started) {
   const ht = tally(harnesses);
   const pt = tally(pageRes.rows);
   const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
@@ -340,6 +463,35 @@ function writeReport(harnesses, pageRes, started) {
   L.push('');
   L.push('This file is generated. Do not hand-edit it: re-run `npm run qa`.');
   L.push('');
+
+  if (serving) {
+    const st = tally(serving.rows);
+    L.push('## Serving check — every shipped file has a route in `vercel.json`');
+    L.push('');
+    L.push(`**${st.PASS || 0} pass · ${st.FAIL || 0} fail**`);
+    L.push('');
+    L.push('| Check | Result | Detail |');
+    L.push('|---|---|---|');
+    for (const r of serving.rows) L.push(`| ${r.name} | ${r.status} | ${r.detail.replace(/\|/g, '\\|')} |`);
+    L.push('');
+    if (liveRes && liveRes.skipped) {
+      L.push(`### Live check — **SKIPPED**`);
+      L.push('');
+      L.push(liveRes.skipped);
+      L.push('');
+    } else if (liveRes) {
+      const lt = tally(liveRes.rows);
+      L.push(`### Live check — \`${OPT.site}\``);
+      L.push('');
+      L.push(`**${lt.PASS || 0} pass · ${lt.FAIL || 0} fail**`);
+      L.push('');
+      const bad = liveRes.rows.filter((r) => r.status === 'FAIL');
+      if (bad.length) { for (const r of bad) L.push(`- ${r.name} — ${r.detail}`); L.push(''); }
+    } else {
+      L.push('The live check did not run. Add `--live` before a release.');
+      L.push('');
+    }
+  }
 
   if (OPT.harnesses) {
     L.push(`## Machine sweep — ${harnesses.length} harnesses`);
@@ -409,17 +561,28 @@ function writeReport(harnesses, pageRes, started) {
 
 (async () => {
   const started = Date.now();
+  const serving = OPT.serving ? servingCheck() : null;
+  const liveRes = serving && OPT.live ? await liveCheck(serving) : null;
   const harnesses = OPT.harnesses ? await machineSweep() : [];
   const pageRes = OPT.pages ? await pageSweep() : { skipped: null, rows: [] };
 
-  writeReport(harnesses, pageRes, started);
+  writeReport(serving, liveRes, harnesses, pageRes, started);
 
+  const st = tally(serving ? serving.rows : []);
+  const lt = tally(liveRes && !liveRes.skipped ? liveRes.rows : []);
   const ht = tally(harnesses);
   const pt = tally(pageRes.rows);
-  const hardFails = (ht.FAIL || 0) + (ht.TIMEOUT || 0) + (pt.FAIL || 0);
-  const skipped = pageRes.skipped ? 1 : 0;
+  const hardFails = (st.FAIL || 0) + (lt.FAIL || 0) + (ht.FAIL || 0) + (ht.TIMEOUT || 0) + (pt.FAIL || 0);
+  const skipped = (pageRes.skipped ? 1 : 0) + (liveRes && liveRes.skipped ? 1 : 0);
 
   process.stdout.write(C.b('\n──────── QA SWEEP ────────\n'));
+  if (serving) process.stdout.write(`serving     ${st.PASS || 0} pass · ${st.FAIL || 0} fail\n`);
+  if (serving) {
+    process.stdout.write(liveRes
+      ? (liveRes.skipped ? `live        ${C.y('SKIPPED')} — could not reach ${OPT.site}\n`
+                         : `live        ${lt.PASS || 0} pass · ${lt.FAIL || 0} fail  ${C.d(OPT.site)}\n`)
+      : `live        ${C.d('not run — add --live before a release')}\n`);
+  }
   if (OPT.harnesses) process.stdout.write(`harnesses   ${ht.PASS || 0} pass · ${ht.FAIL || 0} fail · ${ht.TIMEOUT || 0} timeout · ${ht.QUAR || 0} quarantined\n`);
   if (OPT.pages) {
     const exp = pageRes.rows.reduce((n, r) => n + r.expected.length, 0);
