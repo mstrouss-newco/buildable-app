@@ -97,6 +97,7 @@ const SCREEN_EXPLORE_HUB = "explore_hub"; // NV3: the Explore section page (Labs
 const SCREEN_MAKE_HUB = "make_hub"; // NV3: the Make section page (studios + coming-soon, same shape as Play)
 const SCREEN_LESSONS = "lessons"; // Session LS2: the Lessons section (subject picker, path map, player)
 const SCREEN_PRACTICE = "practice"; // Session PT1: Practice — the shared deck engine (sight words first)
+const SCREEN_ANTCITY = "antcity";  // Card AC2: Ant City — the grow-a-colony game
 const SCREEN_KIDGAME = "kidgame";  // Session CB1: a game a KID made — an engine we ship, launched with ?kg=<id>
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
@@ -127,6 +128,7 @@ const GAME_SLUGS = {
   [SCREEN_BUBBLE]: "bubble",
   [SCREEN_SKYFLYER]: "skyflyer",
   [SCREEN_FARM]: "farm",
+  [SCREEN_ANTCITY]: "antcity",
   [SCREEN_PLAY]: "generated",
 };
 const SCREEN_TOP = "top";
@@ -157,6 +159,7 @@ const LANDING_WRAP = {
   memory: { play: SCREEN_MEMORY, loadout: true, journey: true, demo: "/memory-engine.html?v=hud2&screen=demo" },
   mahjong: { play: SCREEN_MAHJONG, loadout: true, journey: true, demo: "/mahjong-engine.html?v=hud2&screen=demo" },
   bingo: { play: SCREEN_BINGO, loadout: true },
+  antcity: { play: SCREEN_ANTCITY, loadout: true, demo: "/antcity-engine.html?v=ac2&screen=demo" },
   croctot: { play: SCREEN_CROC, loadout: true, journey: true, demo: "/croctot.html?v=hud2&screen=demo" },
   stringmatch: { play: SCREEN_STRINGMATCH, journey: true, demo: "/string-match.html?v=2&screen=demo" },
   bubble: { play: SCREEN_BUBBLE, journey: true, demo: "/bubble-engine.html?v=hud2&screen=demo" },
@@ -216,6 +219,7 @@ const GAME_CATALOG = [
   { id: "typing",      name: "Typing",           category: "Classic",  color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
   { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!", multiplayer: true },
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
+  { id: "antcity",     name: "Ant City",         category: "Colony",   color: "#E9A23B", type: "game", tile: "antcity",      handler: "onAntCity",     desc: "Draw tunnels, feed your ants, grow a colony!" },
   { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
   { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true, multiplayer: true },
@@ -388,6 +392,14 @@ async function startGuestLink(catalogId) {
 // the tile looks like the place it opens. No emoji anywhere in it — that is a
 // standing guardrail, not a style choice.
 const TILE_ART = {
+  // AC2 — Ant City's badge is the game's own shipped art, on its meadow, so the
+  // door looks like the place it opens and needs no image API to draw.
+  antcity: () => (
+    <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg,#8fd8f7 0%,#d9f2ce 46%,#c58f52 47%,#8a5a2b 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <img src="/antcity/art/badge.svg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+        style={{ width: "68%", height: "68%", objectFit: "contain", display: "block" }} />
+    </div>
+  ),
   farm: () => (
     <svg viewBox="0 0 120 80" style={{ width: "100%", height: "100%", display: "block" }} aria-hidden="true">
       <rect x="0" y="0" width="120" height="80" fill="#8CC152" />
@@ -1501,6 +1513,16 @@ function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Gard
 // cycle from the flying engine next door.
 function FarmScreen({ onHome, level }) { return <GameFrame title="The Farm" src={"/skyflyer-farm.html?v=fm3" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#B3E58C" />; }
 function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
+// AC2 — Ant City. One colony the kid keeps, so there is no level param: the shell
+// hands over the equipped look (Ant / Meadow / Dirt indexes from Make it mine) and
+// the engine carries its own mission progress.
+function AntCityScreen({ onHome }) {
+  const eq = readEquipped("antcity");
+  const look = (typeof eq.Ant === "number" ? `&ant=${eq.Ant}` : "") +
+               (typeof eq.Meadow === "number" ? `&meadow=${eq.Meadow}` : "") +
+               (typeof eq.Dirt === "number" ? `&dirt=${eq.Dirt}` : "");
+  return <GameFrame title="Ant City" src={"/antcity-engine.html?v=ac2" + look} onHome={onHome} bg="#2b1d10" />;
+}
 function BubbleScreen({ onHome, level }) { return <GameFrame title="Bubble Buddies" src={"/bubble-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0e1830" />; }
 // Sky Flyer (FL2). The journey picks the world (?level=), the shell hangar picks the
 // plane (?ride= from the Make-it-mine loadout). The engine reads both on load, so a
@@ -2124,6 +2146,7 @@ export default function BuildableKids() {
           onStringMatch={() => openLanding("stringmatch")}
           onTank={() => openLanding("tank")}
           onBubble={() => openLanding("bubble")}
+          onAntCity={() => openLanding("antcity")}
           onSkyFlyer={() => openLanding("skyflyer")}
           onFarm={() => openLanding("farm")}
           onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
@@ -2150,6 +2173,7 @@ export default function BuildableKids() {
           onSurvival={() => openLanding("survival")}
           onStringMatch={() => openLanding("stringmatch")}
           onBubble={() => openLanding("bubble")}
+          onAntCity={() => openLanding("antcity")}
           onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
           onCastle={() => openLanding("castleguard")}
           onTumble={() => openLanding("tumble")}
@@ -2593,6 +2617,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_STRINGMATCH) {
     return <StringMatchScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_ANTCITY) {
+    return <AntCityScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_BUBBLE) {
     return <BubbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;

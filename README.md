@@ -6,6 +6,51 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AC2 — Ant City's ten missions, its gentle rain, and the door into the app (September 6 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs` (new), `src/BuildableKids.jsx`, `qa-nv2.mjs`.
+Phase **AC**, card **AC2**. **Ant City is LIVE.**
+
+The ten tutorial missions from `/antcity/manifest.json` now sit on top of the AC1 colony.
+The manifest names them and their order; the engine maps each `layout` to a goal, so a new
+mission is a manifest edit, not engine code. Finishing the tenth opens free-build, which
+never ends. Each mission pays its manifest coins into the shared wallet through
+`BuildableWallet.awardOnce`, pops a calm celebration through `Feel`, and posts `levelup`
+(or `win` on the last one) to the buddy.
+
+**The setbacks pause, they never punish.** Hunger and tiredness only slow the colony down,
+and a resting den brings tiredness back up. Rain floods ONE tunnel at a time (two at the
+liveliest difficulty), which blocks the way through it until a builder clears it; builders
+always clear water before starting anything new. There is still no lose state anywhere.
+Milestones (dig 5 levels, reach 50 ants) pay coins and open a room type early, and block
+nothing if a kid ignores them.
+
+**The first launch shows, it does not tell.** A touch mark drags down a dashed path so a
+kid who cannot read knows the one thing to do. The first tap ends it, and the `?` button
+replays it.
+
+**The robot the card asked for.** `qa-antcity.mjs` builds the engine in a vm with the shared
+libs, drives it from the manifest, and a perfect-player bot finishes all ten missions in
+order, headlessly — then checks the coins reached the wallet and were never claimed twice,
+that a flood is cleared without losing anything, that hunger keeps every ant, that pause
+and resume land as shell messages, that every art slot resolves to a manifest URL, and that
+there is no emoji anywhere in the engine.
+
+**Three bugs the robot caught before Mike could.** Dig Deep was impossible: the buried find
+only counted if the kid dug within one column of it, so digging straight down (the obvious
+move) missed it forever — depth is the goal, so depth now uncovers it. Rainy Day could be
+finished by a puddle that was already sitting there, so the mission the kid was meant to
+learn from flashed past — it brings its own rain and wants that tunnel cleared. And a
+browser run with no builders left eleven tunnels under water at once, which is a punishment,
+not a setback — hence the one-at-a-time cap.
+
+**Going live.** An Ant City tile in the Play picker (a drawn badge over its own meadow, no
+image API), the `antcity` slug so plays are counted, a landing door with its own attract
+demo, and the equipped Ant / Meadow / Dirt look handed to the engine as index params, the
+same tiny handoff Breaker uses. The Vercel routes landed with AC1. `qa-nv2.mjs` now expects
+22 live games.
+
+---
+
 ## AC1 — the Ant City colony engine, counts and rates under a drawn burrow (September 6 2026)
 `public/antcity-engine.html` (new), `vercel.json`. Phase **AC**, card **AC1**.
 

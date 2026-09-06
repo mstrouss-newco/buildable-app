@@ -50,7 +50,7 @@ const CAT = /GAME_CATALOG\s*=\s*\[([\s\S]*?)\n\];/.exec(S);
 const catBody = CAT ? CAT[1] : '';
 const gameEntries = catBody.split('\n').filter((l) => /{\s*id:/.test(l));
 const liveGames = gameEntries.filter((l) => /type:\s*"game"/.test(l) && !/soon:\s*true/.test(l));
-chk('catalog TODAY has 21 live games (Play door count today)', liveGames.length === 21, 'live=' + liveGames.length);   // FM3 added The Farm
+chk('catalog TODAY has 22 live games (Play door count today)', liveGames.length === 22, 'live=' + liveGames.length);   // FM3 added The Farm; AC2 added Ant City
 const EX = /EXHIBIT_CATALOG\s*=\s*\[([\s\S]*?)\n\];/.exec(S);
 const exBody = EX ? EX[1] : '';
 const exEntries = exBody.split('\n').filter((l) => /{\s*id:/.test(l));

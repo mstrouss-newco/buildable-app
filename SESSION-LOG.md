@@ -1,3 +1,43 @@
+## 2026-09-06 — AC2: Ant City's missions, its rain, and the door into the app
+
+**Shipped, and LIVE.** The ten tutorial missions from the manifest now run on the AC1
+colony, in order, handing off to free-build after the tenth. Each one pays its coins to
+the shared wallet, pops a calm celebration, and tells the buddy. Gentle setbacks: hunger
+and tiredness slow the colony and nothing else, and rain floods one tunnel at a time until
+a builder clears it. Milestones pay coins and open a room type early without blocking
+anything. A first launch plays a wordless show (a touch mark dragging down a dashed path);
+the `?` button replays it. Ant City has a tile in the Play picker and its own landing door,
+so kids can find it.
+
+**`qa-antcity.mjs` written in the same session, as the card required.** A perfect-player
+bot finishes all ten missions headlessly, and the harness checks the coins, the flood, the
+hunger, pause and resume, the manifest art URLs and the no-emoji rule. `node qa-all.mjs`
+is green: 47 harnesses.
+
+**The robot earned its keep immediately — it found three real bugs.**
+1. **Dig Deep was impossible.** The buried find only counted if the kid dug within one
+   column of it, so digging straight down never uncovered it. The bot sat there for 900
+   seconds of colony time. Depth is the goal, so depth uncovers it now.
+2. **Rainy Day taught nothing.** It could be completed by a flood that was already there,
+   so it flashed past in zero seconds. The mission brings its own rain and wants that
+   tunnel cleared.
+3. **Rain was a punishment, not a setback.** A browser run with no builders assigned ended
+   with eleven tunnels under water. One flood at a time now (two on the liveliest
+   difficulty).
+
+**Calls I made for you.**
+1. **No journey picker for Ant City.** Every other game's landing door lets a kid jump to
+   any level. The ten missions here teach one thing at a time and then get out of the way,
+   so jumping into mission seven would skip the teaching. The door has a demo box and the
+   Make-it-mine loadout; the missions live inside the colony.
+2. **The tile is drawn, not generated.** Like the Farm, its badge is the game's own shipped
+   art on its own meadow, so it needs no image API and always shows something.
+3. **`qa-nv2.mjs` now expects 22 live games.** That harness pins the Play door count, and
+   Ant City going live moves it by one.
+
+**What is left.** AC3 is the real per-kid save and away-time growth (today it is still this
+browser's localStorage). AC4 is the sounds, the music loop and the last art slots.
+
 ## 2026-09-06 — AC1: the Ant City colony engine
 
 **Shipped.** `public/antcity-engine.html`, a new cartridge: a side-view ant colony the

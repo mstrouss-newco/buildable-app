@@ -27,7 +27,8 @@ engine), so the QA robot can prove every mission is beatable.
 - **public/buildable-mechanics.js** - `BM`, shared FX/juice (dirt puffs, sparkles, pops).
 - **public/buildable-feel.js** - `Feel`, the shared Feel Kit (taps, celebration card).
 - **public/buildable-hud.js** - the one shared in-play info bar (no global).
-- **qa-antcity.mjs** - the headless robot: every mission is provably beatable.
+- **qa-antcity.mjs** - the headless robot (card AC2): a perfect player finishes all
+  ten missions, and the cartridge contract is checked with them.
 
 ## How to play
 

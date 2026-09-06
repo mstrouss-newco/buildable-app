@@ -137,7 +137,41 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       den:     { name:"Resting Den", desc:"Tired ants recover",     food:8, color:"#9ad2f2" }
     },
 
-    // difficulty 1-5 -> colony pace + setback frequency (AC2 uses setbacks)
+    // ---- missions (AC2) ----------------------------------------------------
+    //  The manifest names the ten missions and their order; this maps each
+    //  manifest `layout` to the goal that finishes it, so the manifest stays the
+    //  recipe and the engine stays the fixed part. A goal is always something the
+    //  colony can reach from any state — nothing can be failed or missed.
+    goals: {
+      "tutorial-tunnel":    { type:"dug",   n:3 },
+      "forage":             { type:"food",  n:8 },
+      "build-room-nursery": { type:"room",  room:"nursery", n:1 },
+      "hatch":              { type:"born",  n:1 },
+      "grow-population":    { type:"ants" },        // the count comes from the level id
+      "build-room-storage": { type:"room",  room:"storage", n:1 },
+      "setback-rain":       { type:"flood", n:1 },
+      "build-room-den":     { type:"room",  room:"den", n:1 },
+      "dig-deep-find":      { type:"found", n:1 }
+    },
+    // which mission opens each room type (index into the mission list). A room the
+    // kid has not met yet is not offered; nothing is ever taken away again.
+    roomUnlock: { nursery:2, storage:5, den:8 },
+    // free rewards that never block building
+    milestones: [
+      { id:"deep-5",  type:"deep", n:5,  coins:20, unlock:"storage" },
+      { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" }
+    ],
+    // gentle setbacks: they pause work, they never take anything away
+    setback: {
+      floodEverySec: 100,        // divided by the difficulty's setback frequency
+      floodClearPerAntPerSec: 0.12,   // a few seconds of a builder's time, long enough to notice
+      restDrainPerSec: 0.007,    // the colony gets tired slowly
+      restPerDenPerSec: 0.030,   // a resting den brings it back
+      sleepyRate: 0.45           // how much slower a sleepy colony works
+    },
+    findRow: 11,                 // how deep the buried find is buried
+
+    // difficulty 1-5 -> colony pace + setback frequency
     difficulty: [
       { pace:0.70, setbacks:0.4 },
       { pace:0.85, setbacks:0.7 },
@@ -224,7 +258,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var C = null;                 // the colony state
   function key(c,r){ return c+","+r; }
   function cellAt(c,r){ return C.cells[key(c,r)] || null; }
-  function isOpen(c,r){ var x = cellAt(c,r); return !!(x && (x.kind === "tunnel" || (x.kind === "room"))); }
+  function isOpen(c,r){ var x = cellAt(c,r); return !!(x && !x.flooded && (x.kind === "tunnel" || (x.kind === "room"))); }
 
   function freshColony(diff){
     var g = GAME_CONFIG, col = {
@@ -232,8 +266,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       jobs:{ digger:2, forager:2, nursery:1, builder:1 },
       surface:[], sample:[],
       layProg:0, hatchProg:0, deepest:g.startRow, difficulty:diff||3,
-      queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0
+      queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0,
+      // --- AC2: missions, milestones and the gentle setbacks ---
+      mission:0, done:{}, mBase:{}, freeBuild:false, hit:{},
+      carried:0, found:0, floods:0, floodT:0, rest:1
     };
+    // the buried find for the last mission, waiting under the deep soil
+    col.find = { c:Math.floor(g.cols/2) + 2, r:g.findRow };
     // the entrance shaft and the queen's first chamber, so there is always somewhere to start
     var qc = col.queen.c;
     for(var r=0; r<=g.startRow; r++) col.cells[key(qc,r)] = { c:qc, r:r, kind:"tunnel" };
@@ -251,8 +290,18 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function paceMul(){
     var dens = Math.min(GAME_CONFIG.denMax, roomCount("den"));
     var hungry = (C.food <= 0) ? GAME_CONFIG.hungryRate : 1;
-    return tune().pace * (1 + dens*GAME_CONFIG.denBonus) * hungry;
+    var sleepy = (C.rest <= 0) ? GAME_CONFIG.setback.sleepyRate : 1;
+    return tune().pace * (1 + dens*GAME_CONFIG.denBonus) * hungry * sleepy;
   }
+  // what is slowing the colony right now, in the kid's words. Never a failure,
+  // always a thing they can go and fix.
+  function setbackNow(){
+    if(C.food <= 0)  return "Your ants are hungry. Drop food up on the meadow.";
+    if(C.rest <= 0)  return "Your ants are sleepy. Build a resting den.";
+    if(floodCount())  return "Rain flooded a tunnel. Builders are clearing it.";
+    return null;
+  }
+  function floodCount(){ var n=0; for(var k in C.cells){ if(C.cells[k].flooded) n++; } return n; }
   function jobCount(id){ return C.jobs[id]|0; }
 
   // ---------- surface: the crumbs and water drops the kid leaves out ----------
@@ -291,6 +340,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         cell.kind = "tunnel"; delete cell.dig; C.plan.shift(); C.dug++;
         if(cell.r > C.deepest) C.deepest = cell.r;
         puff(cell.c, cell.r);
+        // the last mission: dig deep enough and the ants turn up something buried
+        if(C.find && !C.find.gone && cell.r >= C.find.r){
+          C.find.gone = true; C.find.at = { c:cell.c, r:cell.r }; C.found++;
+          if(Feel){ try{ Feel.tap(); }catch(e){} }
+        }
       }
     }
 
@@ -300,12 +354,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var it = C.surface[0], take2 = Math.min(it.amount, carry);
       it.amount -= take2; carry -= take2;
       if(it.kind === "water") C.water = Math.min(waterCap(), C.water + take2);
-      else C.food = Math.min(foodCap(), C.food + take2);
+      else { C.food = Math.min(foodCap(), C.food + take2); C.carried += take2; }
       if(it.amount <= 0.001) C.surface.shift();
     }
 
-    // --- builders raise the rooms the kid asked for
+    // --- builders clear a flooded tunnel FIRST: it blocks the colony, so it is
+    //     the thing that most needs them. Nothing is lost while it sits there.
     var bw = jobCount("builder") * g.build.perAntPerSec * pace * dt;
+    if(bw > 0){
+      for(var fk in C.cells){
+        var fc = C.cells[fk];
+        if(!fc.flooded) continue;
+        var cw = Math.min(1 - (fc.clear||0), bw * (g.setback.floodClearPerAntPerSec / g.build.perAntPerSec));
+        fc.clear = (fc.clear||0) + cw; bw -= cw * (g.build.perAntPerSec / g.setback.floodClearPerAntPerSec);
+        if(fc.clear >= 1){ delete fc.flooded; delete fc.clear; C.floods++; puff(fc.c, fc.r); if(Feel){ try{ Feel.tap(); }catch(e){} } }
+        if(bw <= 0) break;
+      }
+    }
     if(bw > 0){
       for(var k in C.cells){
         var rm = C.cells[k];
@@ -337,8 +402,39 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     C.food  = Math.max(0, C.food  - C.ants * g.upkeep.foodPerAntPerSec  * dt);
     C.water = Math.max(0, C.water - C.ants * g.upkeep.waterPerAntPerSec * dt);
 
+    // --- tiredness: it creeps in slowly, and a resting den brings it back
+    var dens2 = Math.min(g.denMax, roomCount("den"));
+    C.rest = Math.max(0, Math.min(1, C.rest - g.setback.restDrainPerSec*dt + dens2*g.setback.restPerDenPerSec*dt));
+
+    // --- rain: every so often a tunnel floods and blocks the way through it
+    C.floodT += dt * tune().setbacks;
+    if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
+
     normalizeJobs();
+    checkMission();
     walkSample(dt);
+  }
+  // One tunnel floods. Never the queen's chamber, never the entrance shaft, and
+  // never the only way in, so the colony can always keep working somewhere.
+  function rain(){
+    // ONE flooded tunnel at a time (two at the liveliest difficulty). A browser run
+    // with no builders assigned had eleven tunnels under water at once, which is a
+    // punishment, not a gentle setback.
+    var cap = tune().setbacks > 1.2 ? 2 : 1;
+    if(floodCount() >= cap) return null;
+    var pool = [], k, x;
+    for(k in C.cells){
+      x = C.cells[k];
+      if(x.kind !== "tunnel" || x.flooded) continue;
+      if(x.c === C.queen.c && x.r <= C.queen.r) continue;
+      pool.push(x);
+    }
+    if(!pool.length) return null;
+    var pick = pool[Math.floor(srand()*pool.length)];
+    pick.flooded = true; pick.clear = 0;
+    if(Feel){ try{ Feel.miss(); }catch(e){} }
+    hint("Rain flooded a tunnel. Builders will clear it.");
+    return pick;
   }
   function hasOpenNeighbour(c,r){
     return isOpen(c-1,r) || isOpen(c+1,r) || isOpen(c,r-1) || isOpen(c,r+1) || r === 0;
@@ -383,6 +479,142 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   var puffs = [];
   function puff(c,r){ if(puffs.length > 30) puffs.shift(); puffs.push({ c:c, r:r, t:0 }); }
+
+  // ======================================================================
+  //  Missions (AC2). The ten tutorial missions come from the manifest and sit
+  //  ON TOP of the colony: they watch what it does, they never take it over.
+  //  Nothing can be failed, nothing expires, and finishing the tenth opens
+  //  free-build, which never ends.
+  // ======================================================================
+  var FALLBACK_MISSIONS = [   // kept in step with /antcity/manifest.json
+    { id:"first-tunnel",   name:"First Tunnel",   layout:"tutorial-tunnel",    coins:10 },
+    { id:"first-forage",   name:"First Forage",   layout:"forage",             coins:10 },
+    { id:"build-nursery",  name:"Build a Nursery",layout:"build-room-nursery", coins:15 },
+    { id:"hatch-a-baby",   name:"Hatch a Baby",   layout:"hatch",              coins:15 },
+    { id:"reach-10-ants",  name:"Reach 10 Ants",  layout:"grow-population",    coins:20 },
+    { id:"storage-room",   name:"Storage Room",   layout:"build-room-storage", coins:20 },
+    { id:"rainy-day",      name:"Rainy Day",      layout:"setback-rain",       coins:20 },
+    { id:"reach-25-ants",  name:"Reach 25 Ants",  layout:"grow-population",    coins:25 },
+    { id:"resting-den",    name:"Resting Den",    layout:"build-room-den",     coins:25 },
+    { id:"dig-deep",       name:"Dig Deep",       layout:"dig-deep-find",      coins:30 }
+  ];
+  var MISSIONS = FALLBACK_MISSIONS.slice();
+
+  function signal(kind, meta){
+    if(DEMO) return;
+    try{ if(window.parent && window.parent !== window) window.parent.postMessage(meta ? { source:"buildable", kind:kind, meta:meta } : { source:"buildable", kind:kind }, "*"); }catch(e){}
+  }
+  function missionAt(i){ return MISSIONS[i] || null; }
+  function currentMission(){ return C.freeBuild ? null : missionAt(C.mission); }
+  // the goal for a mission: the layout says which kind, the id carries any number
+  // ("reach-25-ants" -> 25), so a new mission needs no engine change.
+  function goalFor(m){
+    if(!m) return null;
+    var g = GAME_CONFIG.goals[m.layout]; if(!g) return null;
+    var n = g.n;
+    if(n == null){ var d = /(\d+)/.exec(m.id || ""); n = d ? +d[1] : 1; }
+    return { type:g.type, room:g.room, n:n };
+  }
+  function haveFor(g){
+    if(!g) return 0;
+    switch(g.type){
+      case "dug":   return C.dug - (C.mBase.dug||0);
+      case "food":  return Math.floor(C.carried - (C.mBase.carried||0));
+      case "born":  return C.born - (C.mBase.born||0);
+      case "flood": if(!C.mFlood) return 1;                      // nowhere to flood: nothing to clear
+                    var fc2 = C.cells[C.mFlood];
+                    return (!fc2 || !fc2.flooded) ? 1 : 0;
+      case "found": return C.found - (C.mBase.found||0);
+      case "ants":  return C.ants;
+      case "room":  return roomCount(g.room);
+      default:      return 0;
+    }
+  }
+  // one short line telling the kid what this mission wants
+  function missionLine(){
+    var m = currentMission(); if(!m) return "Free build: grow it as big as you like";
+    var g = goalFor(m); if(!g) return m.name;
+    var have = Math.max(0, haveFor(g)), n = g.n;
+    switch(g.type){
+      case "dug":   return "Draw a tunnel: " + Math.min(have,n) + " of " + n + " dug";
+      case "food":  return "Bring food home: " + Math.min(have,n) + " of " + n;
+      case "room":  return "Tap a tunnel to build a " + (GAME_CONFIG.rooms[g.room] ? GAME_CONFIG.rooms[g.room].name.toLowerCase() : g.room);
+      case "born":  return "Put ants on nursery duty and wait for an egg";
+      case "ants":  return "Grow to " + n + " ants: " + Math.min(have,n) + " so far";
+      case "flood": return "Clear the flooded tunnel";
+      case "found": return "Keep digging down to find what is buried";
+      default:      return m.name;
+    }
+  }
+  function startMission(i){
+    C.mission = i;
+    C.mBase = { dug:C.dug, carried:C.carried, born:C.born, floods:C.floods, found:C.found };
+    var m = missionAt(i);
+    C.mFlood = null;
+    // Rainy Day brings its own rain, and wants THAT tunnel cleared — a puddle that
+    // was already sitting there does not finish it. It can never be un-finishable:
+    // if there is nowhere to flood, the goal is already met.
+    if(m && m.layout === "setback-rain"){
+      var f = rain();
+      C.mFlood = f ? key(f.c, f.r) : null;
+    }
+    if(m) hint(missionLine());
+  }
+  function checkMission(){
+    if(C.freeBuild) return;
+    var m = currentMission(), g = goalFor(m);
+    if(!m || !g) { C.freeBuild = true; return; }
+    if(haveFor(g) >= g.n) completeMission();
+    checkMilestones();
+  }
+  function completeMission(){
+    var m = currentMission(); if(!m) return;
+    C.done[m.id] = true;
+    award("antcity:" + m.id, m.coins || 10);
+    celebrate(m.name, m.coins || 10);
+    signal(C.mission >= MISSIONS.length - 1 ? "win" : "levelup",
+           { game:"antcity", level:m.name, mission:C.mission + 1, of:MISSIONS.length, ants:C.ants });
+    if(C.mission >= MISSIONS.length - 1){ C.freeBuild = true; hint("Free build: no ending, just keep growing"); }
+    else startMission(C.mission + 1);
+    saveSoon();
+  }
+  // milestones: a free reward for growing, and they open a room type early. They
+  // never gate anything — a kid who ignores them loses nothing.
+  function checkMilestones(){
+    var ms = GAME_CONFIG.milestones || [], i;
+    for(i=0;i<ms.length;i++){
+      var ml = ms[i]; if(C.hit[ml.id]) continue;
+      var have = ml.type === "ants" ? C.ants : C.deepest;
+      if(have < ml.n) continue;
+      C.hit[ml.id] = true;
+      award("antcity:milestone:" + ml.id, ml.coins);
+      celebrate(ml.type === "ants" ? (ml.n + " ants!") : ("Dug " + ml.n + " levels deep!"), ml.coins);
+      signal("cheer", { game:"antcity", milestone:ml.id });
+      saveSoon();
+    }
+  }
+  var coinsAwarded = [];
+  function award(key, n){
+    if(DEMO || !n) return;
+    coinsAwarded.push({ key:key, n:n });
+    try{ if(BW && BW.awardOnce) BW.awardOnce(key, n); }catch(e){}
+  }
+  // a room the kid has not been introduced to yet is simply not offered
+  function roomUnlocked(id){
+    if(C.freeBuild) return true;
+    var ms = GAME_CONFIG.milestones || [], i;
+    for(i=0;i<ms.length;i++) if(ms[i].unlock === id && C.hit[ms[i].id]) return true;
+    var at = GAME_CONFIG.roomUnlock[id];
+    return at == null || C.mission >= at;
+  }
+  // the celebration: Feel does the juice, a plain card says what just happened
+  var party = { t:0, title:"", coins:0 };
+  function celebrate(title, coins){
+    if(DEMO) return;                      // the attract box stays a window on the colony
+    party.t = 2.6; party.title = title; party.coins = coins || 0;
+    if(Feel){ try{ Feel.celebrate(W, H); Feel.coinBurst(W/2, H*0.42, 14); }catch(e){} }
+  }
+  function tickParty(dt){ if(party.t > 0) party.t -= dt; }
 
   // ======================================================================
   //  Drawing
@@ -463,6 +695,20 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       X.fillStyle = "rgba(0,0,0,.22)";
       if(BR){ BR.rrect(X, px+3, py+3, CS-6, CS-8, 8); X.fill(); }
       if(x.kind === "room") drawRoom(x, px, py);
+      if(x.flooded){
+        X.fillStyle = "rgba(98,182,242,.72)";
+        if(BR){ BR.rrect(X, px+2, py+2, CS-4, CS-4, 8); X.fill(); } else X.fillRect(px+2, py+2, CS-4, CS-4);
+        X.fillStyle = "rgba(255,255,255,.55)";
+        X.fillRect(px+4, py + CS*0.35 + Math.sin(C.t*3 + x.c)*CS*0.05, CS-8, 3);
+        X.fillStyle = "rgba(255,255,255,.9)"; X.fillRect(px+4, py+CS-7, (CS-8)*(x.clear||0), 3);
+      }
+    }
+    // whatever the ants turned up down deep
+    if(C.find && C.find.gone && C.find.at){
+      var fx2 = cellX(C.find.at.c)+CS/2, fy2 = cellY(C.find.at.r)+CS/2;
+      if(IMG.find) drawImg(IMG.find, fx2, fy2, CS*0.7);
+      else { X.fillStyle = "#ffd166"; X.beginPath(); X.arc(fx2, fy2, CS*0.24, 0, 7); X.fill();
+             X.fillStyle = "#fff3d6"; if(BR) BR.sparkle(X, fx2, fy2, CS*0.16, C.t); X.fill(); }
     }
     // the queen sits in her chamber
     var q = C.queen, qx = cellX(q.c)+CS/2, qy = cellY(q.r)+CS/2;
@@ -541,6 +787,24 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.save(); X.translate(cx, cy); if(flip) X.scale(-1,1);
     X.drawImage(img, -w/2, -h/2, w, h); X.restore();
   }
+  // the mission celebration: a calm card, the Feel kit does the sparkle
+  function drawParty(){
+    if(party.t <= 0) return;
+    var a = Math.min(1, party.t / 0.4), cw = Math.min(320, W*0.8), ch = 116;
+    var cx = (W - cw)/2, cy = H*0.30;
+    X.globalAlpha = a;
+    X.fillStyle = "rgba(20,12,4,.55)"; X.fillRect(0, 0, W, H);
+    X.fillStyle = "#fff8ec";
+    if(BR){ BR.rrect(X, cx, cy, cw, ch, 20); X.fill(); } else X.fillRect(cx, cy, cw, ch);
+    X.fillStyle = "#4a2f10"; X.textAlign = "center";
+    X.font = "800 22px 'Baloo 2','Nunito',system-ui,sans-serif";
+    X.fillText(party.title, W/2, cy + 46);
+    if(party.coins){
+      X.fillStyle = "#c9862b"; X.font = "800 17px 'Baloo 2','Nunito',system-ui,sans-serif";
+      X.fillText("+" + party.coins + " coins", W/2, cy + 78);
+    }
+    X.textAlign = "left"; X.globalAlpha = 1;
+  }
   function drawPuffs(){
     for(var i=puffs.length-1;i>=0;i--){
       var p = puffs[i]; p.t += STEP*2;
@@ -559,9 +823,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function HUD(){ try{ return _hud || (_hud = window.BuildableHUD.mount(CV)); }catch(e){ return { set:function(){}, show:function(){}, hide:function(){} }; } }
   try{ if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT); }catch(e){}
   function syncHud(){
+    var m = currentMission();
     HUD().set({
-      left:  [{ text:"Ants "+C.ants }, { text:"Eggs "+C.eggs }],
-      right: [{ text:"Food "+Math.floor(C.food) }, { text:"Water "+Math.floor(C.water) }]
+      left:  [{ text: m ? (m.name) : "Free build" }, { text:"Ants "+C.ants }],
+      right: [{ text:"Food "+Math.floor(C.food) }, { text:"Eggs "+C.eggs }]
     });
   }
   var hintT = 0;
@@ -678,6 +943,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   CV.addEventListener("pointerdown", function(ev){
     if(state !== "play" || DEMO || paused) return;
     BA.unlock();
+    if(how.on){ endHow(); }
     var g = cellFromEvent(ev); if(!g) return;
     if(g.surface){ dropSurface(TOOL, g.x); if(Feel){ try{ Feel.tap(); }catch(e){} } saveSoon(); return; }
     var here = cellAt(g.c, g.r);
@@ -705,6 +971,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     buildTarget = { c:c, r:r };
     var list = $("roomList"); list.innerHTML = "";
     Object.keys(GAME_CONFIG.rooms).forEach(function(id){
+      if(!roomUnlocked(id)) return;                 // not met yet: simply not offered
       var def = GAME_CONFIG.rooms[id], can = C.food >= def.food;
       var b = document.createElement("button");
       b.className = "room"; b.type = "button"; b.disabled = !can;
@@ -739,7 +1006,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         v:1, cells:C.cells, plan:C.plan, ants:C.ants, eggs:C.eggs, food:C.food, water:C.water,
         jobs:C.jobs, deepest:C.deepest, difficulty:C.difficulty, queen:C.queen,
-        born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface, savedAt:Date.now()
+        born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface,
+        mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
+        carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
+        seen:C.seen, savedAt:Date.now()
       }));
     }catch(e){}
   }
@@ -752,6 +1022,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       col.food = s.food || 0; col.water = s.water || 0; col.jobs = s.jobs || col.jobs;
       col.deepest = s.deepest || col.deepest; col.queen = s.queen || col.queen;
       col.born = s.born||0; col.dug = s.dug||0; col.rooms = s.rooms||0; col.surface = s.surface || [];
+      col.mission = s.mission||0; col.done = s.done||{}; col.mBase = s.mBase||{};
+      col.freeBuild = !!s.freeBuild; col.hit = s.hit||{}; col.carried = s.carried||0; col.mFlood = s.mFlood||null;
+      col.found = s.found||0; col.floods = s.floods||0; col.rest = (s.rest==null?1:s.rest);
+      col.find = s.find || col.find; col.seen = !!s.seen;
       return col;
     }catch(e){ return null; }
   }
@@ -777,7 +1051,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     hideMenu(); $("panel").className = "";
     buildJobsUI(); syncJobsUI(); HUD().show(); syncHud();
     if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
-    if(!DEMO) hint("Drag in the dirt to draw a tunnel");
+    if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
+    if(DEMO) return;
+    if(!C.seen){ C.seen = true; saveSoon(); showHow(); }      // first launch: show, don't tell
+    else hint(currentMission() ? missionLine() : "Free build: keep growing");
   }
   var startScreen = null;
   function startCfg(){
@@ -811,12 +1088,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var guard = 0;
       while(acc >= STEP && guard < 12){ step(); acc -= STEP; guard++; }
       if(acc > 0.5) acc = 0;
-      tickHint(dt);
+      tickHint(dt); tickHow(dt); tickParty(dt);
       if(saveT > 0 && !DEMO){ saveT -= dt; if(saveT <= 0) saveNow(); }
       if(DEMO) demoStep(dt);
       syncHud(); syncJobsUI();
     }
-    if(C) draw();
+    if(C){ draw(); if(state === "play"){ drawHow(); drawParty(); } }
   }
   // attract mode: the colony plays itself, silent, input ignored (used by the picker)
   function demoStep(dt){
@@ -830,19 +1107,67 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
   }
 
+  // ======================================================================
+  //  The wordless show. On a first launch (and from the ? button) a hand moves
+  //  down the dirt and the cells it passes turn into a drawn path, so a kid who
+  //  cannot read still knows the one thing to do. No words, no emoji, and it
+  //  never blocks: the first tap on the screen ends it.
+  // ======================================================================
+  var how = { on:false, t:0, path:[] };
+  function showHow(){
+    how.on = true; how.t = 0; how.path = [];
+    var c = C.queen.c, r = C.deepest + 1, i;
+    for(i=0;i<4;i++) how.path.push({ c:c, r:r+i });
+  }
+  function endHow(){ how.on = false; }
+  function tickHow(dt){
+    if(!how.on) return;
+    how.t += dt;
+    if(how.t > 3.4){ endHow(); return; }
+  }
+  function drawHow(){
+    if(!how.on || !how.path.length) return;
+    var span = 2.6, p = Math.max(0, Math.min(1, (how.t - 0.4) / span));
+    var at = p * (how.path.length - 1), idx = Math.floor(at), fr = at - idx;
+    var a = how.path[Math.min(idx, how.path.length-1)], b = how.path[Math.min(idx+1, how.path.length-1)];
+    var x = cellX(a.c) + CS/2 + (cellX(b.c) - cellX(a.c)) * fr;
+    var y = cellY(a.r) + CS/2 + (cellY(b.r) - cellY(a.r)) * fr;
+    // where the tunnel is headed, so the shape of the idea is on screen at once
+    X.strokeStyle = "rgba(255,240,200,.5)"; X.lineWidth = 2.5; X.setLineDash([5,5]);
+    for(var i=0;i<how.path.length;i++){
+      var cc = how.path[i], cxp = cellX(cc.c), cyp = cellY(cc.r);
+      if(BR){ BR.rrect(X, cxp+4, cyp+4, CS-8, CS-8, 8); X.stroke(); } else X.strokeRect(cxp+4, cyp+4, CS-8, CS-8);
+    }
+    X.setLineDash([]);
+    // the trail the hand has covered so far
+    X.strokeStyle = "rgba(255,240,200,.8)"; X.lineWidth = Math.max(4, CS*0.28); X.lineCap = "round";
+    X.beginPath();
+    X.moveTo(cellX(how.path[0].c)+CS/2, cellY(how.path[0].r)+CS/2);
+    X.lineTo(x, y); X.stroke();
+    // the touch itself: a soft ring under a solid dot, the same mark a finger makes
+    // on every touchscreen. Drawn, so it needs no art and says nothing in words.
+    handDot(x, y);
+  }
+  function handDot(x,y){
+    var pulse = 0.75 + 0.25*Math.sin(how.t*6);
+    X.strokeStyle = "rgba(255,255,255,.55)"; X.lineWidth = 3;
+    X.beginPath(); X.arc(x, y, CS*0.42*pulse, 0, 7); X.stroke();
+    X.fillStyle = "rgba(255,255,255,.92)"; X.beginPath(); X.arc(x, y, CS*0.2, 0, 7); X.fill();
+  }
+
   // ---------- shared nav bridge (Home exits, Sound, Help) ----------
   if(window.BuildableGameNav){
     window.BuildableGameNav.register({
       hide:["backBtn","muteBtn","helpBtn"],
       onSound:function(){ BA.unlock(); BA.toggleMute(); if(startScreen) startScreen.update(startCfg()); },
       onMenu:function(){ showMenu(); },
-      onHelp:function(){ hint("Drag in the dirt to dig. Tap the meadow to drop food. Slide the bar to change jobs."); },
+      onHelp:function(){ if(state === "play") showHow(); else hint("Tap play to open your colony"); },
       soundOn:function(){ return !BA.muted; },
       inGame:function(){ return state === "play"; }
     });
   }
   $("muteBtn").addEventListener("click", function(){ BA.unlock(); BA.toggleMute(); });
-  $("helpBtn").addEventListener("click", function(){ hint("Drag in the dirt to dig. Tap the meadow to drop food. Slide the bar to change jobs."); });
+  $("helpBtn").addEventListener("click", function(){ if(state === "play") showHow(); });
   $("backBtn").addEventListener("click", function(){ showMenu(); });
 
   // ---------- cartridge contract: shell -> game ----------
@@ -860,14 +1185,16 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // ======================================================================
   var ART_IDS = {
     ant:"antcity/ant/classic-v1", queen:"antcity/hero/queen-v1", soil:"antcity/soil/sandy-v1",
-    egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1",
+    egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1", find:"antcity/prop/buried-find-v1",
     room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1"
   };
+  // The shell owns the kid's picks and hands the engine the option INDEX per slot
+  // (?ant=1&meadow=0&dirt=1), the same tiny-param handoff Breaker and Sky Flyer use.
   function equippedLooks(){
     var out = {};
     try{
-      var v = new URLSearchParams(location.search).get("look"); if(!v) return out;
-      v.split(",").forEach(function(p){ var kv = p.split(":"); if(kv.length===2) out[kv[0].trim().toLowerCase()] = kv[1].trim().toLowerCase(); });
+      var q2 = new URLSearchParams(location.search);
+      ["ant","meadow","dirt"].forEach(function(k){ var v = q2.get(k); if(v != null && v !== "" && !isNaN(+v)) out[k] = +v; });
     }catch(e){}
     return out;
   }
@@ -879,15 +1206,17 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(parts.ant)  ART_IDS.ant  = parts.ant;
       if(parts.soil) ART_IDS.soil = parts.soil;
       if(m.art && m.art.hero) ART_IDS.queen = m.art.hero;
+      if(m.levels && m.levels.length){
+        MISSIONS = m.levels.map(function(l){ return { id:l.id, name:l.name, layout:l.layout, coins:l.coins || 10, difficulty:l.difficulty }; });
+      }
       // the kid's equipped look wins over the level default
       var looks = equippedLooks();
       (m.customization||[]).forEach(function(slot){
-        var want = looks[String(slot.slot||"").toLowerCase()]; if(!want) return;
-        (slot.options||[]).forEach(function(o){
-          if(String(o.name||"").toLowerCase() !== want || !o.asset) return;
-          if(/ant/i.test(slot.slot))  ART_IDS.ant  = o.asset;
-          if(/dirt|soil/i.test(slot.slot)) ART_IDS.soil = o.asset;
-        });
+        var nm = String(slot.slot||"").toLowerCase();
+        var want = looks[nm]; if(want == null) return;
+        var o = (slot.options||[])[want]; if(!o || !o.asset) return;
+        if(nm === "ant")  ART_IDS.ant  = o.asset;
+        if(nm === "dirt") ART_IDS.soil = o.asset;
       });
       if(Feel) Feel.configure({ accent:ACCENT, feel:m.feel || { pace:"chill", celebration:"calm", haptics:"on" } });
       if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT);
@@ -936,9 +1265,28 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var def = GAME_CONFIG.rooms[room]; if(!def || C.food < def.food) return false;
       C.food -= def.food; cell.kind = "room"; cell.room = room; cell.build = 0; cell.done = false; return true; },
     rooms: function(){ return { nursery:roomCount("nursery"), storage:roomCount("storage"), den:roomCount("den") }; },
+    // --- missions (AC2), for the robot and the shell ---
+    missions: function(){ return MISSIONS.map(function(m){ return { id:m.id, name:m.name, layout:m.layout, coins:m.coins, done:!!C.done[m.id] }; }); },
+    mission: function(){ var m = currentMission(); if(!m) return { free:true, line:missionLine() };
+      var g = goalFor(m); return { index:C.mission, id:m.id, name:m.name, layout:m.layout, coins:m.coins,
+        goal:g, have:Math.max(0, haveFor(g)), line:missionLine(), free:false }; },
+    freeBuild: function(){ return !!C.freeBuild; },
+    unlocked: function(id){ return roomUnlocked(id); },
+    rain: function(){ var c = rain(); return c ? { c:c.c, r:c.r } : null; },
+    // the first plain tunnel a room could go in (the robot builds there)
+    openTunnel: function(){ for(var k in C.cells){ var x = C.cells[k];
+      if(x.kind === "tunnel" && !x.flooded && !(x.c === C.queen.c && x.r <= C.queen.r)) return { c:x.c, r:x.r }; } return null; },
+    floods: function(){ return floodCount(); },
+    setback: function(){ return setbackNow(); },
+    find: function(){ return C.find ? { c:C.find.c, r:C.find.r, gone:!!C.find.gone } : null; },
+    how: function(){ return how.on; },
+    showHow: showHow,
     dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
                               jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
-                              dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused }; },
+                              dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
+                              mission:C.mission, free:!!C.freeBuild, carried:Math.round(C.carried*10)/10,
+                              floods:C.floods, flooded:floodCount(), found:C.found, rest:Math.round(C.rest*100)/100,
+                              coins:coinsAwarded.slice() }; },
     _cfg: function(){ return GAME_CONFIG; },
     _applyManifest: function(m){ applyManifest(m); loadAllArt(); },
     _art: function(){ var o = {}; for(var s in ART_IDS) o[s] = artUrl(ART_IDS[s]); return o; },
