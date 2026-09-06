@@ -6,6 +6,49 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AC1 — the Ant City colony engine, counts and rates under a drawn burrow (September 6 2026)
+`public/antcity-engine.html` (new), `vercel.json`. Phase **AC**, card **AC1**.
+
+Ant City is now a playable, growing colony. The kid drags in the dirt to draw a tunnel
+path and digger ants carve it out over time (the kid never digs a cell directly); taps
+the meadow to leave crumbs and water drops that foragers carry down; taps an open tunnel
+to have builders raise a nursery, a storage room or a resting den; and slides one bar to
+move ants across the four jobs. Eggs appear while there is food, nursery ants hatch them,
+and every new ant joins the workforce, which is what makes the loop compound.
+
+**The colony is counts and rates, not a crowd of simulated insects.** Population, food,
+water, eggs and dig progress are numbers advanced by fixed 1/60 steps, so the ant count
+can climb into the hundreds for free. What you SEE is a sample of at most 26 drawn ants
+walking the real tunnels, capped again by how much dug space there is, so a small burrow
+looks busy instead of a stack of sprites in one cell. No physics engine, no per-ant
+pathfinding, and a seeded random number generator, so the same taps give the same colony
+— which is what lets the AC2 robot prove a mission is beatable.
+
+**Nothing punishes.** Empty stores only slow the colony (`hungryRate`), they never take
+anything away, and there is no lose state. Every rate lives in `GAME_CONFIG`, difficulty
+1-5 maps to colony pace plus a setback frequency AC2 will use, and the manifest supplies
+art and the feel presets on top.
+
+Shared libs throughout: the drawn `BR` fallback under every art slot, `Feel` for taps and
+juice, the shared HUD bar, and the gamenav bridge (the engine's own Home/Sound/? buttons
+are declared to it and hidden in-app). `pause` freezes the colony and `resume` continues
+it, verified in a real browser. Art is fetched from the URLs the manifest resolves and
+never baked in: the local Style A vector set fills the `antcity/...` ids, an asset-studio
+URL passes through, and a miss falls back to clean drawn shapes.
+
+`window.BUILDABLE_GAME` (with the `ANTCITY_GAME` alias) exposes the whole colony to a
+robot: `dig`, `drop`, `assign`, `build`, `step`/`seconds`, `dbg`, `_art`, `_draw`.
+
+**Two calls I made.** The save is `localStorage` only for now, as the card allows — real
+per-kid storage and away-time growth are AC3. And I added the `vercel.json` routes for
+`/antcity-engine.html` and `/antcity/` early (they were listed under AC2), because
+without them the page falls into the landing catch-all and nobody, Mike included, can
+open it. The game is NOT live: there is no tile in the Games picker and no slug in
+`GAME_SLUGS`, so it is reachable by link only. Missions, coins, celebrations, the
+wordless demo, `qa-antcity.mjs` and going live all stay with AC2.
+
+---
+
 ## CB1 — a kid's game is a row they own, not new engine code (September 6 2026)
 `db/create-kid-games.sql`, `api/kid-game.js`, `api/_manifestLib.js`, `api/g.js`,
 `public/g.html`, `public/buildable-manifest.js`, `public/skyflyer-engine.html`,
