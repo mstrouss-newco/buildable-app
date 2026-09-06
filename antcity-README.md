@@ -19,7 +19,8 @@ engine), so the QA robot can prove every mission is beatable.
 
 ## The files (planned for this game)
 
-- **public/antcity-engine.html** - the game itself (built in a later session).
+- **public/antcity-engine.html** - the game itself (the colony engine, card AC1: dig,
+  forage, build, assign jobs, hatch. Missions and going live are AC2).
 - **public/antcity/manifest.json** - the settings sheet the shell reads (this session).
 - **public/buildable-renders.js** - `BR`, shared drawn art (always-on fallback).
 - **public/buildable-audio.js** - `BA`, shared sound (dig, march, hatch, munch, rain).

@@ -1,3 +1,39 @@
+## 2026-09-06 — AC1: the Ant City colony engine
+
+**Shipped.** `public/antcity-engine.html`, a new cartridge: a side-view ant colony the
+kid grows. Drag in the dirt to draw a tunnel and diggers carve it; tap the meadow to
+drop food and water and foragers carry it down; tap a tunnel and builders raise a
+nursery, storage room or resting den; slide one bar to move ants between diggers,
+foragers, nursery and builders. Eggs hatch into new ants, and more ants means more of
+everything, which is the loop. Routes for `/antcity-engine.html` and `/antcity/` added
+to `vercel.json` so the page is reachable at all.
+
+**How it stays cheap.** The colony is counts and rates on a fixed 1/60 step (a tycoon
+model), so the population can reach the hundreds; only a sample of at most 26 ants is
+ever drawn, and that sample is capped by how much space has actually been dug. Seeded
+random, no physics, so a headless run repeats a real play exactly — the ground AC2's
+mission robot needs.
+
+**Checked, not assumed.** A vm harness drove the colony through digging, foraging,
+building a nursery, hatching, and 40 simulated minutes of growth (58 ants, 226ms). Then
+a real Chromium session: dragged a tunnel with the mouse, dropped food on the meadow,
+slid the jobs bar, opened the build popup, and confirmed `pause` freezes the colony and
+`resume` continues it. Screenshots at phone size drove three look fixes (HUD chips ran
+off the edge, the engine's own buttons sat under the HUD, tunnel cells read as separate
+squares instead of one burrow).
+
+**Calls I made for you.**
+1. **The save is this browser only.** The card allows it; real per-kid saving and
+   away-time growth are AC3, which is where that risk belongs.
+2. **The Vercel routes came early.** They were written down under AC2, but without them
+   the page falls through to the landing page and you cannot look at it. The game is
+   still NOT live: no tile in the Games picker, no slug in `GAME_SLUGS`.
+3. **No coins or celebrations yet.** Those hang off the missions, and missions are AC2.
+   Awarding coins now would double up when AC2 wires the real milestones.
+
+**What AC2 picks up.** The ten tutorial missions on top of this engine, gentle setbacks
+(hunger, sleep, a rain flood), milestones and coins, the wordless first-launch demo,
+`qa-antcity.mjs`, the picker tile and slug, and going live.
 ## 2026-09-06 (FM2 land + FM3): the farm gets its payoff, and its door
 
 **Phase FM, cards FM2 and FM3.** Two jobs in one session: land the FM2 branch
