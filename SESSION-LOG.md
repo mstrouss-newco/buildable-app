@@ -584,6 +584,129 @@ games sound fine and only the makers look broken. Owner's fix in Vercel.
 `vite build` clean (70 modules). `api/images.js` and `api/generate-song.js`
 import clean under node. Live re-QA of the song flow is blocked until the real
 `sk_` key is in Vercel.
+## 2026-08-16 (FM2): Farm 2 — the chickens, the cow, and feeding off the stack
+
+**Phase FM, card FM2.** The animals go into the farm corner FM1 built, east of
+the field, in `public/skyflyer-farm.html`. Flagged **needsReview**, per the
+card's own line — the renders are the thing to look at.
+
+### The mechanic, which is the whole card
+
+A hungry animal floats **a small 3D model of what it wants** over its head. That
+is the entire instruction: no menu, no tap, no words, nothing to read. Walk past
+carrying it and the **top matching item flies off the stack** on an arc to every
+animal in reach — corn to the chickens, wheat to the cow. After a short wait
+(**18s** for an egg, **26s** for milk, both well under the card's one-minute
+ceiling) the produce appears beside the animal wearing **the same sparkle a
+ready crop wears**, and walking over it hops it onto the stack exactly like a
+harvested crop.
+
+Two decisions worth writing down:
+
+- **Pickup reach is deliberately wider than the furthest an item is ever set
+  down** (2.0u vs 1.6u). The first build had it the other way round, and the
+  robot caught it: a kid could walk right up to the cow and still miss the
+  bottle standing beside her. Nobody aims in this game.
+- **One walk-by feeds every animal in reach, not one.** The three nests sit
+  close together, so walking into the coop yard with three cobs feeds all three
+  hens at once, three arcs in the air. That is the card's "the right item flies
+  off the stack **to each animal**", and it is much better to watch.
+
+**NOTHING CAN DIE, STARVE OR FAIL.** There is no hunger meter, no countdown, no
+health and no penalty anywhere in the FM2 code — QA greps for the words and
+asserts an animal's only possible states are waiting, feeding, making and ready.
+An unfed animal simply keeps waiting.
+
+### The animals
+
+- **The chickens are a REAL model.** `Chicken` cut out of the library into its
+  own **65KB** glb by `scripts/cut-animal-subset.mjs`. Its colour is entirely in
+  `COLOR_0`, so the merge in the page copies that attribute verbatim — the
+  flying engine's own `mergeByMaterial()` drops it and renders every animal
+  solid black. Sized by **longest dimension**, never height. Three hens settle
+  on nests, one struts a patrol loop.
+- **The cow is hand-built**, and this is the one thing to flag (see below).
+  Turned and lofted in code the way the flying engine builds its crab, parrot
+  and fish. Built straight against the note from the mock: **the head goes UP ON
+  A NECK, it has HORNS, and it has SURFACE SPOTS**, including one over an eye.
+  Those three are what stop it reading as a pig, and on the model stand it now
+  reads as a cow at a glance.
+- **They move**, on the AR1Q rig: every vertex sorted once into a band by where
+  it sits in the model's own box, then the bands pushed about each frame. A
+  puppeted animal gets **its own geometry copy**, or every hen in the yard walks
+  in lockstep off one shared buffer. New gaits: `strut` for the walking hen
+  (driven by the **head thrust**, not the feet — that is the thing that says
+  chicken), `nest` for a settled hen (breathing, with an occasional dip to the
+  straw), `graze` for the standing cow.
+
+### zoo(), and why it paid for itself immediately
+
+`?zoo=1` (or `window.FARM.zoo()`) hides the farm, stands every model on a
+turntable plinth at a fixed camera, and **normalises each one to the same
+longest dimension** so shapes are judged against each other rather than against
+however big they happened to be built. The card asked for it and it earned its
+place on the first render, catching three things a scene shot would have hidden:
+
+- the **coop roof splayed open like a book** — both slabs were rotated so the
+  OUTER edge rose to the ridge instead of the inner one;
+- the **hay bale reading as a brass barrel** — saturated gold with dark hoops;
+- the **egg sitting in an eggcup** — a shadow band drawn at the widest point.
+
+A second pass caught the stand itself: straight rows put the egg in front of the
+cow, so the rows are now staggered half a place sideways. Two more came from the
+scene renders — the hens were sized at life scale and read as brown specks from
+the overhead camera (now 1.4x life, the same ruler the flying engine uses), and
+the want-icons were too small to read.
+
+### The kits question — worth Mike knowing
+
+The card said to take the coop, fences, trough and hay from the Kenney kits on
+the KP1 shelf and only hand-build what the kits lack. **In the repo, the kits
+lack all four.** The shelf catalogues 241 kits, but only `2d-assets__tower-defense`
+is actually on disk; the 3D models that are here (pirate, survival, nature) are
+texture-atlas models with no vertex colour, and none of them is a coop, a
+trough or a bale. So all four are hand-built in the AR1P style, matching the
+fence FM1 already built the same way. Same story for the cow: **there is no cow
+in the repo's 18-animal cut**, and the 178-animal source file is Mike's local
+download, not in the repo. The nearest neighbours in the cut are Pig and Goat,
+and a repainted pig is exactly the failure the card warned about.
+
+If Mike wants a library cow later it is one command against his local file:
+`node scripts/cut-animal-subset.mjs <EverythingLibrary.glb> public/models/skyflyer/animals/farm-animals.glb Chicken Cow`
+and then point `ANIMAL_KINDS.cow` at the loaded model instead of `buildCow()`.
+
+### QA — what actually ran
+
+- **`qa-skyflyer.mjs`: 652 checks, ALL PASSED**, including the jsdom flight half
+  (`npm i --no-save jsdom` first). 40 of those are the new FM2 static block.
+- **`qa-farm.mjs`: 33 checks, ALL PASSED.** This is new, and it is the half a
+  static scan cannot do — the farm is a three.js scene that loads a glb, so
+  jsdom sees none of the mechanic. It drives real Chromium and plays the loop:
+  carry corn past a hen, watch the cob leave the stack mid-air, wait out the
+  egg, walk over it, carry it off; then the cow and the milk; then the wrong
+  crop, which correctly does nothing. It serves `public/` from its own tiny http
+  server so it needs no dev dependency beyond playwright, and it **fails loudly**
+  if playwright is missing rather than reporting a pass it never earned. Every
+  wait is on state, never on a sleep — the software rasteriser runs the flight
+  arc several times slower than a real device.
+
+Cache-bust bumped on **both** shell links in `src/BuildableKids.jsx`
+(`v=fl9` → `v=fm2`), and the FM1 check that guards it updated to match.
+
+**Why REVIEW:** the card says to flag it, and the look is Mike's call — the cow
+is hand-built rather than cut from the library, and the coop yard is hand-built
+rather than kit-dressed, both for the asset reasons above. Renders of the model
+stand, the feeding, the egg-and-milk and a tall mixed stack went to Mike before
+this was pushed.
+
+**What's next:** FM3 (the order crate and the plane payoff). It inherits the
+`ITEM()` lookup, so eggs and milk already ride the stack and already have SVG
+icons for a crate UI; `qa-farm.mjs` is the harness to extend.
+
+Touched: `public/skyflyer-farm.html` (+~900 lines),
+`public/models/skyflyer/animals/farm-animals.glb` (new, 64KB),
+`qa-skyflyer.mjs` (+40 FM2 assertions, cache-bust check updated),
+`qa-farm.mjs` (new), `src/BuildableKids.jsx` (cache-bust on both links).
 
 ## 2026-08-16 (FL9 re-land): two fixes for one bug, resolved into one
 
