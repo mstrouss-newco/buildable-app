@@ -6,6 +6,40 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Hop Heroes: four worlds, a cast, and the shared Feel Kit (HH4 + HH5, September 6 2026)
+`public/play.html`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`, `qa-hopheroes-shot.mjs`.
+Phase **HH**, cards **HH4 + HH5**, branch `claude/hop-heroes-mario-feel-safrvp`.
+
+**Four worlds.** Whispering Woods, Frostpine Hollow, Sunbaked Dunes and Sugarplum
+Peaks, on art sets that already existed in `api/game-art`. Art is now a per-world set
+built the first time that world is played (it used to be ONE global set baked from
+`GAME_CONFIG.world` at load, which is why four worlds were impossible), and the sky,
+grass and dirt colours come from the world too. The boss lives on the last world only.
+
+**The fixed cast, Mike's call:** Bramble the Bunny, Pip the Fox, Waddle the Penguin and
+Ember the Dragon, all already in the shared character library. The picker is a
+start-screen choice, not a locker: four big faces, nothing to read, each falling back to
+that hero's colour if the art will not load, and the choice remembered on the device.
+
+**The shared start screen.** `buildable-startscreen.js` replaces the bespoke overlay:
+the four worlds as a level row with cleared / next / locked states, the hero with a
+Change button, the star count and the sound toggle. Clearing a world banks it and
+unlocks the next; clearing the last gives a You Win and returns to the world map.
+
+**The Feel Kit.** Sound and juice go through `buildable-feel.js` as palette names, so a
+Buildable coin sounds the same here as everywhere else: the shared gold burst on coins,
+the shared pop on stars and power-ups, the gentle amber nudge on a lost heart, the one
+shared win celebration. The built-in tone generator is the offline fallback only, and
+`qa-hopheroes.mjs` fails the build if anything calls it directly again.
+
+**QA.** All four worlds won, unhurt, 68 to 77 percent of coins on the ground path.
+`qa-hopheroes.mjs` is 63 checks. Fixed on the way: `qa/sim-node.mjs` read the level
+count from a `const` that is not a sandbox property and silently settled for one level,
+so four worlds could have shipped with only the first simulated.
+
+**Still shut:** the Hop Heroes tile is deliberately still coming-soon behind the 1111
+gate. Opening it puts the game in front of every kid, and Mike has not yet seen it.
+
 ## Hop Heroes feels like Mario (HH1 + HH2 + HH3, September 6 2026)
 `public/play.html`, `public/buildable-hud.js`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`.
 Phase **HH**, cards **HH1, HH2, HH3**, branch `claude/hop-heroes-mario-feel-safrvp`.

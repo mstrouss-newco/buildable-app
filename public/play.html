@@ -77,6 +77,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <div id="hint">Move with the arrows · JUMP to hop · reach the flag</div>
 <script src="buildable-wincard.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-renders.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-feel.js"></script>
 <script src="buildable-hud.js"></script>
 <script src="buildable-gamenav.js"></script>
 <script>
@@ -174,6 +178,10 @@ try{ fitCanvas(); addEventListener('resize',fitCanvas); addEventListener('orient
 let AX=null, soundOn=true, musicOn=true;
 function actx(){ if(!AX){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC)AX=new AC(); }catch{} } if(AX&&AX.state==='suspended'){ try{AX.resume();}catch{} } return AX; }
 function blip(f,dur,type,vol,glide){ const a=actx(); if(!a||!soundOn)return; try{ const o=a.createOscillator(),g=a.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f,a.currentTime); if(glide)o.frequency.exponentialRampToValueAtTime(glide,a.currentTime+dur); g.gain.setValueAtTime(0.0001,a.currentTime); g.gain.exponentialRampToValueAtTime(vol||0.14,a.currentTime+0.01); g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur); o.connect(g);g.connect(a.destination); o.start(); o.stop(a.currentTime+dur+0.03);}catch{} }
+// HH5 — the built-in synth is now the OFFLINE FALLBACK ONLY (GAME-FEEL law 6). Every
+// sound the game actually makes goes out as a palette NAME through the shared Feel Kit,
+// so a Buildable coin sounds like a Buildable coin here and in every other game. When
+// the Kit is not loaded (headless QA, a cold offline page) these tones stand in.
 const SFX={
   jump:()=>blip(420,0.16,'sine',0.12,760),
   land:()=>blip(190,0.07,'sine',0.06,120),
@@ -184,6 +192,22 @@ const SFX={
   hurt:()=>blip(320,0.22,'sawtooth',0.12,120),
   win:()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,0.2,'triangle',0.14),i*130));}
 };
+const FEEL=(typeof window!=="undefined" && window.BuildableFeel)||null;
+const BM  =(typeof window!=="undefined" && window.BuildableMechanics)||null;
+let fx = BM ? BM.makeFx() : { parts:[], pops:[], shake:0, flash:0, flashCol:"#fff", rings:[] };
+try{ if(FEEL){ FEEL.setFx(fx); FEEL.configure({ accent:"#8fc46a", feel:{ pace:"normal", celebration:"big", haptics:"on" }, sfxBase:"/api/sfx?s=" }); } }catch(e){}
+// name -> the shared palette. A name with no good match in the palette simply keeps its
+// fallback tone rather than borrowing a sound that means something else.
+const PALETTE={ jump:"select", coin:"coin", star:"levelup", power:"levelup", bounce:"shoot", hurt:"hurt", win:"win", land:null };
+function S(name, opt){
+  if(!soundOn) return;
+  const pal=PALETTE[name];
+  if(FEEL && pal){ try{ FEEL.sfx(pal, opt); return; }catch(e){} }
+  if(SFX[name]) SFX[name]();
+}
+// world x,y -> where it is on screen right now, so a burst lands on the thing it came from
+function sx_(wx){ return wx-camX; }
+function sy_(wy){ return wy+skyPad()+camY; }
 // --- background music: REAL ElevenLabs tracks (the chess music library), streamed + looped ---
 const MUSIC_BASE = GAME_CONFIG.musicBase || "https://www.buildablekids.com/api/chess-music";
 const MUSIC_LIB = [   // a small library kids can cycle through by ear (no emoji; names are for grown-ups)
@@ -533,12 +557,12 @@ function tryJump(){
   if(player.swing){ const sw=player.swing; const tang=sw.angV*sw.len;        // let go of the vine, fling in the swing direction
     player.vx=Math.max(-7,Math.min(7,Math.cos(sw.ang)*tang*6));
     player.vy=JUMP*0.7 - Math.min(6,Math.abs(Math.sin(sw.ang)*tang)*0.5);
-    player.swing=null; sw.grabbed=false; player.onGround=false; player.dj=true; player.swingCool=10; SFX.jump(); return true; }
+    player.swing=null; sw.grabbed=false; player.onGround=false; player.dj=true; player.swingCool=10; S("jump"); return true; }
   if(player.slide>0) player.slide=0;                       // jump cancels a slide
   const jv = springT>0 ? 1.2 : 1;                          // spring power-up = higher jump
   if(player.onGround || player.coyote>0){                  // ground jump, incl. the coyote grace window
-    player.vy=JUMP*jv; player.onGround=false; player.coyote=0; player.dj=true; SFX.jump(); return true; }
-  if(player.dj){ player.vy=JUMP*0.82*jv; player.dj=false; SFX.jump(); return true; }   // double jump, unchanged
+    player.vy=JUMP*jv; player.onGround=false; player.coyote=0; player.dj=true; S("jump"); return true; }
+  if(player.dj){ player.vy=JUMP*0.82*jv; player.dj=false; S("jump"); return true; }   // double jump, unchanged
   return false;
 }
 function doJump(){
@@ -747,7 +771,7 @@ function update(){
     player.x = sw.ax+Math.sin(sw.ang)*sw.len - 24;
     player.y = sw.ay+Math.cos(sw.ang)*sw.len - 30;
     player.vx=0; player.vy=0; player.onGround=false;
-    for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; SFX.coin(); } }
+    for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; getCoin(k.x,k.y); } }
     return;
   } else if(!botMode && !player.onGround && player.swingCool<=0){     // bonus toy; the QA "perfect runner" stays on the ground path
     for(const sw of L.swings){ const bx=sw.ax+Math.sin(sw.ang)*sw.len, by=sw.ay+Math.cos(sw.ang)*sw.len;
@@ -789,8 +813,8 @@ function update(){
       for(const bp of L.bounces){ if(cx>=bp.x && cx<=bp.x+bp.w && prevFeet<=bp.y && feet>=bp.y){ bounce=true; bp.t=10; } }
     }
     const wasOnGround=player.onGround;
-    if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; player.coyote=0; SFX.bounce(); }
-    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); SFX.land(); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; player.coyote=COYOTE_FRAMES;
+    if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; player.coyote=0; S("bounce"); }
+    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); S("land"); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; player.coyote=COYOTE_FRAMES;
       if(landPf&&landPf.mv){ if(landPf.mv.axis==='x'||landPf.mv.axis==='diag') player.x+=landPf.dx; player.standPf=landPf; } else player.standPf=null; }
     else { player.onGround=false; player.standPf=null; if(wasOnGround && player.vy>=0) player.coyote=COYOTE_FRAMES; }
     if(!player.onGround && player.coyote>0) player.coyote--;
@@ -808,10 +832,10 @@ function update(){
       player.y=bot; player.vy=1.4; b.hit=12; spawnDust(cx, bot+6);
       if(b.kind==='q' && !b.used){
         b.used=true;
-        if(b.content==='power'){ L.powerups.push({x:b.x+b.w/2, y:b.y-28, kind:b.pu, got:false}); SFX.power(); pop(b.x+b.w/2, b.y-34, "POW!", "#ffe27a"); }
-        else { coinsGot++; SFX.coin(); pop(b.x+b.w/2, b.y-34, "+1", "#ffd23f");
+        if(b.content==='power'){ L.powerups.push({x:b.x+b.w/2, y:b.y-28, kind:b.pu, got:false}); S("power"); pop(b.x+b.w/2, b.y-34, "POW!", "#ffe27a"); }
+        else { coinsGot++; getCoin(b.x+b.w/2, b.y-6); pop(b.x+b.w/2, b.y-34, "+1", "#ffd23f");
                for(let d=0;d<7;d++) dust.push({x:b.x+b.w/2, y:b.y-6, vx:(Math.random()-0.5)*3.4, vy:-2-Math.random()*2.4, life:18+Math.random()*10, gold:true}); }
-      } else SFX.land();
+      } else S("jump");                                 // a plain block just thumps
     }
   }
   // HH3 PIPES — solid props. You stand on them (handled with the platforms above) and you
@@ -834,10 +858,10 @@ function update(){
   // magnet power-up: pull nearby coins toward the hero
   if(magnetT>0){ for(const k of L.coins){ if(k.got)continue; const dx=(player.x+24)-k.x, dy=(player.y+30)-k.y; if(dx*dx+dy*dy<170*170){ k.x+=dx*0.16; k.y+=dy*0.16; } } }
   // coins
-  for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; SFX.coin(); } }
-  for(const st of L.stars){ if(!st.got && Math.abs((player.x+24)-st.x)<38 && Math.abs((player.y+30)-st.y)<46){ st.got=true; starsGot++; SFX.star(); } }
+  for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; getCoin(k.x,k.y); } }
+  for(const st of L.stars){ if(!st.got && Math.abs((player.x+24)-st.x)<38 && Math.abs((player.y+30)-st.y)<46){ st.got=true; starsGot++; if(FEEL){ try{ FEEL.explode(sx_(st.x), sy_(st.y), "#ffd23f", {pop:"STAR!", sound:"levelup"}); }catch(e){ S("star"); } } else S("star"); } }
   // power-up pickups
-  for(const u of L.powerups){ if(u.got)continue; if(Math.abs((player.x+24)-u.x)<36 && Math.abs((player.y+30)-u.y)<44){ u.got=true; SFX.power(); if(u.kind==="shield")shieldOn=true; else if(u.kind==="magnet")magnetT=360; else if(u.kind==="spring")springT=360; else if(u.kind==="star")starT=360; else if(u.kind==="heart"&&hearts<3)hearts++; } }
+  for(const u of L.powerups){ if(u.got)continue; if(Math.abs((player.x+24)-u.x)<36 && Math.abs((player.y+30)-u.y)<44){ u.got=true; if(FEEL){ try{ FEEL.explode(sx_(u.x), sy_(u.y), "#7ee0a0", {pop:"POWER!", sound:"levelup"}); }catch(e){ S("power"); } } else S("power"); if(u.kind==="shield")shieldOn=true; else if(u.kind==="magnet")magnetT=360; else if(u.kind==="spring")springT=360; else if(u.kind==="star")starT=360; else if(u.kind==="heart"&&hearts<3)hearts++; } }
   // enemies (walk a little)
   for(const e of L.enemies){ if(e.squash>0) e.squash--; if(e.dead)continue; e.x+=e.dir*0.6; if(Math.abs(e.x-e.base)>e.range)e.dir*=-1;
     const dx=Math.abs((player.x+24)-e.x), dy=(player.y+60)-e.y;
@@ -845,7 +869,7 @@ function update(){
       if(starT>0){ e.dead=true; e.squash=26; pop(e.x, e.y-30, "SMASH!", "#ffd23f"); }        // star smashes enemies
       else if(player.vy>0 && (player.y+60)-e.y<26){                 // STOMP: squash flat, bounce, pop text
         e.dead=true; e.squash=26; player.vy=JUMP*(jumpHeld?0.92:0.72); player.dj=true;
-        spawnDust(e.x, GROUND_Y); SFX.bounce(); pop(e.x, e.y-34, "NICE!", "#fff3b0");
+        spawnDust(e.x, GROUND_Y); S("bounce"); pop(e.x, e.y-34, "NICE!", "#fff3b0");
       }
       else if(invuln<=0){ takeHit(); }
     }
@@ -862,7 +886,7 @@ function update(){
     if(b.active){ b.t++; if(b.t>60*18) defeatBoss(); }           // mercy failsafe: boss gives up 18s after the fight starts (never soft-locks)
     const dx=Math.abs((player.x+24)-b.x), pcy=player.y+30;
     if(dx < b.w*0.5+26 && pcy < b.y-6 && player.vy>0){           // stomp from above
-      b.hp--; b.hit=12; player.vy=JUMP*0.7; player.dj=true; SFX.bounce(); if(b.hp<=0) defeatBoss();
+      b.hp--; b.hit=12; player.vy=JUMP*0.7; player.dj=true; S("bounce"); if(b.hp<=0) defeatBoss();
     } else if(dx < b.w*0.5+20 && pcy > b.y-b.h && player.onGround && invuln<=0){  // gentle side bump — NO heart loss
       player.vx=-3; player.x-=4; invuln=16;
     }
@@ -870,16 +894,23 @@ function update(){
   // magic barrier holds you back until the boss is happy
   if(L.boss && !L.boss.defeated && (player.x+24) > L.barrierX){ player.x=L.barrierX-24; if(player.vx>0)player.vx=0; }
   // reach goal
-  if(player.x>=L.goalX){ state="win"; poleT=1; player.vx=0; player.vy=0; player.x=L.goalX-20; player.y=GROUND_Y-190; SFX.win(); try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){} }
+  if(player.x>=L.goalX){ state="win"; poleT=1; player.vx=0; player.vy=0; player.x=L.goalX-20; player.y=GROUND_Y-190;
+    if(FEEL){ try{ FEEL.celebrate(W,VH); }catch(e){ S("win"); } } else S("win"); try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){} }
 }
+// LAW 3 — coins land with a burst: gold sparkle, rising coin chime, a light buzz.
+// No "+1" text: the coin line is dense on purpose, and a pop per coin buried the level
+// in floating numbers. The sparkle and the chime are the reward.
+function getCoin(wx,wy){ if(FEEL){ try{ FEEL.coinBurst(sx_(wx), sy_(wy), null, {n:5}); return; }catch(e){} } S("coin"); }
 function takeHit(){ if(starT>0) return; if(shieldOn){ shieldOn=false; invuln=70; return; } loseHeart(false); }
 function loseHeart(fell){
-  hearts--; invuln=70; SFX.hurt();
+  hearts--; invuln=70;
+  if(FEEL){ try{ FEEL.miss(); }catch(e){ S("hurt"); } } else S("hurt");
   if(hearts<=0){ state="lose"; try{window.parent.postMessage({source:"buildable",kind:"lose"},"*")}catch(e){} return; }
   // gentle: nudge back to safe ground
   if(fell){ let sx=player.x-TILE*2; while(sx>90 && groundUnder(sx)==null) sx-=20; player.x=Math.max(90,sx); player.y=GROUND_Y-80; player.vy=0; }
 }
-function defeatBoss(){ const b=L.boss; if(!b||b.defeated)return; b.defeated=true; b.happy=140; SFX.power(); }
+function defeatBoss(){ const b=L.boss; if(!b||b.defeated)return; b.defeated=true; b.happy=140;
+  if(FEEL){ try{ FEEL.explode(sx_(b.x), sy_(b.y-b.h*0.5), "#ffd86b", {pop:"HOORAY!", sound:"levelup", shake:0.22}); }catch(e){ S("power"); } } else S("power"); }
 
 // --- draw ---
 function hexA(hex,a){ const h=String(hex||"#ffffff").replace("#",""); const n=parseInt(h.length===3?h[0]+h[0]+h[1]+h[1]+h[2]+h[2]:h,16);
@@ -1190,6 +1221,8 @@ function draw(){
     ctx.save(); ctx.globalAlpha=a; ctx.font="bold 20px Fredoka,sans-serif"; ctx.textAlign="center";
     ctx.lineWidth=4; ctx.strokeStyle="rgba(30,20,10,.55)"; ctx.strokeText(q.txt,x,q.y); ctx.fillStyle=q.col; ctx.fillText(q.txt,x,q.y); ctx.restore(); }
   ctx.restore();                                       // <<< end of the camera shift
+  // the shared effects pipeline: particles, floating pops and the screen flash
+  if(BM){ try{ BM.update(fx, 1/60); BM.draw(ctx, fx, { W, H:VH }); }catch(e){} }
   // HUD — the shared dark strip (buildable-hud.js). White canvas text was unreadable
   // on this pale sky; the shared chips are a dark tint over whatever is behind them and
   // they inset themselves clear of the shell's Home pill and Sound/Menu/Help column.
@@ -1233,7 +1266,13 @@ try{ if(typeof window!=="undefined" && window.BuildableGameNav){
     soundOn: ()=>soundOn,
   });
 } }catch(e){}
-function banner(t,s){ BuildableWin.card(ctx,W,VH,[{t:t,s:32,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[])); }
+// LAW 2 — the ONE shared floating card, never a greyed-out screen. Through the Feel Kit
+// so it picks up the platform accent; straight to the card lib if the Kit is not loaded.
+function banner(t,s){
+  const lines=[{t:t,s:32,w:800,c:"#fff"}].concat(s?[{t:s,s:18,w:600,c:"#cfd3ff"}]:[]);
+  if(FEEL && FEEL.winCard){ FEEL.winCard(ctx,W,VH,lines); return; }
+  if(typeof BuildableWin!=="undefined" && BuildableWin.card) BuildableWin.card(ctx,W,VH,lines);
+}
 
 
 const hintEl=document.getElementById('hint');

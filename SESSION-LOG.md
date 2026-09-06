@@ -1,3 +1,65 @@
+## 2026-09-06 (later) — HH4 and HH5: four worlds, a cast to choose from, and the shared Feel Kit
+
+Phase **HH**, cards **HH4 + HH5**, same branch `claude/hop-heroes-mario-feel-safrvp`.
+Mike asked for both cards to be rewritten and then built in the same session. HH4's
+and HH5's wording was mine (the plan doc is still not in the repo), so both cards say
+so and want rewording if the real doc turns up.
+
+**Two decisions Mike made, on the record.** The fixed cast is Bramble the Bunny, Pip
+the Fox, Waddle the Penguin and Ember the Dragon. The hero picker is a start-screen
+choice, not a locker.
+
+**HH4 — four worlds.** Whispering Woods, Frostpine Hollow, Sunbaked Dunes and
+Sugarplum Peaks, on the enchanted-forest, snowy-village, desert-oasis and candy-land
+art sets that already existed in `api/game-art`. Difficulty climbs gently and the boss
+moved to the last world only. Four worlds were impossible before because the piece
+images were ONE global set baked from `GAME_CONFIG.world` at load; art is now a
+per-world set built the first time that world is played, and the sky, grass and dirt
+colours come from the world too, so Frostpine Hollow is not a green forest with snow
+art pasted on it.
+
+**HH4 — the cast and the picker.** All four heroes already live in the shared
+character library, so nothing new had to be drawn. The hero picture follows whoever is
+chosen and a picture that fails to load leaves the drawn fallback body in place. The
+picker is four big faces with nothing to read, each falling back to that hero's colour,
+and the choice is remembered on the device.
+
+**HH4 — the shared start screen.** `buildable-startscreen.js` replaces the bespoke
+swipe overlay, so Hop Heroes launches like every other game: the four worlds as its
+level row with cleared / next / locked states, the hero with a Change button, the star
+count, the sound toggle. Clearing a world banks it, unlocks the next and keeps the best
+star count; clearing the last gives a You Win and returns to the world map. The thumb
+pads, the engine's own buttons and the HUD strip belong to play and now hide on the
+start screen, where they had been drawing over the world list.
+
+**HH5 — the Feel Kit.** Every sound the game makes now goes out as a palette NAME
+through `buildable-feel.js`, so a Buildable coin sounds like a Buildable coin here and
+everywhere else. Coins fire the shared gold burst, stars and power-ups the shared pop,
+losing a heart the gentle amber nudge rather than a slam, and the win the one shared
+celebration. The built-in tone generator survives only as the offline fallback, which
+is what GAME-FEEL.md asks for, and `qa-hopheroes.mjs` now fails the build if anything
+calls it directly again. The shared effects pipeline (particles, floating pops, screen
+flash) runs each frame in screen space. The per-coin "+1" was dropped almost
+immediately: the coin line is dense on purpose and a number per coin buried the level.
+
+**Fixed while testing.** `qa/sim-node.mjs` read the level count from
+`sandbox.GAME_CONFIG`, which is a `const` inside the engine and therefore not a sandbox
+property, so it silently fell back to one level. Four worlds could have shipped with
+only the first one ever simulated. Both harnesses ask the engine through
+`BK_GAME.levelCount()` now.
+
+**QA.** All four worlds are won by the perfect player, unhurt, with 68 to 77 percent of
+their coins on the ground path. `qa-hopheroes.mjs` is 63 checks including the new ones:
+four distinct worlds, the boss on the last only, a named cast with a colour each, the
+shared start screen and Feel Kit loaded, and no direct call to the built-in synth.
+`qa-all.mjs` green. Verified in a real Chromium, playing from the keyboard and the
+on-screen pad, at desktop and phone width.
+
+**The one HH5 task left undone, deliberately.** Taking the tile out of coming-soon in
+`src/BuildableKids.jsx` puts the game in front of every kid on the live site. Mike has
+not yet said it looks right, and this session could not show him (no Vercel preview,
+and the watercolour art does not load here). The gate stays shut until he says so.
+
 ## 2026-09-06 — HH1 to HH3: Hop Heroes moves, reads and rewards like a Mario level
 
 Phase **HH**, cards **HH1, HH2, HH3**, on branch

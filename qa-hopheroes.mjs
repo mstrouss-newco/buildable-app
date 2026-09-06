@@ -249,6 +249,22 @@ console.log('--- the Mario ingredients ---');
   check('every gap has a coin arc over it', arced === pits2.length, `${arced} of ${pits2.length} pits`);
 }
 
+// ------------------------------------ 8b. four worlds and the fixed cast (HH4/HH5)
+console.log('--- the worlds and the cast ---');
+{
+  check('there are four worlds', nLevels === 4, `${nLevels} levels`);
+  const worlds = [], names = [];
+  for (let i = 0; i < nLevels; i++) { T.boot(i); const L = T.level(); worlds.push(L.world); names.push(L.name); }
+  check('every world uses its own art set', new Set(worlds).size === nLevels, worlds.join(', '));
+  check('every world has its own name', new Set(names).size === nLevels, names.join(', '));
+  const bosses = [];
+  for (let i = 0; i < nLevels; i++) { T.boot(i); if (T.level().boss) bosses.push(i); }
+  check('the boss is on the last world only', bosses.length === 1 && bosses[0] === nLevels - 1, `levels with a boss: ${bosses.join(',') || 'none'}`);
+  const cast = BK.cast ? BK.cast() : [];
+  check('the hero cast is fixed and named', cast.length >= 1 && cast.every(c => c.slug && c.name && c.colour), cast.map(c => c.name).join(', '));
+  check('every hero has a colour to fall back on when the art will not load', cast.every(c => /^#[0-9a-f]{6}$/i.test(c.colour)));
+}
+
 // ------------------------------------------------------ 9. the file's own rules
 console.log('--- the rules the file has to keep ---');
 {
@@ -264,6 +280,13 @@ console.log('--- the rules the file has to keep ---');
   check('the hero is drawn after the canopy and ferns, never under them',
     src.indexOf('LAYER 6') > 0 && src.indexOf('LAYER 6') < src.indexOf('// hero — HH1 animation'));
   check('the world height is a constant, so baked level geometry can never move', /const H=540/.test(src));
+  check('the shared start screen is loaded', /src="buildable-startscreen\.js"/.test(src));
+  check('the shared Feel Kit and the pieces it wraps are loaded',
+    /src="buildable-feel\.js"/.test(src) && /src="buildable-mechanics\.js"/.test(src) && /src="buildable-audio\.js"/.test(src));
+  // GAME-FEEL law 6: sounds are palette NAMES through the Kit. The built-in synth may
+  // exist as the offline fallback, but nothing may call it directly any more.
+  const direct = (src.match(/SFX\.[a-z]+\(\)/g) || []).filter(x => !/^SFX\.(name)/.test(x));
+  check('no sound is played straight from the built-in synth', direct.length === 0, direct.join(' '));
 }
 
 // ------------------------------------------------------------- 10. draw smoke
