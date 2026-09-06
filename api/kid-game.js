@@ -151,7 +151,18 @@ export default async function handler(req, res) {
     // ---------------------------------------------------------------- save ---
     if (op === "save") {
       const engine = str(get("engine"));
-      const manifest = body.manifest;
+      // A caller may hand over a finished manifest, or the RAW BOARD a kid painted
+      // in the Breaker maker. The board is turned into a manifest by the shared
+      // loader's own breakerBoardToManifest — the same function the engine calls in
+      // the browser — so there is exactly one place that decides what a kid's board
+      // becomes and the engine and the server can never drift apart.
+      let manifest = body.manifest;
+      if (!manifest && body.board) {
+        const lib = await manifestLib();
+        if (!lib || typeof lib.breakerBoardToManifest !== "function") return res.status(400).json({ ok: false, errors: ["the shared manifest loader could not be read, so this game was not saved"] });
+        if (engine !== "breaker") return res.status(400).json({ ok: false, errors: ["only Breaker saves a raw board; every other engine sends a manifest"] });
+        manifest = lib.breakerBoardToManifest(body.board);
+      }
       const name = str(get("name")) || (manifest && str(manifest.name)) || "My game";
       const familyId = str(get("familyId")), kidId = str(get("kidId"));
       if (!familyId && !kidId) return res.status(400).json({ ok: false, errors: ["familyId or kidId required"] });

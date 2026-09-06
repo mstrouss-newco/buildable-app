@@ -154,6 +154,38 @@
     resolveAsset: breakerResolveAsset
   };
 
+  // A BOARD a kid painted in the Breaker maker -> a manifest-v2 it can be saved
+  // as. Session CB1. This lives HERE, in the shared loader, on purpose: the
+  // engine's maker calls it in the browser and the server calls it through
+  // api/_manifestLib.js when it stores the row, so there is exactly ONE place
+  // that decides what a kid's board becomes and the two can never drift.
+  //
+  // The manifest still NAMES A LAYOUT rather than carrying raw cols/rows
+  // (manifest golden rule 2), and difficulty stays a 1-5 preset — the painted
+  // bricks are the only thing that is per-board.
+  var BREAKER_THEME_BY_BACKDROP = { meadow:"jungle", ocean:"ocean", space:"space", castle:"jungle", desert:"jungle", candy:"ocean" };
+  function breakerLayoutFor(cols, rows){
+    var c = cols||10, r = rows||6, keys = Object.keys(TPL), i, t, best = null;
+    for(i=0;i<keys.length;i++){ t = TPL[keys[i]]; if(t.cols===c && t.rows===r) return keys[i]; }
+    for(i=0;i<keys.length;i++){ t = TPL[keys[i]];
+      if(t.cols>=c && t.rows>=r && (!best || (t.cols*t.rows) < (TPL[best].cols*TPL[best].rows))) best = keys[i]; }
+    return best || "frame";
+  }
+  function breakerBoardToManifest(board){
+    board = board || {};
+    var name  = String(board.name || "My level").slice(0,60);
+    var theme = BREAKER_THEME_BY_BACKDROP[(board.look && board.look.backdrop) || "meadow"] || "jungle";
+    var lay   = breakerLayoutFor(board.cols, board.rows), t = TPL[lay];
+    var diff  = clamp(parseInt(board.diffN || board.flames || 3, 10) || 3, 1, 5);
+    var cells = (Array.isArray(board.cells) ? board.cells : []).filter(function(c){
+      return c && BRICK_CELL_TYPES[c.type] && c.r>=0 && c.c>=0 && c.r<t.rows && c.c<t.cols;
+    }).map(function(c){ return { r:c.r|0, c:c.c|0, type:c.type }; });
+    var level = { id:"L1", name:name, difficulty:diff, unlocked:true, layout:lay,
+      parts:{ background:"breaker/bg/"+theme+"-v1", bricks:"breaker/bricks/"+theme+"-v1" } };
+    if(cells.length) level.cells = cells;
+    return { id:"breaker", name:name, type:"game", shellVersion:2, color:"#FF6B6B", levels:[level] };
+  }
+
   // ===========================================================================
   //  SURVIVAL profile (survivor "recipes"). Session 5A.
   // ===========================================================================
@@ -916,7 +948,7 @@
     stock();
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, rawManifest:rawManifest, kidGame:kidGame, kidGameId:kidGameId, kidGameCredit:kgCredit, hideKidCover:kgHideCover, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
+  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, rawManifest:rawManifest, breakerBoardToManifest:breakerBoardToManifest, kidGame:kidGame, kidGameId:kidGameId, kidGameCredit:kgCredit, hideKidCover:kgHideCover, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));

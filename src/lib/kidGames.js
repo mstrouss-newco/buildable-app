@@ -135,55 +135,31 @@ export function kidGameCover(game) {
 //  Replace first, remove second: the localStorage list is left exactly where it
 //  is (the engine's own maker still reads it), a marker records that this kid's
 //  levels have been carried over, and the shell stops writing there.
-const MIGRATED_KEY = "bk_kidgames_migrated_v1";
+//  It is keyed BY LEVEL ID, not by "have I run once": the Breaker maker still
+//  keeps its own local shelf for standalone play, so a level saved there later
+//  (or on another device) is carried over the next time Home loads rather than
+//  being stranded behind a one-shot marker.
+const MIGRATED_KEY = "bk_kidgames_migrated_v2";
 
-// A backdrop the kid picked -> the Breaker art theme that ships on disk.
-const THEME_BY_BACKDROP = { meadow: "jungle", ocean: "ocean", space: "space", castle: "jungle", desert: "jungle", candy: "ocean" };
-// The manifest names a LAYOUT, never raw cols/rows (manifest golden rule 2), so
-// a painted board is matched to the template with the same board size.
-const LAYOUTS = [
-  { id: "full", cols: 10, rows: 6 }, { id: "pyramid", cols: 9, rows: 5 },
-  { id: "checker", cols: 10, rows: 5 }, { id: "gaps", cols: 10, rows: 6 },
-  { id: "columns", cols: 10, rows: 6 }, { id: "frame", cols: 11, rows: 7 },
-  { id: "diamond", cols: 11, rows: 7 },
-];
-function layoutFor(cols, rows) {
-  const c = cols || 10, r = rows || 6;
-  const exact = LAYOUTS.find((l) => l.cols === c && l.rows === r);
-  if (exact) return exact;
-  const fits = LAYOUTS.filter((l) => l.cols >= c && l.rows >= r).sort((a, b) => (a.cols * a.rows) - (b.cols * b.rows));
-  return fits[0] || LAYOUTS[LAYOUTS.length - 1];
-}
-const BRICK_TYPES = { ice: 1, wood: 1, metal: 1, candy: 1, star: 1, bomb: 1 };
-
-// One saved Breaker level -> a manifest-v2 the shared loader accepts.
-export function breakerLevelToManifest(rec) {
-  const name = String((rec && rec.name) || "My level").slice(0, 60);
-  const theme = THEME_BY_BACKDROP[(rec && rec.look && rec.look.backdrop) || "meadow"] || "jungle";
-  const lay = layoutFor(rec && rec.cols, rec && rec.rows);
-  const cells = (Array.isArray(rec && rec.cells) ? rec.cells : [])
-    .filter((c) => c && BRICK_TYPES[c.type] && c.r >= 0 && c.c >= 0 && c.r < lay.rows && c.c < lay.cols)
-    .map((c) => ({ r: c.r | 0, c: c.c | 0, type: c.type }));
-  const diff = Math.max(1, Math.min(5, parseInt((rec && (rec.diffN || rec.flames)) || 3, 10) || 3));
-  return {
-    id: "breaker", name, type: "game", shellVersion: 2, color: "#7C5CFC",
-    levels: [{
-      id: "L1", name, difficulty: diff, unlocked: true, layout: lay.id,
-      parts: { background: "breaker/bg/" + theme + "-v1", bricks: "breaker/bricks/" + theme + "-v1" },
-      ...(cells.length ? { cells } : {}),
-    }],
-  };
+// The board -> manifest step is NOT done here. The shared loader owns it
+// (BuildableManifest.breakerBoardToManifest), the server calls that same function
+// through api/_manifestLib.js, and the Breaker maker calls it in the browser — so
+// the migration just posts the raw board it found and one piece of code decides
+// what a kid's board becomes.
+export async function saveBreakerBoard(board, opts) {
+  const c = kidCtx();
+  const j = await call({ op: "save", engine: "breaker", board, sourceGame: "breaker",
+    name: String((board && board.name) || "My level").slice(0, 60), ...(opts || {}), ...c });
+  return j.game;
 }
 
 // Reads the old lists (this kid's, plus the un-suffixed one a guest wrote) and
-// saves each level as a kid game. Runs at most once per kid; a failure leaves the
-// marker unset so the next load tries again, and never breaks Home.
+// saves each level as a kid game. A level that fails is simply not marked, so the
+// next load tries it again, and nothing here ever breaks Home.
 export async function migrateBreakerLevels() {
   let done = {};
   try { done = JSON.parse(localStorage.getItem(MIGRATED_KEY) || "{}") || {}; } catch { done = {}; }
   const c = kidCtx();
-  const who = c.kidId || c.familyId;
-  if (done[who]) return 0;
 
   const keys = ["bk_breaker_levels" + (c.kidId ? "_" + c.kidId : ""), "bk_breaker_levels"];
   const seen = new Set();
@@ -192,25 +168,20 @@ export async function migrateBreakerLevels() {
     let list = [];
     try { list = JSON.parse(localStorage.getItem(k) || "[]"); } catch { list = []; }
     if (!Array.isArray(list)) continue;
-    for (const rec of list) { if (rec && rec.id && !seen.has(rec.id)) { seen.add(rec.id); recs.push(rec); } }
+    // rec.kgId means the maker already saved it across; done[] covers everything
+    // migrated from an older shelf that predates that.
+    for (const rec of list) { if (rec && rec.id && !rec.kgId && !seen.has(rec.id) && !done[rec.id]) { seen.add(rec.id); recs.push(rec); } }
   }
-  if (!recs.length) {
-    try { done[who] = true; localStorage.setItem(MIGRATED_KEY, JSON.stringify(done)); } catch { /* ignore */ }
-    return 0;
-  }
+  if (!recs.length) return 0;
 
   let moved = 0;
   for (const rec of recs) {
     try {
-      await saveKidGame({
-        engine: "breaker",
-        name: String(rec.name || "My level").slice(0, 60),
-        manifest: breakerLevelToManifest(rec),
-        sourceGame: "breaker",
-      });
+      await saveBreakerBoard(rec);
+      done[rec.id] = true;
       moved++;
     } catch { /* one bad level must never stop the rest */ }
   }
-  if (moved) { try { done[who] = true; localStorage.setItem(MIGRATED_KEY, JSON.stringify(done)); } catch { /* ignore */ } }
+  if (moved) { try { localStorage.setItem(MIGRATED_KEY, JSON.stringify(done)); } catch { /* ignore */ } }
   return moved;
 }

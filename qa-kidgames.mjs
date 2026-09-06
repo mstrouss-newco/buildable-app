@@ -271,15 +271,30 @@ chk('Remix no longer walks the AI maker road', !/SCREEN_GAME_TYPE/.test(top) && 
 chk('a forked game opens with ?kg=', /onOpenKidGame\(mine\)/.test(top));
 
 const lib = code('src/lib/kidGames.js');
-chk('the shell stops writing kid levels to localStorage', !/localStorage\.setItem\("bk_breaker_levels/.test(lib) && !/setItem\(\s*key\s*,\s*JSON\.stringify\(a\)/.test(lib));
+chk('the shell never writes kid levels back to localStorage', !/localStorage\.setItem\("bk_breaker_levels/.test(lib));
 chk('the migration reads both the per-kid and the guest list', /bk_breaker_levels" \+ \(c\.kidId/.test(lib));
+chk('the migration is keyed by level, so a later level is not stranded', /!done\[rec\.id\]/.test(lib) && /!rec\.kgId/.test(lib));
+chk('the shell posts the raw board, it does not build the manifest itself', /op: "save", engine: "breaker", board/.test(lib) && !/breakerLevelToManifest/.test(lib));
+
+// The Breaker maker: a level a kid saves must reach kid_games, not just this
+// browser. Without this, My Games would only ever show what predates CB1.
+const brk = code('public/breaker-engine.html');
+chk('the Breaker maker saves a new level as a kid game', /saveLevelAsKidGame\(rec\)/.test(brk) && /op:"save", engine:"breaker", board:rec/.test(brk));
+chk('the Breaker maker posts the raw board, not a manifest it built', !/breakerBoardToManifest/.test(brk));
+
+// One builder, two callers. If these ever disagree a kid's board becomes two
+// different games depending on who saved it.
+chk('the board-to-manifest builder lives in the shared loader', typeof BM.breakerBoardToManifest === 'function');
+chk('the server builds a posted board with that same builder', /lib\.breakerBoardToManifest\(body\.board\)/.test(read('api/kid-game.js')));
 
 // The migration end to end: a real saved Breaker level becomes a manifest the
 // gate accepts. This is the one that decides whether a kid's old work survives.
 {
-  const { breakerLevelToManifest } = await import(path.resolve(dir, 'src/lib/kidGames.js'));
+  // ONE builder, in the shared loader: the maker calls it in the browser and the
+  // server calls it through api/_manifestLib.js, so a board can only ever become
+  // one thing. That is what this block exercises.
   const rec = { id: 'L1', name: 'Pizza Dragon', cols: 10, rows: 6, look: { backdrop: 'space', ball: 'glow', paddle: '#9b7bff' }, diffN: 4, flames: 4, cells: [{ r: 0, c: 0, type: 'ice' }, { r: 5, c: 9, type: 'star' }, { r: 40, c: 0, type: 'ice' }] };
-  const mf = breakerLevelToManifest(rec);
+  const mf = BM.breakerBoardToManifest(rec);
   const r = await checkManifest(mf, 'breaker');
   chk('migration: an old Breaker level becomes a manifest the gate accepts', r.ok, (r.errors || []).join('; '));
   chk('migration: the kid\'s title and difficulty come across', mf.name === 'Pizza Dragon' && mf.levels[0].difficulty === 4);

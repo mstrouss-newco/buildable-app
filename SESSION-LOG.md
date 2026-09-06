@@ -14,6 +14,17 @@ opens the copy with `?kg=`. Share viewer at `/g/<slug>` with server-side OG tags
 (`api/g.js` + `public/g.html`), guest play, no account, play counted once.
 `qa-kidgames.mjs` added; `node qa-all.mjs` green (46 harnesses).
 
+**The one thing I nearly left half-done.** Step 4 says "stop writing to
+localStorage", and migrating the old list is only half of that: the Breaker maker
+itself still wrote every NEW level to `bk_breaker_levels_<kidId>`, so anything a kid
+built after the migration would never have reached My Games. The maker now posts the
+board to `/api/kid-game` as well, and the migration is keyed by level id rather than a
+one-shot marker, so nothing can be stranded. The board-to-manifest step lives in
+`public/buildable-manifest.js` as `breakerBoardToManifest` and the SERVER calls that
+same function through `api/_manifestLib.js` — one builder, so a board can only ever
+become one game. The maker's local shelf is kept as this browser's own standalone
+list; nothing reads it as the truth any more.
+
 **Calls I made for you.**
 1. **Delete is soft, not a real row delete.** A kid tapping Delete stamps `deleted_at`;
    the game leaves My Games and its link stops working, and nothing is lost. A kids'

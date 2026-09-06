@@ -1189,6 +1189,36 @@ function levelsKey(){ const k=activeKidId(); return "bk_breaker_levels"+(k?("_"+
 function loadLevels(){ try{ const s=localStorage.getItem(levelsKey()); const a=s?JSON.parse(s):[]; return Array.isArray(a)?a:[]; }catch{ return []; } }
 function saveLevels(a){ try{ localStorage.setItem(levelsKey(), JSON.stringify(a)); }catch{} }
 
+// Session CB1 — a level a kid builds is a KID GAME. The list above is now only
+// this browser's own shelf for standalone play; the real home for a level is a
+// kid_games row, which is what My Games, the share link and Remix all read.
+// The board is posted RAW: the shared loader's breakerBoardToManifest turns it
+// into a manifest server-side, so the engine and the server can never disagree
+// about what a board becomes. Fire and forget — a kid must never lose a level
+// because the network blinked, which is why the local shelf still gets written
+// and why the shell re-checks it for anything that has not made it across.
+function bkDeviceId(){
+  try{ let id=localStorage.getItem("deviceId");
+    if(!id){ id="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10); localStorage.setItem("deviceId",id); }
+    return id; }catch{ return "dev_anon"; }
+}
+function bkActiveKid(){ try{ return JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); }catch{ return null; } }
+function saveLevelAsKidGame(rec){
+  try{
+    if(typeof fetch!=="function") return;
+    const k=bkActiveKid();
+    fetch("/api/kid-game", { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ op:"save", engine:"breaker", board:rec, name:rec.name,
+        sourceGame:"breaker", familyId:bkDeviceId(), kidId:(k&&k.id)||null,
+        kidName:(k&&(k.display_name||k.name))||null,
+        grownupName:(localStorage.getItem("bk_grownup_name")||"").trim()||null }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(j&&j.ok&&j.game){ rec.kgId=j.game.id; const lv=loadLevels();
+        const i=lv.findIndex(x=>x.id===rec.id); if(i>=0){ lv[i]=rec; saveLevels(lv); } } })
+      .catch(function(){});
+  }catch(e){}
+}
+
 function cellsToArray(){ const out=[]; for(const k in mkCells){ const p=k.split("_"); out.push({ r:+p[0], c:+p[1], type:mkCells[k] }); } return out; }
 function currentBoard(){ return { name:mkName||"My level", cols:mkCols, rows:mkRows, cells:cellsToArray(), look:Object.assign({},mkLook), diffN:mkDiff }; }
 function boardBrickCount(){ return Object.keys(mkCells).length; }
@@ -1211,8 +1241,9 @@ function playTest(){ if(boardBrickCount()<4){ toast("Add a few more bricks first
   applyLookToPrefs(); savePrefs(); if(BA)BA.unlock(); startCustomLevel(currentBoard(), mkDiff); closeMaker(); }
 function doShare(){ const lv=loadLevels(); const board=currentBoard(); const fl=mkDiff;   // save the chosen difficulty as the level's flame rating
   const rec={ id:mkEditingId||("L"+Date.now()), name:mkName||"My level", cols:mkCols, rows:mkRows, cells:board.cells, look:board.look, diffN:mkDiff, flames:fl, plays:0, clears:0, created:Date.now() };
-  const i=lv.findIndex(x=>x.id===rec.id); if(i>=0)lv[i]=rec; else lv.unshift(rec); saveLevels(lv);
-  mkEditingId=rec.id; toast("Saved to your levels! Friends can play it soon."); showHub(); }
+  const i=lv.findIndex(x=>x.id===rec.id); if(i>=0){ rec.kgId=lv[i].kgId||null; lv[i]=rec; } else lv.unshift(rec); saveLevels(lv);
+  saveLevelAsKidGame(rec);   // CB1: the level's real home is a kid_games row
+  mkEditingId=rec.id; toast("Saved! It is in My Games now."); showHub(); }
 
 // ---- footer nav ----
 function mkGoNext(){ const idx=MK_STEPS.indexOf(mkStep);
