@@ -294,7 +294,22 @@
         return { rule: r, every: Math.max(1, Math.min(120, (r.params && r.params.seconds) || 10)), left: Math.max(1, Math.min(120, (r.params && r.params.seconds) || 10)) };
       });
 
-      function say(text, ctx) {
+      // CB3: a line may carry a CLIP — the child's own voice, recorded in the
+      // studio and stored through /api/cobuild-voice. When there is one it is
+      // played AND the words still show, so a clip that will not load (a muted
+      // tab, no network) degrades to exactly what it did before.
+      var clips = {};
+      function playClip(url) {
+        if (!url || typeof Audio === "undefined") return;
+        try {
+          var a = clips[url] || (clips[url] = new Audio(url));
+          a.currentTime = 0;
+          var p = a.play();
+          if (p && typeof p.catch === "function") p.catch(function () {});
+        } catch (e) {}
+      }
+      function say(text, ctx, clip) {
+        if (clip) playClip(clip);
         if (typeof host.sayLine === "function") return host.sayLine(text, ctx);
         if (host.fx) BM.pop(host.fx.pops, (ctx && ctx.x) || 0, (ctx && ctx.y) || 0, text, "#ffe680");
       }
@@ -305,10 +320,10 @@
             if (typeof host.playSound === "function") host.playSound(String(p.sound || p.name || "select"), ctx);
             else if (g.BuildableAudio && g.BuildableAudio.sfx) g.BuildableAudio.sfx(String(p.sound || p.name || "select"));
             break;
-          case "sayLine":  say(String(p.text || ""), ctx); break;
+          case "sayLine":  say(String(p.text || ""), ctx, p.clip); break;
           case "showText":
             if (typeof host.showText === "function") host.showText(String(p.text || ""), ctx);
-            else say(String(p.text || ""), ctx);
+            else say(String(p.text || ""), ctx, p.clip);
             break;
           case "spawn":     if (typeof host.spawn === "function") host.spawn(String(p.what || ""), ctx); break;
           case "speedUp":   if (typeof host.speedUp === "function") host.speedUp(+p.by || 1.1, ctx); break;

@@ -6,6 +6,62 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## CB3 — the studio: a child says it, the game appears, and they change it by asking (September 6 2026)
+`public/studio.html`, `api/cobuild-plan.js`, `api/cobuild-edit.js`, `api/_cobuildBrain.js`,
+`api/cobuild-voice.js`, `api/transcribe.js`, `api/asset-studio.js` (kids lane),
+`public/buildable-mechanics.js` (clip playback), `public/<engine>/cobuild.json` (plain words),
+`src/BuildableKids.jsx`, `qa-studio.mjs`, `vercel.json`.
+
+CB1 gave a kid a game they own. CB2 built the fence and the robot. CB3 is the door a
+child actually walks through, at `/studio` (and `/studio/<id>` to reopen a game),
+behind the same 1111 coming-soon gate as everything else until CB4.
+
+**The shape of it.** Buddy asks what the game is about; the child says it out loud or
+types it. Then ONE follow-up question at a time, never a settings screen: who is the
+star, and how tricky should it be. A plan card comes back naming the game it will be
+built on and why, with every choice as a chip you tap to change. Build takes about a
+minute and narrates itself as a story list. Then the real game is playing at the top
+of the screen with the asking underneath: tap a tile or just say "make it snowy".
+
+**The rule that shapes all of it: the studio never writes a manifest.** The plan is
+ASSEMBLED out of a shipped game by named CB2 recipes, and every tweak is CB2 recipes
+and rules. So what a child gets is inside the engine's fence by construction. Every
+version is then strict-validated AND played by the CB2 robot on the server before it
+reaches the screen, on the build and on every single edit.
+
+**It works with every key switched off.** The engine is chosen by the plain words each
+cobuild sheet now carries about itself, the manifest is assembled locally, and the
+edit door understands the phrases children actually use before it ever asks a model.
+A model, when there is one, only improves the name, the theme and the wording, and
+its answer is dropped if it names anything the sheets do not have. That is why
+`qa-studio.mjs` can drive plan to tweak on all four engines with no API key and no
+database, and why a model outage costs a family cleverness rather than their game.
+
+**Art.** The kids lane in `api/asset-studio.js` (`action:"kid-art"`) LOOKS IN THE
+SHARED LIBRARY FIRST by kind and theme, and only paints when nothing is there — then
+files what it painted back with a made-in-cobuild tag so the next family gets it
+free. A painted piece is hung on the manifest BY THE SERVER, which validates it
+against the sheet and drops it if it does not fit, so the engine's own drawn art
+stands in rather than a game with a hole in it. With no picture key at all the game
+still builds.
+
+**The child's own voice.** Hold the mic, say a line, and it rides on an ordinary CB2
+rule: `{when, do:"sayLine", params:{text, clip}}`. The clip is stored through the same
+narration cache `/api/say.js` uses, and the shared rules runtime plays it when it is
+there and shows the words when it is not.
+
+**Keep is earned by the family, not the robot.** The robot proves a game CAN be
+finished; Keep waits for the engine to post up that the child actually beat it. Then
+the title screen reads "A game by <kid> and <grown-up>" and the card is on the My
+Games shelf, where Change it reopens the same conversation.
+
+**Kid mode is the default** and shows no money, no limits, no publishing and no
+settings. Sharing sits behind the grown-up gate; the real share sheet, the plans and
+the house rules are CB4. The app's "Make a game" tile now opens the studio instead of
+the dead Phaser generator flow.
+
+`node qa-studio.mjs` and `node qa-all.mjs` green: 49 harnesses.
+
 ## CB2 — safe outputs: the fence, the recipe book, the rules, and the robot gate (September 6 2026)
 `public/<engine>/cobuild.json` (breaker, sling, castleguard, skyflyer),
 `public/buildable-recipes.js`, `public/buildable-mechanics.js` (`BM.rules`),

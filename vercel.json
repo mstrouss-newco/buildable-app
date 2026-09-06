@@ -997,6 +997,18 @@
       }
     },
     {
+      "src": "/studio.html",
+      "dest": "/studio.html"
+    },
+    {
+      "src": "/studio",
+      "dest": "/studio.html"
+    },
+    {
+      "src": "/studio/([A-Za-z0-9][A-Za-z0-9-]{1,63})",
+      "dest": "/studio.html"
+    },
+    {
       "src": "/cobuild.html",
       "dest": "/cobuild.html"
     },

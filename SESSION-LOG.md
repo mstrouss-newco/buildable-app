@@ -1,3 +1,49 @@
+## 2026-09-06 — CB3: the studio (a child says it, the game appears, they change it by asking)
+
+**Shipped.** `/studio` and `/studio/<id>` (`public/studio.html`), the plan door
+(`api/cobuild-plan.js`), the tweak door (`api/cobuild-edit.js`), the thinking they
+share (`api/_cobuildBrain.js`), the child's own voice (`api/cobuild-voice.js`), the
+fallback ear (`api/transcribe.js`), the kids lane in `api/asset-studio.js`, clip
+playback in the shared rules runtime, the plain words each cobuild sheet now carries
+about itself, the app's "Make a game" tile repointed at the studio, and
+`qa-studio.mjs`. `node qa-all.mjs` green, 49 harnesses. The React app builds.
+
+**The decision the whole session rests on.** The studio never writes a manifest. A
+plan is ASSEMBLED out of a shipped game by named CB2 recipes, and a tweak is CB2
+recipes and rules. Then every version is strict-validated and PLAYED BY THE ROBOT
+on the server before it is shown, on the build and on every edit. So the worst the
+studio can hand a child is a game that works but is not quite what they meant, and
+never a game that does not work.
+
+**Calls I made for you.**
+1. **It all works with no API keys.** The engine is chosen by the words in the sheets,
+   the manifest is assembled locally, and the edit door understands the phrases
+   children really use before it asks a model. A model, when there is one, only
+   improves the name, the world and the wording, and its answer is thrown away if it
+   names anything the sheets do not have. That is why the whole studio can be tested
+   headless with nothing switched on, and why a model outage costs cleverness rather
+   than a child's game.
+2. **Keep is earned by the family, not the robot.** The robot proves a game CAN be
+   finished. Keep waits for the engine to say the child actually beat it, as the card
+   asked. That does mean a child must play their game through once before it lands on
+   the shelf, which I think is right.
+3. **Painted art is hung by the server, and dropped if it does not fit.** Breaker can
+   take a studio picture in its brick and bat slots; Sling and Castle Guard map their
+   own art, so a picture there would be a hole in the game. Those pieces are still
+   filed into the shared library for the next family, and the engine draws its own —
+   the read-with-a-fallback rule rather than a forced slot.
+4. **The app's "Make a game" tile now opens the studio** instead of the old Phaser
+   generator screen. Nothing was removed: the old screen is still there, and the tile
+   is still behind the coming-soon gate, so this is the safest place in the app to
+   have made that swap.
+5. **Sharing is behind the grown-up gate and money is nowhere.** Kid mode is the
+   default and shows no money, no limits, no publishing and no settings, which
+   `qa-studio.mjs` checks on the page a child actually sees. The real share sheet, the
+   plans and the house rules are CB4.
+6. **No database change.** The kids lane reuses `image_cache` like the rest of the
+   asset studio, and voice lines reuse `narration_cache` like `/api/say.js`, so
+   nothing was applied to Supabase this session.
+
 ## 2026-09-06 — CB2: safe outputs (sheets, recipes, rules, robot gate)
 
 **Shipped.** Four cobuild sheets (`public/breaker|sling|castleguard|skyflyer/cobuild.json`),

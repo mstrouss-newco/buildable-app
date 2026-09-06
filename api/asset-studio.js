@@ -353,6 +353,69 @@ export default async function handler(req, res) {
     return res.status(200).json({ b64, mime: "image/png", engine: "openai" });
   }
 
+  // --- CB3: THE KIDS LANE. One picture, painted and filed in one call. --------
+  // The Create tab is a grown-up tool: it generates a SHEET, the browser slices
+  // it, and a person names each piece. A child in the studio cannot do any of
+  // that, so this lane does the whole job server-side:
+  //
+  //   1. LOOK IN THE LIBRARY FIRST. If we already have a picture of this kind and
+  //      theme, it is reused and nothing is generated. That is the shared-asset
+  //      rule (ASSET-LIBRARY.md) and it is also what stops a family paying for a
+  //      picture the last family already made.
+  //   2. Paint one piece, with the prompt wrapped in a kid-safe frame that the
+  //      child's words cannot escape.
+  //   3. File it back into the SAME shared library with a made-in-cobuild tag, so
+  //      the next family reuses it.
+  //
+  // Always answers 200 with { ok:false, reason } rather than an error when there
+  // is no key or no budget: a studio must still build a game with drawn art when
+  // the picture machine is off. That is the read-on-render-with-a-fallback rule.
+  if (action === "kid-art" || body.target === "kids") {
+    const kind = ["character", "world", "element"].includes(body.kind) ? body.kind : "element";
+    const theme = cleanSlug(body.theme || "jungle");
+    const subject = (body.subject || "").toString().trim().slice(0, 200);
+    const slot = cleanSlug(body.slot || kind);
+    if (!subject) return res.status(400).json({ ok: false, error: "no_subject" });
+
+    // 1. the library first
+    if (body.reuse !== false && SUPABASE_URL && SUPABASE_SERVICE_KEY) {
+      try {
+        const r = await sb("image_cache?select=cache_key,descriptor,created_at&kind=eq.studio&order=created_at.desc&limit=400");
+        const rows = r.ok ? await r.json() : [];
+        for (const row of rows) {
+          const slug = (row.cache_key || "").replace(/^studio:/, "");
+          const m = studioMeta(slug, row.descriptor);
+          if (m.kind === kind && m.theme === theme && /^cobuild\//.test(slug)) {
+            return res.status(200).json({ ok: true, reused: true, slug, url: assetUrl(slug, row.created_at), kind, theme });
+          }
+        }
+      } catch {}
+    }
+
+    // 2. paint one. The child's words go in the middle of OUR sentence, never at
+    // the start of it, and the frame carries the house style and the age rating.
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(200).json({ ok: false, reason: "no_picture_machine" });
+    if (!(await underBudget())) return res.status(200).json({ ok: false, reason: "over_budget" });
+    const frame = kind === "world"
+      ? "A gentle, colourful backdrop for a game for young children. It shows: "
+      : "A single friendly character for a game for young children, full body, centred, on a plain background. It is: ";
+    const tail = " Bright storybook style, soft shapes, no text, no words, no letters, no logos, nothing frightening, nothing violent.";
+    const b64 = await generateSheet(frame + subject + "." + tail, openaiKey, {
+      size: kind === "world" ? "wide" : "square", transparent: kind !== "world", quality: "low",
+    });
+    if (!b64) return res.status(200).json({ ok: false, reason: "picture_failed" });
+    await logCost(COST.low);
+
+    // 3. file it back, tagged, so the next family gets it for free
+    const name = cleanSlug(subject.split(/\s+/).slice(0, 4).join("_")) || slot;
+    const slug = `cobuild/${slot}/${theme}/${name}`;
+    const descriptor = JSON.stringify({ slug, kind, theme, game: "cobuild", type: slot, madeIn: "cobuild", reusable: true });
+    const ok = await cachePut("studio:" + slug, descriptor, "studio", b64);
+    if (!ok) return res.status(200).json({ ok: true, reused: false, slug: null, url: null, b64, kind, theme, filed: false });
+    return res.status(200).json({ ok: true, reused: false, slug, url: assetUrl(slug), kind, theme, filed: true });
+  }
+
   // --- keep the sliced pieces (each already named by the browser from the recipe) ---
   if (action === "keep") {
     const game = cleanSlug(body.game || "misc");

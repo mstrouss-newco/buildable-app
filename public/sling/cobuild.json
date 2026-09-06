@@ -253,5 +253,22 @@
     "It cannot have a boss with health bars.",
     "It cannot set how many slings you get by hand. Difficulty and the number of critters decide.",
     "It cannot have more than 20 levels."
-  ]
+  ],
+  "words": [
+    "sling",
+    "slingshot",
+    "fling",
+    "throw",
+    "launch",
+    "catapult",
+    "knock over",
+    "topple",
+    "tower",
+    "building",
+    "physics",
+    "angry",
+    "squad",
+    "rescue"
+  ],
+  "about": "flinging a pal at a wobbly building to knock the critters out"
 }

@@ -284,5 +284,28 @@
     "It cannot place a hill, a tree or a coin at an exact spot. The world grows itself from the theme.",
     "It cannot ask for more landings than there are pads.",
     "It cannot have more than 6 worlds."
-  ]
+  ],
+  "words": [
+    "fly",
+    "flying",
+    "plane",
+    "jet",
+    "sky",
+    "cloud",
+    "island",
+    "helicopter",
+    "copter",
+    "jetpack",
+    "soar",
+    "land",
+    "landing",
+    "pad",
+    "coin",
+    "explore",
+    "world",
+    "bird",
+    "dragon",
+    "space"
+  ],
+  "about": "flying around an open world scooping coins and landing on pads"
 }

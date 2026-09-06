@@ -280,5 +280,23 @@
     "It cannot be lost forever: the design promises every level is winnable with enough guards.",
     "It cannot have more than 12 levels, and a wave number above 12 does not exist.",
     "It cannot invent a new kind of guard or a new goblin. Those are animated sheets we ship, and only the boss at the end of a level can be named."
-  ]
+  ],
+  "words": [
+    "castle",
+    "guard",
+    "defend",
+    "protect",
+    "tower",
+    "knight",
+    "archer",
+    "goblin",
+    "monster",
+    "army",
+    "wave",
+    "defence",
+    "defense",
+    "path",
+    "base"
+  ],
+  "about": "putting guards along a path so the goblins never reach the castle"
 }

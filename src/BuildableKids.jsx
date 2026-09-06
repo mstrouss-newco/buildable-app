@@ -2036,7 +2036,7 @@ export default function BuildableKids() {
           onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
           onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
           onGames={() => setScreen(SCREEN_PLAY_HUB)}
-          onMakeGame={() => setScreen(SCREEN_INTRO)}
+          onMakeGame={() => { window.location.href = "/studio"; }}   /* CB3: the studio, not the dead generator */
           onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
           onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
           onArt={() => setScreen(SCREEN_ART)}
@@ -2136,7 +2136,7 @@ export default function BuildableKids() {
           onSounds={() => { setReturnTo(SCREEN_MAKE_HUB); setScreen(SCREEN_SOUNDS); }}
           onArt={() => setScreen(SCREEN_ART)}
           onStories={() => { setReturnTo(SCREEN_MAKE_HUB); setScreen(SCREEN_STORY); }}
-          onMakeGame={() => setScreen(SCREEN_INTRO)}
+          onMakeGame={() => { window.location.href = "/studio"; }}   /* CB3: the studio, not the dead generator */
         />
         <BottomBar current="make" {...bottomBarProps} />
       </>
