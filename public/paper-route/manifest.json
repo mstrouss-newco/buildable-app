@@ -1,0 +1,68 @@
+{
+  "id": "paper-route",
+  "name": "Paper Route",
+  "type": "game",
+  "category": "Arcade",
+  "color": "#3FA9F5",
+  "ageBand": "5-10",
+  "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/paper-route-engine.html",
+
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": { "on": true, "personality": "cheerleader" },
+    "multiplayer": "off",
+    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": false, "subjects": [] }
+  },
+
+  "feel": { "pace": "normal", "celebration": "big", "haptics": "on" },
+
+  "art": {
+    "badge": "paper-route/badge/v1",
+    "loadingScreen": "paper-route/loading/v1"
+  },
+
+  "levels": [
+    {
+      "id": "maple-street",
+      "name": "Maple Street",
+      "difficulty": 1,
+      "unlocked": true,
+      "coins": 18,
+      "parts": {
+        "theme": "maple",
+        "houses": [
+          { "at": 0.08, "side": -1, "sub": true },
+          { "at": 0.14, "side": 1,  "sub": false },
+          { "at": 0.22, "side": 1,  "sub": true },
+          { "at": 0.30, "side": -1, "sub": false },
+          { "at": 0.38, "side": -1, "sub": true },
+          { "at": 0.47, "side": 1,  "sub": true },
+          { "at": 0.56, "side": -1, "sub": false },
+          { "at": 0.64, "side": 1,  "sub": true },
+          { "at": 0.74, "side": -1, "sub": true },
+          { "at": 0.86, "side": 1,  "sub": false }
+        ],
+        "obstacles": [
+          { "at": 0.11, "x": -0.35, "kind": "bin" },
+          { "at": 0.19, "x": 0.30,  "kind": "cone" },
+          { "at": 0.27, "x": -0.10, "kind": "puddle" },
+          { "at": 0.35, "x": 0.40,  "kind": "bin" },
+          { "at": 0.43, "x": -0.45, "kind": "hydrant" },
+          { "at": 0.52, "x": 0.15,  "kind": "cone" },
+          { "at": 0.60, "x": -0.30, "kind": "skateboard" },
+          { "at": 0.69, "x": 0.35,  "kind": "puddle" },
+          { "at": 0.78, "x": -0.15, "kind": "bin" },
+          { "at": 0.88, "x": 0.25,  "kind": "cone" }
+        ],
+        "ramps":   [ { "at": 0.33, "x": 0.00 }, { "at": 0.72, "x": -0.20 } ],
+        "boosts":  [ { "at": 0.25, "x": 0.35 }, { "at": 0.58, "x": -0.35 }, { "at": 0.82, "x": 0.10 } ],
+        "bundles": [ { "at": 0.20, "x": -0.25 }, { "at": 0.50, "x": 0.20 }, { "at": 0.76, "x": 0.30 } ]
+      }
+    }
+  ]
+}

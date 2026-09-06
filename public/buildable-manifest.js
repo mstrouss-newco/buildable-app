@@ -677,8 +677,67 @@
     resolveAsset: function(){ return null; }   // math cannon draws its own art (geometry)
   };
 
+  // ===========================================================================
+  //  PAPER ROUTE profile (card PB1). A level is a STREET, and everything on that
+  //  street is DATA: subscriber houses, obstacles, ramps, boost strips and paper
+  //  bundles, each placed by `at` — a 0-1 position along the street. The only
+  //  tuning knob is difficulty 1-5, which this profile turns into the paper count,
+  //  the street's length, the rider's pace and how much of the authored obstacle
+  //  set is live. Nobody writes a raw speed or a density into a manifest.
+  //  Pure + headless-safe.
+  // ===========================================================================
+  //  A street is about 25 seconds of riding at every setting — the dial makes it
+  //  longer AND quicker, so the ride tightens rather than dragging on.
+  var STREET_BAND = {
+    1: { papers:12, length:4200, speed:170, obstacleDensity:0.30 },
+    2: { papers:11, length:4800, speed:185, obstacleDensity:0.50 },
+    3: { papers:10, length:5400, speed:200, obstacleDensity:0.70 },
+    4: { papers:10, length:6000, speed:215, obstacleDensity:0.85 },
+    5: { papers:9,  length:6600, speed:230, obstacleDensity:1.00 }
+  };
+  function streetProps(a){ return Array.isArray(a) ? a.filter(function(p){ return p && typeof p.at==="number"; }) : []; }
+  var paperProfile = {
+    validateLevel: function(lv, at, errors){
+      var parts = lv.parts;
+      if(parts!=null && typeof parts!=="object"){ errors.push(at+" 'parts' must be an object"); return; }
+      parts = parts || {};
+      if(!Array.isArray(parts.houses) || !parts.houses.length){ errors.push(at+" parts.houses must be a non-empty array"); return; }
+      var subs=0, bad=0;
+      parts.houses.forEach(function(h){
+        if(!h || typeof h.at!=="number" || h.at<0 || h.at>1 || (h.side!==-1 && h.side!==1)) bad++;
+        else if(h.sub) subs++;
+      });
+      if(bad) errors.push(at+" parts.houses has "+bad+" house(s) missing an 'at' of 0-1 or a 'side' of -1 or 1");
+      if(!subs) errors.push(at+" parts.houses needs at least one subscriber (sub:true) to deliver to");
+      ["obstacles","ramps","boosts","bundles"].forEach(function(k){
+        if(parts[k]!=null && !Array.isArray(parts[k])) errors.push(at+" parts."+k+" must be an array");
+      });
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5), parts = lv.parts || {}, band = STREET_BAND[d];
+      var houses = streetProps(parts.houses);
+      var subs = 0; houses.forEach(function(h){ if(h.sub) subs++; });
+      return {
+        id: lv.id, name: lv.name, difficulty: d,
+        theme: parts.theme || "maple",
+        length: band.length, papers: band.papers, speed: band.speed,
+        obstacleDensity: band.obstacleDensity,
+        houses: houses, subscribers: subs,
+        obstacles: streetProps(parts.obstacles),
+        ramps: streetProps(parts.ramps),
+        boosts: streetProps(parts.boosts),
+        bundles: streetProps(parts.bundles),
+        coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
+        unlocked: !!lv.unlocked,
+        parts: parts
+      };
+    },
+    toConfig: function(m, levels){ return { id:m.id, name:m.name, color:m.color, levels:levels, streets:levels, stages:levels, _manifest:m }; },
+    resolveAsset: function(){ return null; }   // paper route draws its street from geometry
+  };
+
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile, typing: crocProfile, bubble: crocProfile, castleguard: crocProfile, tennis: crocProfile, skyflyer: crocProfile, mathcannon: mathProfile };
+  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile, typing: crocProfile, bubble: crocProfile, castleguard: crocProfile, tennis: crocProfile, skyflyer: crocProfile, mathcannon: mathProfile, "paper-route": paperProfile };
   // Studios always use the studio profile (they have no levelProfile/levels); every
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }

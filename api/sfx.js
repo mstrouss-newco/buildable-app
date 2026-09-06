@@ -116,6 +116,14 @@ const SOUNDS = {
   sky_deliver: "Short happy two-note drop-off chime with a soft cushioned thud, a parcel landing safely where it belongs, warm and satisfying, single hit, no music, no voices",
   sky_mission: "Short warm cheerful job-well-done fanfare, a gentle rising three-note flourish with a soft sparkle tail, finishing a delivery round, kind and encouraging, no voices",
 
+  // Card PB1 (Paper Route). The delivery moments themselves are the shared FL5
+  // clips above — a bag refill is sky_pickup, a paper in the mailbox is
+  // sky_deliver, the finished street is sky_mission. These three are the ones
+  // only this engine makes, so the company library grows by exactly what is new.
+  pr_throw:  "Short light paper whoosh, a rolled newspaper thrown through the air with a soft flutter of pages, quick and satisfying, single hit, no music, no voices",
+  pr_clunk:  "Short soft cartoon bump against a plastic bin, a gentle hollow clunk with a small wobble, harmless and friendly, never harsh, single hit, no music, no voices",
+  pr_streak: "Short bright rising three-note chime with a sparkle tail, a run of perfect deliveries in a row, proud and encouraging, single hit, no music, no voices",
+
   // ---- Sling Squad one-shots (slingshot launcher; per BUILDING-A-GAME "new engine = create new sounds") ----
   sling_stretch: "Short soft stretchy elastic rubber-band pull and creak, a slingshot being drawn back, single hit, no music, no voices",
   sling_release: "Short bouncy cartoon slingshot twang and boing as an elastic snaps forward and launches, playful, single hit, no music, no voices",
@@ -461,6 +469,8 @@ const DURATIONS = {
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
   frog:0.6, moo:1.0, rooster:1.2, vroom:1.0, sneeze:0.8, partypop:1.0,
+  // Paper Route (PB1) — its own three one-shots, all clear of the 0.5s floor.
+  pr_throw:0.6, pr_clunk:0.5, pr_streak:1.0,
   // Ant City (AC4) — one-shots, every one comfortably over the 0.5s floor that
   // /api/sfx enforces (under it the generator refuses and the sound is silently gone).
   antcity_dig:0.6, antcity_march:1.2, antcity_hatch:1.0, antcity_munch:0.6, antcity_rain:1.6,

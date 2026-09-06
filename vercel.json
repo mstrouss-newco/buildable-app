@@ -431,6 +431,25 @@
       }
     },
     {
+      "src": "/paper-route/manifest.json",
+      "dest": "/paper-route/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/paper-route-engine.html",
+      "dest": "/paper-route-engine.html"
+    },
+    {
+      "src": "/paper-route",
+      "dest": "/paper-route-engine.html"
+    },
+    {
+      "src": "/paper-route/(.*)",
+      "dest": "/paper-route/$1"
+    },
+    {
       "src": "/rileys-garden/manifest.json",
       "dest": "/rileys-garden/manifest.json",
       "headers": {

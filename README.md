@@ -6,7 +6,46 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
-<<<<<<< HEAD
+## PB1 — Paper Route: the spec, the cartridge, and Maple Street (September 6 2026)
+`public/paper-route-engine.html`, `public/paper-route/manifest.json`,
+`public/buildable-manifest.js` (new `paper-route` profile), `api/sfx.js`,
+`src/BuildableKids.jsx`, `vercel.json`, `qa-paper-route.mjs`. Phase **PB**, card **PB1**.
+
+A new game built the BUILDING-A-GAME way: spec first, engine as a cartridge, QA harness in
+the same session. The ride is a straight street seen from behind the rider — the classic
+diagonal Paperboy view was thumb-tested and rejected because the right thumb covers the
+road ahead. Slide to steer, tap to throw a paper at a red-flag mailbox.
+
+**Everything on the street is data.** The manifest holds Maple Street's ten houses (six
+subscribers), ten obstacles, two ramps, three boost strips and three bundles, each placed
+by an `at` of 0 to 1 along the street. Difficulty 1 to 5 is the only dial: the new
+`paper-route` profile in the shared loader turns it into the paper count, the length, the
+pace and how much of the obstacle set is live. No raw number lives in the manifest, so a
+second street is data plus art (that is PB2).
+
+**Nothing can be lost.** A bump is a wobble and one dropped paper. No lives, no timer, no
+penalty. A tap with no mailbox in range costs no paper, so a happy tapper can never reach a
+red flag with an empty bag, and the mailbox a tap would throw at wears a pulsing ring so
+the timing is seen rather than explained. Ramps carry you over what is on the road and an
+air throw pays double; three in a row is a streak; every delivery lights a porch and brings
+a neighbour out to wave.
+
+**Sound.** Delivery moments reuse the shared FL5 clips (`sky_pickup`, `sky_deliver`,
+`sky_mission`) — they were written generic for exactly this. Three new one-shots are Paper
+Route's own, over the 0.5s floor: `pr_throw`, `pr_clunk`, `pr_streak`. They generate on
+their first live fetch through the owner's ElevenLabs key.
+
+QA: `qa-paper-route.mjs` (66 checks) drives the engine headlessly in a vm — a perfect
+player finishes the street with all six papers delivered, pause/resume behave, every coin
+goes to the shared wallet under a key so replays cannot farm, and there is no lose state,
+no baked art, no emoji. `node qa-all.mjs` green. Verified in a real headless Chromium on a
+portrait phone. The tile stays Coming Soon behind the 1111 gate until PB2.
+Ref: SESSION-LOG.md same date.
+
+Also fixed here: `README.md` carried committed merge-conflict markers from the AC4 merge
+(`<<<<<<<` at the top of the log, `>>>>>>>` 200 lines down). Resolved as the plain union
+the repo's own rule prescribes — both sides kept, markers removed.
+
 ## AC4 — Ant City gets its own sounds, a meadow loop, and the last of its art (September 6 2026)
 `api/sfx.js`, `api/library-music.js`, `public/antcity-engine.html`, `public/antcity/art/` (8 new
 files), `qa-antcity.mjs`. Phase **AC**, card **AC4**. Taken out of order, ahead of AC3, because
@@ -46,7 +85,6 @@ into existence; if one comes back 503 the prompt or the duration needs a nudge, 
 in the game breaks meanwhile.
 
 ---
-=======
 ## CB4 — the grown-up studio: shelves, games a month, the share sheet, house rules, real signup (September 6 2026)
 `db/create-cobuild-plans.sql` (written AND applied), `api/cobuild-billing.js`,
 `api/cobuild-rules.js`, `api/cobuild-poster.js`, `api/cobuild-lead.js`,
@@ -209,7 +247,6 @@ recipe, and nothing is kept until a robot has played it.
    the source. `node qa-all.mjs` green: 48 harnesses.
 
 No database change: the `robot` column CB1 created is the one the verdict lands in.
->>>>>>> origin/main
 ## Hop Heroes: four worlds, a cast, and the shared Feel Kit (HH4 + HH5, September 6 2026)
 `public/play.html`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`, `qa-hopheroes-shot.mjs`.
 Phase **HH**, cards **HH4 + HH5**, branch `claude/hop-heroes-mario-feel-safrvp`.

@@ -1,3 +1,44 @@
+## 2026-09-06 — PB1: Paper Route, the delivery ride
+
+**Shipped.** A whole new game as a cartridge. `public/paper-route-engine.html` is the
+ride and nothing else: a straight street seen from behind the rider, slide to steer, tap
+to throw a paper at a red-flag mailbox. The shell keeps the landing, the journey, the HUD
+chrome, the wallet and the buddy, exactly as CARTRIDGE-CONTRACT.md says. Maple Street is
+in `public/paper-route/manifest.json`, and every single thing on it — ten houses with six
+red-flag subscribers, ten obstacles, two ramps, three boost strips, three paper bundles —
+is data placed by a 0-to-1 position along the street. Difficulty 1 to 5 is the only dial;
+the shared loader turns it into the paper count, the street's length, the pace and how
+much of the obstacle set is live. There is not one raw number in the manifest.
+
+**The ride.** A bump is a wobble and one dropped paper. No lives, no timer, no penalty
+of any kind, and the street always ends by reaching the end of it. Ramps carry you clean
+over whatever is on the road and an air throw pays double. Boost strips speed you up.
+Bundles refill the bag. Three deliveries in a row is a streak, and every delivery lights
+the porch and brings a neighbour out to wave.
+
+**Two calls I made while building it.** A tap with no mailbox in range costs no paper, so
+a kid tapping happily can never arrive at a red flag with an empty bag. And the mailbox a
+tap would throw at wears a soft pulsing ring, so the timing is something a kid sees rather
+than something they are told.
+
+**Sound.** The delivery moments reuse the shared FL5 clips (`sky_pickup`, `sky_deliver`,
+`sky_mission`) on purpose, because they were made generic for exactly this. Three new
+one-shots are Paper Route's own and are named in `api/sfx.js` with durations over the
+0.5-second floor: `pr_throw`, `pr_clunk`, `pr_streak`. They have not been generated yet —
+the first live `fetch("/api/sfx?s=pr_throw")` on the site creates them through the
+ElevenLabs key, and this session cannot reach the site.
+
+**Checked.** `qa-paper-route.mjs`, written in the same session, drives the engine
+headlessly in a vm: a perfect player rides the whole street and delivers all six papers in
+24 seconds, pause freezes and resume continues, every coin goes to the shared wallet under
+a key so a replay cannot farm it, and there is no lose state, no baked art and no emoji.
+`node qa-all.mjs` is green. A real Chromium run on a portrait phone plays the street with
+a thumb, finishes it, and reports no console errors.
+
+**Still coming soon.** The tile is in the picker behind the 1111 gate, per the card. PB2
+adds the gigs, the alive street, Sunset Beach and the staged tile shot, and only then does
+the tile open up.
+
 ## 2026-09-06 — AC4: Ant City's sounds, its meadow loop, and the last of its art
 
 **Shipped.** Five created sounds named in `api/sfx.js` (digging, marching feet, a hatch

@@ -86,6 +86,7 @@ const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
 const SCREEN_MATHCANNON = "mathcannon";
+const SCREEN_PAPERROUTE = "paper-route";  // Card PB1: Paper Route — the delivery ride
 const SCREEN_SKYFLYER = "skyflyer";   // Session FL2: Sky Flyer, the 3D one-finger flight cartridge
 const SCREEN_FARM = "farm";           // Phase FM: the farm corner — grow, stack, feed, pack, send
 const SCREEN_GAME_LANDING = "game_landing";   // Session 7F: shared landing as the front door for every keeper
@@ -109,6 +110,7 @@ const GAME_SLUGS = {
   [SCREEN_CASTLE]: "castle",
   [SCREEN_CROC]: "croc",
   [SCREEN_MATHCANNON]: "mathcannon",
+  [SCREEN_PAPERROUTE]: "paper-route",
   [SCREEN_RILEYS]: "rileys",
   [SCREEN_TUMBLE]: "tumble",
   [SCREEN_CHESS]: "chess",
@@ -168,6 +170,7 @@ const LANDING_WRAP = {
   "rileys-garden": { play: SCREEN_RILEYS, journey: true, demo: "/rileys-garden.html?v=art2&screen=demo" },
   typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
   mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
+  "paper-route": { play: SCREEN_PAPERROUTE, journey: true, demo: "/paper-route-engine.html?v=pb1&screen=demo" },
   skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fm3&screen=demo" },
   farm: { play: SCREEN_FARM },
   platformer: { play: SCREEN_PLATFORMER },
@@ -221,6 +224,7 @@ const GAME_CATALOG = [
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
   { id: "antcity",     name: "Ant City",         category: "Colony",   color: "#E9A23B", type: "game", tile: "antcity",      handler: "onAntCity",     desc: "Draw tunnels, feed your ants, grow a colony!" },
   { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
+  { id: "paper-route", name: "Paper Route",        category: "Arcade",   color: "#3FA9F5", type: "game", imgId: "paper-route", handler: "onPaperRoute",  desc: "Ride the street and land a paper on every red flag!", soon: true },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
   { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true, multiplayer: true },
   { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
@@ -1505,6 +1509,9 @@ function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/
 function SlingScreen({ onHome, level }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame title="Sling Squad" src={`/sling-squad.html?v=hud3${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function CrocScreen({ onHome, level }) { return <GameFrame title="Croc Tot" src={"/croctot.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#7fc7ff" />; }
+// PB1 — Paper Route. The journey picks the street (?level=); the engine owns the
+// ride and nothing else, so the shell keeps the landing, the HUD chrome and the coins.
+function PaperRouteScreen({ onHome, level }) { return <GameFrame title="Paper Route" src={"/paper-route-engine.html?v=pb1" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0f1b2a" />; }
 function MathCannonScreen({ onHome, level }) { return <GameFrame title="Math Cannon" src={"/mathcannon-engine.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#12102a" />; }
 function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Garden" src={"/rileys-garden.html?v=art2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#87CEEB" />; }
 // FM3 — GAP 1 CLOSED. Until now `skyflyer-farm` appeared nowhere in this file at
@@ -2160,6 +2167,7 @@ export default function BuildableKids() {
           onCastle={() => openLanding("castleguard")}
           onSling={() => openLanding("sling")}
           onCroc={() => openLanding("croctot")} onMathCannon={() => openLanding("mathcannon")}
+          onPaperRoute={() => openLanding("paper-route")}
           onRileys={() => openLanding("rileys-garden")}
           onStringMatch={() => openLanding("stringmatch")}
           onTank={() => openLanding("tank")}
@@ -2204,6 +2212,7 @@ export default function BuildableKids() {
           onMemory={() => openLanding("memory")}
           onMahjong={() => openLanding("mahjong")}
           onMathCannon={() => openLanding("mathcannon")}
+          onPaperRoute={() => openLanding("paper-route")}
           onSkyFlyer={() => openLanding("skyflyer")}
           onFarm={() => openLanding("farm")}
           onPlatformer={() => openLanding("platformer")}
@@ -2675,6 +2684,9 @@ export default function BuildableKids() {
   }
   if (screen === SCREEN_MATHCANNON) {
     return <MathCannonScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_PAPERROUTE) {
+    return <PaperRouteScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_SKYFLYER) {
     return <SkyFlyerScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
