@@ -1032,7 +1032,38 @@ function renderRoadmap(){
   let html=rmAddBar()+rmFocusBar()+rmChips();
   const live=[], fin=[];
   rd.phases.forEach(ph=>{ (phaseIsDone(ph.num)?fin:live).push(ph); });
-  live.forEach(ph=>{ if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true; html+=rmPhaseHtml(ph); });
+
+  /* Bugs and findings live in their OWN collapsed section, not in the roadmap.
+     A QA sweep can file forty cards in an afternoon, and before this they buried
+     every real phase under them so the roadmap could not be read at a glance.
+     A phase counts as a bug list if most of its open cards are bucket-prefixed
+     ([BROKEN] / [JANKY] / [INCONSISTENT]) - so this works for any future sweep
+     phase without anyone having to flag it by hand. */
+  const isBugName = (n) => /^\s*\[(BROKEN|JANKY|INCONSISTENT)\]/i.test(n||"");
+  const isBugPhase = (ph) => {
+    const cards = rd.sessions.filter(s=>s.phaseNum===ph.num&&!s.later);
+    const open = cards.filter(s=>!s.done);
+    const pool = open.length?open:cards;
+    if(pool.length<5) return false;
+    return pool.filter(s=>isBugName(s.name)).length >= pool.length*0.6;
+  };
+  const roadmapPhases = live.filter(ph=>!isBugPhase(ph));
+  const bugPhases     = live.filter(ph=>isBugPhase(ph));
+
+  roadmapPhases.forEach(ph=>{ if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true; html+=rmPhaseHtml(ph); });
+
+  if(bugPhases.length){
+    let bOpen=0, bTotal=0;
+    bugPhases.forEach(ph=>{ const pr=phaseProgress(ph.num); bTotal+=pr.total; bOpen+=(pr.total-pr.done); });
+    if(rmOpen["__bugs__"]===undefined) rmOpen["__bugs__"]=false;   // closed by default
+    html+='<div class="bucket">'
+      +'<div class="bhead" onclick=\'rmToggle("__bugs__")\'>'
+      +'<h2>Bugs and findings <span class="count">'+bOpen+'</span></h2>'
+      +'<span class="status '+(bOpen?"s-wait":"s-ready")+'">'+bOpen+' open of '+bTotal+'</span></div>'
+      +'<div class="body '+(rmOpen["__bugs__"]?"open":"")+'">'
+      +(rmOpen["__bugs__"]?bugPhases.map(ph=>{ if(rmOpen[ph.num]===undefined) rmOpen[ph.num]=true; return rmPhaseHtml(ph); }).join(""):"")
+      +'</div></div>';
+  }
   const phaseNums=new Set(rd.phases.map(p=>p.num));
   const orphansAll=rd.sessions.filter(s=>!phaseNums.has(s.phaseNum)&&!s.later);
   const orphans=orphansAll.filter(s=>rmShow(s,"__orphan__"));

@@ -73,6 +73,24 @@
       "dest": "/antcity-art-gallery.html"
     },
     {
+      "src": "/antcity-engine.html",
+      "dest": "/antcity-engine.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/antcity/manifest.json",
+      "dest": "/antcity/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/antcity/(.*)",
+      "dest": "/antcity/$1"
+    },
+    {
       "src": "/asset-library.html",
       "dest": "/asset-library.html"
     },

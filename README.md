@@ -169,6 +169,146 @@ recipe, and nothing is kept until a robot has played it.
 
 No database change: the `robot` column CB1 created is the one the verdict lands in.
 
+## AC2 — Ant City's ten missions, its gentle rain, and the door into the app (September 6 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs` (new), `src/BuildableKids.jsx`, `qa-nv2.mjs`.
+Phase **AC**, card **AC2**. **Ant City is LIVE.**
+
+The ten tutorial missions from `/antcity/manifest.json` now sit on top of the AC1 colony.
+The manifest names them and their order; the engine maps each `layout` to a goal, so a new
+mission is a manifest edit, not engine code. Finishing the tenth opens free-build, which
+never ends. Each mission pays its manifest coins into the shared wallet through
+`BuildableWallet.awardOnce`, pops a calm celebration through `Feel`, and posts `levelup`
+(or `win` on the last one) to the buddy.
+
+**The setbacks pause, they never punish.** Hunger and tiredness only slow the colony down,
+and a resting den brings tiredness back up. Rain floods ONE tunnel at a time (two at the
+liveliest difficulty), which blocks the way through it until a builder clears it; builders
+always clear water before starting anything new. There is still no lose state anywhere.
+Milestones (dig 5 levels, reach 50 ants) pay coins and open a room type early, and block
+nothing if a kid ignores them.
+
+**The first launch shows, it does not tell.** A touch mark drags down a dashed path so a
+kid who cannot read knows the one thing to do. The first tap ends it, and the `?` button
+replays it.
+
+**The robot the card asked for.** `qa-antcity.mjs` builds the engine in a vm with the shared
+libs, drives it from the manifest, and a perfect-player bot finishes all ten missions in
+order, headlessly — then checks the coins reached the wallet and were never claimed twice,
+that a flood is cleared without losing anything, that hunger keeps every ant, that pause
+and resume land as shell messages, that every art slot resolves to a manifest URL, and that
+there is no emoji anywhere in the engine.
+
+**Three bugs the robot caught before Mike could.** Dig Deep was impossible: the buried find
+only counted if the kid dug within one column of it, so digging straight down (the obvious
+move) missed it forever — depth is the goal, so depth now uncovers it. Rainy Day could be
+finished by a puddle that was already sitting there, so the mission the kid was meant to
+learn from flashed past — it brings its own rain and wants that tunnel cleared. And a
+browser run with no builders left eleven tunnels under water at once, which is a punishment,
+not a setback — hence the one-at-a-time cap.
+
+**Going live.** An Ant City tile in the Play picker (a drawn badge over its own meadow, no
+image API), the `antcity` slug so plays are counted, a landing door with its own attract
+demo, and the equipped Ant / Meadow / Dirt look handed to the engine as index params, the
+same tiny handoff Breaker uses. The Vercel routes landed with AC1. `qa-nv2.mjs` now expects
+22 live games.
+
+---
+
+## AC1 — the Ant City colony engine, counts and rates under a drawn burrow (September 6 2026)
+`public/antcity-engine.html` (new), `vercel.json`. Phase **AC**, card **AC1**.
+
+Ant City is now a playable, growing colony. The kid drags in the dirt to draw a tunnel
+path and digger ants carve it out over time (the kid never digs a cell directly); taps
+the meadow to leave crumbs and water drops that foragers carry down; taps an open tunnel
+to have builders raise a nursery, a storage room or a resting den; and slides one bar to
+move ants across the four jobs. Eggs appear while there is food, nursery ants hatch them,
+and every new ant joins the workforce, which is what makes the loop compound.
+
+**The colony is counts and rates, not a crowd of simulated insects.** Population, food,
+water, eggs and dig progress are numbers advanced by fixed 1/60 steps, so the ant count
+can climb into the hundreds for free. What you SEE is a sample of at most 26 drawn ants
+walking the real tunnels, capped again by how much dug space there is, so a small burrow
+looks busy instead of a stack of sprites in one cell. No physics engine, no per-ant
+pathfinding, and a seeded random number generator, so the same taps give the same colony
+— which is what lets the AC2 robot prove a mission is beatable.
+
+**Nothing punishes.** Empty stores only slow the colony (`hungryRate`), they never take
+anything away, and there is no lose state. Every rate lives in `GAME_CONFIG`, difficulty
+1-5 maps to colony pace plus a setback frequency AC2 will use, and the manifest supplies
+art and the feel presets on top.
+
+Shared libs throughout: the drawn `BR` fallback under every art slot, `Feel` for taps and
+juice, the shared HUD bar, and the gamenav bridge (the engine's own Home/Sound/? buttons
+are declared to it and hidden in-app). `pause` freezes the colony and `resume` continues
+it, verified in a real browser. Art is fetched from the URLs the manifest resolves and
+never baked in: the local Style A vector set fills the `antcity/...` ids, an asset-studio
+URL passes through, and a miss falls back to clean drawn shapes.
+
+`window.BUILDABLE_GAME` (with the `ANTCITY_GAME` alias) exposes the whole colony to a
+robot: `dig`, `drop`, `assign`, `build`, `step`/`seconds`, `dbg`, `_art`, `_draw`.
+
+**Two calls I made.** The save is `localStorage` only for now, as the card allows — real
+per-kid storage and away-time growth are AC3. And I added the `vercel.json` routes for
+`/antcity-engine.html` and `/antcity/` early (they were listed under AC2), because
+without them the page falls into the landing catch-all and nobody, Mike included, can
+open it. The game is NOT live: there is no tile in the Games picker and no slug in
+`GAME_SLUGS`, so it is reachable by link only. Missions, coins, celebrations, the
+wordless demo, `qa-antcity.mjs` and going live all stay with AC2.
+
+---
+## Farm 3 — the order crate, the plane payoff, and the farm's front door (FM2 + FM3, September 6 2026)
+`public/skyflyer-farm.html`, `public/buildable-wallet.js`,
+`public/models/skyflyer/animals/farm-animals.glb`, `src/BuildableKids.jsx`,
+`CARTRIDGE-CONTRACT.md`, `qa-farm.mjs`, `qa-skyflyer.mjs`. Phase **FM**, cards
+**FM2 + FM3**.
+
+**FM2 landed first.** Its branch had been sitting unmerged since August 16, five
+commits ahead of `main` and fifty-five behind. Merged by hand; the four conflicts
+were all both-sides-added at the top of a file, and both dated entries were kept
+on the README and the session log. Checked by counting rather than by eye, because
+an earlier resolver on this branch swallowed a QA block once: `qa-skyflyer` came
+out at exactly 382 + 39 = 421.
+
+**The payoff loop.** A slatted **crate** by a mown grass runway shows a picture
+wish-list — one silhouette slot per item wanted, lit to full colour with a tick as
+it lands. Walking to it **whooshes the whole carried stack off one item at a
+time**, rapid fire, each with its own pop and a note a step higher than the last;
+anything the order did not ask for stays on your head. Fill it and the **plane**
+taxis, rolls, climbs away and comes back thirteen seconds later with a burst of
+coins that fly into the wallet pill. Orders grow gently from two items to six and
+can only ever ask for something the farm can make that minute.
+
+**The economy, Mike's call.** FM1 priced seeds above what harvesting paid back, so
+every crop lost money. Now **crops are ingredients, not money**: harvesting pays
+nothing, every seed costs the same 3 coins, and the crate is the only income. If a
+kid cannot afford a seed the next one is **free** — there is no state in the farm
+you cannot play out of.
+
+**The duck.** 120 coins, about five deliveries, buys a real `PekinDuck` model for
+the coop (cut out of `island-animals.glb`). She eats corn like the hens and lays a
+pale blue egg, which becomes a fourth thing an order can ask for — but only once
+she exists.
+
+**The four gaps FM1 left open are closed.** The farm now has a real door on the
+Play page with a **drawn** tile badge (no generated image, no emoji) and its own
+`?v=fm3` cache-bust; the coin pill is the **shell's shared wallet**, which grew
+the ability for a game to spend inside its own iframe (a negative `coins` delta,
+now written into `CARTRIDGE-CONTRACT.md`); `buildable-gamenav.js` is wired, so the
+shell's Home button reaches the page on iPhone instead of dying in it; and the
+shared audio and Feel kits give it sound on one `bk_muted` flag.
+
+**Looked at, not just reviewed.** Every new shape went on the `?zoo=1` stand
+first, and the renders changed the build three times: the runway shipped as a
+bone-white slab, the crate came out smaller than the kid loading it, and the empty
+card slots were unreadable smudges. Card states captured empty / half / full at
+phone, tablet and desktop widths.
+
+**Landed on `main` as `482f1b6`** once Mike had seen the renders. Not marked
+deployed on the planner: this session could not reach the live site to check,
+and a push is not a deploy.
+
+`qa-farm.mjs` is 78 checks green (the whole loop played for real in Chromium),
+`qa-skyflyer.mjs` 466, `qa-all.mjs` green.
 ## CB1 — a kid's game is a row they own, not new engine code (September 6 2026)
 `db/create-kid-games.sql`, `api/kid-game.js`, `api/_manifestLib.js`, `api/g.js`,
 `public/g.html`, `public/buildable-manifest.js`, `public/skyflyer-engine.html`,
