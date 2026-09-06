@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Make a game — Buildable Kids</title>
+<link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+<meta name="theme-color" content="#14122b" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#14122b; --card:#1d1b36; --line:rgba(255,255,255,.12); --accent:#9B7BFF; --accent2:#67E8F9;
+         --dim:#B9AEEA; --good:#7EE0A0; --warn:#FFD86B; }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:#fff;
+    font-family:'Nunito',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+  #app{min-height:100dvh;display:flex;flex-direction:column}
+  .bar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  .bar h1{font-size:16px;font-weight:900;margin:0;flex:1;letter-spacing:.2px}
+  .bar .mode{font-size:12px;font-weight:800;color:var(--dim);background:rgba(155,123,255,.14);border:1px solid var(--line);
+    border-radius:999px;padding:7px 12px;cursor:pointer;font-family:inherit}
+  main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px 16px 32px}
+  main.wide{max-width:100%;padding:0}
+  h2{font-size:clamp(21px,6vw,28px);font-weight:900;margin:6px 0 4px;line-height:1.15}
+  p.sub{color:var(--dim);font-size:15px;line-height:1.5;margin:0 0 16px}
+  .buddy{display:flex;gap:12px;align-items:flex-start;margin:8px 0 14px}
+  .bubble{background:var(--card);border:1px solid var(--line);border-radius:18px;border-top-left-radius:6px;
+    padding:13px 15px;font-size:16px;line-height:1.45;flex:1}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .chip{font-family:inherit;font-size:14px;font-weight:800;color:#e9e2ff;background:rgba(155,123,255,.16);
+    border:1px solid var(--line);border-radius:999px;padding:10px 14px;cursor:pointer}
+  .chip.on{background:linear-gradient(160deg,#9B7BFF,#67E8F9);color:#16142b;border-color:transparent}
+  .chip small{display:block;font-weight:700;color:var(--dim);font-size:11px;letter-spacing:.4px}
+  .chip.on small{color:rgba(22,20,43,.7)}
+  .row{display:flex;gap:10px;align-items:center;margin:14px 0}
+  input[type=text]{flex:1;font-family:inherit;font-size:16px;padding:14px 15px;border-radius:15px;
+    border:1px solid var(--line);background:var(--card);color:#fff;min-width:0}
+  input[type=password]{font-family:inherit;font-size:20px;padding:13px 16px;border-radius:14px;border:1px solid var(--line);
+    background:var(--card);color:#fff;width:100%;max-width:240px;text-align:center;letter-spacing:6px;margin:12px 0}
+  .mic{width:58px;height:58px;flex:none;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(160deg,#9B7BFF,#67E8F9);display:grid;place-items:center}
+  .mic.rec{background:linear-gradient(160deg,#FF6B6B,#FFD86B);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  .btn{font-family:inherit;font-weight:900;font-size:17px;color:#16142b;background:linear-gradient(160deg,#9B7BFF,#67E8F9);
+    border:none;border-radius:16px;padding:15px 26px;cursor:pointer;width:100%;margin-top:6px}
+  .btn.alt{background:rgba(155,123,255,.16);color:#cdbcff;font-size:15px;padding:12px 20px}
+  .btn:disabled{opacity:.45;cursor:default}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin:14px 0}
+  .card h3{margin:0 0 4px;font-size:18px;font-weight:900}
+  .card .why{color:var(--dim);font-size:14px;line-height:1.45;margin:0 0 10px}
+  .steps{list-style:none;padding:0;margin:10px 0}
+  .steps li{display:flex;gap:10px;align-items:center;padding:9px 0;font-size:15px;color:var(--dim)}
+  .steps li.done{color:#fff}
+  .steps li.now{color:#fff;font-weight:800}
+  .dot{width:18px;height:18px;flex:none}
+  .note{color:var(--dim);font-size:14px;line-height:1.5;margin-top:12px}
+  .err{color:#ff9a9a;font-size:14px;margin-top:10px;min-height:18px}
+  .frame{width:100%;aspect-ratio:16/10;border:none;border-radius:0;display:block;background:#000}
+  .playwrap{position:relative;background:#000}
+  .tweaks{max-width:560px;margin:0 auto;padding:14px 16px 34px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;text-align:left;
+    font-family:inherit;color:#fff;font-size:14px;font-weight:800}
+  .tile small{display:block;color:var(--dim);font-weight:700;font-size:12px;margin-top:3px}
+  .keep{border-color:rgba(126,224,160,.4);background:rgba(126,224,160,.08)}
+  .hide{display:none!important}
+  .center{text-align:center}
+  @media (max-width:420px){ .btn{font-size:16px} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="bar">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>
+    <h1 id="title">Make a game</h1>
+    <button class="mode" id="modeBtn" type="button">Grown-ups</button>
+  </div>
+  <main id="main"><p class="sub">Loading…</p></main>
+</div>
+<script>
+// ===========================================================================
+//  /studio — THE STUDIO (Session CB3).
+//
+//  A child says what their game is about; a game appears, they play it, and they
+//  change it by asking. Six screens, one page, no settings screen anywhere:
+//
+//     gate -> ask -> (one question at a time) -> plan -> build -> play & tweak -> keep
+//
+//  WHAT THIS PAGE DOES NOT DO. It writes no engine code and it never edits a
+//  manifest itself. Every change goes through /api/cobuild-plan (assembled out of
+//  a shipped game by CB2 recipes) or /api/cobuild-edit (named recipes and rules),
+//  and every version is validated in strict mode and PLAYED BY THE ROBOT on the
+//  server before it reaches the screen. So the worst this page can show a child
+//  is a game that works but is not what they meant.
+//
+//  KID MODE IS THE DEFAULT and it never shows money, limits, publishing or
+//  settings. Those live behind the grown-up gate, and CB4 builds them properly.
+//
+//  No emojis anywhere: every icon here is drawn SVG, per the house rule.
+// ===========================================================================
+(function(){
+  "use strict";
+  var GATE_KEY = "bk_soon_ok_v1";       // the same 1111 coming-soon gate as everywhere else
+  var GROWN_KEY = "bk_studio_grown_v1"; // grown-up mode, this browser only, this session
+  var main = document.getElementById("main"), titleEl = document.getElementById("title"),
+      modeBtn = document.getElementById("modeBtn");
+
+  var S = {                              // everything the studio knows right now
+    text:"", answers:{}, plan:null, game:null, manifest:null, engine:"",
+    beaten:false, grown:false, busy:false, art:[]
+  };
+
+  // ---- little helpers ------------------------------------------------------
+  function esc(s){ return String(s==null?"":s).replace(/[<>&"]/g,function(m){ return {"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[m]; }); }
+  function el(html){ var d=document.createElement("div"); d.innerHTML=html; return d.firstElementChild; }
+  function show(html, wide){ main.className = wide?"wide":""; main.innerHTML = html; window.scrollTo(0,0); }
+  function on(id, fn){ var n=document.getElementById(id); if(n) n.onclick=fn; return n; }
+  function deviceId(){
+    try{ var id=localStorage.getItem("deviceId");
+      if(!id){ id="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10); localStorage.setItem("deviceId",id); }
+      return id; }catch(e){ return "dev_anon"; }
+  }
+  function activeKid(){ try{ return JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); }catch(e){ return null; } }
+  function post(url, body){
+    return fetch(url,{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body||{}) })
+      .then(function(r){ return r.json().catch(function(){ return { ok:false, error:"the studio could not answer" }; }); })
+      .catch(function(){ return { ok:false, error:"we could not reach the studio" }; });
+  }
+  var ICON = {
+    star:'<svg class="dot" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>',
+    tick:'<svg class="dot" viewBox="0 0 24 24" fill="none" stroke="#7EE0A0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>',
+    ring:'<svg class="dot" viewBox="0 0 24 24" fill="none" stroke="#B9AEEA" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>',
+    mic:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16142b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>'
+  };
+
+  // ---- the 1111 coming-soon gate (open until CB4 turns the door into a real one)
+  function gateOk(){ try{ return localStorage.getItem(GATE_KEY)==="1"; }catch(e){ return false; } }
+  function screenGate(){
+    show('<h2>The studio is not open yet</h2>'+
+      '<p class="sub">Buildable Kids is testing this with a few families first. Enter the preview password to have a go.</p>'+
+      '<input id="pw" type="password" inputmode="numeric" autocomplete="off" placeholder="&bull;&bull;&bull;&bull;">'+
+      '<div class="err" id="err"></div>'+
+      '<button class="btn" id="go">Let me in</button>'+
+      '<a class="btn alt" href="/cobuild" style="display:block;text-align:center;text-decoration:none;margin-top:10px">Tell me more first</a>');
+    var pw=document.getElementById("pw"), err=document.getElementById("err");
+    var submit=function(){
+      if(pw.value.trim()==="1111"){ try{ localStorage.setItem(GATE_KEY,"1"); }catch(e){} screenAsk(); }
+      else err.textContent="Not that one. Try again.";
+    };
+    on("go", submit);
+    pw.addEventListener("keydown", function(e){ if(e.key==="Enter") submit(); });
+    pw.focus();
+  }
+
+  // =========================================================================
+  //  1. ASK — Buddy asks, the child talks. Spark chips are helpers, not a menu.
+  // =========================================================================
+  var SPARKS = ["A dragon who delivers pizza","Knock over a candy castle","Fly a plane over the sea",
+    "A shark who wants a friend","Guard a snow fort","Bounce a ball at space rocks"];
+  function screenAsk(){
+    S.plan=null; S.answers={}; S.game=null; S.beaten=false;
+    titleEl.textContent="Make a game";
+    show('<div class="buddy">'+ICON.star+'<div class="bubble" id="say">What is your game about? Say it out loud, or type it.</div></div>'+
+      '<div class="row"><input id="idea" type="text" placeholder="A dragon who delivers pizza..." autocomplete="off">'+
+      '<button class="mic" id="mic" type="button" title="Hold to talk">'+ICON.mic+'</button></div>'+
+      '<div class="chips" id="sparks">'+SPARKS.map(function(s){ return '<button class="chip" type="button" data-s="'+esc(s)+'">'+esc(s)+'</button>'; }).join("")+'</div>'+
+      '<button class="btn" id="go">Make it</button>'+
+      '<button class="btn alt" id="remix" style="margin-top:10px">Or start from a game you love</button>'+
+      '<div class="err" id="err"></div>');
+    var idea=document.getElementById("idea");
+    Array.prototype.forEach.call(document.querySelectorAll("#sparks .chip"), function(c){
+      c.onclick=function(){ idea.value=c.getAttribute("data-s"); idea.focus(); };
+    });
+    wireMic("mic", function(text){ idea.value=text; });
+    on("go", function(){
+      var t=(idea.value||"").trim();
+      if(t.length<3){ document.getElementById("err").textContent="Tell me a little more."; return; }
+      S.text=t; askNext();
+    });
+    on("remix", function(){ meterCheck("remix").then(function(m){ m.allowed ? screenRemix() : screenAskAGrownUp(); }); });
+    idea.addEventListener("keydown", function(e){ if(e.key==="Enter") document.getElementById("go").click(); });
+  }
+
+  // One question at a time. The server decides whether it still needs one.
+  function askNext(){
+    busy("Thinking about your game...");
+    post("/api/cobuild-plan", { text:S.text, answers:S.answers, kidName:(activeKid()||{}).name||null })
+      .then(function(j){
+        if(!j.ok) return oops(j.error);
+        if(j.ask) return screenQuestion(j.ask);
+        S.plan=j.plan; S.engine=j.plan.engine; S.manifest=j.plan.manifest; screenPlan();
+      });
+  }
+  function screenQuestion(ask){
+    titleEl.textContent="Make a game";
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">'+esc(ask.question)+'</div></div>'+
+      '<div class="chips" id="opts">'+(ask.chips||[]).map(function(c){
+        return '<button class="chip" type="button" data-v="'+esc(c.id)+'">'+esc(c.label)+'</button>'; }).join("")+'</div>'+
+      (ask.open ? '<div class="row"><input id="own" type="text" placeholder="Or say your own..." autocomplete="off">'+
+        '<button class="mic" id="mic" type="button">'+ICON.mic+'</button></div>'+
+        '<button class="btn" id="go">That one</button>' : '')+
+      '<button class="btn alt" id="back" style="margin-top:10px">Start again</button>');
+    Array.prototype.forEach.call(document.querySelectorAll("#opts .chip"), function(c){
+      c.onclick=function(){ S.answers[ask.id]=c.getAttribute("data-v"); askNext(); };
+    });
+    if(ask.open){
+      wireMic("mic", function(t){ document.getElementById("own").value=t; });
+      on("go", function(){
+        var v=(document.getElementById("own").value||"").trim();
+        if(!v) return; S.answers[ask.id]=v; askNext();
+      });
+    }
+    on("back", screenAsk);
+  }
+
+  // =========================================================================
+  //  2. THE PLAN CARD — tap any chip to change it, then build.
+  // =========================================================================
+  function screenPlan(){
+    var p=S.plan;
+    titleEl.textContent=p.manifest.name;
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">'+esc(p.why)+'</div></div>'+
+      (p.layerThree ? '<div class="card"><p class="why">'+esc(p.layerThree.said)+'</p></div>' : '')+
+      '<div class="card"><h3>'+esc(p.manifest.name)+'</h3>'+
+      '<p class="why">'+esc(p.engineLabel)+' &middot; '+esc(p.about)+'</p>'+
+      '<div class="chips" id="chips">'+(p.chips||[]).map(function(c){
+        return '<button class="chip" type="button" data-c="'+esc(c.id)+'"><small>'+esc(c.label)+'</small>'+esc(c.value)+'</button>'; }).join("")+'</div>'+
+      '<p class="note">Tap anything to change it.</p></div>'+
+      '<button class="btn" id="build">Build my game</button>'+
+      '<button class="btn alt" id="back" style="margin-top:10px">Start again</button>'+
+      '<div class="err" id="err"></div>');
+    Array.prototype.forEach.call(document.querySelectorAll("#chips .chip"), function(c){
+      c.onclick=function(){ tapChip(c.getAttribute("data-c")); };
+    });
+    on("build", function(){ meterCheck("new").then(function(m){ m.allowed ? buildIt() : screenAskAGrownUp(); }); });
+    on("back", screenAsk);
+  }
+  function tapChip(id){
+    var chip=(S.plan.chips||[]).find(function(c){ return c.id===id; });
+    if(!chip) return;
+    if(chip.kind==="text"){
+      var v=window.prompt(chip.label+"?", chip.value);
+      if(v==null || !String(v).trim()) return;
+      return sendChip(id, String(v).trim());
+    }
+    var opts=chip.options||[];
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">'+esc(chip.label)+'?</div></div>'+
+      '<div class="chips" id="opts">'+opts.map(function(o){
+        return '<button class="chip'+(String(o)===String(chip.value)?" on":"")+'" type="button" data-v="'+esc(o)+'">'+esc(o)+'</button>'; }).join("")+'</div>'+
+      '<button class="btn alt" id="back">Never mind</button>');
+    Array.prototype.forEach.call(document.querySelectorAll("#opts .chip"), function(c){
+      c.onclick=function(){ sendChip(id, c.getAttribute("data-v")); };
+    });
+    on("back", screenPlan);
+  }
+  function sendChip(id, value){
+    busy("Changing it...");
+    post("/api/cobuild-plan", { op:"chip", plan:S.plan, chip:id, value:value }).then(function(j){
+      if(!j.ok) return oops(j.error);
+      S.plan=j.plan; S.manifest=j.plan.manifest; screenPlan();
+    });
+  }
+
+  // The remix door: start from a game you love (ours, or one from the Top Board).
+  function screenRemix(){
+    busy("Fetching games to start from...");
+    fetch("/api/cobuild-plan?op=remix").then(function(r){ return r.json(); }).then(function(j){
+      var ours=(j&&j.ours)||[], theirs=(j&&j.topBoard)||[];
+      show('<h2>Start from a game you love</h2><p class="sub">You get your own copy. Nothing you do changes theirs.</p>'+
+        '<div class="grid">'+ours.concat(theirs).map(function(g){
+          return '<button class="tile" type="button" data-s="'+esc(g.source)+'">'+esc(g.name)+
+            '<small>'+esc(g.by?("by "+g.by):"one of ours")+'</small></button>'; }).join("")+'</div>'+
+        '<button class="btn alt" id="back">Back</button><div class="err" id="err"></div>');
+      Array.prototype.forEach.call(document.querySelectorAll(".tile"), function(t){
+        t.onclick=function(){ forkIt(t.getAttribute("data-s")); };
+      });
+      on("back", screenAsk);
+    });
+  }
+  function forkIt(source){
+    var k=activeKid();
+    busy("Making your own copy...");
+    post("/api/kid-game", { op:"fork", source:source, familyId:deviceId(), kidId:(k&&k.id)||null,
+      kidName:(k&&k.name)||null }).then(function(j){
+      if(!j.ok) return oops((j.errors&&j.errors[0])||j.error);
+      S.game=j.game; S.engine=j.game.engine; S.manifest=j.game.manifest; S.beaten=false;
+      meterCount("remix");
+      screenPlay();
+    });
+  }
+
+  // =========================================================================
+  //  3. BUILD — the story list, narrated while it happens. 30 to 60 seconds.
+  // =========================================================================
+  function buildIt(){
+    var p=S.plan, steps=p.story.slice(), at=0, done=[];
+    function paint(){
+      show('<h2>Building '+esc(p.manifest.name)+'</h2>'+
+        '<p class="sub">This takes about a minute. Watch it happen.</p>'+
+        '<ul class="steps">'+steps.map(function(s,i){
+          return '<li class="'+(i<at?"done":(i===at?"now":""))+'">'+(i<at?ICON.tick:ICON.ring)+esc(s)+'</li>'; }).join("")+'</ul>'+
+        '<div class="err" id="err"></div>');
+    }
+    paint();
+    var cover=null, pieces=[];
+    // 1. the art. Every piece checks the shared library first (api/asset-studio's
+    //    kids lane), so most families get a picture that already exists, instantly
+    //    and for nothing. If the picture machine is off the game still builds and
+    //    the engine's own drawn art stands in — the read-with-a-fallback rule.
+    function paintArt(i){
+      if(i>=(p.art||[]).length){ at=3; paint(); return hangArt(save); }
+      at=Math.min(i+1,2); paint();
+      var a=p.art[i];
+      post("/api/asset-studio", { action:"kid-art", target:"kids", kind:a.kind, theme:a.theme, slot:a.slot, subject:a.subject })
+        .then(function(j){
+          if(j && j.ok){
+            if(a.slot==="cover") cover=j.slug||j.url;
+            else if(a.key && j.slug) pieces.push({ key:a.key, slug:j.slug });
+          }
+          paintArt(i+1);
+        });
+    }
+    // The painted pieces are hung on the manifest by the SERVER, which validates
+    // each one against the sheet and drops any that do not fit. This page never
+    // edits a manifest itself.
+    function hangArt(next){
+      if(!pieces.length) return next();
+      post("/api/cobuild-plan", { op:"art", engine:p.engine, manifest:p.manifest, pieces:pieces })
+        .then(function(j){ if(j && j.ok && j.manifest) p.manifest=j.manifest; next(); });
+    }
+    function save(){
+      at=4; paint();
+      var k=activeKid();
+      post("/api/kid-game", { op:"save", engine:p.engine, manifest:p.manifest, name:p.manifest.name,
+        cover:cover, familyId:deviceId(), kidId:(k&&k.id)||null, kidName:(k&&k.name)||p.kidName||null,
+        grownupName:p.grownupName||null, sourceGame:p.engine })
+        .then(function(j){
+          if(!j.ok) return oops((j.errors&&j.errors[0])||j.error||"the robot could not finish your game");
+          at=5; paint();
+          S.game=j.game; S.manifest=j.game.manifest||p.manifest; S.engine=p.engine; S.beaten=false;
+          if(j.created) meterCount("new");
+          try{ history.replaceState(null,"","/studio/"+j.game.id); }catch(e){}
+          setTimeout(screenPlay, 450);
+        });
+    }
+    paintArt(0);
+  }
+
+  // =========================================================================
+  //  4. PLAY AND TWEAK — the real game on top, the asking underneath.
+  // =========================================================================
+  var TWEAKS = [
+    { t:"Make it harder", s:"every level a step up" }, { t:"Make it easier", s:"every level a step down" },
+    { t:"Make it faster", s:"the whole game quicker" }, { t:"Make it calmer", s:"slow it all down" },
+    { t:"Add a level", s:"one more to play" }, { t:"More coins", s:"more to collect" }
+  ];
+  var ENTRY = { breaker:"/breaker-engine.html", sling:"/sling-squad.html",
+    castleguard:"/castle-guard.html", skyflyer:"/skyflyer-engine.html" };
+  // Every time a game opens, the house rules get asked first. A family with no
+  // rules set never sees any of this: the gate answers yes and nothing changes.
+  function screenPlay(msg){ houseGate(function(){ playNow(msg); }); }
+  function playNow(msg){
+    var g=S.game;
+    startClock();
+    titleEl.textContent=g.name;
+    var src=(ENTRY[S.engine]||"/breaker-engine.html")+"?kg="+encodeURIComponent(g.id)+"&kgplay=0&screen=play&t="+Date.now();
+    show('<div class="playwrap"><iframe class="frame" id="frame" src="'+esc(src)+'" allow="autoplay; fullscreen; microphone" title="'+esc(g.name)+'"></iframe></div>'+
+      '<div class="tweaks">'+
+      '<div class="buddy">'+ICON.star+'<div class="bubble" id="say">'+esc(msg||("Have a go. When you want to change something, just ask."))+'</div></div>'+
+      '<div class="row"><input id="ask" type="text" placeholder="Make it snowy..." autocomplete="off">'+
+      '<button class="mic" id="mic" type="button">'+ICON.mic+'</button></div>'+
+      '<div class="grid" id="tweaks">'+TWEAKS.map(function(t){
+        return '<button class="tile" type="button" data-t="'+esc(t.t)+'">'+esc(t.t)+'<small>'+esc(t.s)+'</small></button>'; }).join("")+
+      '<button class="tile" type="button" id="voice">Record your voice<small>say a line for your game</small></button></div>'+
+      '<button class="btn'+(S.beaten?"":" alt")+'" id="keep">'+(S.beaten?"Keep it":"Beat it once to keep it")+'</button>'+
+      (S.grown?'<button class="btn alt" id="share" style="margin-top:10px">Share this game</button><a class="btn alt" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/studio/grownups">Grown-up studio</a>':'')+
+      '<div class="err" id="err"></div></div>', true);
+    Array.prototype.forEach.call(document.querySelectorAll("#tweaks .tile"), function(t){
+      if(t.id==="voice") return;
+      t.onclick=function(){ tweak(t.getAttribute("data-t")); };
+    });
+    on("voice", screenVoice);
+    wireMic("mic", function(t){ document.getElementById("ask").value=t; tweak(t); });
+    var ask=document.getElementById("ask");
+    ask.addEventListener("keydown", function(e){ if(e.key==="Enter" && ask.value.trim()) tweak(ask.value.trim()); });
+    on("keep", function(){ S.beaten ? screenKeep() : say("Play it through once first. Then you can keep it."); });
+    if(S.grown) on("share", screenShare);
+  }
+  function say(t){ var n=document.getElementById("say"); if(n) n.textContent=t; }
+
+  // The engine posts up when the kid wins. That, not the robot, is what unlocks
+  // Keep: the robot proves a game CAN be finished, the family proves it is fun.
+  window.addEventListener("message", function(e){
+    var d=e&&e.data;
+    if(!d || d.source!=="buildable") return;
+    if(d.kind==="win" || d.kind==="levelup"){
+      if(!S.beaten){ S.beaten=true;
+        var b=document.getElementById("keep");
+        if(b){ b.className="btn"; b.textContent="Keep it"; }
+        say("You did it! You can keep this game now.");
+      }
+    }
+  });
+
+  function tweak(text){
+    if(S.busy) return; S.busy=true;
+    say("Changing it...");
+    post("/api/cobuild-edit", { manifest:S.manifest, engine:S.engine, text:text }).then(function(j){
+      S.busy=false;
+      if(!j.ok) return say(j.error||"I could not do that one.");
+      if(!j.changed){
+        var o=j.offer||{};
+        return say((o.said||"I could not do that one.")+(o.nearest&&o.nearest.length?" I could make it harder, easier, faster or calmer instead.":""));
+      }
+      S.manifest=j.manifest;
+      // Save first, THEN reload the frame: the engine reads the saved row, so
+      // showing the change before it is stored would show a game that is not there.
+      var k=activeKid();
+      post("/api/kid-game", { op:"save", id:S.game.id, engine:S.engine, manifest:j.manifest,
+        name:j.manifest.name, familyId:deviceId(), kidId:(k&&k.id)||null }).then(function(sv){
+        if(!sv.ok) return say((sv.errors&&sv.errors[0])||"I could not keep that change.");
+        S.game=sv.game; S.beaten=false;
+        screenPlay(j.said+" Have another go.");
+      });
+    });
+  }
+
+  // =========================================================================
+  //  5. YOUR OWN VOICE — hold the mic, say a line, the game says it back.
+  // =========================================================================
+  var MOMENTS = [ {id:"onWin", label:"when I win"}, {id:"onCollect", label:"when I grab something"},
+    {id:"onHit", label:"when something gets hit"}, {id:"onLevelStart", label:"when a level starts"} ];
+  function screenVoice(){
+    show('<h2>Say a line for your game</h2><p class="sub">Hold the button, say it, let go. Your game will say it in your voice.</p>'+
+      '<div class="chips" id="when">'+MOMENTS.map(function(m,i){
+        return '<button class="chip'+(i===0?" on":"")+'" type="button" data-v="'+m.id+'">'+esc(m.label)+'</button>'; }).join("")+'</div>'+
+      '<div class="row"><input id="line" type="text" placeholder="Well done!" autocomplete="off">'+
+      '<button class="mic" id="rec" type="button">'+ICON.mic+'</button></div>'+
+      '<p class="note" id="hint">Hold the round button to record.</p>'+
+      '<button class="btn" id="save" disabled>Put it in my game</button>'+
+      '<button class="btn alt" id="back" style="margin-top:10px">Back to my game</button><div class="err" id="err"></div>');
+    var when=MOMENTS[0].id, clip=null, mime="audio/webm";
+    Array.prototype.forEach.call(document.querySelectorAll("#when .chip"), function(c){
+      c.onclick=function(){
+        Array.prototype.forEach.call(document.querySelectorAll("#when .chip"), function(x){ x.className="chip"; });
+        c.className="chip on"; when=c.getAttribute("data-v");
+      };
+    });
+    holdToRecord("rec", function(b64, m){
+      clip=b64; mime=m;
+      document.getElementById("hint").textContent="Got it. Write the words too, so the game can show them.";
+      document.getElementById("save").disabled=false;
+    }, function(why){ document.getElementById("hint").textContent=why; });
+    on("save", function(){
+      var words=(document.getElementById("line").value||"").trim() || "Well done!";
+      busy("Putting your voice in the game...");
+      post("/api/cobuild-voice", { op:"save", gameId:S.game.id, at:when, b64:clip, mime:mime }).then(function(j){
+        var url=(j&&j.ok)?j.url:null;
+        // The line goes in as an ordinary CB2 rule; the clip rides along in its
+        // params, so a game with no clip still says the words.
+        post("/api/cobuild-edit", { manifest:S.manifest, engine:S.engine, text:'say "'+words+'" '+labelFor(when) })
+          .then(function(e){
+            if(!e.ok || !e.changed) return screenPlay("I could not add that line to this game.");
+            var m=e.manifest;
+            if(url && Array.isArray(m.rules)) m.rules.forEach(function(r){ if(r.when===when && r["do"]==="sayLine") r.params.clip=url; });
+            var k=activeKid();
+            post("/api/kid-game", { op:"save", id:S.game.id, engine:S.engine, manifest:m, name:m.name,
+              familyId:deviceId(), kidId:(k&&k.id)||null }).then(function(sv){
+              if(!sv.ok) return screenPlay("I could not keep that line.");
+              S.manifest=m; S.game=sv.game; S.beaten=false;
+              screenPlay("Your voice is in the game. Play it and listen.");
+            });
+          });
+      });
+    });
+    on("back", function(){ screenPlay(); });
+  }
+  function labelFor(id){ var m=MOMENTS.find(function(x){ return x.id===id; }); return m?m.label:"when I win"; }
+
+  // =========================================================================
+  //  6. KEEP — the title screen, then it lands on the My Games shelf.
+  // =========================================================================
+  function screenKeep(){
+    var g=S.game, k=activeKid();
+    var kid=(k&&k.name)||g.kid_name||"", up=g.grownup_name||"";
+    show('<div class="center">'+
+      '<svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>'+
+      '<h2>'+esc(g.name)+'</h2>'+
+      '<p class="sub">'+esc(kid?("A GAME BY "+kid.toUpperCase()+(up?(" AND "+up.toUpperCase()):"")):"A GAME BY YOU")+'</p>'+
+      '<div class="card keep"><p class="why">It is on your My Games shelf. You can play it any time, and change it whenever you like.</p></div>'+
+      '<button class="btn" id="play">Play it again</button>'+
+      '<button class="btn alt" id="change" style="margin-top:10px">Change it</button>'+
+      '<button class="btn alt" id="another" style="margin-top:10px">Make another game</button>'+
+      (S.grown?'<button class="btn alt" id="share" style="margin-top:10px">Share it</button>':'')+
+      '</div>');
+    on("play", function(){ screenPlay(); });
+    on("change", function(){ screenPlay("What shall we change?"); });
+    on("another", screenAsk);
+    if(S.grown) on("share", screenShare);
+  }
+
+  // Sharing is a GROWN-UP thing, so it lives behind the grown-up gate. CB4 builds
+  // the real share sheet; this is the private link CB1 already ships.
+  function screenShare(){
+    var g=S.game, url=location.origin+"/g/"+g.id;
+    show('<h2>Share '+esc(g.name)+'</h2>'+
+      '<p class="sub">Anyone with this link can play it. No account, no ads. You can turn it off again here.</p>'+
+      '<div class="card"><p class="why" id="link">'+esc(url)+'</p>'+
+      '<button class="btn alt" id="copy">Copy the link</button></div>'+
+      '<p class="note">Putting a game on the Top Board for everyone comes with the grown-up studio.</p>'+
+      '<button class="btn alt" id="back">Back</button>');
+    on("copy", function(){
+      try{ navigator.clipboard.writeText(url); document.getElementById("link").textContent="Copied."; }catch(e){}
+      post("/api/kid-game", { op:"share", id:g.id, shared:true, familyId:deviceId() });
+    });
+    on("back", function(){ screenPlay(); });
+  }
+
+  // =========================================================================
+  //  CB4 — THE METER AND THE HOUSE RULES, from a child's side.
+  //
+  //  A child never sees a number with a currency on it. When the month's new
+  //  games are used up they are told, in their own words, to ask a grown-up; the
+  //  grown-up page is where the plan and the money actually live. Editing a game
+  //  they already have is free and always will be, so nothing below runs on an
+  //  edit.
+  //
+  //  The house rules work the same way: the gate is asked BEFORE a game opens, so
+  //  a child sees a short list to tick or a goodnight, never a nag over the top
+  //  of a game they are already playing.
+  // =========================================================================
+  function kidId(){ var k=activeKid(); return (k&&k.id)||"default"; }
+  function meterCheck(kind){
+    return post("/api/cobuild-billing",{ op:"check", familyId:deviceId(), kind:kind||"new" })
+      .then(function(j){ return (j && j.ok) ? j : { allowed:true }; });   // a wobble never blocks a child
+  }
+  function meterCount(kind){
+    return post("/api/cobuild-billing",{ op:"count", familyId:deviceId(), kind:kind||"new" }).catch(function(){});
+  }
+  function screenAskAGrownUp(){
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">All the new games for this month are made. A grown-up can add more.</div></div>'+
+      '<div class="card"><p class="why">You can still play the games you have, and changing them is always free.</p></div>'+
+      '<button class="btn" id="mine">Play a game I made</button>'+
+      '<button class="btn alt" id="grown" style="margin-top:10px">I am a grown-up</button>');
+    on("mine", function(){ location.href="/app"; });
+    on("grown", function(){ location.href="/studio/grownups"; });
+  }
+
+  // The gate the house rules put in front of a game. Chores to tick, or a
+  // goodnight when the play clock is done. Never over the top of a game.
+  function houseGate(then){
+    post("/api/cobuild-rules",{ op:"gate", familyId:deviceId(), kidId:kidId() }).then(function(j){
+      if(!j || !j.ok || j.allowed) return then();
+      if(j.why==="clock") return screenGoodnight(j.said);
+      screenChores(j.chores||[], then);
+    }).catch(then);
+  }
+  function screenChores(chores, then){
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">These first, then play.</div></div>'+
+      '<div class="grid" id="ch">'+chores.map(function(c){
+        return '<button class="tile'+(c.done?" keep":"")+'" type="button" data-c="'+esc(c.id)+'">'+esc(c.text)+
+          '<small>'+(c.done?"done":"tap when it is done")+'</small></button>'; }).join("")+'</div>'+
+      '<button class="btn" id="go" '+(chores.every(function(c){return c.done;})?"":"disabled")+'>All done, let me play</button>');
+    Array.prototype.forEach.call(document.querySelectorAll("#ch .tile"), function(t){
+      t.onclick=function(){
+        post("/api/cobuild-rules",{ op:"chore", familyId:deviceId(), kidId:kidId(), choreId:t.getAttribute("data-c"), done:true })
+          .then(function(j){ if(j&&j.ok) screenChores(j.chores||[], then); });
+      };
+    });
+    on("go", then);
+  }
+  function screenGoodnight(said){
+    show('<div class="center">'+
+      '<svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>'+
+      '<h2>That is play for today</h2><p class="sub">'+esc(said||"See you tomorrow.")+'</p>'+
+      '<div class="card keep"><p class="why">Your games are all still here. They will be waiting.</p></div>'+
+      '<a class="btn" style="display:block;text-align:center;text-decoration:none" href="/app">Goodnight</a></div>');
+  }
+  // The play clock counts real minutes while a game is open. No countdown is ever
+  // drawn: the child plays, and when it is done the session ends the way a win
+  // does, with a goodnight rather than a snatched screen.
+  var clock=null;
+  function startClock(){
+    stopClock();
+    clock=setInterval(function(){
+      post("/api/cobuild-rules",{ op:"tick", familyId:deviceId(), kidId:kidId(), minutes:1 }).then(function(j){
+        if(j && j.ok && j.over){ stopClock(); screenGoodnight(j.said); }
+      });
+    }, 60000);
+  }
+  function stopClock(){ if(clock){ clearInterval(clock); clock=null; } }
+
+  // =========================================================================
+  //  KID MODE vs GROWN-UP MODE. Kid mode is the default and never shows money,
+  //  limits, publishing or settings. The toggle uses the same 1111 gate.
+  // =========================================================================
+  function paintMode(){ modeBtn.textContent = S.grown ? "Kid mode" : "Grown-ups"; }
+  modeBtn.onclick=function(){
+    if(S.grown){ S.grown=false; try{ sessionStorage.removeItem(GROWN_KEY); }catch(e){} paintMode(); return repaint(); }
+    var pw=window.prompt("Grown-up code");
+    if(pw===null) return;
+    if(String(pw).trim()!=="1111") return;
+    S.grown=true; try{ sessionStorage.setItem(GROWN_KEY,"1"); }catch(e){}
+    paintMode(); repaint();
+  };
+  function repaint(){ if(S.game) screenPlay(); else if(S.plan) screenPlan(); else screenAsk(); }
+
+  // ---- talking: the browser's own ear first, ours as the fallback ----------
+  function wireMic(id, onText){
+    var btn=document.getElementById(id);
+    if(!btn) return;
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(SR){
+      var rec=new SR(); rec.lang="en-GB"; rec.interimResults=false; rec.maxAlternatives=1;
+      btn.onclick=function(){
+        try{ btn.className="mic rec"; rec.start(); }catch(e){ btn.className="mic"; }
+      };
+      rec.onresult=function(e){
+        btn.className="mic";
+        var t=e.results&&e.results[0]&&e.results[0][0]&&e.results[0][0].transcript;
+        if(t) onText(String(t).trim());
+      };
+      rec.onerror=function(){ btn.className="mic"; };
+      rec.onend=function(){ btn.className="mic"; };
+      return;
+    }
+    // No speech recognition in this browser (Safari on an iPad, most of Android):
+    // record a few seconds and let /api/transcribe listen instead.
+    holdToRecord(id, function(b64, mime){
+      post("/api/transcribe", { b64:b64, mime:mime }).then(function(j){
+        if(j&&j.ok&&j.text) onText(j.text);
+      });
+    }, function(){});
+  }
+  // Hold the button, record, let go. Used for both the fallback ear and for the
+  // child's own voice lines, so there is one microphone path on the page.
+  function holdToRecord(id, onClip, onWhy){
+    var btn=document.getElementById(id);
+    if(!btn) return;
+    if(!navigator.mediaDevices || typeof MediaRecorder==="undefined"){ if(onWhy) onWhy("This browser cannot record. You can type instead."); return; }
+    var rec=null, chunks=[], stream=null;
+    function stop(){
+      btn.className="mic";
+      try{ if(rec && rec.state!=="inactive") rec.stop(); }catch(e){}
+    }
+    function start(){
+      btn.className="mic rec";
+      navigator.mediaDevices.getUserMedia({ audio:true }).then(function(s){
+        stream=s; chunks=[];
+        rec=new MediaRecorder(s);
+        rec.ondataavailable=function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+        rec.onstop=function(){
+          try{ stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+          var blob=new Blob(chunks, { type:(rec.mimeType||"audio/webm").split(";")[0] });
+          var fr=new FileReader();
+          fr.onload=function(){ onClip(String(fr.result).split(",")[1], blob.type); };
+          fr.readAsDataURL(blob);
+        };
+        rec.start();
+      }).catch(function(){ btn.className="mic"; if(onWhy) onWhy("I could not hear the microphone. You can type instead."); });
+    }
+    btn.onmousedown=start; btn.onmouseup=stop; btn.onmouseleave=stop;
+    btn.ontouchstart=function(e){ e.preventDefault(); start(); };
+    btn.ontouchend=function(e){ e.preventDefault(); stop(); };
+  }
+
+  // ---- the in-between screens ---------------------------------------------
+  function busy(what){ show('<div class="buddy">'+ICON.star+'<div class="bubble">'+esc(what)+'</div></div>'+
+    '<ul class="steps"><li class="now">'+ICON.ring+'One moment...</li></ul>'); }
+  function oops(why){
+    show('<div class="buddy">'+ICON.star+'<div class="bubble">'+esc(why||"Something went wrong. Shall we try again?")+'</div></div>'+
+      '<button class="btn" id="again">Try again</button>');
+    on("again", screenAsk);
+  }
+
+  // ---- start ---------------------------------------------------------------
+  try{ S.grown = sessionStorage.getItem(GROWN_KEY)==="1"; }catch(e){}
+  paintMode();
+  function reopenId(){
+    var m=/^\/studio\/([A-Za-z0-9][A-Za-z0-9-]{1,63})\/?$/.exec(location.pathname);
+    if(m) return m[1];
+    try{ return (new URLSearchParams(location.search)).get("game")||""; }catch(e){ return ""; }
+  }
+  function start(){
+    var id=reopenId();
+    if(!id) return screenAsk();
+    busy("Opening your game...");
+    fetch("/api/kid-game?op=load&id="+encodeURIComponent(id)).then(function(r){ return r.json(); }).then(function(j){
+      if(!j||!j.ok) return screenAsk();
+      S.game=j.game; S.engine=j.game.engine; S.manifest=j.game.manifest; S.beaten=false;
+      screenPlay("Here it is. What shall we change?");
+    }).catch(screenAsk);
+  }
+  if(!gateOk()) screenGate(); else start();
+})();
+</script>
+</body>
+</html>

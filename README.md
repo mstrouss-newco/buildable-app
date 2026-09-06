@@ -6,6 +6,7 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+<<<<<<< HEAD
 ## AC4 — Ant City gets its own sounds, a meadow loop, and the last of its art (September 6 2026)
 `api/sfx.js`, `api/library-music.js`, `public/antcity-engine.html`, `public/antcity/art/` (8 new
 files), `qa-antcity.mjs`. Phase **AC**, card **AC4**. Taken out of order, ahead of AC3, because
@@ -45,6 +46,170 @@ into existence; if one comes back 503 the prompt or the duration needs a nudge, 
 in the game breaks meanwhile.
 
 ---
+=======
+## CB4 — the grown-up studio: shelves, games a month, the share sheet, house rules, real signup (September 6 2026)
+`db/create-cobuild-plans.sql` (written AND applied), `api/cobuild-billing.js`,
+`api/cobuild-rules.js`, `api/cobuild-poster.js`, `api/cobuild-lead.js`,
+`api/app-flags.js`, `public/studio-grownups.html`, `public/studio.html`,
+`public/cobuild.html`, `src/BuildableKids.jsx`, `qa-grownups.mjs`, `vercel.json`.
+
+CB3 gave a child the studio. CB4 is everything a child never sees. Money and limits
+live ONLY here, and nothing with a currency on it appears anywhere a kid can reach.
+
+1. **What a family is on.** Two tables, `cobuild_plans` and `cobuild_house_rules`,
+   written as a migration and applied in the same session (verified against
+   `information_schema`). `api/cobuild-billing.js` does Stripe Checkout for the two
+   monthly plans and the three-game add-on, a signed webhook that keeps the row
+   honest, and THE METER: a new game counts one, a remix counts one, an edit never
+   counts, a layer-three build counts two. The sentence the grown-up page shows,
+   "N of M new games this month, renews <date>. Edits are always free", is generated
+   by the same code that enforces it, so the words and the behaviour cannot drift.
+   No secret is in the repo: the Stripe key, the webhook secret and the three price
+   ids are read by name from the environment, which the owner sets in Vercel.
+2. **The grown-up studio** at `/studio/grownups`, behind the grown-up code: one
+   shelf per kid in the house with plays per game, the plan line, the add-on button
+   and plan management.
+3. **A share sheet per game**: copy the link (CB1's `/g/<slug>`), text it with a
+   prewritten line through the share API, a Top Board toggle (public, first name
+   only), and Print the poster. The poster is a real PDF built server-side: one A4
+   page with the cover the kid painted, the title, "A GAME BY <kid>", and a QR code
+   drawn as vector squares so it prints crisply. Printing turns the link on, and
+   says so, rather than printing a code that does not work.
+4. **House rules per kid, all off by default.** Vegetables first is not a new
+   feature: it applies the CB2 `mathGate` recipe to the games the grown-up chose, so
+   it is re-validated and re-played by the robot like any other change, and turning
+   it off really takes the questions back out. Chores unlock play is a short list the
+   grown-up writes and the child ticks; it clears itself every day and it is shown
+   BEFORE a game, never over the top of one. The play clock is minutes a day with no
+   countdown on screen: when the time is up the session ends with a goodnight. Every
+   door in the app into a kid-made game now goes through the same gate, and a
+   network wobble opens the game rather than locking a child out of their own work.
+5. **The fake door becomes a real one, on a switch.** `app_flags.cobuild_live` is
+   FALSE by default. While it is off, `/cobuild` behaves exactly as it has: it logs
+   the click and takes a name. When the owner flips it on, the same buttons go to
+   real checkout, and the click is still logged either way. `api/cobuild-lead.js`
+   gains a waitlist notifier that needs the owner code AND an explicit `send:true`;
+   anything else is a dry run that shows who would be emailed and changes nothing,
+   and nobody is ever emailed twice.
+6. **`qa-grownups.mjs`**: the meter (including the edit-is-free promise), the rule
+   gates, the share toggles, the poster PDF built for real and parsed back (its xref
+   offsets followed, its content stream inflated, its 577 QR squares counted), and
+   both sides of the switch. `node qa-all.mjs` green: 50 harnesses.
+
+**Still needs the owner, and cannot be done from here:** the Stripe account, its
+keys and the three price ids, and linking a paid family to a signed-in Google
+account rather than to the device they paid on.
+
+## CB3 — the studio: a child says it, the game appears, and they change it by asking (September 6 2026)
+`public/studio.html`, `api/cobuild-plan.js`, `api/cobuild-edit.js`, `api/_cobuildBrain.js`,
+`api/cobuild-voice.js`, `api/transcribe.js`, `api/asset-studio.js` (kids lane),
+`public/buildable-mechanics.js` (clip playback), `public/<engine>/cobuild.json` (plain words),
+`src/BuildableKids.jsx`, `qa-studio.mjs`, `vercel.json`.
+
+CB1 gave a kid a game they own. CB2 built the fence and the robot. CB3 is the door a
+child actually walks through, at `/studio` (and `/studio/<id>` to reopen a game),
+behind the same 1111 coming-soon gate as everything else until CB4.
+
+**The shape of it.** Buddy asks what the game is about; the child says it out loud or
+types it. Then ONE follow-up question at a time, never a settings screen: who is the
+star, and how tricky should it be. A plan card comes back naming the game it will be
+built on and why, with every choice as a chip you tap to change. Build takes about a
+minute and narrates itself as a story list. Then the real game is playing at the top
+of the screen with the asking underneath: tap a tile or just say "make it snowy".
+
+**The rule that shapes all of it: the studio never writes a manifest.** The plan is
+ASSEMBLED out of a shipped game by named CB2 recipes, and every tweak is CB2 recipes
+and rules. So what a child gets is inside the engine's fence by construction. Every
+version is then strict-validated AND played by the CB2 robot on the server before it
+reaches the screen, on the build and on every single edit.
+
+**It works with every key switched off.** The engine is chosen by the plain words each
+cobuild sheet now carries about itself, the manifest is assembled locally, and the
+edit door understands the phrases children actually use before it ever asks a model.
+A model, when there is one, only improves the name, the theme and the wording, and
+its answer is dropped if it names anything the sheets do not have. That is why
+`qa-studio.mjs` can drive plan to tweak on all four engines with no API key and no
+database, and why a model outage costs a family cleverness rather than their game.
+
+**Art.** The kids lane in `api/asset-studio.js` (`action:"kid-art"`) LOOKS IN THE
+SHARED LIBRARY FIRST by kind and theme, and only paints when nothing is there — then
+files what it painted back with a made-in-cobuild tag so the next family gets it
+free. A painted piece is hung on the manifest BY THE SERVER, which validates it
+against the sheet and drops it if it does not fit, so the engine's own drawn art
+stands in rather than a game with a hole in it. With no picture key at all the game
+still builds.
+
+**The child's own voice.** Hold the mic, say a line, and it rides on an ordinary CB2
+rule: `{when, do:"sayLine", params:{text, clip}}`. The clip is stored through the same
+narration cache `/api/say.js` uses, and the shared rules runtime plays it when it is
+there and shows the words when it is not.
+
+**Keep is earned by the family, not the robot.** The robot proves a game CAN be
+finished; Keep waits for the engine to post up that the child actually beat it. Then
+the title screen reads "A game by <kid> and <grown-up>" and the card is on the My
+Games shelf, where Change it reopens the same conversation.
+
+**Kid mode is the default** and shows no money, no limits, no publishing and no
+settings. Sharing sits behind the grown-up gate; the real share sheet, the plans and
+the house rules are CB4. The app's "Make a game" tile now opens the studio instead of
+the dead Phaser generator flow.
+
+`node qa-studio.mjs` and `node qa-all.mjs` green: 49 harnesses.
+
+## CB2 — safe outputs: the fence, the recipe book, the rules, and the robot gate (September 6 2026)
+`public/<engine>/cobuild.json` (breaker, sling, castleguard, skyflyer),
+`public/buildable-recipes.js`, `public/buildable-mechanics.js` (`BM.rules`),
+`public/buildable-manifest.js` (strict mode), `qa/kid-game-robot.mjs`,
+`api/kid-game-check.js`, `api/_cobuild.js`, `api/kid-game.js`, `qa-recipes.mjs`,
+`qa-rules.mjs`, `MECHANICS.md`, `vercel.json`.
+
+CB1 let a kid own a game. CB2 is what makes a game an AI assembles nearly bug-free by
+construction: the AI may only touch what a sheet allows, every edit is a named
+recipe, and nothing is kept until a robot has played it.
+
+1. **A cobuild sheet per engine** at `public/<engine>/cobuild.json`: every art slot
+   with the themes it takes, every dial with min/max/default and a plain-English
+   label, the level shape (its geometry tier — what a level is made of and the size
+   limits — and its dial tier), the feel presets, the rules it really fires, and a
+   plain list of what that engine can NEVER do, so the AI can offer the nearest
+   thing instead of pretending. `validate(m, {strict:true, sheet})` in the shared
+   loader rejects any field, slot or value outside the sheet. All four shipped
+   games pass their own sheet, which is how we know a sheet describes the real
+   engine and not a wish.
+2. **The recipe book** at `public/buildable-recipes.js`: 18 named, deterministic,
+   non-mutating manifest edits (`rename`, `swapHero`, `swapWorld`, `recolor`,
+   `moreCollectibles`, `fewerCollectibles`, `harder`, `easier`, `addBoss`,
+   `removeBoss`, `nightMode`, `dayMode`, `zoomier`, `calmer`, `addLevel`,
+   `removeLevel`, `mathGate`, `voiceLine`), each declaring which engines it works
+   on and clamping to the sheet's own limits. Asking for one an engine does not
+   have is an honest no with the reason. `MECHANICS.md` is re-aimed around this;
+   it had been written for the dead Phaser generator.
+3. **Rules vocabulary v0 (layer two)** in `public/buildable-mechanics.js`: six
+   moments (`onLevelStart`, `onCollect`, `onHit`, `onLand`, `onWin`,
+   `everyNSeconds`) and eight actions (`playSound`, `sayLine`, `showText`, `spawn`,
+   `speedUp`, `slowDown`, `addPoints`, `loseItem`). A manifest may carry
+   `rules:[{when,do,params}]` and the shared runtime applies them. Sling Squad and
+   Sky Flyer fire their events for real. The sheet decides which moments an engine
+   really fires, so a rule it would ignore is an error rather than a
+   disappointment.
+4. **The robot build gate.** `qa/kid-game-robot.mjs` plays a manifest headless — the
+   same vm sandbox the `qa-*.mjs` runners already use, through each engine's own
+   `sim()` hook, not a third robot — and answers per level: beatable,
+   not-beatable or too-long. `api/kid-game-check.js` is the endpoint;
+   `api/kid-game.js` calls it on every save and every fork, stores the verdict on
+   the row (`kid_games.robot`) and REFUSES a game no robot can finish, offering the
+   `easier` variant when that one passes. Sky Flyer is the honest exception: its
+   flight needs a real browser and WebGL, so its worlds are checked structurally
+   (a world asking for more landings than it has pads is caught) and the verdict
+   says "checked, not flown" rather than claiming a play-through it never did.
+5. **`qa-recipes.mjs` and `qa-rules.mjs`**, both auto-discovered by `qa-all.mjs`.
+   Every recipe on every engine it claims is proved pure, deterministic, still
+   inside the sheet AND still beatable by the robot. Sling's four events are proved
+   by PLAYING a level with rules in it and catching what they did, not by reading
+   the source. `node qa-all.mjs` green: 48 harnesses.
+
+No database change: the `robot` column CB1 created is the one the verdict lands in.
+>>>>>>> origin/main
 ## Hop Heroes: four worlds, a cast, and the shared Feel Kit (HH4 + HH5, September 6 2026)
 `public/play.html`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`, `qa-hopheroes-shot.mjs`.
 Phase **HH**, cards **HH4 + HH5**, branch `claude/hop-heroes-mario-feel-safrvp`.

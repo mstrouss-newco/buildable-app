@@ -479,6 +479,7 @@
 <script src="/buildable-wallet.js"></script>
 <script src="/buildable-buddy.js"></script>
 <script src="/buildable-gamenav.js"></script>
+<script src="/buildable-mechanics.js"></script>
 <script src="/buildable-manifest.js"></script>
 <script>
 (function(){
@@ -3977,6 +3978,28 @@ if(DEMO){ // attract mode on the landing card: scenery only, no chrome, no taps
 // ============================================================================
 var FEEL = window.BuildableFeel || null;
 var BA   = window.BuildableAudio || null;
+var BMX  = window.BuildableMechanics || null;
+// ---------------------------------------------------------------------------
+//  CB2 — LAYER TWO: the manifest's own rules.
+//  rules:[{when,do,params}] on the manifest. The vocabulary and the doing live
+//  in buildable-mechanics.js; this engine only says WHEN — a coin scooped, a
+//  landing, the world beaten, arriving, and a per-frame tick for everyNSeconds.
+//  A manifest with no rules leaves every call below a no-op.
+// ---------------------------------------------------------------------------
+var RULES = null;
+function buildRules(raw){
+  RULES = null;
+  try{
+    if(!(BMX && BMX.rules) || !raw || !Array.isArray(raw.rules) || !raw.rules.length) return;
+    RULES = BMX.rules.make(raw, {
+      playSound: function(n){ sfx(n); },
+      sayLine:   function(t){ toast(t); },
+      showText:  function(t){ toast(t); },
+      speedUp:   function(){}, slowDown: function(){}
+    });
+  }catch(e){ RULES = null; }
+}
+function fireRule(ev, ctx){ try{ if(RULES) RULES.fire(ev, ctx||{}); }catch(e){} }
 var SFX_MAP = {
   select:  "sky_coin",      // a tap / a small yes
   coin:    "sky_coin",      // one coin scooped
@@ -4158,6 +4181,8 @@ function readManifest(m){
   MF_LEARN={ beforeUnlock:!!L.beforeUnlock,
              coinTopUp:L.coinTopUp!==false,
              subjects:(Array.isArray(L.subjects)&&L.subjects.length)?L.subjects:["math"] };
+  buildRules(m);
+  fireRule("onLevelStart", { world:world.id });
   if(musicOn){ musicOn=false; startMusic(); }   // a manifest track swap re-beds the music
 }
 // Session CB1 — Sky Flyer was the one Cobuild engine that read its own manifest
@@ -4306,6 +4331,7 @@ function collectCoins(list,parent){
     if(dx*dx+dy*dy+dz*dz<46){   // generous kid-sized magnet
       c.taken=true;c.mesh.visible=false;
       S.coins++;S.worldCoins++;S.autoIdle=0;coinsEl.textContent=S.coins;
+      fireRule("onCollect", { what:"coin", coins:S.worldCoins });
       paintGoals();
       burst(new THREE.Vector3(wx,wy,wz),5);
       // Feel law 3: every coin is a gold sparkle + a chime + a light buzz. A
@@ -4329,6 +4355,7 @@ function checkBeaten(){
   if(S.beaten)return;
   if(S.worldCoins>=world.goalCoins&&S.landings>=world.goalLandings){
     S.beaten=true;
+    fireRule("onWin", { world:world.id });
     markBeaten();
     paintGoals();
     toast(world.name+" beaten!");
@@ -4357,6 +4384,7 @@ function tryLand(){
 function finishLanding(){
   S.mode="landed";
   S.landings++;
+  fireRule("onLand", { landings:S.landings });
   sfx("select");haptic("light");        // the wheels touch down
   if(S.coins>0){
     var n=S.coins;
@@ -7275,6 +7303,7 @@ function frame(now){
   requestAnimationFrame(frame);
   var dt=Math.min((now-last)/1000,0.05);last=now;
   if(LOOK_HOLD) return;
+  if(RULES && !S.paused) RULES.tick(dt, {});
   stepSim(dt);
   drawScene(dt);
 }

@@ -1,0 +1,302 @@
+{
+  "sheetVersion": 1,
+  "engine": "castleguard",
+  "label": "Castle Guard",
+  "plainName": "Put your guards along the path and stop the goblins reaching the castle.",
+  "entry": "/castle-guard.html",
+  "levelProfile": "croc",
+  "manifest": {
+    "keys": [
+      "id",
+      "name",
+      "type",
+      "levelProfile",
+      "category",
+      "color",
+      "ageBand",
+      "shellVersion",
+      "engine",
+      "entry",
+      "features",
+      "feel",
+      "art",
+      "artNote",
+      "levels",
+      "customization",
+      "rules"
+    ],
+    "required": [
+      "id",
+      "name",
+      "type",
+      "shellVersion",
+      "levels"
+    ],
+    "fixed": {
+      "id": "castleguard",
+      "type": "game",
+      "shellVersion": 2,
+      "levelProfile": "croc"
+    }
+  },
+  "art": [
+    {
+      "key": "art.badge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The little badge on the game's card"
+    },
+    {
+      "key": "art.hero",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The big picture on the game's front"
+    },
+    {
+      "key": "art.loadingScreen",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The picture while it loads"
+    },
+    {
+      "key": "art.winCelebration",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The confetti when you win"
+    },
+    {
+      "key": "art.bush1",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "A small bush beside the path"
+    },
+    {
+      "key": "art.bush2",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "Another small bush"
+    },
+    {
+      "key": "art.rock1",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "A small rock beside the path"
+    },
+    {
+      "key": "art.rock2",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "A bigger rock"
+    },
+    {
+      "key": "art.tree",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "A tree beside the path"
+    },
+    {
+      "key": "art.castle",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The castle being guarded"
+    },
+    {
+      "key": "art.arrow",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The arrow an archer shoots"
+    },
+    {
+      "key": "levels[].journeyBadge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The badge for this level on the map"
+    },
+    {
+      "key": "levels[].parts.boss",
+      "kind": "character",
+      "themes": [
+        "*"
+      ],
+      "label": "The big goblin at the end of this level (a name, or leave it out)"
+    }
+  ],
+  "dials": [
+    {
+      "key": "levels[].difficulty",
+      "min": 1,
+      "max": 5,
+      "default": 2,
+      "step": 1,
+      "label": "How hard this level is, 1 easy to 5 tough"
+    },
+    {
+      "key": "levels[].parts.wave",
+      "min": 1,
+      "max": 12,
+      "default": 1,
+      "step": 1,
+      "label": "Which wave of goblins comes at you"
+    },
+    {
+      "key": "levels[].coins",
+      "min": 0,
+      "max": 60,
+      "default": null,
+      "step": 1,
+      "label": "How many coins this level pays (leave empty and difficulty decides)"
+    },
+    {
+      "key": "levels[].unlocked",
+      "type": "boolean",
+      "default": false,
+      "label": "Is this level open from the start"
+    }
+  ],
+  "level": {
+    "keys": [
+      "id",
+      "name",
+      "difficulty",
+      "parts",
+      "coins",
+      "unlocked",
+      "journeyBadge"
+    ],
+    "required": [
+      "id",
+      "name",
+      "difficulty"
+    ],
+    "min": 1,
+    "max": 12,
+    "geometry": {
+      "kind": "wave",
+      "of": "A level is a wave number. The path, the castle and the goblins that come with that wave belong to the engine; the level names which wave and how hard it is.",
+      "waves": {
+        "min": 1,
+        "max": 12
+      }
+    },
+    "dials": [
+      "difficulty",
+      "parts.wave",
+      "coins",
+      "unlocked"
+    ],
+    "parts": {
+      "keys": [
+        "wave",
+        "theme",
+        "boss"
+      ]
+    }
+  },
+  "feel": {
+    "pace": [
+      "chill",
+      "calm",
+      "normal",
+      "zippy"
+    ],
+    "celebration": [
+      "small",
+      "big"
+    ],
+    "haptics": [
+      "on",
+      "off"
+    ]
+  },
+  "feelPresets": [
+    {
+      "id": "gentle",
+      "label": "Gentle",
+      "feel": {
+        "pace": "chill",
+        "celebration": "big",
+        "haptics": "off"
+      }
+    },
+    {
+      "id": "normal",
+      "label": "Just right",
+      "feel": {
+        "pace": "normal",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    },
+    {
+      "id": "zippy",
+      "label": "Zippy",
+      "feel": {
+        "pace": "zippy",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    }
+  ],
+  "rules": {
+    "events": [
+      "onLevelStart",
+      "onHit",
+      "onWin",
+      "everyNSeconds"
+    ],
+    "actions": [
+      "playSound",
+      "sayLine",
+      "addPoints",
+      "showText"
+    ]
+  },
+  "never": [
+    "Castle Guard cannot draw a new path. The paths belong to the engine and a level picks a wave along one.",
+    "It cannot be lost forever: the design promises every level is winnable with enough guards.",
+    "It cannot have more than 12 levels, and a wave number above 12 does not exist.",
+    "It cannot invent a new kind of guard or a new goblin. Those are animated sheets we ship, and only the boss at the end of a level can be named."
+  ],
+  "words": [
+    "castle",
+    "guard",
+    "defend",
+    "protect",
+    "tower",
+    "knight",
+    "archer",
+    "goblin",
+    "monster",
+    "army",
+    "wave",
+    "defence",
+    "defense",
+    "path",
+    "base"
+  ],
+  "about": "putting guards along a path so the goblins never reach the castle"
+}

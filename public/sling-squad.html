@@ -227,6 +227,29 @@ function maxStars(){ return GAME_CONFIG.levels.length*3; }
 
 // ---- audio helper (created sounds via /api/sfx; synth is silent fallback only) ----
 function sfx(n){ try{ if(SLING_DEMO) return; if(BA&&BA.sfx) BA.sfx(n); }catch(e){} }
+
+// ---------------------------------------------------------------------------
+//  CB2 — LAYER TWO: the manifest's own rules.
+//  A manifest may carry rules:[{when,do,params}]. The shared runtime in
+//  buildable-mechanics.js owns the vocabulary and the doing; this engine only
+//  says WHEN things happen, at the four moments it already knows about, plus a
+//  per-frame tick for everyNSeconds. With no rules in the manifest every call
+//  below is a no-op, so a game without rules behaves exactly as it always did.
+// ---------------------------------------------------------------------------
+var RULES = null;
+function buildRules(raw){
+  RULES = null;
+  try{
+    if(!(BM && BM.rules) || !raw || !Array.isArray(raw.rules) || !raw.rules.length) return;
+    RULES = BM.rules.make(raw, {
+      playSound: function(n){ sfx(n); },
+      sayLine:   function(t,c){ if(fx&&BM) BM.pop(fx.pops, (c&&c.x)||W/2, (c&&c.y)||170, t, "#ffe680"); },
+      showText:  function(t,c){ if(fx&&BM) BM.pop(fx.pops, (c&&c.x)||W/2, (c&&c.y)||170, t, "#ffffff"); },
+      addPoints: function(n,c){ if(fx&&BM) BM.pop(fx.pops, (c&&c.x)||W/2, (c&&c.y)||200, "+"+n, "#ffd86b"); }
+    });
+  }catch(e){ RULES = null; }
+}
+function fireRule(ev, ctx){ try{ if(RULES) RULES.fire(ev, ctx||{}); }catch(e){} }
 // background music: reusable shared-library track (see /api/library-music). Warm,
 // no shrill highs. Any future game can pull the same named track by URL.
 var _curMusic=null;
@@ -284,6 +307,7 @@ function sweepBrokenBlocks(){
   for(var i=G.blocks.length-1;i>=0;i--){ var b=G.blocks[i]; if(!b._broken) continue;
     var M0 = matOf(b) || BLOCK_MATS.wood;
     G.blocks.splice(i,1); G.smashed++;
+    fireRule("onHit", { x:b.position.x, y:b.position.y, what:"block" });
     try{ M.Composite.remove(world, b); }catch(e){}
     G.shards.push({ x:b.position.x, y:b.position.y, w:b._w, h:b._h, a:b.angle, m:b._mat, t0:nowMs() });
     if(G.shards.length>18) G.shards.shift();
@@ -540,6 +564,7 @@ function popTarget(t, why){
   if(fx&&BM) BM.explode(fx, t.position.x, t.position.y, "#bdf06a", { n:16, pop:"POOF!", sfx:null });
   sfx("poof");
   M.Composite.remove(world, t);
+  fireRule("onCollect", { x:t.position.x, y:t.position.y, why:t._why });
   if(G.popped>=G.totalTargets){ startWinRoll(); }
 }
 
@@ -633,7 +658,7 @@ function winLevel(){ if(state==="win")return; state="win";
   var stars = Math.max(1, 3 - extra);
   if(!PREFS.stars[level] || PREFS.stars[level]<stars) PREFS.stars[level]=stars;
   if(PREFS.unlocked < Math.min(level+1, GAME_CONFIG.levels.length)) PREFS.unlocked=Math.min(level+1,GAME_CONFIG.levels.length);
-  savePrefs(); sfx("win"); if(fx&&BM) BM.explode(fx, W/2, 200, "#ffd86b", { n:30, pop:"You did it!", sfx:null });
+  savePrefs(); fireRule("onWin", { x:W/2, y:170, level:level, stars:stars }); sfx("win"); if(fx&&BM) BM.explode(fx, W/2, 200, "#ffd86b", { n:30, pop:"You did it!", sfx:null });
   signal("win");
 }
 function loseLevel(){ if(state==="lose")return; state="lose"; sfx("lose"); signal("lose"); }
@@ -1403,7 +1428,9 @@ function showMenu(){ state="title"; G=null; show("help",false); showChrome(false
   if(!startScreen) startScreen=BS.mount(host, buildStartCfg(), cb); else startScreen.update(buildStartCfg());
 }
 function hideMenu(){ var host=el("start"); if(host)host.style.display="none"; showChrome(true); }
-function startLevel(i){ level=i; buildWorld(i); botWait=0; started=true; hideMenu(); show("help",false); ensureMusic(); }
+function startLevel(i){ level=i; buildWorld(i); botWait=0; started=true; hideMenu(); show("help",false); ensureMusic();
+  if(RULES && RULES.reset) RULES.reset();
+  fireRule("onLevelStart", { x:W/2, y:170, level:i }); }
 
 function wireMenus(){
   var hb=el("helpBtn"); if(hb)hb.onclick=function(){ show("help",true); };
@@ -1429,7 +1456,7 @@ if(BA&&BA.configure){ BA.configure({ sfxBase:"/api/sfx?s=", map:{
   crack:"sling_crack", shatter:"sling_shatter",     // SD1: a block cracking, and a block going to bits
   explode:"explode", win:"sling_win", lose:"tennis_lose" } }); }
 
-function frame(){ update(); if(SLING_DEMO) demoTick(); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
+function frame(){ update(); if(SLING_DEMO) demoTick(); if(RULES&&started&&state!=="title"&&state!=="win"&&state!=="lose") RULES.tick(1/60, { x:W/2, y:170 }); if(G&&ctx)draw(); if(BN&&BN.update)BN.update(); requestAnimationFrame(frame); }
 // ---- Session 7I attract bot: plan like the QA bot, but PULL the sling visibly.
 // The pull point + tutorial hand GLIDE with a capped per-frame step (never teleport).
 var demoBot={ want:null, hold:0, wait:0, restartAt:0, hand:{x:AX,y:AY}, dip:0 };
@@ -1529,6 +1556,7 @@ if(typeof document!=="undefined" && el("start")){ loadPrefs(); wireMenus();
 function applyManifest(cfg, raw){
   if(!cfg || !Array.isArray(cfg.levels) || !cfg.levels.length) return;
   try{ window.BUILDABLE_MANIFEST = raw; }catch(e){}
+  buildRules(raw);
   try{ if(window.BuildableHUD && BuildableHUD.setAccent && raw && raw.color) BuildableHUD.setAccent(raw.color); }catch(e){}
   GAME_CONFIG.levels.length = cfg.levels.length;
   for(var i=0;i<cfg.levels.length;i++){ GAME_CONFIG.levels[i]=cfg.levels[i]; }

@@ -1,0 +1,327 @@
+{
+  "sheetVersion": 1,
+  "engine": "breaker",
+  "label": "Breaker",
+  "plainName": "A bat, a ball, and a wall of bricks to knock out.",
+  "entry": "/breaker-engine.html",
+  "levelProfile": "breaker",
+  "manifest": {
+    "keys": [
+      "id",
+      "name",
+      "type",
+      "levelProfile",
+      "category",
+      "color",
+      "ageBand",
+      "shellVersion",
+      "engine",
+      "entry",
+      "features",
+      "feel",
+      "art",
+      "levels",
+      "customization",
+      "rules"
+    ],
+    "required": [
+      "id",
+      "name",
+      "type",
+      "shellVersion",
+      "levels"
+    ],
+    "fixed": {
+      "id": "breaker",
+      "type": "game",
+      "shellVersion": 2
+    }
+  },
+  "art": [
+    {
+      "key": "art.badge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The little badge on the game's card"
+    },
+    {
+      "key": "art.hero",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The big picture on the game's front"
+    },
+    {
+      "key": "art.loadingScreen",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The picture while it loads"
+    },
+    {
+      "key": "art.winCelebration",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The confetti when you win"
+    },
+    {
+      "key": "levels[].parts.background",
+      "kind": "world",
+      "themes": [
+        "jungle",
+        "space",
+        "ocean",
+        "candy",
+        "desert",
+        "castle",
+        "forest"
+      ],
+      "label": "What is behind the bricks"
+    },
+    {
+      "key": "levels[].parts.bricks",
+      "kind": "element",
+      "themes": [
+        "jungle",
+        "space",
+        "ocean",
+        "candy",
+        "desert",
+        "castle",
+        "forest"
+      ],
+      "required": true,
+      "label": "What the bricks look like"
+    },
+    {
+      "key": "levels[].parts.balls",
+      "kind": "element",
+      "themes": [
+        "jungle",
+        "space",
+        "ocean",
+        "candy",
+        "desert",
+        "castle",
+        "forest"
+      ],
+      "label": "What the ball looks like"
+    },
+    {
+      "key": "levels[].parts.paddle",
+      "kind": "element",
+      "themes": [
+        "jungle",
+        "space",
+        "ocean",
+        "candy",
+        "desert",
+        "castle",
+        "forest"
+      ],
+      "label": "What the bat looks like"
+    },
+    {
+      "key": "levels[].journeyBadge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The badge for this level on the map"
+    }
+  ],
+  "dials": [
+    {
+      "key": "levels[].difficulty",
+      "min": 1,
+      "max": 5,
+      "default": 2,
+      "step": 1,
+      "label": "How hard this level is, 1 easy to 5 tough"
+    },
+    {
+      "key": "levels[].coins",
+      "min": 0,
+      "max": 60,
+      "default": null,
+      "step": 1,
+      "label": "How many coins this level pays (leave empty and difficulty decides)"
+    },
+    {
+      "key": "levels[].unlocked",
+      "type": "boolean",
+      "default": false,
+      "label": "Is this level open from the start"
+    }
+  ],
+  "level": {
+    "keys": [
+      "id",
+      "name",
+      "difficulty",
+      "layout",
+      "parts",
+      "cells",
+      "coins",
+      "unlocked",
+      "journeyBadge"
+    ],
+    "required": [
+      "id",
+      "name",
+      "difficulty",
+      "layout",
+      "parts"
+    ],
+    "min": 1,
+    "max": 12,
+    "geometry": {
+      "kind": "brick-board",
+      "of": "A named layout sets the board size and the pattern. A level may also carry `cells`: a hand-painted list of bricks, each one a row, a column and a brick kind.",
+      "layouts": {
+        "full": {
+          "cols": 10,
+          "rows": 6
+        },
+        "pyramid": {
+          "cols": 9,
+          "rows": 5
+        },
+        "checker": {
+          "cols": 10,
+          "rows": 5
+        },
+        "gaps": {
+          "cols": 10,
+          "rows": 6
+        },
+        "columns": {
+          "cols": 10,
+          "rows": 6
+        },
+        "frame": {
+          "cols": 11,
+          "rows": 7
+        },
+        "diamond": {
+          "cols": 11,
+          "rows": 7
+        }
+      },
+      "cellTypes": [
+        "ice",
+        "wood",
+        "metal",
+        "candy",
+        "star",
+        "bomb"
+      ],
+      "maxCells": 400
+    },
+    "dials": [
+      "difficulty",
+      "coins",
+      "unlocked"
+    ],
+    "parts": {
+      "keys": [
+        "background",
+        "bricks",
+        "balls",
+        "paddle"
+      ],
+      "pattern": "^(breaker/(bg|bricks|balls|paddle|shatter)/[a-z0-9]+-v[0-9]+|studio:[A-Za-z0-9._\\-/]+)$"
+    }
+  },
+  "feel": {
+    "pace": [
+      "chill",
+      "calm",
+      "normal",
+      "zippy"
+    ],
+    "celebration": [
+      "small",
+      "big"
+    ],
+    "haptics": [
+      "on",
+      "off"
+    ]
+  },
+  "feelPresets": [
+    {
+      "id": "gentle",
+      "label": "Gentle",
+      "feel": {
+        "pace": "chill",
+        "celebration": "big",
+        "haptics": "off"
+      }
+    },
+    {
+      "id": "normal",
+      "label": "Just right",
+      "feel": {
+        "pace": "normal",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    },
+    {
+      "id": "zippy",
+      "label": "Zippy",
+      "feel": {
+        "pace": "zippy",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    }
+  ],
+  "rules": {
+    "events": [
+      "onLevelStart",
+      "onCollect",
+      "onHit",
+      "onWin",
+      "everyNSeconds"
+    ],
+    "actions": [
+      "playSound",
+      "sayLine",
+      "addPoints",
+      "showText",
+      "speedUp",
+      "slowDown"
+    ]
+  },
+  "never": [
+    "Breaker cannot make a character walk or jump. It is a bat that slides along the bottom.",
+    "It cannot have a boss to fight. The nearest thing is a level full of metal bricks.",
+    "It cannot be two players on two devices. Its two-player mode is pong on one screen.",
+    "It cannot set the board size by hand. The board comes from a named layout.",
+    "It cannot have more than 400 painted bricks in one level, or more than 12 levels."
+  ],
+  "words": [
+    "bricks",
+    "brick",
+    "bat",
+    "ball",
+    "bounce",
+    "paddle",
+    "smash",
+    "wall",
+    "knock",
+    "break",
+    "pong",
+    "tennis",
+    "blocks"
+  ],
+  "about": "knocking a wall of bricks out with a bouncing ball"
+}

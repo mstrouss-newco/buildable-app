@@ -1,0 +1,274 @@
+{
+  "sheetVersion": 1,
+  "engine": "sling",
+  "label": "Sling Squad",
+  "plainName": "Fling a pal at a building until every critter is knocked out.",
+  "entry": "/sling-squad.html",
+  "levelProfile": "sling",
+  "manifest": {
+    "keys": [
+      "id",
+      "name",
+      "type",
+      "levelProfile",
+      "category",
+      "color",
+      "ageBand",
+      "shellVersion",
+      "engine",
+      "entry",
+      "features",
+      "feel",
+      "art",
+      "levels",
+      "customization",
+      "rules"
+    ],
+    "required": [
+      "id",
+      "name",
+      "type",
+      "shellVersion",
+      "levels"
+    ],
+    "fixed": {
+      "id": "sling",
+      "type": "game",
+      "shellVersion": 2
+    }
+  },
+  "art": [
+    {
+      "key": "art.badge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The little badge on the game's card"
+    },
+    {
+      "key": "art.hero",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The big picture on the game's front"
+    },
+    {
+      "key": "art.loadingScreen",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The picture while it loads"
+    },
+    {
+      "key": "art.winCelebration",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The confetti when you win"
+    },
+    {
+      "key": "levels[].parts.scene",
+      "kind": "world",
+      "themes": [
+        "grass",
+        "desert",
+        "forest",
+        "fall",
+        "castles"
+      ],
+      "label": "Which backdrop this level stands in"
+    },
+    {
+      "key": "levels[].parts.world",
+      "kind": "world",
+      "themes": [
+        "grass",
+        "desert",
+        "forest",
+        "fall",
+        "castles"
+      ],
+      "label": "A whole art set for this level (pals, critters, backdrop)"
+    },
+    {
+      "key": "levels[].journeyBadge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The badge for this level on the map"
+    }
+  ],
+  "dials": [
+    {
+      "key": "levels[].difficulty",
+      "min": 1,
+      "max": 5,
+      "default": 2,
+      "step": 1,
+      "label": "How hard this level is, 1 easy to 5 tough. It also sets how many spare slings you get."
+    },
+    {
+      "key": "levels[].coins",
+      "min": 0,
+      "max": 60,
+      "default": null,
+      "step": 1,
+      "label": "How many coins this level pays (leave empty and difficulty decides)"
+    },
+    {
+      "key": "levels[].unlocked",
+      "type": "boolean",
+      "default": false,
+      "label": "Is this level open from the start"
+    }
+  ],
+  "level": {
+    "keys": [
+      "id",
+      "name",
+      "difficulty",
+      "layout",
+      "parts",
+      "coins",
+      "unlocked",
+      "journeyBadge"
+    ],
+    "required": [
+      "id",
+      "name",
+      "difficulty",
+      "layout"
+    ],
+    "min": 1,
+    "max": 20,
+    "geometry": {
+      "kind": "named-building",
+      "of": "A level IS one of the built buildings below. Each one holds its blocks, its critters and its ground in a shape the robot can already clear. Nothing places a block by hand.",
+      "layouts": [
+        "gate",
+        "tower",
+        "double",
+        "keep",
+        "grand",
+        "post",
+        "hut",
+        "ledge",
+        "trio",
+        "wall",
+        "bunker",
+        "twinkeep",
+        "spire",
+        "fort",
+        "hideout",
+        "tallgrand",
+        "gauntlet",
+        "twintower",
+        "citadel",
+        "finale"
+      ]
+    },
+    "dials": [
+      "difficulty",
+      "coins",
+      "unlocked"
+    ],
+    "parts": {
+      "keys": [
+        "scene",
+        "world"
+      ],
+      "pattern": "^[a-z0-9][a-z0-9-]{0,30}$"
+    }
+  },
+  "feel": {
+    "pace": [
+      "chill",
+      "calm",
+      "normal",
+      "zippy"
+    ],
+    "celebration": [
+      "small",
+      "big"
+    ],
+    "haptics": [
+      "on",
+      "off"
+    ]
+  },
+  "feelPresets": [
+    {
+      "id": "gentle",
+      "label": "Gentle",
+      "feel": {
+        "pace": "chill",
+        "celebration": "big",
+        "haptics": "off"
+      }
+    },
+    {
+      "id": "normal",
+      "label": "Just right",
+      "feel": {
+        "pace": "normal",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    },
+    {
+      "id": "zippy",
+      "label": "Zippy",
+      "feel": {
+        "pace": "zippy",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    }
+  ],
+  "rules": {
+    "events": [
+      "onLevelStart",
+      "onCollect",
+      "onHit",
+      "onWin",
+      "everyNSeconds"
+    ],
+    "actions": [
+      "playSound",
+      "sayLine",
+      "addPoints",
+      "showText",
+      "speedUp",
+      "slowDown"
+    ]
+  },
+  "never": [
+    "Sling Squad cannot build a brand new building block by block. A level picks one of the buildings we ship.",
+    "It cannot make the pal walk, drive or fly on purpose. It gets one fling and then physics decides.",
+    "It cannot have a boss with health bars.",
+    "It cannot set how many slings you get by hand. Difficulty and the number of critters decide.",
+    "It cannot have more than 20 levels."
+  ],
+  "words": [
+    "sling",
+    "slingshot",
+    "fling",
+    "throw",
+    "launch",
+    "catapult",
+    "knock over",
+    "topple",
+    "tower",
+    "building",
+    "physics",
+    "angry",
+    "squad",
+    "rescue"
+  ],
+  "about": "flinging a pal at a wobbly building to knock the critters out"
+}

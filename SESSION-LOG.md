@@ -33,6 +33,146 @@ its prompt or its duration needs a nudge, and nothing else breaks in the meantim
    mood, `meadow_busy_bright`, and any future farm or town game can use it.
 3. **The celebration got calmer.** It was dimming the whole screen for 2.6 seconds on every
    mission; this manifest asks for a calm celebration, so it is a lighter hush for 2 seconds.
+## 2026-09-06 — CB4: the grown-up studio (plans, share sheet, house rules, real signup)
+
+**Shipped.** `db/create-cobuild-plans.sql` written AND applied to the live Supabase
+project in-session (verified against `information_schema`: `cobuild_plans` 12 columns,
+`cobuild_house_rules` 9, `cobuild_leads.notified_at` added). `api/cobuild-billing.js`
+with Stripe Checkout, a signed webhook and the meter. `api/cobuild-rules.js` with the
+three house rules and one shared gate. `api/cobuild-poster.js`, a real PDF built by
+hand. `/studio/grownups` (`public/studio-grownups.html`). The `cobuild_live` switch in
+`api/app-flags.js` and the landing page wired to it. A waitlist notifier in
+`api/cobuild-lead.js`. The studio and the app's game launcher wired to the meter and
+the gate. `qa-grownups.mjs`. `node qa-all.mjs` green, 50 harnesses. The app builds.
+
+**The thing I made sure of.** The sentence the grown-up page shows a parent, "N of M
+new games this month, renews <date>. Edits are always free", is produced by the same
+function that enforces it. A promise on a page and a meter behind it that disagree is
+how a family gets charged for something they were told was free, so there is one
+place that knows an edit costs nothing, and the test reads the sentence back.
+
+**Calls I made for you.**
+1. **Nothing charges, blocks or counts until you flip the switch.** `cobuild_live`
+   defaults to false. While it is off, `/cobuild` still logs clicks and takes names
+   exactly as it has been, the studio meters nothing, and no family can be blocked.
+   Flip it in the owner tools when the Stripe side is ready.
+2. **You still have to do the Stripe part.** I cannot open an account or handle keys.
+   The code reads `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_COBUILD`,
+   `STRIPE_PRICE_PREMIUM` and `STRIPE_PRICE_ADDON` by name from Vercel. Until they
+   exist every money button answers "the checkout is not switched on yet" and the
+   landing page falls back to the waitlist rather than a dead end.
+3. **A paid family is identified by their device, not yet by a Google account.** The
+   app has Google sign-in, but the landing page is a static page that cannot reach
+   it, and wiring the sign-in through checkout properly needs the Supabase redirect
+   set up. So checkout collects the email, stores it on the row, and the family lane
+   is the same device id the studio already uses. Linking that to a signed-in account
+   is the one real gap in this card and it needs your Supabase and Stripe settings.
+4. **The waitlist email is written but will not send by accident.** It needs the owner
+   code AND an explicit send flag; anything else returns the list of who WOULD be
+   emailed and changes nothing. Nobody can be emailed twice.
+5. **Vegetables first is not a new feature.** It applies the CB2 mathGate recipe to
+   the games you choose, so it goes through the recipe book, strict validation and
+   the robot like every other change, and turning it off takes the questions back out
+   rather than leaving them in the manifest.
+6. **The poster is a hand-written PDF.** No document library: one A4 page, the cover
+   re-encoded from its PNG, and the QR drawn as vector squares. I checked it parses
+   with a real PDF library and the test follows every xref offset, because a
+   hand-written PDF is exactly the kind of thing that looks fine and will not open.
+   Two small dependencies were added for it, `qrcode` and `pngjs`.
+7. **A house-rule check that fails opens the game.** If the gate cannot be reached, a
+   child gets their game. Locking a child out of their own work because a request
+   timed out is the worse mistake.
+
+## 2026-09-06 — CB3: the studio (a child says it, the game appears, they change it by asking)
+
+**Shipped.** `/studio` and `/studio/<id>` (`public/studio.html`), the plan door
+(`api/cobuild-plan.js`), the tweak door (`api/cobuild-edit.js`), the thinking they
+share (`api/_cobuildBrain.js`), the child's own voice (`api/cobuild-voice.js`), the
+fallback ear (`api/transcribe.js`), the kids lane in `api/asset-studio.js`, clip
+playback in the shared rules runtime, the plain words each cobuild sheet now carries
+about itself, the app's "Make a game" tile repointed at the studio, and
+`qa-studio.mjs`. `node qa-all.mjs` green, 49 harnesses. The React app builds.
+
+**The decision the whole session rests on.** The studio never writes a manifest. A
+plan is ASSEMBLED out of a shipped game by named CB2 recipes, and a tweak is CB2
+recipes and rules. Then every version is strict-validated and PLAYED BY THE ROBOT
+on the server before it is shown, on the build and on every edit. So the worst the
+studio can hand a child is a game that works but is not quite what they meant, and
+never a game that does not work.
+
+**Calls I made for you.**
+1. **It all works with no API keys.** The engine is chosen by the words in the sheets,
+   the manifest is assembled locally, and the edit door understands the phrases
+   children really use before it asks a model. A model, when there is one, only
+   improves the name, the world and the wording, and its answer is thrown away if it
+   names anything the sheets do not have. That is why the whole studio can be tested
+   headless with nothing switched on, and why a model outage costs cleverness rather
+   than a child's game.
+2. **Keep is earned by the family, not the robot.** The robot proves a game CAN be
+   finished. Keep waits for the engine to say the child actually beat it, as the card
+   asked. That does mean a child must play their game through once before it lands on
+   the shelf, which I think is right.
+3. **Painted art is hung by the server, and dropped if it does not fit.** Breaker can
+   take a studio picture in its brick and bat slots; Sling and Castle Guard map their
+   own art, so a picture there would be a hole in the game. Those pieces are still
+   filed into the shared library for the next family, and the engine draws its own —
+   the read-with-a-fallback rule rather than a forced slot.
+4. **The app's "Make a game" tile now opens the studio** instead of the old Phaser
+   generator screen. Nothing was removed: the old screen is still there, and the tile
+   is still behind the coming-soon gate, so this is the safest place in the app to
+   have made that swap.
+5. **Sharing is behind the grown-up gate and money is nowhere.** Kid mode is the
+   default and shows no money, no limits, no publishing and no settings, which
+   `qa-studio.mjs` checks on the page a child actually sees. The real share sheet, the
+   plans and the house rules are CB4.
+6. **No database change.** The kids lane reuses `image_cache` like the rest of the
+   asset studio, and voice lines reuse `narration_cache` like `/api/say.js`, so
+   nothing was applied to Supabase this session.
+
+## 2026-09-06 — CB2: safe outputs (sheets, recipes, rules, robot gate)
+
+**Shipped.** Four cobuild sheets (`public/breaker|sling|castleguard|skyflyer/cobuild.json`),
+strict mode in the shared manifest validator, the recipe book
+(`public/buildable-recipes.js`, 18 recipes), the rules vocabulary in
+`public/buildable-mechanics.js` (`BM.rules`), the shared build-gate robot
+(`qa/kid-game-robot.mjs`), its endpoint (`api/kid-game-check.js`) plus
+`api/_cobuild.js`, the gate wired into save and fork in `api/kid-game.js`,
+Sling Squad and Sky Flyer firing rule events for real, `qa-recipes.mjs` and
+`qa-rules.mjs`, `MECHANICS.md` re-aimed around the recipe book, and routes in
+`vercel.json` for the five new public files. `node qa-all.mjs` green, 48 harnesses.
+
+**The proof I insisted on.** A sheet that describes a wish rather than the engine is
+worse than no sheet, so every one of our four shipped manifests is validated against
+its OWN sheet in strict mode and passes — the sheets were corrected until they did
+(Sling really has 20 buildings, Castle Guard really does name a boss, Sky Flyer
+really does carry its loadout words and per-world jobs). The same test runs over
+every recipe on every engine it claims, and each result has to still pass strict
+validation AND still beat the robot. Sling's events are proved by PLAYING a level
+with rules in it and catching the sound the rule made, not by grepping the source.
+
+**Calls I made for you.**
+1. **Sky Flyer is checked, not flown.** Its flight needs a real browser and WebGL
+   (that is why `qa-skyflyer.mjs` needs jsdom), and a kid's save cannot wait on
+   that. So the robot checks its worlds structurally — a world asking for more
+   landings than it has pads, or for more coins than a world holds, is refused —
+   and the verdict says "checked, not flown" instead of claiming a play-through it
+   never did. Flying it for real on save would need a browser in the save path,
+   which is a bigger change than this card.
+2. **The too-long line is generous on purpose.** Our own Breaker levels take the
+   bot up to about five minutes and Castle Guard's finale about three, because the
+   bot plays imperfectly. The line sits at seven minutes, so it catches a runaway
+   level without second-guessing games we already ship.
+3. **No database change.** CB1 already created the `robot` column, and the verdict
+   is exactly what it was for, so nothing new was applied to Supabase this session.
+4. **Strict mode is on for every kid game, including edits.** A game saved under
+   CB1 that used a field no sheet names will be refused when it is next saved, with
+   the field named in plain words. That is the point of the fence, and the four
+   sheets were widened to cover everything our own games really use, so nothing
+   ordinary is caught by it.
+5. **The robot falling over never loses a kid's work.** If the sandbox itself
+   errors, the save goes through and the row says honestly that it was not
+   play-tested. A refusal only ever comes from a level the robot really could not
+   finish.
 ## 2026-09-06 (merge) — HH1 to HH5 are on main
 
 Mike said merge. `origin/main` had moved on six commits (AC1, AC2, CB1, FM2, FM3), so

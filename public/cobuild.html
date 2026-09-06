@@ -308,9 +308,48 @@ footer .logo{justify-content:center;margin-bottom:10px}
 
 <script>
 var picked='';
+// CB4 — THE FAKE DOOR BECOMES A REAL ONE, on a switch.
+//
+// While app_flags.cobuild_live is FALSE (the safe default) every Start button does
+// exactly what it has always done: log the click and take a name for the waitlist.
+// When the owner flips it true, the same buttons go to real checkout instead, and
+// the click is STILL logged either way — the fake-door numbers do not stop being
+// useful the day the real door opens.
+//
+// If the flag is on but the checkout is not configured yet, the button falls back
+// to the waitlist with a plain line rather than a dead end.
+var LIVE = false;
+try {
+  fetch('/api/app-flags').then(function(r){ return r.json(); }).then(function(j){
+    LIVE = !!(j && j.flags && j.flags.cobuild_live);
+    if (LIVE) { var n = document.getElementById('livenote'); if (n) n.style.display = 'block'; }
+  }).catch(function(){});
+} catch (e) {}
+
+// The family lane the studio and the plan row both use, so a grown-up who pays
+// here lands on a studio that already knows what they are on.
+function familyId(){
+  try { var f = localStorage.getItem('deviceId');
+    if(!f){ f = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,10); localStorage.setItem('deviceId', f); }
+    return f; } catch(e){ return 'dev_anon'; }
+}
+function startSignup(where, plan){
+  var btnPlan = plan === 'premium-20' ? 'premium' : 'cobuild';
+  fetch('/api/cobuild-billing', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ op:'checkout', familyId: familyId(), plan: btnPlan }) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (j && j.ok && j.url) { location.href = j.url; return; }
+      waitlist(where);   // not switched on yet: the waitlist still works
+    })
+    .catch(function(){ waitlist(where); });
+}
+
 function did(){try{var d=localStorage.getItem('cobuild_did');if(!d){d='cb_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem('cobuild_did',d);}return d;}catch(e){return 'cb_anon';}}
 function log(body){try{fetch('/api/cobuild-lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({deviceId:did()},body)),keepalive:true});}catch(e){}}
-function openDoor(where){picked=where;log({kind:'click',source:where,plan:where.indexOf('premium')===0?'premium-20':(where.indexOf('cobuild')===0?'cobuild-10':null)});document.getElementById('modal').classList.add('open');document.getElementById('form').style.display='block';document.getElementById('thanks').style.display='none';setTimeout(function(){document.getElementById('email').focus();},50);}
+function planOf(where){return where.indexOf('premium')===0?'premium-20':(where.indexOf('cobuild')===0?'cobuild-10':null);}
+function openDoor(where){picked=where;log({kind:'click',source:where,plan:planOf(where)});if(LIVE){startSignup(where,planOf(where)||'cobuild-10');return;}waitlist(where);}
+function waitlist(where){picked=where||picked;document.getElementById('modal').classList.add('open');document.getElementById('form').style.display='block';document.getElementById('thanks').style.display='none';setTimeout(function(){document.getElementById('email').focus();},50);}
 function closeDoor(){document.getElementById('modal').classList.remove('open')}
 function thanks(){
   var email=document.getElementById('email').value.trim();
