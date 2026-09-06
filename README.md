@@ -6,6 +6,51 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Hop Heroes feels like Mario (HH1 + HH2 + HH3, September 6 2026)
+`public/play.html`, `public/buildable-hud.js`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`.
+Phase **HH**, cards **HH1, HH2, HH3**, branch `claude/hop-heroes-mario-feel-safrvp`.
+
+**Moving.** A run-up over about sixteen frames to a top speed of the recipe speed x
+1.55, a skid with dust and a lean when you turn around, six frames of coyote grace off
+a ledge, a jump buffered up to eight frames before landing, and a stomp that squashes
+the enemy flat and bounces you. Variable jump height and the double jump are unchanged.
+The level recipe grew 150 to 230 tiles so the perfect run stayed at about 47 seconds.
+Camera look-ahead scaled by speed, plus a clamped vertical follow.
+
+**Bramble's poses come from transforms, not new art.** `api/story-library` can only
+make FACE and MOOD variants of a character, never a run or a jump pose, and none of
+Bramble's are generated. Mike's call was to animate the one watercolour cutout: idle
+breathe, a two-beat run cycle, a stretch up, a brace down, land squash, skid lean-back.
+The drawn fallback body gets the same treatment, so a missing image is never broken.
+
+**Reading the screen.** Holes get a dark shaft, dirt walls, a shadow lip and grass over
+the edges. Background trees and bushes are skipped over a hole (they used to grow
+straight through the pits). Canopy and ferns are a frame at the screen edges, drawn
+under the hero. The HUD is the shared `buildable-hud.js` strip (which gained drawn coin
+and star chips) and the engine registers with `buildable-gamenav.js`. The world height
+stays 540 because level geometry is baked from it, but the VIEW is now W x VH and both
+follow the screen, so the canvas exactly fills any viewport with no letterbox: a wide
+screen shows more level, a tall phone gets more sky above the same world.
+
+**Mario ingredients.** Bonk blocks in short rows over solid ground, ? blocks popping a
+coin or a power-up. Coin arcs over every gap, crystal, critter, pipe and bounce pad,
+laid on the engine's own jump curve. Pipes as solid stand-on markers. A flag pole you
+slide down that runs straight into the next level.
+
+**QA.** `qa/sim-node.mjs` now checks that every level wins, that the perfect player
+finishes unhurt with all three hearts, and that 60%+ of its
+coins are reachable without leaving the floor (3 of 63 before, 224 of 290 now). New
+`qa-hopheroes.mjs`: 42 dependency-free checks driving the hero a frame at a time
+through a `BK_GAME.test` seam. Both green. Bugs fixed on the way: a bounce pad could push
+the ground off the bottom of the screen, replaying a level gave an empty world because
+nothing was reset, and the level generator spaced hazards using a tapped jump's air
+time while the QA bot always holds the button. The perfect player used to finish the
+level on its last heart; it now finishes with all three.
+
+**Not done.** No Vercel preview link (the connector in that session listed no
+projects). HH4 (worlds, the fixed hero cast, the picker) and HH5 remain, and the tile
+is still coming-soon behind the 1111 gate.
+
 ## Practice Round 2: the warm-up, the birds, and numbers (PT2 + PT3, August 30 2026)
 `public/buildable-practice.js`, `public/practice.html`, `public/practice/decks/`,
 `api/sfx.js`, `qa-practice.mjs`, `qa-practice-shot.mjs`,

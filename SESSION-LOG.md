@@ -1,3 +1,101 @@
+## 2026-09-06 — HH1 to HH3: Hop Heroes moves, reads and rewards like a Mario level
+
+Phase **HH**, cards **HH1, HH2, HH3**, on branch
+`claude/hop-heroes-mario-feel-safrvp`. Scoped to `public/play.html`,
+`public/buildable-hud.js`, `qa/sim-node.mjs`, and a new `qa-hopheroes.mjs`.
+
+**Two things the brief assumed were there, were not.** The plan doc
+`claude/HH-hop-heroes-plan.md` is not in this repo and the `hop-heroes-plan` memory
+was not reachable, so HH1 to HH3 were built from the session brief alone. HH4's card
+is reconstructed from that brief and HH5's is an honest placeholder; both say so on
+the card and want rewording once the doc turns up. Separately, this session's network
+policy blocks `www.buildablekids.com`, so every piece of watercolour art 404s here and
+the drawn fallbacks stand in. Everything below was still verified in a real Chromium;
+what could not be checked is how the art itself looks.
+
+**Bramble cannot be given running poses, and that was Mike's call to make.**
+`api/story-library` only produces FACE and MOOD variants of a character (happy,
+excited, scared, proud), never a run or a jump, and none of Bramble's variants have
+even been generated. Mike chose to animate the one watercolour cutout rather than
+commission a sprite set. So the poses are transforms: an idle breathe, a two-beat run
+cycle whose bounce and forward lean follow the run speed, a stretch going up, a brace
+coming down, the existing land squash, and a lean-back turn-around on a skid. The
+drawn fallback body gets exactly the same treatment, so a missing image is never a
+broken image and never a frozen hero.
+
+**HH1 — the feel.** A run-up over about sixteen frames to a top speed of the recipe
+speed times 1.55, instead of snapping to it in five. Pushing against your own momentum
+skids: the speed bleeds off, dust sprays backwards, the hero leans away from where he
+was going. Six frames of coyote grace after walking off a ledge. A jump pressed up to
+eight frames early is remembered and fires on landing. A stomp squashes the enemy
+flat, bounces the hero higher if the button is still held, and pops "NICE!". Variable
+jump height and the double jump are untouched. Mike chose "faster, and lengthen the
+level", so the recipe went from 150 to 230 tiles and the perfect run stayed put: 2843
+frames before, 2840 now, about 47 seconds either way. Camera: look-ahead of up to
+110px scaled by speed, never scrolling left of the start, plus a vertical follow.
+
+**HH2 — reading the screen.** Holes are drawn as holes: a near-black shaft, a dirt
+wall down each side, a shadow lip, grass curling over both edges. A background tree is
+skipped when its trunk would stand over a hole, which is the bug where trunks grew
+straight through the pits. The canopy and the ferns became a frame rather than a
+curtain: screen edges only, drawn before the hero, pinned to the screen. The HUD moved
+to the shared `buildable-hud.js` strip, which insets itself clear of the shell nav, and
+the engine now registers with `buildable-gamenav.js`. The world height stays 540
+forever because every platform y is baked from it, but the VIEW is now W x VH and both
+follow the screen, so the canvas exactly fills any viewport: a wide screen shows more
+level, a tall phone gets more sky above the same world with the ground still on the
+floor. Coins went gold and bigger with a shine, enemies got a halo and went berry
+purple, platforms became grass-topped blocks, the far forest tiles at a capped width.
+
+**HH3 — the Mario ingredients.** Bonk blocks in short rows, one per climb zone, always
+over solid ground: a ? block pops a coin or a power-up with a gold burst, a plain one
+thumps and nudges the hero down, and both are solid to stand on. Coin arcs over every
+gap, every crystal, every critter, every pipe and every bounce pad, laid on the
+engine's own jump curve from the take-off point the QA bot actually uses. Pipes as
+solid stand-on markers at the mouth of every run zone. A flag pole finish: touch it,
+slide down, short fanfare, straight into the next level with no tap.
+
+**Three real bugs found while building this.** (1) The vertical camera was a spring
+with a 160px range, so a bounce pad pushed the ground band clean off the bottom of the
+screen; it is a clamped dead zone now. (2) `startLevel` never reset a single collected
+coin, star, power-up or dead enemy, so replaying a level gave you an empty world —
+invisible while the only way back was a deliberate tap, and unmissable the moment the
+flag pole started auto-advancing. (3) `buildLevel` spaced hazards using a TAPPED jump's
+air time, but the QA bot holds the button on every jump and a held jump hangs half as
+long again. A faster hero turned that latent error into three lost hearts and a losing
+run. Hazard spacing now uses the real held-jump distance, and hazards may either
+cluster inside one jump arc (flown over) or sit beyond the landing, which is what lets
+a Mario level put things close together without ever being unfair. Two follow-on cases
+came out of the same thread: a clustered hazard moves the landing point forward, so the
+next hole or crystal has to be measured from THAT, not from the hazard that opened the
+jump; and a low bar is slid under rather than jumped, so nothing may cluster behind one
+(an enemy two tiles past a low bar made the bot jump while still inside the bar and
+take the hit it had just ducked). The perfect player now finishes the level with all
+three hearts, where before HH1 it finished on its last one.
+
+**Coins on the ground path went from 3 of 63 to 224 of 290, 77%.** Most of that was
+not the arcs: run-zone coins sat 70 to 130px up, above a running hero's chest, so a kid
+on the floor passed under nearly all of them. They sit on the running line now, a
+continuous coin line follows the floor the whole way, and the line steps around the
+span where the hero is airborne so no coin is placed somewhere unreachable.
+
+**QA.** `qa/sim-node.mjs` now asserts three things: every level wins, the perfect
+player finishes UNHURT with all three hearts, and at least 60% of its coins are
+reachable without leaving the floor. New `qa-hopheroes.mjs`, 42 checks,
+dependency-free in a vm sandbox with no browser, driving the hero a frame at a time
+through a new `BK_GAME.test` seam: the run-up, the skid, coyote time, the jump buffer,
+the double jump, the stomp, the pits, the camera clamp at four screen sizes, the Mario
+furniture, the file's own rules (no emoji, shared HUD and nav loaded, hero above
+scenery), and a render smoke test. All green. Verified in a real Chromium at 1440x900,
+820x1180 and 390x844 with no page errors, moving and jumping from both the keyboard and
+the on-screen pad.
+
+**What is NOT done.** Mike asked for a Vercel preview link as the picture gate; the
+Vercel connector in this session lists no projects, so no preview URL could be
+produced, and screenshots with the art missing were sent instead. HH4 (worlds, the
+fixed hero cast, the hero picker) and HH5 wait. The game is still `soon: true` behind
+the 1111 gate in `src/BuildableKids.jsx`.
+
 ## 2026-08-30 — QA-FIX: Practice is alive, Lessons is open, and there is finally a release gate
 
 The first fixing session off the QA3d/QA3e sweep. Mike picked the Practice fix plus

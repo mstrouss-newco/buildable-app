@@ -98,7 +98,7 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
   palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#b8477e", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
-    { name:"Whispering Woods", speed:3.2, length:230, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, boss:true, bossHp:3 },
+    { name:"Whispering Woods", speed:3.2, length:230, gapChance:0.58, gapMax:2, obstacleChance:0.26, enemyChance:0.30, lowChance:0.20, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, boss:true, bossHp:3 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
@@ -117,8 +117,15 @@ const SKID_DECEL = 0.90;                      // per-frame bite when you push ag
 const COYOTE_FRAMES = 6;                      // grace frames to jump after walking off a ledge
 const BUFFER_FRAMES = 8;                      // a jump pressed this early still fires on landing
 const SKID_MIN = 1.6;                         // speed you must be doing for a turn-around to count as a skid
-const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a full jump stays airborne
+const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a TAPPED jump stays airborne
+// Frames a HELD jump stays airborne. Holding the button softens gravity on the way up
+// (GRAV*0.62), so a held jump hangs far longer than the tapped figure above — and the QA
+// bot holds it on every single jump. buildLevel has to space hazards by THIS number, not
+// the tapped one, or the perfect player lands straight on the next hazard.
+const AIR_FRAMES_HELD = (()=>{ const aUp=GRAV*0.62, rise=JUMP*JUMP/(2*aUp);
+  return Math.abs(JUMP)/aUp + Math.sqrt(2*rise/GRAV); })();
 const SLIDE_FRAMES=34;
+const POLE_SLIDE=48, POLE_FANFARE=78;      // HH3 flag pole: slide down, short fanfare, next level
 const c=document.getElementById('c'), ctx=c.getContext('2d');
 // ---------------------------------------------------------------------------
 //  HH2 — fill the screen the way the other engines do. The world stays 540 tall
@@ -204,35 +211,115 @@ function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=M
 // CLIMB zones (flat ground + platforms). Always clearable: RUN zones space
 // hazards <= a jump apart; CLIMB zones are flat so the bot never jumps where a
 // platform could catch it. Platforms/stars/bounces live only in CLIMB zones. ---
+// HH3 — a coin arc laid on the engine's OWN jump curve, so the reward sits exactly
+// where a jumping hero passes rather than somewhere a designer guessed. cx/baseY are
+// the hero's CENTRE at take-off, v is the speed being carried, vy0 the launch speed
+// (a normal jump over a gap, or the much bigger kick of a bounce pad). Holding the
+// jump button softens gravity on the way up, which is why the rise uses GRAV*0.62.
+function coinArc(coins, cx, baseY, v, vy0, n){
+  const aUp=GRAV*0.62, tUp=Math.abs(vy0)/aUp, rise=vy0*vy0/(2*aUp);
+  const tTot=tUp+Math.sqrt(2*rise/GRAV); n=n||6;
+  for(let i=1;i<=n;i++){ const t=tTot*i/(n+1);
+    const dy = t<=tUp ? (vy0*t + 0.5*aUp*t*t) : (-rise + 0.5*GRAV*(t-tUp)*(t-tUp));
+    coins.push({ x: cx + v*t, y: baseY+dy, got:false }); }
+}
 function mkSwing(ax, rnd){ return {ax, ay:GROUND_Y-230, len:140+rnd()*40, ang:(rnd()<0.5?-1:1)*(0.5+rnd()*0.3), angV:0, grabbed:false}; }
 function buildLevel(lv, idx){
   const rnd=mulberry(1000+idx*97);
-  const ground=[], obstacles=[], enemies=[], coins=[], lowBars=[], decos=[], powerups=[], platforms=[], bounces=[], stars=[], swings=[];
+  const ground=[], obstacles=[], enemies=[], coins=[], lowBars=[], decos=[], powerups=[], platforms=[], bounces=[], stars=[], swings=[], blocks=[], pipes=[];
   let boss=null, barrierX=Infinity;
   const isLast = idx === ((GAME_CONFIG.levels&&GAME_CONFIG.levels.length||1)-1);
   const wantBoss = lv.boss!==false && (lv.boss===true || isLast);
   const n=lv.length, speed=lv.speed||RUN_BASE;
-  const safeGapTiles=Math.max(1, Math.floor(speed*AIR_FRAMES*0.62/TILE) - 1);
-  const landTiles=Math.ceil(speed*AIR_FRAMES/TILE)+1;
+  // How far one running jump actually carries, in the units the generator thinks in.
+  // A gap is capped well inside that (the guarantee), and anything the hero would LAND
+  // on has to sit beyond it (the thing that used to be wrong, and cost the bot a heart
+  // at three different obstacles once the hero got faster).
+  const flight=speed*TOP_MULT*AIR_FRAMES_HELD;
+  const safeGapTiles=Math.max(1, Math.floor(flight*0.55/TILE) - 1);
+  const landTiles=Math.ceil(flight/TILE)+2;
   const POOL=(GAME_CONFIG.powerups&&GAME_CONFIG.powerups.length)?GAME_CONFIG.powerups:["shield"];
+  const topV=speed*TOP_MULT;                 // the speed a running hero actually carries
+  // Where a running hero LEAVES THE GROUND for each kind of hazard. These mirror the
+  // look-ahead numbers in botThink exactly (46 / 66 / 58 tiles-ahead, scaled by the speed
+  // being carried), so an arc always starts at the real take-off point. Guessing these
+  // by eye put the obstacle arcs 36px out, and a 36px error on the steep part of a jump
+  // is the whole reason a coin gets missed.
+  const KB=topV/RUN_BASE;
+  const takeGap=46*KB-topV, takeObs=66*KB-topV, takeEne=58*KB-topV, takePipe=64*KB-topV;
   let segStart=0, i=4, mode="run";          // first 4 tiles solid (safe spawn)
   while(i<n-4){
     if(mode==="run"){
-      const segEnd=Math.min(n-4, i + 11 + Math.floor(rnd()*7));   // 11-17 tiles of hazards
-      let lastHaz=i;                                              // wait 3 tiles into the zone
+      // 18-27 tiles of hazards. Longer than they used to be: a jump now carries the hero
+      // most of 6 tiles, and nothing he can land on may sit inside that, so a short zone
+      // only had room for one hazard and the level came out empty.
+      const segEnd=Math.min(n-4, i + 18 + Math.floor(rnd()*10));
+      // HH3 PIPE — a stand-on marker at the mouth of every run zone: safe ground here,
+      // danger after this. It lands in the zone's 3-tile hazard-free lead-in, so it is
+      // always on solid ground and there is always room to jump it.
+      // One tile into the zone, but well clear of the spawn on the very first one, so a
+      // kid's first two seconds are running, not a wall.
+      { const pp={ x:(i + (i<=4 ? 6 : 1))*TILE+8, w:66, h:64 }; pipes.push(pp);
+        coinArc(coins, pp.x-takePipe, GROUND_Y-30, topV, JUMP, 6); }   // a pipe is a jump too, so it gets its arc
+      // lastHaz spaces hazards for variety; lastJump is the safety rule — nothing the
+      // hero can LAND on (a hole, a crystal, a low bar) may sit inside the arc of the
+      // jump he had to make for the hazard before it.
+      // lastHaz spaces hazards for variety. lastFresh is where the current jump started,
+      // which is what "still inside that arc" is measured from. lastAny is EVERY hazard
+      // the hero might take off for, cluster ones included — because a cluster hazard he
+      // is grounded at moves the landing point forward, and a hole or a crystal sitting
+      // at that new landing point is exactly how the perfect player lost two hearts.
+      let lastHaz=i, lastFresh=i, lastAny=i, arcOpen=false;
       for(; i<segEnd; i++){
-        const tx=i*TILE; const canHaz=(i-lastHaz)>=3;
-        if(canHaz && rnd()<lv.gapChance){
-          ground.push({x0:segStart, x1:tx, y:GROUND_Y});
-          const maxGap=Math.max(1, Math.min(lv.gapMax, safeGapTiles));
-          const gapTiles=1+Math.floor(rnd()*maxGap);
-          if((lv.vineChance||0)>0 && rnd()<0.6) swings.push(mkSwing(tx + gapTiles*TILE*0.5, rnd));   // optional vine to swing the pit (ground jump still clears it)
-          i+=gapTiles; segStart=i*TILE; lastHaz=i; continue;
+        const tx=i*TILE;
+        const canHaz=(i-lastHaz)>=2;
+        // canLand: far enough past the last jump that the hero is back on his feet, so
+        // this is somewhere he can safely come DOWN. inArc: still inside that jump, high
+        // over the ground, so a crystal or a critter here is flown over rather than
+        // landed on — which is what lets hazards cluster like they do in a Mario level.
+        // A low bar is slid under, not jumped, so it opens no arc: nothing may cluster
+        // behind it. Clustering an enemy two tiles past one made the bot jump while it
+        // was still inside the bar and take the hit it had just ducked.
+        const canLand=(i-lastAny)>=landTiles, inArc=arcOpen && (i-lastFresh)<=3;
+        // One weighted pick per legal tile, instead of a cascade of separate rolls. The
+        // cascade let whichever hazard was tested first eat every slot, which is how a
+        // level ended up with fifteen crystals and two holes.
+        if(canHaz){
+          const opts=[];
+          if(canLand) opts.push(['gap', lv.gapChance||0]);
+          if(canLand||inArc){ opts.push(['obs', lv.obstacleChance||0], ['ene', lv.enemyChance||0]); }
+          if(canLand) opts.push(['low', lv.lowChance||0]);
+          const total=opts.reduce((a,o)=>a+o[1],0);
+          if(total>0 && rnd()<Math.min(0.85,total)){
+            let r=rnd()*total, pick=opts[0][0];
+            for(const o of opts){ if(r<o[1]){ pick=o[0]; break; } r-=o[1]; }
+            if(pick==='gap'){
+              const gapStart=i;                       // the hero takes off HERE, not past the far lip
+              ground.push({x0:segStart, x1:tx, y:GROUND_Y});
+              const maxGap=Math.max(1, Math.min(lv.gapMax, safeGapTiles));
+              const gapTiles=1+Math.floor(rnd()*maxGap);
+              if((lv.vineChance||0)>0 && rnd()<0.6) swings.push(mkSwing(tx + gapTiles*TILE*0.5, rnd));   // optional vine to swing the pit (ground jump still clears it)
+              coinArc(coins, tx-takeGap, GROUND_Y-30, topV, JUMP, 6);        // an arc over EVERY gap
+              i+=gapTiles; segStart=i*TILE; lastHaz=i; lastFresh=gapStart; lastAny=gapStart; arcOpen=true; continue;
+            }
+            if(pick==='obs'){
+              obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46});
+              if(canLand){ coinArc(coins, tx+TILE/2-takeObs, GROUND_Y-30, topV, JUMP, 6); lastFresh=i; arcOpen=true; }  // only a FRESH jump gets an arc
+              lastHaz=i; lastAny=i;
+            } else if(pick==='ene'){
+              enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false, squash:0});
+              if(canLand){ coinArc(coins, tx+TILE/2-takeEne, GROUND_Y-30, topV, JUMP, 6); lastFresh=i; arcOpen=true; }
+              lastHaz=i; lastAny=i;
+            } else { lowBars.push({x:tx+TILE/2}); lastHaz=i; lastFresh=i; lastAny=i; arcOpen=false; }
+          }
         }
-        if(canHaz && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); lastHaz=i; }
-        else if(canHaz && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false, squash:0}); lastHaz=i; }
-        else if(canHaz && (lv.lowChance||0)>0 && (i-lastHaz)>=landTiles && rnd()<lv.lowChance){ lowBars.push({x:tx+TILE/2}); lastHaz=i; }
-        if(rnd()<lv.coinChance) coins.push({x:tx+TILE/2, y:GROUND_Y-70-Math.floor(rnd()*60), got:false});
+        // HH3 — run-zone coins sat 70-130px up, ABOVE the hero's chest, so a kid running
+        // along the floor ran underneath them and collected almost nothing. They now sit
+        // on the running line, with the occasional one lifted onto a little hop arc.
+        if(rnd()<lv.coinChance){
+          if(rnd()<0.22) coinArc(coins, tx-40, GROUND_Y-30, topV, JUMP*0.55, 3);
+          else coins.push({x:tx+TILE/2, y:GROUND_Y-34-Math.floor(rnd()*16), got:false});
+        }
       }
       mode="climb";
     } else {
@@ -252,10 +339,13 @@ function buildLevel(lv, idx){
         }
         platforms.push(pf);
         if(pf.mv){                                                // coins along the mover's path reward riding it
-          const cn=2+Math.floor(rnd()*2), spread=(pf.mv.axis==='y')?0:(pf.mv.amp||TILE)*1.1;
+          const cn=2, spread=(pf.mv.axis==='y')?0:(pf.mv.amp||TILE)*1.1;
           for(let cc=0;cc<cn;cc++){ const fx=(cn>1?cc/(cn-1):0.5)-0.5; coins.push({x:pf.x+pf.w*0.5+fx*spread, y:py-30, got:false}); }
         } else {
-          for(let cc=0;cc<wT;cc++) coins.push({x:j*TILE+TILE/2+cc*TILE, y:py-30, got:false});
+          // HH3 — one coin per still platform, not one per tile. The climb is still worth
+          // making (the coin, plus the stars and power-ups that only live up here), but the
+          // bulk of the level's coins now sit on the floor where a running kid meets them.
+          coins.push({x:j*TILE+wT*TILE/2, y:py-30, got:false});
         }
         if(rnd() < (lv.vineChance||0)){                           // more vines, sometimes a 2-vine chain to swing across
           swings.push(mkSwing(pf.x+pf.w*0.5, rnd));
@@ -263,13 +353,61 @@ function buildLevel(lv, idx){
         }
         if(tier===2 && stars.length<(lv.starCount||3) && rnd()<0.7) stars.push({x:j*TILE+TILE/2, y:py-36, got:false});
         else if(rnd()<0.35) powerups.push({x:j*TILE+TILE/2, y:py-36, kind:POOL[Math.floor(rnd()*POOL.length)], got:false});
-        if(rnd()<0.4) bounces.push({x:j*TILE+wT*TILE/2-32, y:py-14, w:64, t:0});
+        if(rnd()<0.4){ const bp={x:j*TILE+wT*TILE/2-32, y:py-14, w:64, t:0}; bounces.push(bp);
+          coinArc(coins, bp.x+32, bp.y-30, topV*0.45, JUMP*1.55, 3); }   // HH3 — a reward for riding the bounce up
         j += wT + 1 + Math.floor(rnd()*1);                        // tighter packing => more platforms
       }
+      // HH3 — a coin trail along the floor of the climb zone. Climb zones were pure
+      // platform reward before, so a kid who stays on the ground walked through them
+      // with nothing to collect. The platform coins are still the prize for climbing.
+      for(let g=i+1; g<segEnd-1; g++){ if(rnd()<0.5) coins.push({x:g*TILE+TILE/2, y:GROUND_Y-34-Math.floor(rnd()*16), got:false}); }
+      // HH3 BONK BLOCKS — one short row per climb zone. Climb zones are flat solid
+      // ground by construction, and the row is placed only where it overlaps no
+      // platform, so the ground path a kid (or the QA bot) walks is never blocked.
+      { const by=GROUND_Y-234, rowLen=3+Math.floor(rnd()*2);
+        for(let tries=0; tries<10; tries++){
+          const j0=i+2+Math.floor(rnd()*Math.max(1,(segEnd-i-4-rowLen)));
+          const x0=j0*TILE, x1=x0+rowLen*TILE;
+          if(j0+rowLen > segEnd-2) continue;
+          let clash=false;
+          for(const pf of platforms){ if(pf.y<GROUND_Y-140 && x1>pf.x-30 && x0<pf.x+pf.w+30){ clash=true; break; } }
+          if(clash) continue;
+          for(let b=0;b<rowLen;b++){
+            const q = (b%2===1);                       // plain, ?, plain, ? — the ends are always plain
+            blocks.push({ x:x0+b*TILE, y:by, w:TILE, h:34, kind:q?'q':'plain', used:false, hit:0,
+                          content: (q && rnd()<0.34) ? 'power' : 'coin',
+                          pu: POOL[Math.floor(rnd()*POOL.length)] });
+          }
+          break;
+        } }
       i=segEnd; mode="run";
     }
   }
   ground.push({x0:segStart, x1:n*TILE, y:GROUND_Y});
+  // HH3 — a continuous coin line along the walkable FLOOR, the whole way. The level used
+  // to reward climbing almost exclusively: a kid who ran along the ground passed under
+  // nearly every coin. This lays one on the running line every two tiles wherever the
+  // floor is solid and nothing dangerous is standing there, skipping any spot a coin
+  // already covers. The platform and arc coins stay exactly as they are, as the extra.
+  { const gAt=(x)=>{ for(const g of ground){ if(x>=g.x0 && x<g.x1) return g.y; } return null; };
+    // Everything the hero JUMPS puts him in the air for about 340px afterwards. A floor
+    // coin inside that span can never be reached, so the arc over the jump carries the
+    // reward there instead and the floor line steps around it.
+    const air=[];
+    // take-off is about 70px before the hazard and the landing about 275px after it,
+    // so this is the real window, not a guess with slack piled on
+    const AIR_BEFORE=80, AIR_AFTER=295;
+    for(const p of pitsFrom(ground)) air.push([p.x0-AIR_BEFORE, p.x0+AIR_AFTER]);
+    for(const o of obstacles) air.push([o.x-AIR_BEFORE, o.x+AIR_AFTER]);
+    for(const e of enemies)   air.push([e.x-AIR_BEFORE, e.x+AIR_AFTER]);
+    for(const pp of pipes)    air.push([pp.x-AIR_BEFORE, pp.x+pp.w+AIR_AFTER]);
+    const inAir=(x)=>air.some(a=>x>a[0] && x<a[1]);
+    for(let g=6; g<n-6; g+=1){ const x=g*TILE+TILE/2, y=GROUND_Y-34;
+      if(gAt(x)==null) continue;
+      if(inAir(x)) continue;
+      if(lowBars.some(b=>Math.abs(b.x-x)<52)) continue;
+      if(coins.some(k=>Math.abs(k.x-x)<46 && Math.abs(k.y-y)<44)) continue;
+      coins.push({x, y, got:false}); } }
   if(wantBoss){
     const bx=(n*TILE) - TILE*4;                              // arena just before the flag
     ground.push({x0:bx-TILE*2.5, x1:n*TILE, y:GROUND_Y});    // guarantee a solid, gap-free boss arena
@@ -285,7 +423,8 @@ function buildLevel(lv, idx){
   ground.unshift({x0:-3000, x1:0, y:GROUND_Y});
   ground.push({x0:n*TILE, x1:n*TILE+3000, y:GROUND_Y});
   const goalX=n*TILE - TILE*1.4;
-  return { ground, obstacles, enemies, coins, lowBars, decos, powerups, platforms, bounces, stars, swings, boss, barrierX, goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
+  return { ground, obstacles, enemies, coins, lowBars, decos, powerups, platforms, bounces, stars, swings, blocks, pipes,
+           boss, barrierX, goalX, poleX:goalX, worldEnd:n*TILE, name:lv.name, speed:lv.speed||RUN_BASE };
 }
 
 // --- scatter the world pieces across parallax layers (cosmetic; separate RNG so QA is unaffected) ---
@@ -315,12 +454,27 @@ function spawnSkidDust(wx,wy,dir){ for(let i=0;i<3;i++) dust.push({x:wx,y:wy,vx:
 // floating pop text ("+1", "NICE!") — the little reward that says a stomp landed
 function pop(wx,wy,txt,col){ pops.push({x:wx,y:wy,t:0,txt:txt,col:col||"#fff"}); if(pops.length>14) pops.shift(); }
 let shieldOn=false, magnetT=0, springT=0, starT=0;  // power-up effect timers
+let poleT=0;                                       // flag-pole finish: slide, fanfare, next level
 
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
   player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null,
           coyote:COYOTE_FRAMES, buf:0, skid:0, runPhase:0, idleT:0};
-  camX=0; camY=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; starsGot=0; totalStars=L.stars.length; dust=[]; pops=[]; doneMsgT=0; gameT=0;
+  camX=0; camY=0; invuln=0; state="play"; coinsGot=0;
+  // a ? block holding a coin counts toward the level's total, so the number on the HUD
+  // is every coin there is to find, not just the loose ones
+  totalCoins=L.coins.length + (L.blocks||[]).filter(b=>b.kind==='q' && b.content==='coin').length; starsGot=0; totalStars=L.stars.length; dust=[]; pops=[]; doneMsgT=0; gameT=0;
+  poleT=0;
+  // Replay has to hand the level back exactly as it was built. Nothing here used to be
+  // reset, so playing the same level twice showed an empty world — invisible while the
+  // only way back was a deliberate tap, obvious the moment the flag pole auto-advances.
+  for(const k of L.coins) k.got=false;
+  for(const st of L.stars) st.got=false;
+  if(L._puBase==null) L._puBase=L.powerups.length; else L.powerups.length=L._puBase;
+  for(const u of L.powerups) u.got=false;
+  for(const e of L.enemies){ e.dead=false; e.squash=0; e.x=e.base; e.dir=-1; }
+  for(const b of (L.blocks||[])){ b.used=false; b.hit=0; }
+  for(const bp of (L.bounces||[])) bp.t=0;
   if(L.boss){ L.boss.hp=L.boss.maxHp; L.boss.defeated=false; L.boss.t=0; L.boss.hit=0; L.boss.happy=0; L.boss.active=false; }
   for(const sw of (L.swings||[])){ sw.grabbed=false; }
   shieldOn=false; magnetT=0; springT=0; starT=0;
@@ -375,7 +529,10 @@ hold('dright',()=>inputRight=true,()=>inputRight=false);
 hold('djump', ()=>doJump(),       ()=>jumpHeld=false);
 hold('ddown', ()=>doSlide(),      null);
 // tap the world to continue after win / lose
-c.addEventListener('pointerdown',()=>{ if(state==="win"||state==="lose"){ hearts=3; startLevel(li); } });
+c.addEventListener('pointerdown',()=>{
+  if(state==="win"){ if(poleT>0){ poleT=0; startLevel(li<LEVELS.length-1?li+1:li); } else { hearts=3; startLevel(li); } }
+  else if(state==="lose"){ hearts=3; startLevel(li); }
+});
 // how-to overlay
 const howto=document.getElementById('howto');
 function startDemo(){ if(typeof hintEl!=='undefined'&&hintEl){hintEl.style.opacity='';hintGone=false;} demoMode=true; botMode=false; hearts=3; startLevel(0); started=false; paused=false; demoRestartT=0; howto.style.display='flex'; }  // start screen: idle hero + finger-swipe, NO auto-play
@@ -397,13 +554,12 @@ document.getElementById('bHelp').addEventListener('click',()=>{ startDemo(); });
 
 // --- where are the holes? Merged from the ground segments once per level, so the
 // pit art and the ground band can never disagree about where an edge is. ---
-function pitsOf(L){
-  if(L._pits) return L._pits;
-  const g=L.ground.slice().sort((a,b)=>a.x0-b.x0), out=[];
-  let end=g.length?g[0].x1:0;
+function pitsFrom(segs){
+  const g=segs.slice().sort((a,b)=>a.x0-b.x0), out=[]; let end=g.length?g[0].x1:0;
   for(let i=1;i<g.length;i++){ if(g[i].x0>end+1) out.push({x0:end, x1:g[i].x0}); end=Math.max(end,g[i].x1); }
-  L._pits=out; return out;
+  return out;
 }
+function pitsOf(L){ if(!L._pits) L._pits=pitsFrom(L.ground); return L._pits; }
 // --- helpers: is there solid ground under world-x? ---
 function groundUnder(wx){ for(const g of L.ground){ if(wx>=g.x0 && wx<g.x1) return g.y; } return null; }
 
@@ -418,6 +574,7 @@ function botThink(){
     if(L.boss && !L.boss.defeated){ const d=L.boss.x-(player.x+24); if(d>-20 && d<90*K){ doJump(); return; } }
     for(const b of L.lowBars){ const d=b.x-(player.x+24); if(d>2 && d<60*K){ if(player.slide<=0) doSlide(); return; } }
     if(groundUnder(player.x+24+46*K)==null){ doJump(); return; }   // gap just ahead
+    for(const pp of L.pipes){ const d=pp.x-(player.x+24); if(d>2 && d<64*K){ doJump(); return; } }
     for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>2 && d<66*K){ doJump(); return; } }
     for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>2 && d<58*K){ doJump(); return; } } }
   } else { jumpHeld=true; }
@@ -425,7 +582,17 @@ function botThink(){
 
 // --- update ---
 function update(){
-  if(state!=="play"){ doneMsgT++; return; }
+  if(state!=="play"){
+    doneMsgT++;
+    // HH3 — the flag pole runs itself: the hero slides down, there is a short fanfare,
+    // and then the next level starts. No tap needed. (One level today, so it repeats;
+    // HH4 brings the worlds that make this go somewhere new.)
+    if(state==="win" && poleT>0){
+      poleT++;
+      if(poleT>POLE_SLIDE+POLE_FANFARE){ poleT=0; startLevel(li<LEVELS.length-1?li+1:li); }
+    }
+    return;
+  }
   if(paused) return;
   if(botMode) botThink();
   if(!started) return;                       // wait for first input
@@ -483,6 +650,8 @@ function update(){
     if(player.vy>=0){
       const g=groundUnder(cx); if(g!=null && feet>=g) landY=g;
       for(const pf of L.platforms){ if(cx>=pf.x && cx<=pf.x+pf.w && prevFeet<=pf.y && feet>=pf.y){ if(landY==null||pf.y<landY){landY=pf.y; landPf=pf;} } }
+      for(const b of (L.blocks||[])){ if(cx>=b.x && cx<=b.x+b.w && prevFeet<=b.y && feet>=b.y){ if(landY==null||b.y<landY){landY=b.y; landPf=null;} } }
+      for(const pp of (L.pipes||[])){ const top=GROUND_Y-pp.h; if(cx>=pp.x && cx<=pp.x+pp.w && prevFeet<=top && feet>=top){ if(landY==null||top<landY){landY=top; landPf=null;} } }
       for(const bp of L.bounces){ if(cx>=bp.x && cx<=bp.x+bp.w && prevFeet<=bp.y && feet>=bp.y){ bounce=true; bp.t=10; } }
     }
     const wasOnGround=player.onGround;
@@ -493,6 +662,33 @@ function update(){
     if(!player.onGround && player.coyote>0) player.coyote--;
     // a jump pressed just before landing fires the moment there is something to push off
     if(player.buf>0){ player.buf--; if(player.onGround||player.coyote>0){ if(tryJump()) player.buf=0; } }
+  }
+  // HH3 BONK BLOCKS — hit from below. A ? block pops a coin or a power-up; a plain block
+  // just thumps and nudges the hero back down. Blocks only ever sit over solid ground, so
+  // bonking one can never drop a kid somewhere they cannot get out of.
+  for(const b of (L.blocks||[])){
+    if(b.hit>0) b.hit--;
+    if(player.vy>=0) continue;
+    const cx=player.x+24, head=player.y, prevHead=head-player.vy, bot=b.y+b.h;
+    if(cx>b.x-14 && cx<b.x+b.w+14 && prevHead>=bot && head<=bot){
+      player.y=bot; player.vy=1.4; b.hit=12; spawnDust(cx, bot+6);
+      if(b.kind==='q' && !b.used){
+        b.used=true;
+        if(b.content==='power'){ L.powerups.push({x:b.x+b.w/2, y:b.y-28, kind:b.pu, got:false}); SFX.power(); pop(b.x+b.w/2, b.y-34, "POW!", "#ffe27a"); }
+        else { coinsGot++; SFX.coin(); pop(b.x+b.w/2, b.y-34, "+1", "#ffd23f");
+               for(let d=0;d<7;d++) dust.push({x:b.x+b.w/2, y:b.y-6, vx:(Math.random()-0.5)*3.4, vy:-2-Math.random()*2.4, life:18+Math.random()*10, gold:true}); }
+      } else SFX.land();
+    }
+  }
+  // HH3 PIPES — solid props. You stand on them (handled with the platforms above) and you
+  // cannot walk through them, so they read as the wall a pipe should be.
+  for(const pp of (L.pipes||[])){
+    const top=GROUND_Y-pp.h, cx=player.x+24;
+    if(player.y+60 <= top+4) continue;                      // standing on it, or clear above it
+    if(cx>pp.x-22 && cx<pp.x+pp.w+22){
+      if(cx < pp.x+pp.w*0.5){ player.x=pp.x-46; if(player.vx>0)player.vx=0; }
+      else { player.x=pp.x+pp.w-2; if(player.vx<0)player.vx=0; }
+    }
   }
   player.r = player.onGround?0:Math.max(-0.5,Math.min(0.5,player.vy*0.03));
   // fell in a gap
@@ -540,7 +736,7 @@ function update(){
   // magic barrier holds you back until the boss is happy
   if(L.boss && !L.boss.defeated && (player.x+24) > L.barrierX){ player.x=L.barrierX-24; if(player.vx>0)player.vx=0; }
   // reach goal
-  if(player.x>=L.goalX){ state="win"; SFX.win(); try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){} }
+  if(player.x>=L.goalX){ state="win"; poleT=1; player.vx=0; player.vy=0; player.x=L.goalX-20; player.y=GROUND_Y-190; SFX.win(); try{window.parent.postMessage({source:"buildable",kind:"win"},"*")}catch(e){} }
 }
 function takeHit(){ if(starT>0) return; if(shieldOn){ shieldOn=false; invuln=70; return; } loseHeart(false); }
 function loseHeart(fell){
@@ -654,6 +850,30 @@ function draw(){
     ctx.fillStyle="rgba(0,0,0,.10)";                         // pebbles, on a fixed world grid so they never crawl
     for(let px=Math.floor((g.x0)/70)*70; px<g.x1; px+=70){ const sxp=px-camX; if(sxp<-20||sxp>W+20)continue;
       const j=(px*0.013)%1; ctx.beginPath(); ctx.ellipse(sxp+j*40, g.y+34+j*44, 7, 4, 0,0,7); ctx.fill(); } }
+  // HH3 PIPES — the stand-on marker at the mouth of every run zone: safe ground here,
+  // something to jump just after. Deep teal with a dark rim so it can never be mistaken
+  // for the grass or a bush.
+  for(const pp of (L.pipes||[])){ const x=pp.x-camX; if(x+pp.w<-40||x>W+40)continue; const top=GROUND_Y-pp.h;
+    ctx.fillStyle="rgba(0,0,0,.16)"; ctx.beginPath(); ctx.ellipse(x+pp.w/2,GROUND_Y+4,pp.w*0.56,7,0,0,7); ctx.fill();
+    ctx.fillStyle="#1d6b52"; ctx.fillRect(x+5, top+16, pp.w-10, pp.h-16);                 // body
+    ctx.fillStyle="#2f9e77"; ctx.fillRect(x+9, top+16, pp.w-24, pp.h-16);
+    ctx.fillStyle="rgba(255,255,255,.30)"; ctx.fillRect(x+13, top+18, 8, pp.h-22);        // highlight down one side
+    ctx.fillStyle="#1d6b52"; rrect(x, top, pp.w, 20, 6); ctx.fill();                      // rim
+    ctx.fillStyle="#37b085"; rrect(x+3, top+2, pp.w-6, 13, 5); ctx.fill();
+    ctx.fillStyle="rgba(0,0,0,.30)"; rrect(x+8, top+4, pp.w-16, 7, 4); ctx.fill();        // the dark mouth
+  }
+  // HH3 BONK BLOCKS — hit one from below. A ? block gives something up; a plain one thumps.
+  for(const b of (L.blocks||[])){ const x=b.x-camX; if(x+b.w<-40||x>W+40)continue;
+    const bump = b.hit>0 ? -Math.sin((b.hit/12)*Math.PI)*9 : 0, y=b.y+bump;
+    const spent = b.kind!=='q' || b.used;
+    ctx.fillStyle="rgba(0,0,0,.18)"; rrect(x+2,y+4,b.w,b.h,7); ctx.fill();
+    ctx.fillStyle = spent ? "#8a6a45" : "#e0a520"; rrect(x,y,b.w,b.h,7); ctx.fill();
+    ctx.fillStyle = spent ? "#a98457" : "#ffc93c"; rrect(x+3,y+3,b.w-6,b.h-7,5); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.30)"; ctx.fillRect(x+6,y+5,b.w-12,3);
+    ctx.fillStyle = spent ? "rgba(60,42,24,.55)" : "#7a5310";
+    if(spent){ for(const dx of [10, b.w-10]) for(const dy of [9, b.h-9]){ ctx.beginPath(); ctx.arc(x+dx, y+dy, 2.6, 0, 7); ctx.fill(); } }
+    else { ctx.font="bold 24px Fredoka,sans-serif"; ctx.textAlign="center"; ctx.fillText("?", x+b.w/2, y+b.h-9); ctx.textAlign="left"; }
+  }
   // climbable platforms
   // HH2: platforms are grass-topped BLOCKS with a body you can see, not thin sticks —
   // so at a glance a kid can tell a thing they can stand on from a thing in the background.
@@ -743,7 +963,27 @@ function draw(){
   } }
   if(L.boss && !L.boss.defeated){ const bxs=L.barrierX-camX; if(bxs>-20&&bxs<W+20){ ctx.fillStyle="rgba(150,200,255,"+(0.10+0.05*Math.sin(t*4)).toFixed(3)+")"; ctx.fillRect(bxs-3,0,6,GROUND_Y+10); } }
   // goal flag
-  const fx=L.goalX-camX; if(fx<W+80 && fx>-90){ const im=propImg("flag"); if(im){ const h=150, w=h*(im.naturalWidth/im.naturalHeight); ctx.drawImage(im, fx-w*0.16, GROUND_Y-h, w, h); } else { ctx.strokeStyle="#6a4a2a";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(fx,GROUND_Y);ctx.lineTo(fx,GROUND_Y-120);ctx.stroke(); ctx.fillStyle=P.flag; ctx.beginPath();ctx.moveTo(fx,GROUND_Y-120);ctx.lineTo(fx+52,GROUND_Y-104);ctx.lineTo(fx,GROUND_Y-86);ctx.closePath();ctx.fill(); } }
+  // HH3 FLAG POLE — the finish is a pole you touch and slide down, and the flag rides
+  // down with you before the next level starts.
+  { const fx=L.goalX-camX;
+    if(fx<W+110 && fx>-110){
+      const POLE_H=210, top=GROUND_Y-POLE_H;
+      const slide = poleT>0 ? Math.min(1, poleT/POLE_SLIDE) : 0;
+      const flagY = top+18 + slide*(POLE_H-72);
+      ctx.fillStyle="rgba(0,0,0,.16)"; ctx.beginPath(); ctx.ellipse(fx,GROUND_Y+4,26,7,0,0,7); ctx.fill();
+      ctx.fillStyle="#4a3a26"; rrect(fx-18,GROUND_Y-16,36,18,5); ctx.fill();              // the plinth
+      ctx.fillStyle="#8a6a45"; rrect(fx-4,top,8,POLE_H,4); ctx.fill();                    // the pole
+      ctx.fillStyle="rgba(255,255,255,.30)"; ctx.fillRect(fx-2,top+4,2.5,POLE_H-10);
+      ctx.fillStyle=P.flag; ctx.beginPath(); ctx.arc(fx,top,11,0,7); ctx.fill();          // the ball on top
+      ctx.fillStyle="#fff3b0"; ctx.beginPath(); ctx.arc(fx-3,top-3,4,0,7); ctx.fill();
+      ctx.fillStyle=P.flag;                                                               // the flag itself
+      ctx.beginPath(); ctx.moveTo(fx+3,flagY); ctx.lineTo(fx+58,flagY+15); ctx.lineTo(fx+3,flagY+30); ctx.closePath(); ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.35)"; ctx.beginPath(); ctx.moveTo(fx+3,flagY); ctx.lineTo(fx+34,flagY+8); ctx.lineTo(fx+3,flagY+13); ctx.closePath(); ctx.fill();
+      if(poleT>0 && poleT<=POLE_SLIDE){                                                   // sparkles on the way down
+        for(let i=0;i<4;i++){ const a=t*5+i*1.6; ctx.fillStyle="rgba(255,232,130,.8)";
+          ctx.beginPath(); ctx.arc(fx+Math.cos(a)*(16+4*Math.sin(t*3+i)), flagY+18+Math.sin(a)*13, 2.6,0,7); ctx.fill(); }
+      }
+    } }
   // LAYER 6 — HH2: the canopy and the foreground ferns are a FRAME, not a curtain.
   // They are pinned to the screen edges (never the middle, where the hero plays), they
   // are drawn BEFORE the hero so he is always on top of scenery, and they are pinned to
@@ -761,7 +1001,9 @@ function draw(){
     ctx.restore();
   }
   // landing dust
-  for(const d of dust){ const x=d.x-camX; ctx.fillStyle="rgba(170,150,110,"+Math.min(0.6,d.life/26).toFixed(2)+")"; ctx.beginPath();ctx.arc(x,d.y,3,0,7);ctx.fill(); }
+  for(const d of dust){ const x=d.x-camX; const a=Math.min(0.75,d.life/26).toFixed(2);
+    ctx.fillStyle = d.gold ? "rgba(255,214,90,"+a+")" : "rgba(170,150,110,"+a+")";
+    ctx.beginPath();ctx.arc(x,d.y,d.gold?3.6:3,0,7);ctx.fill(); }
   // hero — HH1 animation. api/story-library can only make FACE/MOOD variants of a
   // character (happy, excited, scared...), never a run or jump pose, so the poses are
   // built by moving the one watercolor cutout we have: idle breathe, a two-beat run
@@ -769,11 +1011,14 @@ function draw(){
   // down, the existing land squash, and a lean-back turn-around when skidding.
   // If the image never loads, the drawn fallback body gets the identical treatment,
   // so there is never a broken image and never a frozen hero.
-  const hx=player.x-camX, hy=player.y;
-  const sliding=player.slide>0;
+  const onPole = (state==="win" && poleT>0);
+  const hx = onPole ? (L.goalX-camX-20) : (player.x-camX);
+  const hy = onPole ? (GROUND_Y-190 + Math.min(1,poleT/POLE_SLIDE)*130) : player.y;
+  const sliding=player.slide>0 && !onPole;
   let scx=1, scy=1, lean=0, bob=0;
   const running = player.onGround && Math.abs(player.vx)>0.5;
-  if(sliding){ /* slide keeps its own flat pose below */ }
+  if(onPole){ lean=0.10; scx=0.94; scy=1.06; }        // clinging to the pole, riding it down
+  else if(sliding){ /* slide keeps its own flat pose below */ }
   else if(player.skid>0){                         // turn-around: lean AWAY from where you were going
     lean = -0.30*(player.face||1); scx=1.10; scy=0.94; bob=1;
   } else if(player.land>0){ const k=player.land/8; scy=1-0.26*k; scx=1+0.26*k; }
@@ -792,7 +1037,8 @@ function draw(){
     const br=Math.sin(player.idleT*0.07);
     scy = 1 + br*0.022; scx = 1 - br*0.022; bob = br*0.8;
   }
-  ctx.save(); ctx.translate(hx+24, hy+64+bob); ctx.scale(scx*(player.face||1),scy); ctx.rotate(sliding?0:(player.r*0.6 + lean*(player.face||1)));
+  const fdir = onPole ? 1 : (player.face||1);
+  ctx.save(); ctx.translate(hx+24, hy+64+bob); ctx.scale(scx*fdir,scy); ctx.rotate(sliding?0:((onPole?0:player.r*0.6) + lean*fdir));
   if(hero.complete && hero.naturalWidth){ if(sliding) ctx.drawImage(hero,-34,-40,68,40); else ctx.drawImage(hero,-30,-68,60,68); }
   else { ctx.fillStyle="#e8915a"; rrect(-22, sliding?-34:-60, 44, sliding?32:56, 16); ctx.fill();
          ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(6,sliding?-22:-44,5,0,7); ctx.fill();
@@ -821,7 +1067,9 @@ function draw(){
   // music track name toast (shown briefly when the song is changed)
   if(musicToast>0){ musicToast--; const nm=Music.current(); ctx.save(); ctx.font="bold 16px Fredoka,sans-serif"; ctx.textAlign="center"; const tw=ctx.measureText(nm).width+50, x=W/2, y=Math.round(VH*0.16)+20; ctx.globalAlpha=Math.max(0,Math.min(1,musicToast/30)); ctx.fillStyle="rgba(20,30,50,.74)"; rrect(x-tw/2,y-16,tw,30,15); ctx.fill(); ctx.fillStyle="#ffd23f"; ctx.beginPath(); ctx.arc(x-tw/2+18,y+4,3.4,0,7); ctx.fill(); ctx.fillRect(x-tw/2+20.4,y-8,2,12); ctx.fillStyle="#fff"; ctx.fillText(nm, x+8, y+5); ctx.restore(); }
   // banners
-  if(state==="win"){ banner(li<LEVELS.length-1?"Level Complete!":"You Win!", "You found "+starsGot+"/"+totalStars+" stars  \u00b7  Tap to play again"); }
+  if(state==="win" && (poleT===0 || poleT>POLE_SLIDE)){
+    banner("Level Complete!", "You found "+starsGot+"/"+totalStars+" stars  \u00b7  "+coinsGot+" coins");
+  }
   if(state==="lose"){ banner("Try Again!","Tap to restart this level"); }
 }
 function t2(){return Date.now()/1000;}
@@ -864,8 +1112,30 @@ window.BK_GAME = { startLevel:(i)=>startLevel(i), setBot:(b)=>{demoMode=false;bo
   dbg:()=>({px:Math.round(player.x), goal:Math.round(L.goalX), started, runV:player.runV, hp:hearts, onG:player.onGround, vy:Math.round(player.vy), state}),
   // QA harness: run a "perfect player" headlessly (no rAF) through a level.
   frameStep:(n)=>{ demoMode=false; paused=false; for(let i=0;i<(n||1);i++){ update(); draw(); } },
+  // --- test seam for qa-hopheroes.mjs: drive the hero one frame at a time, read the
+  // internals, and re-fit the view, all without a browser. Nothing here is used by the
+  // game itself. ---
+  test:{
+    boot:(i)=>{ demoMode=false; paused=false; botMode=false; hearts=3; startLevel(i||0); started=true; inputLeft=false; inputRight=false; jumpHeld=false; },
+    step:(n)=>{ for(let k=0;k<(n||1);k++) update(); },
+    paint:()=>draw(),
+    jump:()=>doJump(),
+    slide:()=>doSlide(),
+    groundAt:(x)=>groundUnder(x),
+    view:(vw,vh)=>{ if(vw&&vh){ W=Math.round(Math.max(560,Math.min(1600,H*(vw/vh)))); VH=Math.max(H,Math.round(W*vh/vw)); } return {W,VH}; },
+    set:(o)=>{ o=o||{};
+      if('x' in o)player.x=o.x; if('y' in o)player.y=o.y; if('vx' in o)player.vx=o.vx; if('vy' in o)player.vy=o.vy;
+      if('onGround' in o)player.onGround=o.onGround; if('left' in o)inputLeft=!!o.left; if('right' in o)inputRight=!!o.right;
+      if('hold' in o)jumpHeld=!!o.hold; },
+    get:()=>({ x:player.x, y:player.y, vx:player.vx, vy:player.vy, onGround:player.onGround, coyote:player.coyote,
+               buf:player.buf, skid:player.skid, dj:player.dj, camX, camY, W, VH, skyPad:skyPad(), state, poleT,
+               coinsGot, totalCoins, starsGot, hearts }),
+    level:()=>L,
+    pits:()=>pitsOf(L),
+    consts:()=>({ TOP_MULT, COYOTE_FRAMES, BUFFER_FRAMES, GROUND_Y, H, TILE, JUMP, GRAV, RUN_BASE }),
+  },
   sim:(idx, maxFrames)=>{ demoMode=false; hearts=3; startLevel(idx); paused=false; botMode=true; started=true; inputLeft=false; inputRight=false; let f=0; const cap=maxFrames||8000;
-    while(state==="play" && f<cap){ update(); f++; } botMode=false; inputLeft=false; inputRight=false; return { level:idx, result:state, frames:f, coins:coinsGot+"/"+totalCoins }; } };
+    while(state==="play" && f<cap){ update(); f++; } botMode=false; inputLeft=false; inputRight=false; return { level:idx, result:state, frames:f, coins:coinsGot+"/"+totalCoins, hearts }; } };
 </script>
 </body>
 </html>
