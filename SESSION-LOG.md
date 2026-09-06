@@ -1,3 +1,48 @@
+## 2026-09-06 — CB2: safe outputs (sheets, recipes, rules, robot gate)
+
+**Shipped.** Four cobuild sheets (`public/breaker|sling|castleguard|skyflyer/cobuild.json`),
+strict mode in the shared manifest validator, the recipe book
+(`public/buildable-recipes.js`, 18 recipes), the rules vocabulary in
+`public/buildable-mechanics.js` (`BM.rules`), the shared build-gate robot
+(`qa/kid-game-robot.mjs`), its endpoint (`api/kid-game-check.js`) plus
+`api/_cobuild.js`, the gate wired into save and fork in `api/kid-game.js`,
+Sling Squad and Sky Flyer firing rule events for real, `qa-recipes.mjs` and
+`qa-rules.mjs`, `MECHANICS.md` re-aimed around the recipe book, and routes in
+`vercel.json` for the five new public files. `node qa-all.mjs` green, 48 harnesses.
+
+**The proof I insisted on.** A sheet that describes a wish rather than the engine is
+worse than no sheet, so every one of our four shipped manifests is validated against
+its OWN sheet in strict mode and passes — the sheets were corrected until they did
+(Sling really has 20 buildings, Castle Guard really does name a boss, Sky Flyer
+really does carry its loadout words and per-world jobs). The same test runs over
+every recipe on every engine it claims, and each result has to still pass strict
+validation AND still beat the robot. Sling's events are proved by PLAYING a level
+with rules in it and catching the sound the rule made, not by grepping the source.
+
+**Calls I made for you.**
+1. **Sky Flyer is checked, not flown.** Its flight needs a real browser and WebGL
+   (that is why `qa-skyflyer.mjs` needs jsdom), and a kid's save cannot wait on
+   that. So the robot checks its worlds structurally — a world asking for more
+   landings than it has pads, or for more coins than a world holds, is refused —
+   and the verdict says "checked, not flown" instead of claiming a play-through it
+   never did. Flying it for real on save would need a browser in the save path,
+   which is a bigger change than this card.
+2. **The too-long line is generous on purpose.** Our own Breaker levels take the
+   bot up to about five minutes and Castle Guard's finale about three, because the
+   bot plays imperfectly. The line sits at seven minutes, so it catches a runaway
+   level without second-guessing games we already ship.
+3. **No database change.** CB1 already created the `robot` column, and the verdict
+   is exactly what it was for, so nothing new was applied to Supabase this session.
+4. **Strict mode is on for every kid game, including edits.** A game saved under
+   CB1 that used a field no sheet names will be refused when it is next saved, with
+   the field named in plain words. That is the point of the fence, and the four
+   sheets were widened to cover everything our own games really use, so nothing
+   ordinary is caught by it.
+5. **The robot falling over never loses a kid's work.** If the sandbox itself
+   errors, the save goes through and the row says honestly that it was not
+   play-tested. A refusal only ever comes from a level the robot really could not
+   finish.
+
 ## 2026-09-06 — CB1: kid-made games (Cobuild)
 
 **Shipped.** `kid_games` table (migration written to `db/create-kid-games.sql` AND

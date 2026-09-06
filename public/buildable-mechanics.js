@@ -212,6 +212,140 @@
     if (o.W && o.H) BM.drawFlash(ctx, fx, o.W, o.H);
   };
 
+
+  // ==========================================================================
+  //  RULES VOCABULARY v0 — LAYER TWO (Session CB2).
+  // ==========================================================================
+  //  Layer one is the manifest: art, dials, levels. It cannot say "when you grab
+  //  a coin, say something". Layer two is a tiny vocabulary an engine opts into:
+  //
+  //      manifest.rules = [ { when:"onCollect", do:"sayLine", params:{ text:"Yum!" } } ]
+  //
+  //  EVENTS are things an engine already knows happen. ACTIONS are things the
+  //  shared runtime can do about it. Both lists are SHORT on purpose: a kid's game
+  //  is built by an AI, and a small closed vocabulary is what makes the result
+  //  predictable. Anything outside these two lists is rejected by the strict
+  //  validator in buildable-manifest.js, using the engine's cobuild sheet — the
+  //  sheet says which of these an engine REALLY fires, so a rule is never quietly
+  //  ignored.
+  //
+  //  An engine adopts this in two lines: build a runtime once, then fire events
+  //  where they already happen.
+  //
+  //      var RULES = BM.rules.make(manifest, { sayLine:toast, playSound:sfx });
+  //      RULES.fire("onCollect", { x:px, y:py });      // where a coin is scooped
+  //      RULES.tick(dt);                                // once a frame, for everyNSeconds
+  //
+  //  The host is optional: with no host, sayLine and showText become floating pop
+  //  text through the fx bag, playSound goes to BuildableAudio if it is loaded, and
+  //  everything else is a no-op. Nothing here throws, ever — a bad rule must never
+  //  be able to break a kid's game mid-play.
+  //  Pure + headless-safe, so the QA robot fires the same rules the browser does.
+  BM.RULE_EVENTS  = ["onLand", "onCollect", "onHit", "everyNSeconds", "onLevelStart", "onWin"];
+  BM.RULE_ACTIONS = ["playSound", "sayLine", "spawn", "speedUp", "slowDown", "addPoints", "loseItem", "showText"];
+
+  var RULE_LIMIT = 20;
+  // The fx helpers clamp dt hard (0.05s) because a particle must never jump. A
+  // rule timer is counting real seconds, so it uses its own, gentler clamp.
+  function ruleSec(dt){ return (typeof dt==="number" && dt>0) ? Math.min(dt, 0.25) : 1/60; }
+
+  function ruleErrors(rules, allowed) {
+    var errors = [];
+    if (rules == null) return errors;
+    if (!Array.isArray(rules)) return ["'rules' must be a list"];
+    if (rules.length > RULE_LIMIT) errors.push("'rules' has " + rules.length + " rules (max " + RULE_LIMIT + ")");
+    var evs = (allowed && allowed.events) || BM.RULE_EVENTS;
+    var acts = (allowed && allowed.actions) || BM.RULE_ACTIONS;
+    rules.forEach(function (r, i) {
+      var at = "rules[" + i + "]";
+      if (!r || typeof r !== "object" || Array.isArray(r)) { errors.push(at + " is not a rule"); return; }
+      if (evs.indexOf(r.when) === -1) errors.push(at + " does not know the moment '" + r.when + "'");
+      if (acts.indexOf(r["do"]) === -1) errors.push(at + " does not know how to '" + r["do"] + "'");
+      if (r.params != null && (typeof r.params !== "object" || Array.isArray(r.params))) errors.push(at + " 'params' must be an object");
+      if (r.when === "everyNSeconds") {
+        var n = r.params && r.params.seconds;
+        if (typeof n !== "number" || n < 1 || n > 120) errors.push(at + " everyNSeconds needs params.seconds between 1 and 120");
+      }
+    });
+    return errors;
+  }
+
+  BM.rules = {
+    events: BM.RULE_EVENTS,
+    actions: BM.RULE_ACTIONS,
+    limit: RULE_LIMIT,
+    // { ok, errors } — `allowed` is the engine's cobuild sheet `rules` block when
+    // there is one, so an engine is only held to the moments it really fires.
+    validate: function (rules, allowed) { var e = ruleErrors(rules, allowed); return { ok: e.length === 0, errors: e }; },
+
+    // The runtime. `host` is whatever the engine can really do; anything it does
+    // not provide falls back to something safe and visible, or to nothing.
+    make: function (manifest, host) {
+      host = host || {};
+      var all = (manifest && Array.isArray(manifest.rules)) ? manifest.rules.slice(0, RULE_LIMIT) : [];
+      var byEvent = {};
+      all.forEach(function (r) {
+        if (!r || typeof r !== "object") return;
+        if (BM.RULE_EVENTS.indexOf(r.when) === -1) return;      // unknown moment: never runs
+        if (BM.RULE_ACTIONS.indexOf(r["do"]) === -1) return;    // unknown action: never runs
+        (byEvent[r.when] = byEvent[r.when] || []).push(r);
+      });
+      var timers = (byEvent.everyNSeconds || []).map(function (r) {
+        return { rule: r, every: Math.max(1, Math.min(120, (r.params && r.params.seconds) || 10)), left: Math.max(1, Math.min(120, (r.params && r.params.seconds) || 10)) };
+      });
+
+      function say(text, ctx) {
+        if (typeof host.sayLine === "function") return host.sayLine(text, ctx);
+        if (host.fx) BM.pop(host.fx.pops, (ctx && ctx.x) || 0, (ctx && ctx.y) || 0, text, "#ffe680");
+      }
+      function run(r, ctx) {
+        var p = r.params || {};
+        switch (r["do"]) {
+          case "playSound":
+            if (typeof host.playSound === "function") host.playSound(String(p.sound || p.name || "select"), ctx);
+            else if (g.BuildableAudio && g.BuildableAudio.sfx) g.BuildableAudio.sfx(String(p.sound || p.name || "select"));
+            break;
+          case "sayLine":  say(String(p.text || ""), ctx); break;
+          case "showText":
+            if (typeof host.showText === "function") host.showText(String(p.text || ""), ctx);
+            else say(String(p.text || ""), ctx);
+            break;
+          case "spawn":     if (typeof host.spawn === "function") host.spawn(String(p.what || ""), ctx); break;
+          case "speedUp":   if (typeof host.speedUp === "function") host.speedUp(+p.by || 1.1, ctx); break;
+          case "slowDown":  if (typeof host.slowDown === "function") host.slowDown(+p.by || 0.9, ctx); break;
+          case "addPoints": if (typeof host.addPoints === "function") host.addPoints(parseInt(p.points, 10) || 1, ctx); break;
+          case "loseItem":  if (typeof host.loseItem === "function") host.loseItem(String(p.what || ""), ctx); break;
+        }
+      }
+      var API = {
+        count: all.length,
+        has: function (ev) { return !!(byEvent[ev] && byEvent[ev].length); },
+        // Fire one moment. Never throws: a broken rule must not break the game.
+        fire: function (ev, ctx) {
+          var list = byEvent[ev];
+          if (!list || !list.length) return 0;
+          var n = 0;
+          // Count the rule as fired BEFORE running it: a rule whose action throws must
+          // still be reported, and must never take the game down with it.
+          for (var i = 0; i < list.length; i++) { n++; try { run(list[i], ctx || {}); } catch (e) {} }
+          return n;
+        },
+        // Once a frame (seconds, like the rest of this file), for everyNSeconds.
+        tick: function (dt, ctx) {
+          if (!timers.length) return 0;
+          var s = ruleSec(dt), n = 0;
+          for (var i = 0; i < timers.length; i++) {
+            timers[i].left -= s;
+            if (timers[i].left <= 0) { timers[i].left = timers[i].every; n++; try { run(timers[i].rule, ctx || {}); } catch (e) {} }
+          }
+          return n;
+        },
+        reset: function () { for (var i = 0; i < timers.length; i++) timers[i].left = timers[i].every; }
+      };
+      return API;
+    }
+  };
+
   function _cull(arr) {
     let w = 0;
     for (let i = 0; i < arr.length; i++) if (arr[i].life > 0) arr[w++] = arr[i];

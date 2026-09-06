@@ -708,12 +708,135 @@
     return breakerResolveAsset(id);
   }
 
+
+  // ===========================================================================
+  //  STRICT MODE — the COBUILD SHEET is the fence (Session CB2).
+  // ===========================================================================
+  //  A kid's game is built by an AI, so "valid" is not enough: the manifest must
+  //  also stay inside what THIS engine can actually do. Every Cobuild engine ships
+  //  a sheet at public/<engine>/cobuild.json listing its art slots, its dials with
+  //  their range, the shape a level may take, the feel presets, the rules
+  //  vocabulary it really fires, and a plain list of what it can NEVER do.
+  //
+  //  validate(m, { strict:true, sheet:sheetJson }) rejects ANY field, slot or
+  //  value the sheet does not name. Without the flag validate() behaves exactly as
+  //  it always has, so nothing we already ship changes.
+  //
+  //  Pure + headless-safe: the sheet is passed IN (this file never fetches), so the
+  //  browser, the server (api/kid-game.js) and the QA robots all run the same code.
+  // ---------------------------------------------------------------------------
+  function readPath(o, path){
+    var parts = String(path||"").split("."), cur = o, i;
+    for(i=0;i<parts.length;i++){ if(cur==null || typeof cur!=="object") return undefined; cur = cur[parts[i]]; }
+    return cur;
+  }
+  function inList(list, v){ for(var i=0;i<list.length;i++) if(list[i]===v) return true; return false; }
+
+  // One dial's value, wherever it lives. "levels[].difficulty" is checked on every
+  // level; anything else is a plain dotted path on the manifest.
+  function checkDial(m, dial, errors){
+    var key = String(dial.key||""), pre = "levels[].";
+    var spots = [];
+    if(key.indexOf(pre)===0){
+      var sub = key.slice(pre.length);
+      (Array.isArray(m.levels)?m.levels:[]).forEach(function(lv,i){ spots.push({ at:"levels["+i+"] "+sub, v:readPath(lv, sub) }); });
+    } else spots.push({ at:key, v:readPath(m, key) });
+    spots.forEach(function(s){
+      if(s.v==null) return;                                  // not set is always fine; the default applies
+      if(dial.type==="boolean"){ if(typeof s.v!=="boolean") errors.push(s.at+" must be yes or no (got "+JSON.stringify(s.v)+")"); return; }
+      if(typeof s.v!=="number" || !isFinite(s.v)){ errors.push(s.at+" must be a number (got "+JSON.stringify(s.v)+")"); return; }
+      if(dial.step===1 && (s.v|0)!==s.v) errors.push(s.at+" must be a whole number (got "+s.v+")");
+      if(dial.min!=null && s.v<dial.min) errors.push(s.at+" is "+s.v+", lower than "+dial.min+" — "+(dial.label||key));
+      if(dial.max!=null && s.v>dial.max) errors.push(s.at+" is "+s.v+", higher than "+dial.max+" — "+(dial.label||key));
+    });
+  }
+
+  // rules:[{when,do,params}] — layer two. The SHEET says which events this engine
+  // really fires and which actions it can really run, so a rule the engine would
+  // silently ignore is an error rather than a disappointment.
+  function checkRules(rules, sheet, errors){
+    if(rules==null) return;
+    if(!Array.isArray(rules)){ errors.push("'rules' must be a list"); return; }
+    if(rules.length>20){ errors.push("'rules' has "+rules.length+" rules (max 20)"); return; }
+    var vocab = sheet.rules || {}, evs = vocab.events||[], acts = vocab.actions||[];
+    rules.forEach(function(r,i){
+      var at = "rules["+i+"]";
+      if(!r || typeof r!=="object" || Array.isArray(r)){ errors.push(at+" is not a rule"); return; }
+      if(!inList(evs, r.when)) errors.push(at+" '"+r.when+"' is not something "+(sheet.label||sheet.engine)+" can tell you about (it knows "+evs.join(", ")+")");
+      if(!inList(acts, r["do"])) errors.push(at+" '"+r["do"]+"' is not something "+(sheet.label||sheet.engine)+" can do (it can "+acts.join(", ")+")");
+      if(r.params!=null && (typeof r.params!=="object" || Array.isArray(r.params))) errors.push(at+" 'params' must be an object");
+      if(r.when==="everyNSeconds"){
+        var n = r.params && r.params.seconds;
+        if(typeof n!=="number" || n<1 || n>120) errors.push(at+" everyNSeconds needs params.seconds between 1 and 120");
+      }
+      Object.keys(r).forEach(function(k){ if(k!=="when" && k!=="do" && k!=="params") errors.push(at+" has a field nothing reads: '"+k+"'"); });
+    });
+  }
+
+  function strictCheck(m, sheet, errors){
+    if(!sheet || typeof sheet!=="object"){ errors.push("strict mode needs the engine's cobuild sheet, and none was given"); return; }
+    var man = sheet.manifest || {}, L = sheet.level || {}, who = sheet.label || sheet.engine || "this engine";
+
+    var okKeys = {}; (man.keys||[]).forEach(function(k){ okKeys[k]=1; });
+    Object.keys(m).forEach(function(k){ if(!okKeys[k]) errors.push("'"+k+"' is not a field "+who+" reads"); });
+    (man.required||[]).forEach(function(k){ if(m[k]==null) errors.push("missing '"+k+"'"); });
+    var fixed = man.fixed || {};
+    Object.keys(fixed).forEach(function(k){ if(m[k]!==fixed[k]) errors.push("'"+k+"' must be "+JSON.stringify(fixed[k])+" for "+who+" (got "+JSON.stringify(m[k])+")"); });
+
+    if(m.feel!=null){
+      if(typeof m.feel!=="object" || Array.isArray(m.feel)) errors.push("'feel' must be an object");
+      else Object.keys(m.feel).forEach(function(k){
+        var allowed = (sheet.feel||{})[k];
+        if(!allowed) errors.push("feel."+k+" is not a feel "+who+" has");
+        else if(!inList(allowed, m.feel[k])) errors.push("feel."+k+" must be one of "+allowed.join("/")+" (got "+JSON.stringify(m.feel[k])+")");
+      });
+    }
+
+    var lv = Array.isArray(m.levels) ? m.levels : [];
+    if(L.max!=null && lv.length>L.max) errors.push(who+" can have at most "+L.max+" levels (got "+lv.length+")");
+    if(L.min!=null && lv.length<L.min) errors.push(who+" needs at least "+L.min+" level");
+
+    var lvKeys = {}; (L.keys||[]).forEach(function(k){ lvKeys[k]=1; });
+    var geo = L.geometry || {}, partSpec = L.parts || {};
+    var partKeys = {}; (partSpec.keys||[]).forEach(function(k){ partKeys[k]=1; });
+    var partRe = partSpec.pattern ? new RegExp(partSpec.pattern) : null;
+    var layouts = geo.layouts ? (Array.isArray(geo.layouts) ? geo.layouts : Object.keys(geo.layouts)) : null;
+
+    lv.forEach(function(x,i){
+      var at = "levels["+i+"]";
+      if(!x || typeof x!=="object"){ errors.push(at+" is not a level"); return; }
+      Object.keys(x).forEach(function(k){ if(!lvKeys[k]) errors.push(at+" '"+k+"' is not a field "+who+" reads on a level"); });
+      (L.required||[]).forEach(function(k){ if(x[k]==null) errors.push(at+" missing '"+k+"'"); });
+      if(layouts && lvKeys.layout && !inList(layouts, x.layout)) errors.push(at+" 'layout' must be one of "+layouts.join("/")+" (got "+JSON.stringify(x.layout)+")");
+      if(x.parts!=null){
+        if(typeof x.parts!=="object" || Array.isArray(x.parts)) errors.push(at+" 'parts' must be an object");
+        else Object.keys(x.parts).forEach(function(k){
+          if(!partKeys[k]){ errors.push(at+" parts."+k+" is not a part "+who+" has"); return; }
+          var v = x.parts[k];
+          if(typeof v==="string" && partRe && !partRe.test(v)) errors.push(at+" parts."+k+" is not an art id "+who+" can resolve (got "+JSON.stringify(v)+")");
+          if(typeof v==="string" && partSpec.themes && k==="theme" && !inList(partSpec.themes, v)) errors.push(at+" parts.theme must be one of "+partSpec.themes.join("/")+" (got "+JSON.stringify(v)+")");
+        });
+      }
+      if(geo.maxCells!=null && Array.isArray(x.cells) && x.cells.length>geo.maxCells) errors.push(at+" has "+x.cells.length+" bricks (max "+geo.maxCells+")");
+      if(geo.cellTypes && Array.isArray(x.cells)) x.cells.forEach(function(c){ if(c && !inList(geo.cellTypes, c.type)) errors.push(at+" has a brick kind "+who+" does not have: "+JSON.stringify(c && c.type)); });
+      (L.constraints||[]).forEach(function(c){
+        var a = readPath(x, c.left), b = readPath(x, c.right);
+        if(typeof a!=="number" || typeof b!=="number") return;
+        if(c.op==="<=" && a>b) errors.push(at+" "+(c.why || (c.left+" cannot be more than "+c.right)));
+        if(c.op===">=" && a<b) errors.push(at+" "+(c.why || (c.left+" cannot be less than "+c.right)));
+      });
+    });
+
+    (sheet.dials||[]).forEach(function(d){ checkDial(m, d, errors); });
+    checkRules(m.rules, sheet, errors);
+  }
+
   // ---- validation -----------------------------------------------------------
   // Returns { ok, errors:[...], warnings:[...] }. Errors block the manifest from
   // being applied (engine keeps its built-in levels); warnings just log. The
   // universal fields are checked here; per-game level fields are checked by the
   // active profile so each game type validates its own level shape.
-  function validate(m){
+  function validate(m, opts){
     var errors=[], warnings=[];
     if(!m || typeof m!=="object"){ return { ok:false, errors:["manifest is not an object"], warnings:warnings }; }
     if(!m.id || typeof m.id!=="string")   errors.push("missing string 'id'");
@@ -748,6 +871,17 @@
       }
     }
     if(m.customization && !Array.isArray(m.customization)) errors.push("'customization' must be an array");
+    // rules:[{when,do,params}] — the SHAPE is checked for everyone; WHICH events and
+    // actions exist is a strict-mode question, because only the sheet knows.
+    if(m.rules!=null){
+      if(!Array.isArray(m.rules)) errors.push("'rules' must be a list");
+      else m.rules.forEach(function(r,i){
+        if(!r || typeof r!=="object" || Array.isArray(r)) errors.push("rules["+i+"] is not a rule");
+        else if(typeof r.when!=="string" || typeof r["do"]!=="string") errors.push("rules["+i+"] needs a 'when' and a 'do'");
+      });
+    }
+    // CB2 strict mode: also fence the manifest inside the engine's cobuild sheet.
+    if(opts && opts.strict) strictCheck(m, opts.sheet, errors);
     return { ok: errors.length===0, errors: errors, warnings: warnings };
   }
 
@@ -948,7 +1082,7 @@
     stock();
   }
 
-  var API = { validate:validate, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, rawManifest:rawManifest, breakerBoardToManifest:breakerBoardToManifest, kidGame:kidGame, kidGameId:kidGameId, kidGameCredit:kgCredit, hideKidCover:kgHideCover, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
+  var API = { validate:validate, checkRules:checkRules, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, rawManifest:rawManifest, breakerBoardToManifest:breakerBoardToManifest, kidGame:kidGame, kidGameId:kidGameId, kidGameCredit:kgCredit, hideKidCover:kgHideCover, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));

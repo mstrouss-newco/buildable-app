@@ -1,0 +1,288 @@
+{
+  "sheetVersion": 1,
+  "engine": "skyflyer",
+  "label": "Sky Flyer",
+  "plainName": "Fly around a world, scoop up coins and land on the pads.",
+  "entry": "/skyflyer-engine.html",
+  "levelProfile": "croc",
+  "manifest": {
+    "keys": [
+      "id",
+      "name",
+      "type",
+      "levelProfile",
+      "category",
+      "color",
+      "ageBand",
+      "shellVersion",
+      "engine",
+      "entry",
+      "features",
+      "feel",
+      "audio",
+      "art",
+      "levels",
+      "customization",
+      "rules",
+      "loadoutTitle",
+      "loadoutBlurb",
+      "loadoutPlayLabel"
+    ],
+    "required": [
+      "id",
+      "name",
+      "type",
+      "shellVersion",
+      "levels"
+    ],
+    "fixed": {
+      "id": "skyflyer",
+      "type": "game",
+      "shellVersion": 2,
+      "levelProfile": "croc"
+    }
+  },
+  "art": [
+    {
+      "key": "art.badge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The little badge on the game's card"
+    },
+    {
+      "key": "art.hero",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The big picture on the game's front"
+    },
+    {
+      "key": "art.winCelebration",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The confetti when you win"
+    },
+    {
+      "key": "levels[].journeyBadge",
+      "kind": "element",
+      "themes": [
+        "*"
+      ],
+      "label": "The badge for this world on the map"
+    },
+    {
+      "key": "levels[].palette",
+      "kind": "world",
+      "themes": [
+        "ocean",
+        "snow",
+        "desert",
+        "jungle",
+        "space",
+        "candy",
+        "castle",
+        "forest"
+      ],
+      "label": "The colours of this world's sky, ground and trees"
+    }
+  ],
+  "dials": [
+    {
+      "key": "levels[].difficulty",
+      "min": 1,
+      "max": 5,
+      "default": 2,
+      "step": 1,
+      "label": "How hard this world is, 1 easy to 5 tough"
+    },
+    {
+      "key": "levels[].parts.goalCoins",
+      "min": 4,
+      "max": 40,
+      "default": 12,
+      "step": 1,
+      "label": "How many coins you must scoop to beat the world"
+    },
+    {
+      "key": "levels[].parts.goalLandings",
+      "min": 1,
+      "max": 4,
+      "default": 1,
+      "step": 1,
+      "label": "How many times you must land on a pad"
+    },
+    {
+      "key": "levels[].parts.pads",
+      "min": 1,
+      "max": 4,
+      "default": 2,
+      "step": 1,
+      "label": "How many landing pads there are"
+    },
+    {
+      "key": "levels[].coins",
+      "min": 0,
+      "max": 60,
+      "default": null,
+      "step": 1,
+      "label": "How many coins this world pays (leave empty and difficulty decides)"
+    },
+    {
+      "key": "levels[].unlocked",
+      "type": "boolean",
+      "default": false,
+      "label": "Is this world open from the start"
+    }
+  ],
+  "level": {
+    "keys": [
+      "id",
+      "name",
+      "difficulty",
+      "parts",
+      "colors",
+      "palette",
+      "music",
+      "coins",
+      "unlocked",
+      "journeyBadge",
+      "missions"
+    ],
+    "required": [
+      "id",
+      "name",
+      "difficulty",
+      "parts"
+    ],
+    "min": 1,
+    "max": 6,
+    "geometry": {
+      "kind": "open-world",
+      "of": "A world is open sky over ground the engine grows itself. The level names a theme, how many coins to scoop, how many pads to land on, and how many pads exist.",
+      "goals": {
+        "goalCoins": [
+          4,
+          40
+        ],
+        "goalLandings": [
+          1,
+          4
+        ],
+        "pads": [
+          1,
+          4
+        ]
+      },
+      "rule": "goalLandings can never be more than pads, or the world cannot be beaten."
+    },
+    "dials": [
+      "difficulty",
+      "parts.goalCoins",
+      "parts.goalLandings",
+      "parts.pads",
+      "coins",
+      "unlocked"
+    ],
+    "parts": {
+      "keys": [
+        "world",
+        "theme",
+        "goalCoins",
+        "goalLandings",
+        "pads"
+      ],
+      "themes": [
+        "ocean",
+        "snow",
+        "desert",
+        "jungle",
+        "space",
+        "candy",
+        "castle",
+        "forest"
+      ]
+    },
+    "constraints": [
+      {
+        "left": "parts.goalLandings",
+        "op": "<=",
+        "right": "parts.pads",
+        "why": "asks for more landings than it has pads, so nobody could ever beat it"
+      }
+    ]
+  },
+  "feel": {
+    "pace": [
+      "chill",
+      "calm",
+      "normal",
+      "zippy"
+    ],
+    "celebration": [
+      "small",
+      "big"
+    ],
+    "haptics": [
+      "on",
+      "off"
+    ]
+  },
+  "feelPresets": [
+    {
+      "id": "gentle",
+      "label": "Gentle",
+      "feel": {
+        "pace": "calm",
+        "celebration": "big",
+        "haptics": "off"
+      }
+    },
+    {
+      "id": "normal",
+      "label": "Just right",
+      "feel": {
+        "pace": "normal",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    },
+    {
+      "id": "zippy",
+      "label": "Zippy",
+      "feel": {
+        "pace": "zippy",
+        "celebration": "big",
+        "haptics": "on"
+      }
+    }
+  ],
+  "rules": {
+    "events": [
+      "onLevelStart",
+      "onCollect",
+      "onLand",
+      "onWin",
+      "everyNSeconds"
+    ],
+    "actions": [
+      "playSound",
+      "sayLine",
+      "addPoints",
+      "showText",
+      "speedUp",
+      "slowDown"
+    ]
+  },
+  "never": [
+    "Sky Flyer has no way to lose. Bumping into something is never a fail, so it cannot have lives or a game over.",
+    "It cannot have enemies that chase or shoot you.",
+    "It cannot place a hill, a tree or a coin at an exact spot. The world grows itself from the theme.",
+    "It cannot ask for more landings than there are pads.",
+    "It cannot have more than 6 worlds."
+  ]
+}

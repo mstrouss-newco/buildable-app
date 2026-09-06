@@ -24,6 +24,8 @@
 import fs from "fs";
 import path from "path";
 import { manifestLib } from "./_manifestLib.js";
+import { readPublic, sheetFor, recipeLib } from "./_cobuild.js";
+import { playManifest } from "../qa/kid-game-robot.mjs";
 
 const URL_ = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_KEY;
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
@@ -40,8 +42,8 @@ export const ENGINES = {
 
 // Everything a guest / the loader is allowed to see. family_id and kid_id never
 // leave the server.
-const PLAY_COLS = "id,engine,name,kid_name,grownup_name,cover,manifest,source_game,layer,plays,cleared,shared,public,created_at";
-const LIST_COLS = "id,engine,name,kid_name,grownup_name,cover,source_game,layer,plays,cleared,shared,public,created_at";
+const PLAY_COLS = "id,engine,name,kid_name,grownup_name,cover,manifest,source_game,layer,plays,cleared,shared,public,robot,created_at";
+const LIST_COLS = "id,engine,name,kid_name,grownup_name,cover,source_game,layer,plays,cleared,shared,public,robot,created_at";
 
 function readBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
@@ -93,7 +95,15 @@ export async function checkManifest(manifest, engine) {
   // engine's level shape and pass while being unplayable.
   const key = str(manifest.levelProfile) || str(manifest.id);
   if (key !== engine && str(manifest.id) !== engine) errors.push("manifest id '" + str(manifest.id) + "' must be the engine id '" + engine + "'");
-  const v = lib.validate(manifest);
+  // CB2 — STRICT MODE. Universal fields and the engine level profile are not
+  // enough for a game an AI wrote: it must also stay inside what this engine can
+  // actually do. The engine's cobuild sheet (public/<engine>/cobuild.json) is that
+  // fence — art slots, dial ranges, the level shape, the feel presets and the
+  // rules it really fires. No sheet, no save: an unfenced manifest is exactly what
+  // this endpoint exists to keep out.
+  const sheet = await sheetFor(engine);
+  if (!sheet) return { ok: false, errors: ["the " + engine + " cobuild sheet could not be read, so this game was not saved"] };
+  const v = lib.validate(manifest, { strict: true, sheet });
   if (!v.ok) errors.push(...v.errors);
   if (!errors.length) {
     // Belt and braces: the profile must also be able to TRANSLATE it. A manifest
@@ -104,6 +114,44 @@ export async function checkManifest(manifest, engine) {
     } catch (e) { errors.push("the engine profile could not read this manifest: " + String((e && e.message) || e)); }
   }
   return { ok: errors.length === 0, errors };
+}
+
+// THE ROBOT BUILD GATE (CB2). A manifest that validates is well formed; it is not
+// yet a game anybody can finish. So before a row is written the robot PLAYS every
+// level headless — the same sandbox the qa-*.mjs runners use, through each
+// engine's own sim() hook — and answers per level: beatable / not-beatable /
+// too-long, plus an easier variant when the game turned out to be impossible.
+// The verdict is stored on the row (kid_games.robot) and a game that no robot can
+// finish is REFUSED, which is the whole point: nothing a kid cannot play is kept
+// or shared.
+export async function robotCheck(manifest, engine, opts) {
+  if (!ENGINES[engine]) return { ok: false, error: "unknown engine" };
+  const [recipes, sheet] = await Promise.all([recipeLib(), sheetFor(engine)]);
+  try {
+    const out = await playManifest(manifest, engine, {
+      read: readPublic, recipes: recipes || null, sheet: sheet || null,
+      suggest: !(opts && opts.suggest === false),
+    });
+    return out;
+  } catch (e) {
+    // The robot falling over is not the kid's fault and must not lose their work:
+    // the save goes through, and the row says honestly that it was not play-tested.
+    return { ok: true, engine, robot: "error", verdict: "untested", beatable: true, playable: true,
+             levels: [], note: "the robot could not finish its check: " + String((e && e.message) || e),
+             checkedAt: new Date().toISOString(), suggestion: null };
+  }
+}
+
+// What goes in the row: the answer, never the robot's whole transcript, and never
+// the suggested manifest (that goes back to the caller so a kid can accept it).
+export function robotRow(check) {
+  if (!check) return null;
+  return {
+    verdict: check.verdict, robot: check.robot, checkedAt: check.checkedAt,
+    note: check.note || null,
+    levels: (check.levels || []).map((l) => ({ id: l.id, name: l.name, verdict: l.verdict, seconds: l.seconds || null, note: l.note || null })),
+    suggested: check.suggestion ? check.suggestion.recipe : null,
+  };
 }
 
 // Ownership for the private lane. A row is yours if it carries your family id or
@@ -170,8 +218,18 @@ export default async function handler(req, res) {
       const check = await checkManifest(manifest, engine);
       if (!check.ok) return res.status(400).json({ ok: false, errors: check.errors });
 
+      // The robot plays it before anything is written. A game no robot can finish is
+      // refused, with the level that fails named and an easier variant offered when
+      // there is one — never a silent "saved" for something unplayable.
+      const verdict = await robotCheck(manifest, engine);
+      if (!verdict.playable) {
+        const bad = (verdict.levels || []).filter((l) => l.verdict === "not-beatable");
+        return res.status(400).json({ ok: false, errors: bad.map((l) => "\"" + l.name + "\" cannot be finished: " + (l.note || "the robot never got to the end")), check: verdict });
+      }
+
       const wanted = str(get("id"));
       const patch = {
+        robot: robotRow(verdict),
         engine, name,
         kid_name: str(get("kidName")) || null,
         grownup_name: str(get("grownupName")) || null,
@@ -189,7 +247,7 @@ export default async function handler(req, res) {
           const up = await sb(`kid_games?id=eq.${enc(wanted)}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(patch) });
           const out = await up.json().catch(() => null);
           if (!up.ok || !Array.isArray(out) || !out[0]) return res.status(500).json({ ok: false, errors: ["could not save"] });
-          return res.status(200).json({ ok: true, game: out[0], created: false });
+          return res.status(200).json({ ok: true, game: out[0], created: false, check: verdict });
         }
       }
 
@@ -203,7 +261,7 @@ export default async function handler(req, res) {
       const ins = await sb("kid_games", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
       const out = await ins.json().catch(() => null);
       if (!ins.ok || !Array.isArray(out) || !out[0]) return res.status(500).json({ ok: false, errors: ["could not save"] });
-      return res.status(200).json({ ok: true, game: out[0], created: true });
+      return res.status(200).json({ ok: true, game: out[0], created: true, check: verdict });
     }
 
     // -------------------------------------------------------------- delete ---
@@ -249,6 +307,8 @@ export default async function handler(req, res) {
 
       const check = await checkManifest(manifest, engine);
       if (!check.ok) return res.status(400).json({ ok: false, errors: check.errors });
+      const verdict = await robotCheck(manifest, engine);
+      if (!verdict.playable) return res.status(400).json({ ok: false, errors: ["that game cannot be finished, so it was not copied"], check: verdict });
 
       const kidName = str(get("kidName"));
       const name = str(get("name")) || ((kidName ? kidName + "'s " : "My ") + (fromName || ENGINES[engine].label) + " remix").slice(0, 60);
@@ -257,13 +317,13 @@ export default async function handler(req, res) {
         kid_name: kidName || null, grownup_name: str(get("grownupName")) || null,
         engine, name, cover: str(get("cover")) || null,
         manifest: { ...manifest, name },   // the kid's title travels with the copy
-        source_game: source, layer,
+        source_game: source, layer, robot: robotRow(verdict),
         updated_at: new Date().toISOString(),
       };
       const ins = await sb("kid_games", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
       const out = await ins.json().catch(() => null);
       if (!ins.ok || !Array.isArray(out) || !out[0]) return res.status(500).json({ ok: false, errors: ["could not fork"] });
-      return res.status(200).json({ ok: true, game: out[0], forkedFrom: source });
+      return res.status(200).json({ ok: true, game: out[0], forkedFrom: source, check: verdict });
     }
 
     // -------------------------------------------------------------- share ----

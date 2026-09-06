@@ -320,6 +320,42 @@
       }
     },
     {
+      "src": "/buildable-recipes.js",
+      "dest": "/buildable-recipes.js",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800",
+        "content-type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "src": "/breaker/cobuild.json",
+      "dest": "/breaker/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/sling/cobuild.json",
+      "dest": "/sling/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/castleguard/cobuild.json",
+      "dest": "/castleguard/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/skyflyer/cobuild.json",
+      "dest": "/skyflyer/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/breaker/manifest.json",
       "dest": "/breaker/manifest.json",
       "headers": {

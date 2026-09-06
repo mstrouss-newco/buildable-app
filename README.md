@@ -6,6 +6,60 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## CB2 — safe outputs: the fence, the recipe book, the rules, and the robot gate (September 6 2026)
+`public/<engine>/cobuild.json` (breaker, sling, castleguard, skyflyer),
+`public/buildable-recipes.js`, `public/buildable-mechanics.js` (`BM.rules`),
+`public/buildable-manifest.js` (strict mode), `qa/kid-game-robot.mjs`,
+`api/kid-game-check.js`, `api/_cobuild.js`, `api/kid-game.js`, `qa-recipes.mjs`,
+`qa-rules.mjs`, `MECHANICS.md`, `vercel.json`.
+
+CB1 let a kid own a game. CB2 is what makes a game an AI assembles nearly bug-free by
+construction: the AI may only touch what a sheet allows, every edit is a named
+recipe, and nothing is kept until a robot has played it.
+
+1. **A cobuild sheet per engine** at `public/<engine>/cobuild.json`: every art slot
+   with the themes it takes, every dial with min/max/default and a plain-English
+   label, the level shape (its geometry tier — what a level is made of and the size
+   limits — and its dial tier), the feel presets, the rules it really fires, and a
+   plain list of what that engine can NEVER do, so the AI can offer the nearest
+   thing instead of pretending. `validate(m, {strict:true, sheet})` in the shared
+   loader rejects any field, slot or value outside the sheet. All four shipped
+   games pass their own sheet, which is how we know a sheet describes the real
+   engine and not a wish.
+2. **The recipe book** at `public/buildable-recipes.js`: 18 named, deterministic,
+   non-mutating manifest edits (`rename`, `swapHero`, `swapWorld`, `recolor`,
+   `moreCollectibles`, `fewerCollectibles`, `harder`, `easier`, `addBoss`,
+   `removeBoss`, `nightMode`, `dayMode`, `zoomier`, `calmer`, `addLevel`,
+   `removeLevel`, `mathGate`, `voiceLine`), each declaring which engines it works
+   on and clamping to the sheet's own limits. Asking for one an engine does not
+   have is an honest no with the reason. `MECHANICS.md` is re-aimed around this;
+   it had been written for the dead Phaser generator.
+3. **Rules vocabulary v0 (layer two)** in `public/buildable-mechanics.js`: six
+   moments (`onLevelStart`, `onCollect`, `onHit`, `onLand`, `onWin`,
+   `everyNSeconds`) and eight actions (`playSound`, `sayLine`, `showText`, `spawn`,
+   `speedUp`, `slowDown`, `addPoints`, `loseItem`). A manifest may carry
+   `rules:[{when,do,params}]` and the shared runtime applies them. Sling Squad and
+   Sky Flyer fire their events for real. The sheet decides which moments an engine
+   really fires, so a rule it would ignore is an error rather than a
+   disappointment.
+4. **The robot build gate.** `qa/kid-game-robot.mjs` plays a manifest headless — the
+   same vm sandbox the `qa-*.mjs` runners already use, through each engine's own
+   `sim()` hook, not a third robot — and answers per level: beatable,
+   not-beatable or too-long. `api/kid-game-check.js` is the endpoint;
+   `api/kid-game.js` calls it on every save and every fork, stores the verdict on
+   the row (`kid_games.robot`) and REFUSES a game no robot can finish, offering the
+   `easier` variant when that one passes. Sky Flyer is the honest exception: its
+   flight needs a real browser and WebGL, so its worlds are checked structurally
+   (a world asking for more landings than it has pads is caught) and the verdict
+   says "checked, not flown" rather than claiming a play-through it never did.
+5. **`qa-recipes.mjs` and `qa-rules.mjs`**, both auto-discovered by `qa-all.mjs`.
+   Every recipe on every engine it claims is proved pure, deterministic, still
+   inside the sheet AND still beatable by the robot. Sling's four events are proved
+   by PLAYING a level with rules in it and catching what they did, not by reading
+   the source. `node qa-all.mjs` green: 48 harnesses.
+
+No database change: the `robot` column CB1 created is the one the verdict lands in.
+
 ## CB1 — a kid's game is a row they own, not new engine code (September 6 2026)
 `db/create-kid-games.sql`, `api/kid-game.js`, `api/_manifestLib.js`, `api/g.js`,
 `public/g.html`, `public/buildable-manifest.js`, `public/skyflyer-engine.html`,
