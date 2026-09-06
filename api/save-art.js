@@ -57,16 +57,27 @@ export default async function handler(req, res) {
       art, published, published_at: published ? new Date().toISOString() : null,
     };
 
+    // A stale/guest kid_profile_id that has no row in kid_profiles trips a
+    // foreign-key error. Retrying without the link keeps the drawing (device
+    // lane) instead of losing it -- but the answer must SAY that happened.
+    // Silently returning ok:true is what let art-studio.html cheer "Saved to
+    // your gallery!" while the gallery went on saying "No saved art yet".
+    let lane = kidProfileId ? "kid" : "device";
     let insRes = await sb("saved_art", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
     if (!insRes.ok && kidProfileId) {
       insRes = await sb("saved_art", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ ...row, kid_profile_id: null }) });
+      if (insRes.ok) lane = "device";
     }
     if (!insRes.ok) {
       const detail = await insRes.text();
       return res.status(502).json({ error: "save failed", status: insRes.status, detail: detail.slice(0, 300) });
     }
     const saved = await insRes.json();
-    return res.status(200).json({ ok: true, art: Array.isArray(saved) ? saved[0] : saved, count: current + 1, max: MAX_ART });
+    return res.status(200).json({
+      ok: true, art: Array.isArray(saved) ? saved[0] : saved, count: current + 1, max: MAX_ART,
+      lane, savedToKid: lane === "kid",
+      ...(lane === "device" && kidProfileId ? { note: "saved to device", message: "Saved to this device, but not filed under this player yet." } : {}),
+    });
   } catch (e) {
     return res.status(500).json({ error: "server error", detail: String((e && e.message) || e).slice(0, 200) });
   }

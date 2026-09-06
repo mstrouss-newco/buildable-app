@@ -35,6 +35,7 @@ import SongPlayer from "./lib/SongPlayer";
 import QuickGame from "./QuickGame";
 import { getLearningSettings, effectiveLearning } from "./store";
 import { registerAudio } from './lib/audioUnlock.js';
+import { ensureServerKidProfile } from './lib/accounts';
 
 const MAX_SONGS = 100000; // testing: effectively unlimited (was 10)
 
@@ -140,8 +141,19 @@ const QUESTION_PHRASES = [Q_TOPIC, Q_STYLE, Q_SINGER, "Surprise!", "Making your 
 function getDeviceId() {
   try { let id = localStorage.getItem("deviceId"); if (!id) { id = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10); localStorage.setItem("deviceId", id); } return id; } catch { return "dev_anon"; }
 }
+// Who is playing, whatever lane they are in. Use this for "has anyone been
+// picked yet", never as a kid_profile_id for the server.
+function getActivePlayer() {
+  try { return JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); } catch { return null; }
+}
+// The id that may be SENT to the server. Only a profile with a real row in
+// kid_profiles (lane "account") has one; a device-local guest profile returns
+// null, which means "save to the device lane" -- a lane that genuinely works.
+// Sending a guest id was what made save-song fall back to nobody and the
+// library read (0) right after saying "Saved to My Songs!".
 function getKidProfileId() {
-  try { const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); return k && k.id ? k.id : null; } catch { return null; }
+  const k = getActivePlayer();
+  return k && k.id && k.lane === "account" ? k.id : null;
 }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -410,11 +422,16 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
   }
 
   async function refresh() {
-    // Only show this kid's own songs. Without a selected kid, show none rather
-    // than the shared device list (which would mix in other kids' songs).
-    if (!kidProfileId) { setSongs([]); setCount(0); return; }
+    // Ask by BOTH lanes and let the server decide. It prefers this kid's own
+    // songs and only falls back to the device list when the kid lane is empty,
+    // so a sibling's songs never crowd out a kid who has their own -- but a kid
+    // whose songs landed on the device lane still sees every one of them.
+    // Asking by kid alone is what made the library read (0) straight after a
+    // song saved successfully.
+    const kid = getKidProfileId();
+    const q = "deviceId=" + encodeURIComponent(deviceId) + (kid ? "&kidProfileId=" + encodeURIComponent(kid) : "");
     try {
-      const r = await fetch("/api/list-songs?kidProfileId=" + encodeURIComponent(kidProfileId));
+      const r = await fetch("/api/list-songs?" + q);
       const j = await r.json();
       if (j && j.configured && Array.isArray(j.songs)) { setSongs(j.songs); setCount(j.count || j.songs.length); }
     } catch {}
@@ -547,14 +564,23 @@ export default function MusicMaker({ onBack, onHome, playerName, remix = null, o
 
   async function keepSong() {
     if (!draft) return;
-    if (!kidProfileId) { setStatus("Tap Grown-ups and pick who's playing first, so this song saves to the right kid."); return; }
+    if (!getActivePlayer()) { setStatus("Tap Grown-ups and pick who's playing first, so this song saves to the right kid."); return; }
     if (count >= MAX_SONGS) { setStatus("You have lots of songs! Delete one in My Songs to make room."); setTab("library"); return; }
     setStatus("Saving...");
+    // THE RULE: a player gets a real kid_profiles row the first time they save,
+    // if there is a signed-in grown-up for it to belong to. Do that here, then
+    // read the id back, so the very first song lands on the right child instead
+    // of on nobody.
+    try { await ensureServerKidProfile(); } catch (e) { /* device lane still works */ }
+    const kidId = getKidProfileId();
     try {
       const r = await fetch("/api/save-song", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId, kidProfileId, kidName: playerName || "", title: (titleDraft || draft.title), audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, coverUrl: draft.coverUrl, durationSec: draft.durationSec, provider: draft.provider, meta: { ...(draft.meta || {}), coverUrl: draft.coverUrl, choices: buildChoices() } }) });
+        body: JSON.stringify({ deviceId, kidProfileId: kidId, kidName: playerName || "", title: (titleDraft || draft.title), audioUrl: draft.audioUrl, vibe: draft.vibe, theme: draft.theme, prompt: draft.prompt, coverColor: draft.coverColor, coverUrl: draft.coverUrl, durationSec: draft.durationSec, provider: draft.provider, meta: { ...(draft.meta || {}), coverUrl: draft.coverUrl, choices: buildChoices() } }) });
       const j = await r.json();
-      if (r.ok && j.ok) { setStatus("Saved to My Songs!"); setDraft(null); setTitleDraft(""); setRevealPlay(false); setEditingTitle(false); setPrompt(""); setTopicId(null); setStyleId(null); setMkStep(0); setJustFinished(true); await refresh(); }
+      // The server tells us WHICH lane it actually landed in. Saying "Saved to
+      // My Songs!" when it went to the device lane is the lie that started all
+      // of this -- the kid read it, opened My Songs, and the tab said (0).
+      if (r.ok && j.ok) { setStatus(j.lane === "device" ? "Saved to this tablet. Ask a grown-up to sign in so it follows you everywhere." : "Saved to My Songs!"); setDraft(null); setTitleDraft(""); setRevealPlay(false); setEditingTitle(false); setPrompt(""); setTopicId(null); setStyleId(null); setMkStep(0); setJustFinished(true); await refresh(); }
       else if (r.status === 409) { setStatus(j.message || "Your song box is full!"); setTab("library"); }
       else setStatus("Couldn't save — " + (j.detail || j.error || ("error " + r.status)));
     } catch (e) { setStatus("Couldn't save — " + ((e && e.message) || "network error")); }

@@ -24,21 +24,42 @@ export default async function handler(req, res) {
       const rows = await r.json();
       return res.status(200).json({ ok: true, art: Array.isArray(rows) ? rows[0] || null : null });
     }
-    const filter = kidProfileId ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId) : "device_id=eq." + encodeURIComponent(deviceId);
     const safeCols = "art_id,title,theme,created_at";
     // pull image_b64 so the real saved drawing shows as its own thumbnail (kid
     // galleries are capped at 40, so shipping the small PNGs is fine); fall back to
     // a lightweight theme thumb only when a drawing has no saved image.
-    let r = await sb("saved_art?" + filter + "&select=" + safeCols + ",image_b64,published,play_count,heart_count&order=created_at.desc&limit=40");
-    if (!r.ok) { r = await sb("saved_art?" + filter + "&select=" + safeCols + "&order=created_at.desc&limit=40"); }
+    const fetchLane = async (filter) => {
+      let r = await sb("saved_art?" + filter + "&select=" + safeCols + ",image_b64,published,play_count,heart_count&order=created_at.desc&limit=40");
+      if (!r.ok) r = await sb("saved_art?" + filter + "&select=" + safeCols + "&order=created_at.desc&limit=40");
+      return r;
+    };
+    const kidFilter = kidProfileId ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId) : null;
+    const deviceFilter = deviceId ? "device_id=eq." + encodeURIComponent(deviceId) : null;
+
+    let lane = kidProfileId ? "kid" : "device";
+    let r = await fetchLane(kidFilter || deviceFilter);
     if (!r.ok) { const detail = await r.text(); return res.status(502).json({ error: "list failed", status: r.status, detail: detail.slice(0, 300) }); }
     let art = await r.json();
+
+    // NOTHING A KID MADE MAY VANISH. A drawing saved before this child had a real
+    // profile row sits on the DEVICE lane with kid_profile_id null, which is how
+    // the gallery came to say "No saved art yet" moments after "Saved to your
+    // gallery!". When the kid lane is empty, look on the device lane before
+    // giving up -- only when it is empty, so a child with art of their own never
+    // has a sibling's gallery pushed in on top.
+    if (kidFilter && deviceFilter && Array.isArray(art) && art.length === 0) {
+      const rd = await fetchLane(deviceFilter);
+      if (rd.ok) {
+        const deviceArt = await rd.json();
+        if (Array.isArray(deviceArt) && deviceArt.length) { art = deviceArt; lane = "device"; }
+      }
+    }
     if (Array.isArray(art)) art = art.map((row) => ({
       ...row,
       thumbnail: row.image_b64 ? row.image_b64 : (thumbForWorld(row.theme) || null),
       image_b64: undefined,
     }));
-    return res.status(200).json({ ok: true, configured: true, art: Array.isArray(art) ? art : [], count: Array.isArray(art) ? art.length : 0, max: 40 });
+    return res.status(200).json({ ok: true, configured: true, art: Array.isArray(art) ? art : [], count: Array.isArray(art) ? art.length : 0, max: 40, lane });
   } catch (e) {
     return res.status(500).json({ error: "server error", detail: String((e && e.message) || e).slice(0, 200) });
   }

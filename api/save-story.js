@@ -58,17 +58,26 @@ export default async function handler(req, res) {
       story,
     };
 
+    // Same shape as save-song/save-art: keep the story rather than lose it when
+    // the kid link cannot be satisfied, but SAY which lane it landed in so no
+    // screen can cheerfully claim it was filed under a child when it was not.
+    let lane = kidProfileId ? "kid" : "device";
     let insRes = await sb("saved_stories", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
     if (!insRes.ok && kidProfileId) {
       // device-lane fallback if the kid_profile_id link can't be satisfied
       insRes = await sb("saved_stories", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ ...row, kid_profile_id: null }) });
+      if (insRes.ok) lane = "device";
     }
     if (!insRes.ok) {
       const detail = await insRes.text();
       return res.status(502).json({ error: "save failed", status: insRes.status, detail: detail.slice(0, 300) });
     }
     const saved = await insRes.json();
-    return res.status(200).json({ ok: true, story: Array.isArray(saved) ? saved[0] : saved, count: current + 1, max: MAX_STORIES });
+    return res.status(200).json({
+      ok: true, story: Array.isArray(saved) ? saved[0] : saved, count: current + 1, max: MAX_STORIES,
+      lane, savedToKid: lane === "kid",
+      ...(lane === "device" && kidProfileId ? { note: "saved to device", message: "Saved to this device, but not filed under this player yet." } : {}),
+    });
   } catch (e) {
     return res.status(500).json({ error: "server error", detail: String((e && e.message) || e).slice(0, 200) });
   }

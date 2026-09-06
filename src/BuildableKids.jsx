@@ -23,7 +23,7 @@ import { listInvitesForKid } from "./lib/rtMatch";
 import { startPresence, stopPresence, inboxInvites } from "./lib/friends";
 import { listActiveFriendMatches, roleFor } from "./lib/friendMatches";
 import { setLearningSettings, saveCharacter, saveLevel, libraryCounts, onLibraryChange, reloadLearningForActiveKid, getLearningSettings, getProgress, dailyLearningProgress, effectiveLearning } from "./store";
-import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles } from "./lib/accounts";
+import { getActiveKid, setActiveKid, saveKidHelper, getKidHelper, isSignedIn, completeOAuthRedirect, ensureFreshToken, listKidProfiles, ensureServerKidProfile } from "./lib/accounts";
 import { listKidGames, migrateBreakerLevels, kidGamePlayUrl, kidGameCover, ENGINES as KID_ENGINES } from "./lib/kidGames";
 import { registerAudio } from "./lib/audioUnlock";
 import { playVoiceUrl, stopVoice } from "./lib/voiceBus";
@@ -1857,13 +1857,31 @@ export default function BuildableKids() {
   // so gameSpecFor / the lobby open exactly the lane the manifest declares (6A).
   useEffect(() => { warmMultiplayerSwitch("tictactoe"); }, []);
 
-  // ---- APP-WIDE PRESENCE ----------------------------------------------------
-  // Stamp kid_profiles.last_seen every ~30s for as long as a kid is active in
-  // the app -- ANYWHERE, not just inside a game lobby. This is what makes a
-  // friend show "online" to someone else while they're playing/making things.
+  // ---- ADOPT THE PLAYER INTO THE FAMILY, THEN STAMP PRESENCE ---------------
+  // A child can be playing under a profile that lives only in this browser while
+  // a grown-up IS signed in. That id means nothing to the database, so songs and
+  // drawings saved with nobody attached, friend invites came back 403 "not your
+  // player", and this very heartbeat answered 503 -- all of it silently.
+  //
+  // So before anything is stamped or sent: make sure the child who is here has a
+  // REAL kid_profiles row (see ensureServerKidProfile in lib/accounts). Only then
+  // is there an id worth heartbeating on. With no grown-up signed in this is a
+  // no-op and the child plays on happily in the device lane.
   useEffect(() => {
-    if (isSignedIn() && activeKid && activeKid.id) startPresence(activeKid);
-    else stopPresence();
+    if (!activeKid || !activeKid.id) { stopPresence(); return; }
+    let alive = true;
+    (async () => {
+      const serverId = await ensureServerKidProfile();
+      if (!alive) return;
+      // Adoption may have rewritten the stored profile (a fresh id, or just the
+      // lane label). Pull the app's copy back into line so every screen below
+      // sends the id the server actually knows about.
+      const fresh = getActiveKid();
+      if (fresh && (fresh.id !== activeKid.id || fresh.lane !== activeKid.lane)) setActiveKidState(fresh);
+      if (serverId) startPresence(fresh || activeKid);
+      else stopPresence();
+    })();
+    return () => { alive = false; };
   }, [activeKid]);
   useEffect(() => () => stopPresence(), []);
 

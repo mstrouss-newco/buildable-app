@@ -38,21 +38,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    const filter = kidProfileId
-      ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId)
-      : "device_id=eq." + encodeURIComponent(deviceId);
     const baseCols = "song_id,title,prompt,vibe,theme,audio_url,cover_color,duration_sec,provider,created_at,meta";
     const tail = "&order=created_at.desc&limit=200";
-    let r = await sb("saved_songs?" + filter + "&select=" + baseCols + ",published,play_count,heart_count" + tail);
-    if (!r.ok) {
+    const fetchLane = async (filter) => {
+      let r = await sb("saved_songs?" + filter + "&select=" + baseCols + ",published,play_count,heart_count" + tail);
       // pre-migration fallback: publishing columns may not exist yet
-      r = await sb("saved_songs?" + filter + "&select=" + baseCols + tail);
-    }
+      if (!r.ok) r = await sb("saved_songs?" + filter + "&select=" + baseCols + tail);
+      return r;
+    };
+    const kidFilter = kidProfileId ? "kid_profile_id=eq." + encodeURIComponent(kidProfileId) : null;
+    const deviceFilter = deviceId ? "device_id=eq." + encodeURIComponent(deviceId) : null;
+
+    let lane = kidProfileId ? "kid" : "device";
+    let r = await fetchLane(kidFilter || deviceFilter);
     if (!r.ok) {
       const detail = await r.text();
       return res.status(502).json({ error: "list failed", status: r.status, detail: detail.slice(0, 300) });
     }
     let songs = await r.json();
+
+    // NOTHING A KID MADE MAY VANISH. A song written before this child had a real
+    // profile row sits on the DEVICE lane with kid_profile_id null, so asking by
+    // kid alone answered "you have no songs" for songs that were right there.
+    // When the kid lane comes back empty, look on the device lane before giving
+    // up. Only when it is empty, so a child with songs of their own never has a
+    // sibling's list pushed in on top.
+    if (kidFilter && deviceFilter && Array.isArray(songs) && songs.length === 0) {
+      const rd = await fetchLane(deviceFilter);
+      if (rd.ok) {
+        const deviceSongs = await rd.json();
+        if (Array.isArray(deviceSongs) && deviceSongs.length) { songs = deviceSongs; lane = "device"; }
+      }
+    }
     if (Array.isArray(songs)) songs = songs.map((row) => ({
       ...row,
       // MM2 — surface the saved album cover (meta.coverUrl, or a real cover_url
@@ -65,6 +82,7 @@ export default async function handler(req, res) {
       songs: Array.isArray(songs) ? songs : [],
       count: Array.isArray(songs) ? songs.length : 0,
       max: 100000,
+      lane, // "kid" or "device" -- which lane these rows actually came from
     });
   } catch (e) {
     return res.status(500).json({ error: "server error", detail: String(e && e.message || e).slice(0, 200) });

@@ -102,6 +102,12 @@ export default async function handler(req, res) {
       // Resilience: a stale/guest kid_profile_id that isn't in the database
       // triggers a foreign-key error. Retry once without the profile link so the
       // song still saves (device lane) instead of hard-failing.
+      //
+      // THE HONESTY RULE (2026-09-06): this fallback is fine, saying nothing
+      // about it is not. It used to answer a bare ok:true, the client checked
+      // only j.ok, and a kid was told "Saved to My Songs!" for a song filed
+      // under nobody -- then My Songs read (0). Every answer below now names the
+      // lane it really used, and the client says where it went.
       if (kidProfileId) {
         const retry = await sb("saved_songs", {
           method: "POST",
@@ -113,7 +119,9 @@ export default async function handler(req, res) {
           return res.status(200).json({
             ok: true,
             song: Array.isArray(savedRetry) ? savedRetry[0] : savedRetry,
-            count: current + 1, max: MAX_SONGS, note: "saved to device",
+            count: current + 1, max: MAX_SONGS,
+            lane: "device", savedToKid: false, note: "saved to device",
+            message: "Saved to this device, but not filed under this player yet.",
           });
         }
         const detail2 = await retry.text();
@@ -127,6 +135,10 @@ export default async function handler(req, res) {
       song: Array.isArray(saved) ? saved[0] : saved,
       count: current + 1,
       max: MAX_SONGS,
+      // "kid" only when the row really carries a kid_profile_id; a save with no
+      // kid asked for is a device-lane save and says so.
+      lane: kidProfileId ? "kid" : "device",
+      savedToKid: Boolean(kidProfileId),
     });
   } catch (e) {
     return res.status(500).json({ error: "server error", detail: String((e && e.message) || e).slice(0, 200) });

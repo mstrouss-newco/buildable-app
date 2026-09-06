@@ -36,10 +36,13 @@ function getDeviceId() {
     return id;
   } catch { return "dev_anon"; }
 }
+// Only a profile with a REAL kid_profiles row (lane "account") has an id the
+// server knows about. A device-local guest profile returns null, so the lists
+// below ask by device instead -- which is where that kid's work actually is.
 function getKidProfileId() {
   try {
     const k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
-    return k && k.id ? k.id : null;
+    return k && k.id && k.lane === "account" ? k.id : null;
   } catch { return null; }
 }
 

@@ -355,7 +355,11 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
       var d=tileMedia(function(){ S.coloring=id; S.bg={type:"color",c:"#ffffff"}; S.style="paper"; redraw(); ov.classList.remove("show"); toast("Color it in! Try the Fill bucket."); }); d.appendChild(cv); wrap.appendChild(d); });
     ov.classList.add("show"); }
   function deviceId(){ var k="deviceId",v=localStorage.getItem(k); if(!v){ var old=localStorage.getItem("artstudio:device"); v=old||("dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10)); localStorage.setItem(k,v); } return v; }
-  function kidId(){ try{ var kk=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return kk&&kk.id?kk.id:""; }catch(e){ return ""; } }
+  // Only a profile with a REAL kid_profiles row (lane "account") has an id the
+  // server knows. A device-local guest profile returns "", so we save and list by
+  // device instead -- sending the guest id is what made save-art quietly drop the
+  // kid link and the gallery answer "No saved art yet" for art that WAS saved.
+  function kidId(){ try{ var kk=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return kk&&kk.id&&kk.lane==="account"?kk.id:""; }catch(e){ return ""; } }
   function openGallery(){ var ov=document.getElementById("galleryOv"), wrap=document.getElementById("galleryWrap"); wrap.innerHTML="<p style='opacity:.7'>Loading…</p>"; ov.classList.add("show");
     fetch("/api/list-art?deviceId="+encodeURIComponent(deviceId())+(kidId()?"&kidProfileId="+encodeURIComponent(kidId()):"")).then(function(r){return r.ok?r.json():null;}).then(function(j){ var arr=(j&&j.art)||[];
       if(!arr.length){ wrap.innerHTML="<p style='opacity:.85'>No saved art yet — make something and tap the heart!</p>"; return; } wrap.innerHTML="";
@@ -368,7 +372,17 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
     try{ image_b64=paper.toDataURL("image/png"); }catch(e){}
     var payload={ art_id:"art_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), device_id:deviceId(), kid_profile_id:kidId()||undefined, title:title, theme:(S.bg&&S.bg.name)||S.style||"rainbow", image_b64:image_b64, art:{ops:S.ops,bg:S.bg,style:S.style,coloring:S.coloring}, published:!!share };
     document.getElementById("saveOv").classList.remove("show"); playSfx("art_save"); celebrate();
-    fetch("/api/save-art",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).then(function(r){ if(r.ok) toast(share?"Saved & shared with family!":"Saved to your gallery!"); else downloadFallback(image_b64,title); }).catch(function(){ downloadFallback(image_b64,title); }); }
+    // Tell the truth about where it landed. The server answers with the lane it
+    // actually used: "kid" means it is filed under this child, "device" means it
+    // is on this tablet only. Saying "Saved to your gallery!" for a device-lane
+    // save is what sent kids to a gallery that said "No saved art yet".
+    fetch("/api/save-art",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).then(function(r){
+      if(!r.ok){ downloadFallback(image_b64,title); return; }
+      return r.json().catch(function(){ return {}; }).then(function(j){
+        if(j&&j.lane==="device") toast("Saved to this tablet. Ask a grown-up to sign in so it follows you everywhere.");
+        else toast(share?"Saved & shared with family!":"Saved to your gallery!");
+      });
+    }).catch(function(){ downloadFallback(image_b64,title); }); }
   function downloadFallback(data,title){ if(!data){ toast("Saved!"); return; } try{ var a=document.createElement("a"); a.href=data; a.download=(title||"art").replace(/\s+/g,"_")+".png"; document.body.appendChild(a); a.click(); a.remove(); toast("Saved a copy to your device!"); }catch(e){ toast("Saved!"); } }
   var fxParts=[]; function celebrate(){ if(!BM||!BM.burst||!ctx) return; for(var i=0;i<6;i++) BM.burst(fxParts,Math.random()*paper.width,paper.height*0.4,"hsl("+(i*60)+",90%,60%)",14);
     var t0=Date.now(); (function loop(){ if(Date.now()-t0>900){ redraw(); return; } redraw(); BM.updateParticles(fxParts,1/60); BM.drawParticles(ctx,fxParts); requestAnimationFrame(loop); })(); }

@@ -41,7 +41,11 @@ const CHAR_LABEL = Object.fromEntries(CHARACTERS);
 const HERO_WINDOW = 6; // hero grid shows 6 at a time (ST4)
 
 function getDeviceId(){try{let id=localStorage.getItem("deviceId");if(!id){id="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);localStorage.setItem("deviceId",id);}return id;}catch{return "dev_anon";}}
-function getKidProfileId(){try{const k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");return k&&k.id?k.id:null;}catch{return null;}}
+// Only a profile with a REAL kid_profiles row (lane "account") has an id the
+// server knows. A device-local guest profile returns null, which means "save to
+// the device lane" -- sending a guest id instead is what quietly detached
+// creations from their kid and emptied the shelves.
+function getKidProfileId(){try{const k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");return k&&k.id&&k.lane==="account"?k.id:null;}catch{return null;}}
 function libImg(kind,slug,style,emo){return "/api/story-library?img="+kind+":"+slug+"&style="+(style||"watercolor")+(emo?"&emo="+emo:"");}
 function iconImg(id){return "/api/game-art?img=story-icons:"+id+"&style=watercolor";}
 const SPARK_ICON={"It's my birthday!":"birthday","I lost my favorite toy":"lost_toy","My first day somewhere new":"first_day","Learning to be brave":"learn_brave","A rainy-day adventure":"rainy_day","Making a new friend":"new_friend"};

@@ -115,6 +115,44 @@ export function setActiveKid(kid) {
   else localStorage.removeItem(ACTIVE_KID_KEY);
 }
 
+// ---- WHICH LANE IS THIS PLAYER IN? (the guest-profile fix) --------
+// A kid profile is in exactly one of two lanes:
+//
+//   lane "account" -- there is a REAL row for it in the kid_profiles table, so
+//                     its id means something to the server. Safe to send as
+//                     kid_profile_id, safe to invite friends with, safe to
+//                     stamp presence on.
+//   lane "guest"   -- it exists ONLY in this browser's localStorage. Its id
+//                     means NOTHING to the database.
+//
+// Sending a GUEST id to the server as if it were real is the single cause
+// behind QA42/43/44/53. The song insert hit a foreign-key error, save-song
+// quietly retried with kid_profile_id null and still answered ok:true, and
+// every gallery -- which lists BY KID -- then showed an empty shelf for work
+// that was sitting on the server the whole time. The same bad id made
+// /api/friends answer 403 "not your player" and the presence PATCH 503.
+//
+// THE RULE WE CHOSE (2026-09-06): ADOPT, don't evict. The moment a grown-up is
+// signed in, the child who is playing gets a real kid_profiles row -- keeping
+// the same id wherever possible -- instead of being bounced back to a picker
+// mid-game. With no grown-up signed in there is no family to belong to, so the
+// kid stays a guest and everything saves to the DEVICE lane on purpose, which
+// is a lane that genuinely works (see CREATIONS.md).
+export const LANE_ACCOUNT = "account";
+export const LANE_GUEST = "guest";
+
+export function kidLane(kid) {
+  if (!kid) return null;
+  return kid && kid.lane === LANE_ACCOUNT ? LANE_ACCOUNT : LANE_GUEST;
+}
+
+// The ONLY id that may travel to the server as kid_profile_id. Null is not a
+// failure -- it means "use the device lane", which saves and lists just fine.
+export function getServerKidId() {
+  const k = getActiveKid();
+  return k && k.id && kidLane(k) === LANE_ACCOUNT ? k.id : null;
+}
+
 function makeId() {
   try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); }
   catch (e) { /* fall through */ }
@@ -285,9 +323,11 @@ export async function listKidProfiles() {
         if (k && k.id && k.helper) localStorage.setItem("bk_helper_" + k.id, JSON.stringify(k.helper));
       });
     } catch (e) {}
-    return kids;
+    // Every row that came back really is in kid_profiles, so label the lane. The
+    // makers read this label to decide whether the id may be sent to the server.
+    return (kids || []).map((k) => ({ ...k, lane: LANE_ACCOUNT }));
   }
-  return loadGuestKids();
+  return loadGuestKids().map((k) => ({ ...k, lane: LANE_GUEST }));
 }
 
 export async function createKidProfile(displayName, avatar, opts = {}) {
@@ -311,21 +351,117 @@ export async function createKidProfile(displayName, avatar, opts = {}) {
         method: "POST",
         body: JSON.stringify({ ...base, grade, pin_hash }),
       });
-      return rows?.[0];
+      return rows?.[0] && { ...rows[0], lane: LANE_ACCOUNT };
     } catch (e) {
       const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,created_at", {
         method: "POST",
         body: JSON.stringify(base),
       });
-      return rows?.[0];
+      return rows?.[0] && { ...rows[0], lane: LANE_ACCOUNT };
     }
   }
 
   const kids = loadGuestKids();
-  const kid = { id: makeId(), display_name: name.slice(0, 40), avatar: avatar || DEFAULT_AVATAR, grade, pin_hash, created_at: new Date().toISOString() };
+  const kid = { id: makeId(), display_name: name.slice(0, 40), avatar: avatar || DEFAULT_AVATAR, grade, pin_hash, created_at: new Date().toISOString(), lane: LANE_GUEST };
   kids.push(kid);
   saveGuestKids(kids);
   return kid;
+}
+
+// ---- ADOPTION: give the player who is here a REAL profile row ------
+// This is the fix for the guest-kid-with-a-signed-in-parent hole. Call it
+// whenever the app knows who is playing; it is cheap, idempotent, and a no-op
+// in every case except the broken one.
+//
+// Returns the server-safe kid id, or null when the child stays on the device
+// lane (which is correct and working, not a failure).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Copy one device-local profile into kid_profiles under the signed-in family.
+// It keeps the SAME id whenever the guest id is a uuid (crypto.randomUUID makes
+// one, so almost always). That matters: anything already saved under that id,
+// and any friend or match row pointing at it, lines up the instant the row
+// exists. The old "kid_xxx" fallback ids cannot be a uuid primary key, so those
+// get a fresh id and the device copy is re-pointed at it.
+async function adoptGuestKid(kid) {
+  const me = await authFetch("user", { method: "GET", headers: authHeaders(true) });
+  if (!me?.id) throw new Error("No signed-in grown-up to adopt this player into");
+  await ensureParentRow();
+  const parentId = await familyOwnerId(me.id);
+  const base = {
+    parent_id: parentId,
+    name: (kid.display_name || kid.name || "Player").toString().trim().slice(0, 40) || "Player",
+    avatar: kid.avatar || DEFAULT_AVATAR,
+  };
+  if (UUID_RE.test(String(kid.id))) base.id = kid.id;
+
+  // Carry across as much of the child as the database will take. The columns
+  // added by later migrations may not exist on every project yet, so step down
+  // rather than lose the whole adoption over one missing column.
+  const attempts = [
+    { ...base, grade: kid.grade || null, pin_hash: kid.pin_hash || null, helper: kid.helper || null },
+    { ...base, helper: kid.helper || null },
+    base,
+  ];
+  let row = null, lastErr = null;
+  for (const body of attempts) {
+    try {
+      const rows = await restFetch("kid_profiles?select=id,display_name:name,avatar,created_at", {
+        method: "POST", body: JSON.stringify(body),
+      });
+      row = rows?.[0];
+      if (row && row.id) break;
+    } catch (e) { lastErr = e; }
+  }
+  if (!row || !row.id) throw lastErr || new Error("Could not create a profile for this player");
+
+  const adopted = { ...kid, ...row, display_name: row.display_name || kid.display_name, lane: LANE_ACCOUNT };
+  // The device copy has been promoted, so drop it from the guest list -- one
+  // child must never appear twice on the picker.
+  try { saveGuestKids(loadGuestKids().filter((x) => x.id !== kid.id)); } catch (e) {}
+  const active = getActiveKid();
+  if (active && active.id === kid.id) setActiveKid(adopted);
+  // If the id had to change, carry the buddy over by hand so adoption never
+  // re-triggers buddy onboarding for a child who already has one.
+  if (row.id !== kid.id) {
+    try {
+      const h = localStorage.getItem("bk_helper_" + kid.id);
+      if (h) localStorage.setItem("bk_helper_" + row.id, h);
+    } catch (e) {}
+  }
+  return row.id;
+}
+
+let adoptInFlight = null;
+export async function ensureServerKidProfile() {
+  const kid = getActiveKid();
+  if (!kid || !kid.id) return null;
+  if (!isSignedIn()) {
+    // No grown-up account means there is no family for a profile row to belong
+    // to. Label it plainly so the makers send no kid id and save to the device
+    // lane, instead of sending an id the database has never heard of.
+    if (kid.lane !== LANE_GUEST) setActiveKid({ ...kid, lane: LANE_GUEST });
+    return null;
+  }
+  if (kidLane(kid) === LANE_ACCOUNT) return kid.id;
+  if (!adoptInFlight) {
+    adoptInFlight = (async () => {
+      try {
+        // Already in the database under this id? Then it was only ever missing
+        // its label -- stamp it and stop. No second row for the same child.
+        const mine = await listKidProfiles();
+        const found = (mine || []).find((k) => k.id === kid.id);
+        if (found) { setActiveKid({ ...found, lane: LANE_ACCOUNT }); return found.id; }
+        return await adoptGuestKid(kid);
+      } catch (e) {
+        // Adoption failing must never stop a child playing. They stay on the
+        // device lane, which still saves and still lists.
+        console.warn("ensureServerKidProfile: could not give this player a real profile row", e);
+        return null;
+      }
+    })().finally(() => { adoptInFlight = null; });
+  }
+  return adoptInFlight;
 }
 
 // General profile update for the onboarding fields (name/avatar/grade/pin).
@@ -344,7 +480,9 @@ export async function updateKidProfile(id, patch = {}) {
       try {
         const b = i === 0 ? body : (({ grade, pin_hash, ...rest }) => rest)(body);
         const rows = await restFetch(`kid_profiles?id=eq.${id}&select=${trySelects[i]}`, { method: "PATCH", body: JSON.stringify(b) });
-        const updated = rows?.[0];
+        // Re-stamp the lane: setActiveKid stores this object verbatim, and an
+        // edit that dropped the label would demote a real profile back to guest.
+        const updated = rows?.[0] && { ...rows[0], lane: LANE_ACCOUNT };
         const active = getActiveKid();
         if (active && active.id === id && updated) setActiveKid(updated);
         return updated;
@@ -373,7 +511,7 @@ export async function renameKidProfile(id, displayName) {
       method: "PATCH",
       body: JSON.stringify({ name: name.slice(0, 40) }),
     });
-    const updated = rows?.[0];
+    const updated = rows?.[0] && { ...rows[0], lane: LANE_ACCOUNT };
     const active = getActiveKid();
     if (active && active.id === id && updated) setActiveKid(updated);
     return updated;
