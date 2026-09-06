@@ -92,14 +92,24 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   bgUrl:   "https://www.buildablekids.com/api/story-library?img=world:enchanted-forest&style=watercolor",
   palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#c0566f", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
-    { name:"Whispering Woods", speed:3.2, length:150, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, boss:true, bossHp:3 },
+    { name:"Whispering Woods", speed:3.2, length:230, gapChance:0.15, gapMax:2, obstacleChance:0.10, enemyChance:0.09, lowChance:0.10, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, boss:true, bossHp:3 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
 
-const W=900, H=540, TILE=60;                  // world units
+let W=900; const H=540, TILE=60;               // world units (W widens to fill a landscape screen; H is fixed so level geometry never moves)
 const GROUND_Y = H-110;                        // top of the ground band
 const GRAV=0.58, JUMP=-13.8, RUN_BASE=3.2; // physics
+// --- HH1: Mario feel. A short run-up to a faster top speed, then coyote time and a
+// jump buffer so a jump is never eaten by a frame. lv.speed stays the RECIPE speed
+// (buildLevel sizes gaps from it), so a faster hero only ever makes a gap EASIER. ---
+const TOP_MULT   = 1.55;   // real top speed = lv.speed * this
+const ACC_GROUND = 0.30, ACC_AIR = 0.20;      // low accel => a run-up you can feel
+const FRIC_GROUND= 0.86, FRIC_AIR = 0.965;    // momentum when you let go
+const SKID_DECEL = 0.90;                      // per-frame bite when you push against your own momentum
+const COYOTE_FRAMES = 6;                      // grace frames to jump after walking off a ledge
+const BUFFER_FRAMES = 8;                      // a jump pressed this early still fires on landing
+const SKID_MIN = 1.6;                         // speed you must be doing for a turn-around to count as a skid
 const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a full jump stays airborne
 const SLIDE_FRAMES=34;
 const c=document.getElementById('c'), ctx=c.getContext('2d');
@@ -189,7 +199,7 @@ function buildLevel(lv, idx){
           i+=gapTiles; segStart=i*TILE; lastHaz=i; continue;
         }
         if(canHaz && rnd()<lv.obstacleChance){ obstacles.push({x:tx+TILE/2, y:GROUND_Y, w:34, h:46}); lastHaz=i; }
-        else if(canHaz && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false}); lastHaz=i; }
+        else if(canHaz && rnd()<lv.enemyChance){ enemies.push({x:tx+TILE/2, y:GROUND_Y-26, w:40, h:40, dir:-1, base:tx+TILE/2, range:40, dead:false, squash:0}); lastHaz=i; }
         else if(canHaz && (lv.lowChance||0)>0 && (i-lastHaz)>=landTiles && rnd()<lv.lowChance){ lowBars.push({x:tx+TILE/2}); lastHaz=i; }
         if(rnd()<lv.coinChance) coins.push({x:tx+TILE/2, y:GROUND_Y-70-Math.floor(rnd()*60), got:false});
       }
@@ -267,14 +277,19 @@ function buildScene(L, idx){
 let LEVELS = GAME_CONFIG.levels.map((lv,i)=>buildLevel(lv,i));
 let li=0, L=LEVELS[0];
 let player, camX, hearts, coinsGot, totalCoins, state, invuln, botMode=false, doneMsgT=0, started=false, starsGot=0, totalStars=0, gameT=0, demoMode=true, demoRestartT=0;
-let dust=[];
+let dust=[], pops=[], camY=0;
 function spawnDust(wx,wy){ for(let i=0;i<6;i++) dust.push({x:wx,y:wy,vx:(Math.random()-0.5)*3.2,vy:-Math.random()*2,life:16+Math.random()*10}); }
+// skid dust: sprays backwards out from under the feet when the hero turns around
+function spawnSkidDust(wx,wy,dir){ for(let i=0;i<3;i++) dust.push({x:wx,y:wy,vx:-dir*(1.4+Math.random()*2.2),vy:-Math.random()*1.4,life:14+Math.random()*10}); }
+// floating pop text ("+1", "NICE!") — the little reward that says a stomp landed
+function pop(wx,wy,txt,col){ pops.push({x:wx,y:wy,t:0,txt:txt,col:col||"#fff"}); if(pops.length>14) pops.shift(); }
 let shieldOn=false, magnetT=0, springT=0, starT=0;  // power-up effect timers
 
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
-  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null};
-  camX=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; starsGot=0; totalStars=L.stars.length; dust=[]; doneMsgT=0; gameT=0;
+  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null,
+          coyote:COYOTE_FRAMES, buf:0, skid:0, runPhase:0, idleT:0};
+  camX=0; camY=0; invuln=0; state="play"; coinsGot=0; totalCoins=L.coins.length; starsGot=0; totalStars=L.stars.length; dust=[]; pops=[]; doneMsgT=0; gameT=0;
   if(L.boss){ L.boss.hp=L.boss.maxHp; L.boss.defeated=false; L.boss.t=0; L.boss.hit=0; L.boss.happy=0; L.boss.active=false; }
   for(const sw of (L.swings||[])){ sw.grabbed=false; }
   shieldOn=false; magnetT=0; springT=0; starT=0;
@@ -285,17 +300,25 @@ startLevel(0);
 
 // --- input ---
 let jumpHeld=false, inputLeft=false, inputRight=false, paused=true;
-function doJump(){
-  if(!started){started=true;}
+// One jump attempt. Returns true if it actually fired. Coyote time lets a ground jump
+// still work for a few frames after walking off a ledge; a press that finds nothing is
+// remembered by the buffer and fired the moment the feet touch down.
+function tryJump(){
   if(player.swing){ const sw=player.swing; const tang=sw.angV*sw.len;        // let go of the vine, fling in the swing direction
     player.vx=Math.max(-7,Math.min(7,Math.cos(sw.ang)*tang*6));
     player.vy=JUMP*0.7 - Math.min(6,Math.abs(Math.sin(sw.ang)*tang)*0.5);
-    player.swing=null; sw.grabbed=false; player.onGround=false; player.dj=true; player.swingCool=10; SFX.jump(); return; }
+    player.swing=null; sw.grabbed=false; player.onGround=false; player.dj=true; player.swingCool=10; SFX.jump(); return true; }
   if(player.slide>0) player.slide=0;                       // jump cancels a slide
   const jv = springT>0 ? 1.2 : 1;                          // spring power-up = higher jump
-  if(player.onGround){ player.vy=JUMP*jv; player.onGround=false; player.dj=true; SFX.jump(); }
-  else if(player.dj){ player.vy=JUMP*0.82*jv; player.dj=false; SFX.jump(); }
+  if(player.onGround || player.coyote>0){                  // ground jump, incl. the coyote grace window
+    player.vy=JUMP*jv; player.onGround=false; player.coyote=0; player.dj=true; SFX.jump(); return true; }
+  if(player.dj){ player.vy=JUMP*0.82*jv; player.dj=false; SFX.jump(); return true; }   // double jump, unchanged
+  return false;
+}
+function doJump(){
+  if(!started){started=true;}
   jumpHeld=true;
+  if(!tryJump()) player.buf=BUFFER_FRAMES;                 // nothing to jump from yet — remember the press
 }
 function doSlide(){ if(!started){started=true;return;} if(player.onGround && player.slide<=0){ player.slide=SLIDE_FRAMES; } }
 addEventListener('keydown',e=>{
@@ -347,12 +370,16 @@ function groundUnder(wx){ for(const g of L.ground){ if(wx>=g.x0 && wx<g.x1) retu
 // --- simple "perfect player" bot: jump before a gap or obstacle/enemy ---
 function botThink(){
   inputRight=true; inputLeft=false;          // perfect player walks right
+  // HH1: the hero now runs up to L.speed*TOP_MULT, so every "how far ahead do I look"
+  // number scales with the speed actually being carried. Without this the bot jumps
+  // too late at the new top speed and clips the lip of a pit.
+  const K = Math.max(1, Math.abs(player.vx)/RUN_BASE);
   if(player.onGround){
-    if(L.boss && !L.boss.defeated){ const d=L.boss.x-(player.x+24); if(d>-20 && d<90){ doJump(); return; } }
-    for(const b of L.lowBars){ const d=b.x-(player.x+24); if(d>2 && d<60){ if(player.slide<=0) doSlide(); return; } }
-    if(groundUnder(player.x+24+46)==null){ doJump(); return; }   // gap just ahead
-    for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>2 && d<66){ doJump(); return; } }
-    for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>2 && d<58){ doJump(); return; } } }
+    if(L.boss && !L.boss.defeated){ const d=L.boss.x-(player.x+24); if(d>-20 && d<90*K){ doJump(); return; } }
+    for(const b of L.lowBars){ const d=b.x-(player.x+24); if(d>2 && d<60*K){ if(player.slide<=0) doSlide(); return; } }
+    if(groundUnder(player.x+24+46*K)==null){ doJump(); return; }   // gap just ahead
+    for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>2 && d<66*K){ doJump(); return; } }
+    for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>2 && d<58*K){ doJump(); return; } } }
   } else { jumpHeld=true; }
 }
 
@@ -385,13 +412,28 @@ function update(){
     for(const sw of L.swings){ const bx=sw.ax+Math.sin(sw.ang)*sw.len, by=sw.ay+Math.cos(sw.ang)*sw.len;
       if(Math.abs((player.x+24)-bx)<40 && Math.abs((player.y+30)-by)<46){ player.swing=sw; sw.grabbed=true; player.vy=0; break; } }
   }
-  // walk — player-controlled (Mario-style, no auto-scroll)
-  const ACC=0.7, MAXR=L.speed, FR=0.80;
-  if(inputLeft && !inputRight) player.vx-=ACC; else if(inputRight && !inputLeft) player.vx+=ACC; else player.vx*=FR;
+  // walk — player-controlled (Mario-style, no auto-scroll). A short run-up to a faster
+  // top speed, and pushing against your own momentum SKIDS instead of stopping dead.
+  const MAXR=L.speed*TOP_MULT;
+  const ACC = player.onGround ? ACC_GROUND : ACC_AIR;
+  const dir = (inputLeft && !inputRight) ? -1 : (inputRight && !inputLeft) ? 1 : 0;
+  if(player.skid>0) player.skid--;
+  if(dir!==0){
+    const turning = player.vx*dir < -0.01;                 // asking for the opposite of where you are going
+    if(turning){
+      if(player.onGround && Math.abs(player.vx)>SKID_MIN){ player.skid=10; if(gameT%3===0) spawnSkidDust(player.x+24, player.y+60, dir); }
+      player.vx *= SKID_DECEL;                             // skid: momentum bleeds off, it does not stop dead
+      player.vx += ACC*dir*1.8;
+    } else player.vx += ACC*dir;
+  } else player.vx *= (player.onGround?FRIC_GROUND:FRIC_AIR);
+  if(Math.abs(player.vx)<0.04) player.vx=0;
   if(player.vx>MAXR)player.vx=MAXR; if(player.vx<-MAXR)player.vx=-MAXR;
   player.x += player.vx;
   if(player.x<20){ player.x=20; if(player.vx<0)player.vx=0; }
   if(Math.abs(player.vx)>0.4) player.face = player.vx>0?1:-1;
+  // run cycle phase: driven by distance travelled, so the legs match the speed
+  player.runPhase += Math.abs(player.vx)*0.09;
+  if(player.onGround && Math.abs(player.vx)<0.3) player.idleT++; else player.idleT=0;
   // gravity + variable jump height
   player.vy += GRAV * (jumpHeld && player.vy<0 ? 0.62 : 1);
   player.y += player.vy;
@@ -403,10 +445,14 @@ function update(){
       for(const pf of L.platforms){ if(cx>=pf.x && cx<=pf.x+pf.w && prevFeet<=pf.y && feet>=pf.y){ if(landY==null||pf.y<landY){landY=pf.y; landPf=pf;} } }
       for(const bp of L.bounces){ if(cx>=bp.x && cx<=bp.x+bp.w && prevFeet<=bp.y && feet>=bp.y){ bounce=true; bp.t=10; } }
     }
-    if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; SFX.bounce(); }
-    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); SFX.land(); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false;
+    const wasOnGround=player.onGround;
+    if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; player.coyote=0; SFX.bounce(); }
+    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); SFX.land(); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; player.coyote=COYOTE_FRAMES;
       if(landPf&&landPf.mv){ if(landPf.mv.axis==='x'||landPf.mv.axis==='diag') player.x+=landPf.dx; player.standPf=landPf; } else player.standPf=null; }
-    else { player.onGround=false; player.standPf=null; }
+    else { player.onGround=false; player.standPf=null; if(wasOnGround && player.vy>=0) player.coyote=COYOTE_FRAMES; }
+    if(!player.onGround && player.coyote>0) player.coyote--;
+    // a jump pressed just before landing fires the moment there is something to push off
+    if(player.buf>0){ player.buf--; if(player.onGround||player.coyote>0){ if(tryJump()) player.buf=0; } }
   }
   player.r = player.onGround?0:Math.max(-0.5,Math.min(0.5,player.vy*0.03));
   // fell in a gap
@@ -423,14 +469,19 @@ function update(){
   // power-up pickups
   for(const u of L.powerups){ if(u.got)continue; if(Math.abs((player.x+24)-u.x)<36 && Math.abs((player.y+30)-u.y)<44){ u.got=true; SFX.power(); if(u.kind==="shield")shieldOn=true; else if(u.kind==="magnet")magnetT=360; else if(u.kind==="spring")springT=360; else if(u.kind==="star")starT=360; else if(u.kind==="heart"&&hearts<3)hearts++; } }
   // enemies (walk a little)
-  for(const e of L.enemies){ if(e.dead)continue; e.x+=e.dir*0.6; if(Math.abs(e.x-e.base)>e.range)e.dir*=-1;
+  for(const e of L.enemies){ if(e.squash>0) e.squash--; if(e.dead)continue; e.x+=e.dir*0.6; if(Math.abs(e.x-e.base)>e.range)e.dir*=-1;
     const dx=Math.abs((player.x+24)-e.x), dy=(player.y+60)-e.y;
     if(dx<34 && Math.abs((player.y+30)-e.y)<46){
-      if(starT>0){ e.dead=true; }                                   // star smashes enemies
-      else if(player.vy>0 && (player.y+60)-e.y<26){ e.dead=true; player.vy=JUMP*0.6; }  // stomp
+      if(starT>0){ e.dead=true; e.squash=26; pop(e.x, e.y-30, "SMASH!", "#ffd23f"); }        // star smashes enemies
+      else if(player.vy>0 && (player.y+60)-e.y<26){                 // STOMP: squash flat, bounce, pop text
+        e.dead=true; e.squash=26; player.vy=JUMP*(jumpHeld?0.92:0.72); player.dj=true;
+        spawnDust(e.x, GROUND_Y); SFX.bounce(); pop(e.x, e.y-34, "NICE!", "#fff3b0");
+      }
       else if(invuln<=0){ takeHit(); }
     }
   }
+  for(const q of pops){ q.t++; q.y-=0.9; }
+  if(pops.length) pops=pops.filter(q=>q.t<44);
   // obstacles
   for(const o of L.obstacles){ const dx=Math.abs((player.x+24)-o.x); if(dx<28 && (player.y+60)>o.y-o.h+6 && (player.y+30)<o.y && invuln<=0){ takeHit(); } }
   // low barriers: must SLIDE under (can't jump over)
@@ -481,10 +532,18 @@ function drawPU(x,y,kind,r){ r=r||15; const col={shield:"#4aa3ff",magnet:"#e0566
 function heart(x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*0.3);ctx.bezierCurveTo(x,y,x-s,y,x-s,y+s*0.35);ctx.bezierCurveTo(x-s,y+s*0.7,x,y+s*0.9,x,y+s*1.15);ctx.bezierCurveTo(x,y+s*0.9,x+s,y+s*0.7,x+s,y+s*0.35);ctx.bezierCurveTo(x+s,y,x,y,x,y+s*0.3);ctx.closePath();ctx.fill();}
 function draw(){
   const P=GAME_CONFIG.palette;
-  const _ct=Math.max(0, player.x - W*0.42); camX += (_ct-camX)*0.16; if(camX<0)camX=0;
+  // HH1 camera: a little look-ahead in the direction of travel (so you see what you are
+  // running into), never scrolling left of the start, and a gentle vertical follow that
+  // only kicks in on the tall two-tier climbs so the top platforms stay on screen.
+  const spd01 = Math.min(1, Math.abs(player.vx)/(L.speed*TOP_MULT));
+  const look  = (player.face||1) * spd01 * 110;
+  const _ct=Math.max(0, player.x - W*0.42 + look); camX += (_ct-camX)*0.09; if(camX<0)camX=0;
+  const wantY = Math.max(0, Math.min(160, (GROUND_Y-170) - player.y));
+  camY += (wantY-camY)*0.07; if(camY<0.4) camY=0;
   const t=Date.now()/1000, SC=L.scene||{mid:[],near:[],fore:[],top:[],flies:[]};
-  // LAYER 1 — sky gradient
+  // LAYER 1 — sky gradient (drawn OUTSIDE the camera shift so the top never goes blank)
   const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#cfeaff"); sky.addColorStop(.55,"#dff0d6"); sky.addColorStop(1,"#eef6dc"); ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  ctx.save(); ctx.translate(0, Math.round(camY));      // <<< world layers follow the climb
   // soft god-rays
   ctx.save(); ctx.globalCompositeOperation="lighter";
   for(let i=0;i<4;i++){ const a=0.05+0.035*Math.sin(t*0.5+i*1.7); ctx.fillStyle="rgba(255,250,205,"+a.toFixed(3)+")"; const x=((150+i*240-(camX*0.1))%1100+1100)%1100 - 100; ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+80,0);ctx.lineTo(x-10,H);ctx.lineTo(x-110,H);ctx.closePath();ctx.fill(); }
@@ -518,7 +577,12 @@ function draw(){
   // obstacles (crystals)
   for(const o of L.obstacles){ const x=o.x-camX; if(x<-40||x>W+40)continue; const im=propImg("gem"); if(im){ const h=o.h+22, w=h*(im.naturalWidth/im.naturalHeight); ctx.drawImage(im, x-w/2, o.y-h+8, w, h); } else { ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/2,o.y);ctx.lineTo(x-o.w/2,o.y);ctx.closePath();ctx.fill(); ctx.fillStyle="rgba(255,255,255,.25)";ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/4,o.y-o.h/2);ctx.lineTo(x-o.w/6,o.y-o.h/3);ctx.closePath();ctx.fill(); } }
   // enemies (little blobs)
-  for(const e of L.enemies){ if(e.dead)continue; const x=e.x-camX; if(x<-40||x>W+40)continue; const im=propImg("critter"); if(im){ const s=52, w=s*(im.naturalWidth/im.naturalHeight), bob=Math.sin(t*4+e.base)*2; ctx.save(); ctx.translate(x, GROUND_Y-s+bob); if(e.dir>0)ctx.scale(-1,1); ctx.drawImage(im, -w/2, 0, w, s); ctx.restore(); } else { ctx.fillStyle=P.enemy; rrect(x-20,e.y-6,40,34,16);ctx.fill(); ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(x-7,e.y+6,5,0,7);ctx.arc(x+7,e.y+6,5,0,7);ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath();ctx.arc(x-6,e.y+7,2.4,0,7);ctx.arc(x+8,e.y+7,2.4,0,7);ctx.fill(); } }
+  for(const e of L.enemies){ if(e.dead && !(e.squash>0))continue; const x=e.x-camX; if(x<-40||x>W+40)continue;
+    if(e.dead){ const k=e.squash/26; ctx.save(); ctx.globalAlpha=Math.min(1,k*1.6);   // squashed flat, then fades
+      ctx.fillStyle=P.enemy; ctx.beginPath(); ctx.ellipse(x, GROUND_Y-5, 26, 6+8*k, 0,0,7); ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.7)"; ctx.beginPath(); ctx.ellipse(x-7, GROUND_Y-6, 4, 2.4,0,0,7); ctx.ellipse(x+7, GROUND_Y-6, 4, 2.4,0,0,7); ctx.fill();
+      ctx.restore(); continue; }
+    const im=propImg("critter"); if(im){ const s=52, w=s*(im.naturalWidth/im.naturalHeight), bob=Math.sin(t*4+e.base)*2; ctx.save(); ctx.translate(x, GROUND_Y-s+bob); if(e.dir>0)ctx.scale(-1,1); ctx.drawImage(im, -w/2, 0, w, s); ctx.restore(); } else { ctx.fillStyle=P.enemy; rrect(x-20,e.y-6,40,34,16);ctx.fill(); ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(x-7,e.y+6,5,0,7);ctx.arc(x+7,e.y+6,5,0,7);ctx.fill(); ctx.fillStyle="#222"; ctx.beginPath();ctx.arc(x-6,e.y+7,2.4,0,7);ctx.arc(x+8,e.y+7,2.4,0,7);ctx.fill(); } }
   // low barriers (slide under)
   for(const b of L.lowBars){ const x=b.x-camX; if(x<-40||x>W+40)continue; const im=propImg("vines"); if(im){ const h=GROUND_Y-20, w=72; ctx.drawImage(im, x-w/2, -16, w, h); } else { ctx.fillStyle=P.obstacle; rrect(x-22,-12,44,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-22,-12,12,GROUND_Y-24,12); ctx.fill(); ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x-30,GROUND_Y-36);ctx.lineTo(x+30,GROUND_Y-36);ctx.lineTo(x,GROUND_Y-18);ctx.closePath();ctx.fill(); } }
   // power-ups (floating bonus pickups)
@@ -551,15 +615,41 @@ function draw(){
   const fx=L.goalX-camX; if(fx<W+80 && fx>-90){ const im=propImg("flag"); if(im){ const h=150, w=h*(im.naturalWidth/im.naturalHeight); ctx.drawImage(im, fx-w*0.16, GROUND_Y-h, w, h); } else { ctx.strokeStyle="#6a4a2a";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(fx,GROUND_Y);ctx.lineTo(fx,GROUND_Y-120);ctx.stroke(); ctx.fillStyle=P.flag; ctx.beginPath();ctx.moveTo(fx,GROUND_Y-120);ctx.lineTo(fx+52,GROUND_Y-104);ctx.lineTo(fx,GROUND_Y-86);ctx.closePath();ctx.fill(); } }
   // landing dust
   for(const d of dust){ const x=d.x-camX; ctx.fillStyle="rgba(170,150,110,"+Math.min(0.6,d.life/26).toFixed(2)+")"; ctx.beginPath();ctx.arc(x,d.y,3,0,7);ctx.fill(); }
-  // hero
+  // hero — HH1 animation. api/story-library can only make FACE/MOOD variants of a
+  // character (happy, excited, scared...), never a run or jump pose, so the poses are
+  // built by moving the one watercolor cutout we have: idle breathe, a two-beat run
+  // cycle (run A / run B) with a bounce and a lean, a stretch going up, a squash coming
+  // down, the existing land squash, and a lean-back turn-around when skidding.
+  // If the image never loads, the drawn fallback body gets the identical treatment,
+  // so there is never a broken image and never a frozen hero.
   const hx=player.x-camX, hy=player.y;
   const sliding=player.slide>0;
-  let scx=1, scy=1;
-  if(player.land>0){ const k=player.land/8; scy=1-0.26*k; scx=1+0.26*k; }
-  else if(!player.onGround){ if(player.vy<-1){ scy=1.12; scx=0.9; } else if(player.vy>4){ scy=1.07; scx=0.95; } }
-  ctx.save(); ctx.translate(hx+24, hy+64); ctx.scale(scx*(player.face||1),scy); ctx.rotate(sliding?0:player.r*0.6);
+  let scx=1, scy=1, lean=0, bob=0;
+  const running = player.onGround && Math.abs(player.vx)>0.5;
+  if(sliding){ /* slide keeps its own flat pose below */ }
+  else if(player.skid>0){                         // turn-around: lean AWAY from where you were going
+    lean = -0.30*(player.face||1); scx=1.10; scy=0.94; bob=1;
+  } else if(player.land>0){ const k=player.land/8; scy=1-0.26*k; scx=1+0.26*k; }
+  else if(!player.onGround){
+    if(player.vy<-1){ scy=1.14; scx=0.88; lean=0.10*(player.face||1); }        // jump: stretched, tipped forward
+    else if(player.vy>4){ scy=1.06; scx=0.95; lean=-0.05*(player.face||1); }   // falling: bracing
+  } else if(running){
+    // two-beat run cycle. sin() gives run A on one half and run B on the other:
+    // the body rises and tips forward on A, drops and squashes on B.
+    const ph=player.runPhase, sp=Math.min(1,Math.abs(player.vx)/(L.speed*TOP_MULT));
+    const a=Math.sin(ph), b=Math.cos(ph*2);
+    bob  = -Math.abs(a)*4.2*sp;
+    lean = (0.16 + a*0.07)*sp*(player.face||1);
+    scy  = 1 + b*0.05*sp; scx = 1 - b*0.05*sp;
+  } else {                                        // idle: a slow breathe so he is never dead still
+    const br=Math.sin(player.idleT*0.07);
+    scy = 1 + br*0.022; scx = 1 - br*0.022; bob = br*0.8;
+  }
+  ctx.save(); ctx.translate(hx+24, hy+64+bob); ctx.scale(scx*(player.face||1),scy); ctx.rotate(sliding?0:(player.r*0.6 + lean*(player.face||1)));
   if(hero.complete && hero.naturalWidth){ if(sliding) ctx.drawImage(hero,-34,-40,68,40); else ctx.drawImage(hero,-30,-68,60,68); }
-  else { ctx.fillStyle="#e8915a"; rrect(-22, sliding?-34:-60, 44, sliding?32:56, 16); ctx.fill(); }
+  else { ctx.fillStyle="#e8915a"; rrect(-22, sliding?-34:-60, 44, sliding?32:56, 16); ctx.fill();
+         ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(6,sliding?-22:-44,5,0,7); ctx.fill();
+         ctx.fillStyle="#2a2118"; ctx.beginPath(); ctx.arc(7,sliding?-22:-44,2.4,0,7); ctx.fill(); }
   ctx.restore();
   if(shieldOn){ ctx.strokeStyle="rgba(90,170,255,.85)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(hx+24,hy+28,34,0,7);ctx.stroke(); ctx.fillStyle="rgba(120,190,255,.16)";ctx.beginPath();ctx.arc(hx+24,hy+28,34,0,7);ctx.fill(); }
   if(starT>0){ ctx.fillStyle="rgba(255,220,90,.95)"; for(let s=0;s<3;s++){ const a=Date.now()/200+s*2.1; star5(hx+24+Math.cos(a)*30, hy+28+Math.sin(a)*30, 5); } }
@@ -569,6 +659,11 @@ function draw(){
     for(const fo of sc.fore){ const sx=fo.x-camX*1.25 + Math.sin(t2()*0.7+fo.ph)*6; if(sx<-200||sx>W+200)continue; if(groundUnder(sx+camX)==null)continue; const im=pieceImg("fern"); if(im){ ctx.globalAlpha=0.92; drawPiece(im, sx, H+28, 230*fo.s, fo.flip); ctx.globalAlpha=1; } }
     for(const tp of sc.top){ const sx=tp.x-camX*1.12; if(sx<-260||sx>W+260)continue; const im=pieceImg("canopy"); if(im) drawTopPiece(im, sx, 165*tp.s, tp.flip); }
   }
+  // floating pop text from stomps and smashes
+  for(const q of pops){ const x=q.x-camX; if(x<-60||x>W+60)continue; const a=Math.max(0,1-q.t/44);
+    ctx.save(); ctx.globalAlpha=a; ctx.font="bold 20px Fredoka,sans-serif"; ctx.textAlign="center";
+    ctx.lineWidth=4; ctx.strokeStyle="rgba(30,20,10,.55)"; ctx.strokeText(q.txt,x,q.y); ctx.fillStyle=q.col; ctx.fillText(q.txt,x,q.y); ctx.restore(); }
+  ctx.restore();                                       // <<< end of the camera shift
   // HUD
   ctx.fillStyle=P.hud; ctx.font="bold 22px Fredoka,sans-serif"; ctx.textAlign="left";
   ctx.fillText(L.name+"   Lv "+(li+1)+"/"+LEVELS.length, 18, 34);
