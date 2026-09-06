@@ -212,26 +212,44 @@ no jargon.
 - **QA honesty.** Any session that touches a game ends by running that game's QA script
   (`qa-{game}.mjs`). If a game has no QA script, say so plainly. **Never claim QA passed
   if it did not actually run.**
-- **`qa-all.mjs` is the release gate. Run it before you call a session done.**
+- **`npm run qa` is the release gate. Run it before you call a session done.**
 
   ```
-  node qa-all.mjs            # every harness, no browser needed, about 4 minutes
-  node qa-all.mjs --live     # ALSO check the live site serves what it should (CI only)
+  npm run qa                      # the whole gate: serving check + harnesses + pages
+  npm run qa -- --no-pages        # skip the browser half (no Chromium on this machine)
+  npm run qa -- --serving-only    # just the routing check, seconds not minutes
+  npm run qa -- --live            # ALSO check the live site serves what it should (CI)
   ```
 
-  It finds every `qa-*.mjs` on disk, so a new harness is in the gate the moment you
-  write one and can never be forgotten. Before the harnesses it runs a **serving
-  check**: every `public/buildable-*.js` and every `public/*.html` must have a route
-  in `vercel.json` ahead of the `/(.*)` catch-all. That check exists because Practice
-  shipped completely dead — `qa-practice.mjs` passed the whole time, but
-  `buildable-practice.js` had no route, so the server sent `landing.html` in its place
-  and the browser choked on `Unexpected token '<'`. **A passing harness does not mean
-  the thing is reachable.** `--live` fetches each file from production and fails if
-  HTML comes back where JavaScript should; it needs real network, so it is skipped
-  (loudly, never silently) on a machine that cannot reach the site.
+  It is `scripts/qa-all.mjs`. There was briefly a second gate at the repo root; it was
+  folded into this one and deleted (session QA-SUITE, 2026-09-06), so `node qa-all.mjs`
+  no longer exists. The gate has three parts:
+
+  1. **The serving check.** Every `public/buildable-*.js` and every `public/*.html`
+     must have a route in `vercel.json` ahead of the `/(.*)` catch-all. This check
+     exists because Practice shipped completely dead — `qa-practice.mjs` passed the
+     whole time, but `buildable-practice.js` had no route, so the server sent
+     `landing.html` in its place and the browser choked on `Unexpected token '<'`.
+     **A passing harness does not mean the thing is reachable.** It is a file-system
+     sweep, not a list somebody has to remember to update. `--live` fetches each file
+     from production and fails if HTML comes back where JavaScript should; it needs
+     real network, so it is skipped (loudly, never silently) on a machine that cannot
+     reach the site.
+  2. **The machine sweep.** Every `qa-*.mjs` on disk, so a new harness is in the gate
+     the moment you write one and can never be forgotten. A harness that cannot run
+     today is never silently dropped: it goes in the `QUARANTINE` table at the top of
+     `scripts/qa-all.mjs` with a reason and a planner card id, and prints `QUAR`.
+  3. **The page sweep.** Serves `public/` and opens every `public/**/*.html` in
+     headless Chromium, failing on a console error, an uncaught error or a missing
+     file. Needs `playwright`; without it this half prints SKIP and the run reports
+     "green but incomplete" rather than "green".
+
+  It prints one table and writes `QA-SWEEP-REPORT.md`, which is generated — never
+  hand-edit it. `QA-MAP.md` is the companion: the list of every page, tile, book and
+  harness on the site, and which pages still have no check.
 
   This does not replace `scripts/editor-qa-run.mjs`, which is a different job: that one
-  play-tests the 19 manifest games in `qa/qa-map.mjs` after an editor save. `qa-all.mjs`
+  play-tests the 19 manifest games in `qa/qa-map.mjs` after an editor save. `npm run qa`
   is the whole-repo gate.
 - **Log every session in `SESSION-LOG.md`** at the end: date, block ID, what shipped,
   what remains, anything flagged. (This is in addition to the dated README log entry

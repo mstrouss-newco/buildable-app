@@ -22,9 +22,9 @@ name: Editor QA gate
 
 on:
   # QA-FIX 2026-08-30: the release gate. Every push to main runs the WHOLE suite
-  # (qa-all.mjs) including the serving check, so a file that is not routed can never
-  # reach kids silently again. This is the trigger that was missing when Practice
-  # shipped dead.
+  # (`npm run qa` = scripts/qa-all.mjs) including the serving check, so a file that is
+  # not routed can never reach kids silently again. This is the trigger that was
+  # missing when Practice shipped dead.
   push:
     branches: [main]
   repository_dispatch:
@@ -48,6 +48,8 @@ jobs:
   # ---- The whole-repo gate (QA-FIX 2026-08-30) --------------------------------
   # Runs on every push to main. Separate from play-test on purpose: this one needs no
   # secrets, touches nothing, and must go red the moment anything in the repo breaks.
+  # QA-SUITE 2026-09-06: repointed at `npm run qa` when the root qa-all.mjs was folded
+  # into scripts/qa-all.mjs and deleted.
   gate:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -65,8 +67,13 @@ jobs:
       # nothing to do with the code. (Caught the first time this job ever ran.)
       - name: Install dependencies
         run: npm ci
-      - name: Run every harness and the serving check
-        run: node qa-all.mjs
+      # QA-SUITE 2026-09-06: the two gates were merged. `npm run qa` is
+      # scripts/qa-all.mjs — the serving check, every harness, and the headless
+      # page sweep. The root qa-all.mjs no longer exists.
+      - name: Install a browser for the page sweep
+        run: npx playwright install --with-deps chromium
+      - name: Run the release gate
+        run: npm run qa
       - name: Check the live site really serves what it should
         # Runs after the deploy that this push triggers, so give Vercel a moment.
         # Never fails the build on its own: a wobble on the live site is not a reason
@@ -76,7 +83,7 @@ jobs:
           QA_SITE_URL: ${{ vars.QA_SITE_URL || 'https://buildablekids.com' }}
         run: |
           sleep 90
-          node qa-all.mjs --live --only NOSUCHHARNESS
+          npm run qa -- --serving-only --live --report /tmp/qa-live-report.md
 
   play-test:
     if: github.event_name != 'push'
