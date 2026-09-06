@@ -8,11 +8,15 @@ This is the *find* half of the QA phase. It fixes nothing. It exists so that QA2
 checklist to work from, and so nobody has to re-derive "what is actually on this
 site" ever again.
 
-Built by reading the repo at the commit that introduced this file: `vercel.json`
-(every route), `src/BuildableKids.jsx` (`GAME_CATALOG`, `MAKE_CATALOG`,
-`LANDING_WRAP`, the `SCREEN_*` table), `public/**/*.html` (53 pages),
-`public/explore/*.json` (the Kidspedia shelf), `api/*.js` (87 functions) and all 51
-`qa-*.mjs` harnesses.
+Built by reading the repo: `vercel.json` (every route), `src/BuildableKids.jsx`
+(`GAME_CATALOG`, `MAKE_CATALOG`, `LANDING_WRAP`, the `SCREEN_*` table),
+`public/**/*.html`, `public/explore/*.json` (the Kidspedia shelf), `api/*.js` and
+every `qa-*.mjs` harness.
+
+**Re-checked against `main` on 2026-09-06** (session QA-SUITE), when QA1 and QA2's
+deliverables were finally landed on `main` — they had been ticked done in August
+but lived only on a branch. The drift since the map was written is marked
+**[2026-09-06]** wherever it appears below.
 
 ## How to read this map
 
@@ -31,22 +35,32 @@ Every row answers the three questions QA1 asks, with no blanks and no "unknown":
 
 Counts, so a future session can tell at a glance whether this map has drifted:
 
-| Thing | Count |
-|---|---|
-| Pages under `public/` (`*.html`) | 53 |
-| Home tiles in `GAME_CATALOG` | 27 (21 live, 6 soon) |
-| Make tiles in `MAKE_CATALOG` | 5 (3 live, 2 soon) |
-| Kidspedia books planned / shelved today | 20 / 14 |
-| Kidspedia labs (exhibit templates) | 3 |
-| `qa-*.mjs` harnesses in the repo root | 51 |
-| API functions in `api/` | 87 |
-| Public pages with **no** harness | 16 |
+| Thing | Count | Was (Aug) |
+|---|---|---|
+| Pages under `public/` (`*.html`) | **57** | 53 |
+| Home tiles in `GAME_CATALOG` | 27 (21 live, 6 soon) | unchanged |
+| Make tiles in `MAKE_CATALOG` | 5 (3 live, 2 soon) | unchanged |
+| Kidspedia books planned / shelved today | 20 / 14 | unchanged |
+| Kidspedia labs (exhibit templates) | 3 | unchanged |
+| `qa-*.mjs` harnesses in the repo root | **60** | 51 |
+| API functions in `api/` | **88** | 87 |
+| Public pages with **no** harness | **13** | 16 |
+| Harnesses quarantined in the gate | **1** | 3 |
+
+**[2026-09-06] What moved.** Five pages arrived — `practice.html`,
+`minutemath.html`, `cobuild.html`, `audio-check.html`, `audio-watch.html` — and
+`chess-look-mock.html` was deleted (commit `51d96cb`, CP2). Nine harnesses
+arrived: `qa-practice.mjs`, `qa-practice-shot.mjs`, `qa-art-browser.mjs`,
+`qa-farm.mjs`, and the five written by card QA9 (§8a). The repo-root
+`qa-all.mjs` that briefly existed alongside `scripts/qa-all.mjs` was folded into
+it and deleted, so `npm run qa` is now the only gate.
 
 ---
 
 ## 1. The shell — `/app`
 
-One React app, `src/BuildableKids.jsx` (5,139 lines) plus 17 sibling components.
+One React app, `src/BuildableKids.jsx` (**5,174 lines** [2026-09-06]) plus 17
+sibling components.
 Vercel rewrites `/app`, `/app/*`, `/admin` and `/admin.html` to `index.html`; the
 shell then routes internally through its `SCREEN_*` table. Games are **not**
 separate documents to the kid — the shell mounts each engine page in a `GameFrame`
@@ -62,6 +76,7 @@ iframe.
 | `/app/explore` | Explore section page | `qa-nv3.mjs` |
 | `/app/me` (alias `/app/creations`) | My Stuff | `qa-nv4.mjs` |
 | `/app/lessons` | Lessons | `qa-lessons.mjs`, `qa-lessons-dom.mjs` |
+| `/app/practice` | Practice — the shared deck engine (session PT1) **[2026-09-06]** | `qa-practice.mjs`, `qa-practice-shot.mjs` |
 | `/app/explore/<id>` | One exhibit / book | `qa-explore.mjs`, `qa-topic.mjs` |
 | `/app/breaker`, `/breaker/journey`, `/breaker/loadout` | Breaker landing / journey / loadout | `qa-breaker.mjs` |
 | `/app/tennis`, `/app/chess`, `/app/music-maker` | Those landings | `qa-tennis.mjs`, `qa-chess.mjs`, `qa-music.mjs` |
@@ -194,13 +209,34 @@ Awaiting approval: **6** (`snakes-reptiles`, `planets`, `rockets`, `deep-ocean`,
 | Question bank generator | `api/generate-question-bank.js`, `api/_curriculum.js`, `api/_quizgen.js` | `qa-question-bank.mjs` |
 | Lesson review (grown-up) | `/lesson-review.html` | `qa-lessons.mjs` |
 | Question review (grown-up) | `/question-review.html` | **none** |
+| Minute Math **[2026-09-06]** | `/minutemath.html`, `/minutemath` — reached from `lessons.html` via `window.__minuteMath` | `qa-minutemath.mjs` |
+
+### Practice — the shared deck engine (session PT1) **[2026-09-06]**
+
+Practice is its own kid-facing surface, not part of Lessons. The shell mounts it
+at `/app/practice` through a `GameFrame` on `/practice`; the engine is
+`public/buildable-practice.js` with `public/practice.html` as the page.
+
+| Thing | Where | QA harness |
+|---|---|---|
+| Practice page | `/practice.html`, `/practice`, `/app/practice` | `qa-practice.mjs` |
+| Practice engine | `public/buildable-practice.js` | `qa-practice.mjs` |
+| Decks and word audio | `public/practice/decks/`, `public/practice/audio/` | `qa-practice.mjs` |
+| How the screens LOOK | real Chromium screenshots | `qa-practice-shot.mjs` (SKIPs without playwright) |
+
+`qa-practice.mjs` asserts its own routes — `/practice`, `/practice.html`, the
+decks and the audio — which is the check whose absence let Practice ship dead in
+the first place. See §8c.7.
 
 ---
 
-## 6. Every page under `public/` — all 53
+## 6. Every page under `public/` — all 57 **[2026-09-06]**
 
-Grouped by what they are. Every one has an explicit `vercel.json` route **except
-`feedback.html`** (see §8).
+Grouped by what they are. **[2026-09-06] Every one now has an explicit
+`vercel.json` route**, `feedback.html` included — that gap (§8c.1, card QA4) has
+been closed. `landing.html` needs no route of its own: it is the catch-all's own
+destination. The gate proves this on every push, so this paragraph can no longer
+go quietly stale.
 
 ### 6a. Game engine pages (26) — covered by the table in §2
 
@@ -234,7 +270,16 @@ Grouped by what they are. Every one has an explicit `vercel.json` route **except
 | `/story.html` | A shared story (`/s/<id>`) | Share link, `src/TopBoard.jsx` | · · · · | **none** |
 | `/play-invite.html` | Guest "grandma flow" — play a friend without an account | Invite link | · · · · | **none** (backend has `qa-invite.mjs`) |
 
-### 6d. Grown-up, parent and admin pages (5)
+### 6c-bis. Learn and Practice pages (2) **[2026-09-06]**
+
+| Page | What it is | Opened from | S H N M | QA harness |
+|---|---|---|---|---|
+| `/practice.html` | Practice — the shared deck engine (sight words, then numbers) | Home "Practice" door, `/app/practice` | · · · · | `qa-practice.mjs`, `qa-practice-shot.mjs` |
+| `/minutemath.html` | Minute Math — the timed arithmetic sheet | `lessons.html` (`window.__minuteMath`) | · · N · | `qa-minutemath.mjs` |
+
+`/lessons.html` itself is listed under §5.
+
+### 6d. Grown-up, parent and admin pages (6) **[2026-09-06]**
 
 | Page | What it is | Opened from | S H N M | QA harness |
 |---|---|---|---|---|
@@ -242,21 +287,24 @@ Grouped by what they are. Every one has an explicit `vercel.json` route **except
 | `/partner.html` | Partner overview (`/partner`) | Direct link | · · · · | **none** |
 | `/lesson-review.html` | Grown-up lesson review (`/lesson-review`) | Direct link | · · · · | `qa-lessons.mjs` |
 | `/question-review.html` | Grown-up question review (`/question-review`) | Direct link | · · · · | **none** |
-| `/feedback.html` | Share Feedback | **nothing links to it — see §8** | · · · · | **none** |
+| `/feedback.html` | Share Feedback | **routed since QA4, but still nothing links to it — see §8c.1** | · · · · | **none** |
+| `/cobuild.html` | Cobuild — "build a game with your kid", a lead page backed by `api/cobuild-lead.js` **[2026-09-06]** | Direct link (`/cobuild`) | · · · · | **none** |
 
 The Grown-ups portal, parent dashboard, login and signup are **shell screens**, not
 pages under `public/` — see §1. `/admin` and `/admin.html` also rewrite to the
 shell (`src/AdminDashboard.jsx`).
 
-### 6e. Internal tools (3)
+### 6e. Internal tools (5) **[2026-09-06]**
 
 | Page | What it is | Opened from | S H N M | QA harness |
 |---|---|---|---|---|
 | `/editor.html` | Game editor (`/editor`) | Direct link | · · · M | `qa-kits.mjs`, `qa-kp3-add-a-kit.mjs` |
 | `/asset-library.html` | Asset library / Browse (`/asset-library`) | Direct link, `buildable-slicer.js` | · · · · | `qa-kits.mjs`, `qa-ap2-use-in-game.mjs` |
 | `/planner.html` | The roadmap planner (`/planner`) — this card's own source of truth | Direct link | · · · M | **none** |
+| `/audio-check.html` | Sound check — probes `/api/sfx` and gives a verdict **[2026-09-06]** | Direct link | · · · · | **none** |
+| `/audio-watch.html` | Sound watch — the same probe, left running **[2026-09-06]** | Direct link | · · · · | **none** |
 
-### 6f. Mocks, art references and superseded pages (9)
+### 6f. Mocks, art references and superseded pages (8) **[2026-09-06]**
 
 Not kid-facing. QA3a–QA3e should **skip** these; QA2's headless page load should
 still open them, because a mock that throws still costs a console error.
@@ -264,23 +312,24 @@ still open them, because a mock that throws still costs a console error.
 | Page | What it is | Status | S H N M | QA harness |
 |---|---|---|---|---|
 | `/skyflyer-mock.html` | Sky Flyer FL1 mock | Design reference | · · · · | **none** |
+| ~~`/chess-look-mock.html`~~ | Chess look, before/after | **Deleted** 2026-09-06 in commit `51d96cb` (CP2) | — | — |
 | `/skyflyer-farm.html` | Sky Flyer farm corner (FM1) | Work in progress | · · · · | `qa-skyflyer.mjs` |
-| `/chess-look-mock.html` | Chess look, before/after | Design reference | · · · · | **none** |
 | `/story-directions.html` | Story art directions | Design reference | · · · · | **none** |
 | `/story-directions-cabin.html` | Cabin quality-tier test | Design reference | · · · · | **none** |
 | `/antcity-art-gallery.html` | Ant City AI art (`/antcity-art`) | Design reference | · · · · | **none** |
 | `/croc-engine.html` | Older Croc Tot engine | **Superseded** by `/croctot.html`; still routed, nothing links to it | · · · · | **none** |
 | `/snakes-engine.html` | Snakes and Ladders | **Orphaned** — see §8 | S · · · | `qa-snakes.mjs` |
-| `/play.html` | Titled "Buildable Runner — engine", wired as the **Hop Heroes** tile | Live behind the 1111 gate | · · · · | **none** |
+| `/play.html` | Titled "Buildable Runner — engine", wired as the **Hop Heroes** tile | Live behind the 1111 gate | · · · · | `qa-play.mjs` **[2026-09-06]** |
 
 ---
 
-## 7. The 51 QA harnesses, and what each one guards
+## 7. The 60 QA harnesses, and what each one guards **[2026-09-06]**
 
 | Harness | Guards |
 |---|---|
 | `qa-ap2-use-in-game.mjs` | "Use in a game" flow on the Browse page |
 | `qa-art.mjs` | `/art-studio.html` + `buildable-renders.js` |
+| `qa-art-browser.mjs` | Art Studio in a real browser **[2026-09-06]** |
 | `qa-bingo.mjs` | `/bingo-engine.html` |
 | `qa-breaker.mjs` | `/breaker-engine.html` + `/breaker/manifest.json` |
 | `qa-bubble.mjs` | `/bubble-engine.html` |
@@ -293,6 +342,7 @@ still open them, because a mock that throws still costs a console error.
 | `qa-dotsandboxes.mjs` | `/dotsboxes-engine.html` |
 | `qa-explore.mjs` | `/orbit-explorer.html` + every `public/explore/*.json` |
 | `qa-family-town.mjs` | `/family-town.html` |
+| `qa-farm.mjs` | `/skyflyer-farm.html` — the farm corner, in a real browser **[2026-09-06]** |
 | `qa-invite.mjs` | `api/invite.js` (guest flow) |
 | `qa-kidspedia.mjs` | `/kidspedia.html` bookshelf |
 | `qa-kits.mjs` | Kit shelf: `/asset-library.html`, `/editor.html`, `public/kenney/` |
@@ -302,11 +352,16 @@ still open them, because a mock that throws still costs a console error.
 | `qa-mathcannon.mjs` | `/mathcannon-engine.html` |
 | `qa-maze.mjs` | `/maze-engine.html` |
 | `qa-memory.mjs` | `/memory-engine.html` |
+| `qa-minutemath.mjs` | `/minutemath.html` — routing, shape, and the arithmetic generator itself **[2026-09-06, card QA9]** |
 | `qa-music.mjs` | Music Maker studio contract |
 | `qa-nv1.mjs` | 5-tab bottom bar + Play page |
 | `qa-nv2.mjs` | New Home screen + live door counts |
 | `qa-nv3.mjs` | Make / Explore / Learn / Me section pages |
 | `qa-nv4.mjs` / `qa-nv4-dom.mjs` | Nav polish + phone-width discipline |
+| `qa-play.mjs` | `/play.html` — the Hop Heroes engine page **[2026-09-06, card QA9]** |
+| `qa-play-invite.mjs` | `/play-invite.html` — the guest "grandma flow" front end **[2026-09-06, card QA9]** |
+| `qa-practice.mjs` | `/practice.html` + `buildable-practice.js` + the decks, audio and routes **[2026-09-06]** |
+| `qa-practice-shot.mjs` | Real screenshots of the Practice screens (SKIPs without playwright) **[2026-09-06]** |
 | `qa-question-bank.mjs` | `api/generate-question-bank.js`, `_curriculum.js`, `_quizgen.js` |
 | `qa-quickgame.mjs` | `src/QuickGame.jsx` on `topic` / `dive` / `weather` / `orbit-explorer` |
 | `qa-rileys.mjs` | `/rileys-garden.html` art + audio + engine + manifest |
@@ -316,8 +371,10 @@ still open them, because a mock that throws still costs a console error.
 | `qa-skyflyer-hud.mjs` | FL9 — shell chrome vs game HUD, measured together |
 | `qa-skyflyer-look.mjs` | FL6 — the offer card layout (LOOK RULE 19) |
 | `qa-skyflyer-sky.mjs` | FL8 — clouds and sun rays (LOOK RULE 19) |
+| `qa-share-links.mjs` | `/song.html` and `/story.html` — the two share-link pages, as one system **[2026-09-06, card QA9]** |
 | `qa-sling.mjs` | `/sling-squad.html` + `/sling/manifest.json` |
 | `qa-snakes.mjs` | `/snakes-engine.html` |
+| `qa-soundboard.mjs` | `/soundboard.html` — every pad plays a sound `api/sfx.js` knows **[2026-09-06, card QA9]** |
 | `qa-stringmatch.mjs` | `/string-match.html` |
 | `qa-survival.mjs` | `/survival-engine.html` + `/survival/manifest.json` |
 | `qa-tank.mjs` | `/tank-engine.html` |
@@ -331,13 +388,20 @@ still open them, because a mock that throws still costs a console error.
 Plus the shared harness helpers under `qa/`: `qa/qa-map.mjs`, `qa/sim-node.mjs`,
 `qa/game-qa-harness.html`.
 
-**The runner** is `scripts/qa-all.mjs` (`npm run qa`, session QA2). It runs all 51
-harnesses, then serves `public/` and opens every page in headless Chromium, failing on
-a console error, an uncaught error or a missing file. It prints one table, writes
-`QA-SWEEP-REPORT.md`, and exits non-zero on any failure. Three harnesses are currently
-quarantined in it — `qa-ap2-use-in-game.mjs` (card **QA10**), `qa-lessons.mjs` and
-`qa-lessons-dom.mjs` (card **QA11**) — so they print `QUAR`, stay visible, and do not
-fail the gate. See AGENTS.md for the rule that no card is `done` without a green run.
+**The runner** is `scripts/qa-all.mjs` — `npm run qa`, and **[2026-09-06]** the only
+gate there is. It does three things: the **serving check** (every
+`public/buildable-*.js` and `public/*.html` has a `vercel.json` route ahead of the
+`/(.*)` catch-all, plus `--live` to fetch each one from production), the **machine
+sweep** (all 60 harnesses), then the **page sweep** (serves `public/` and opens every
+page in headless Chromium, failing on a console error, an uncaught error or a missing
+file). It prints one table, writes `QA-SWEEP-REPORT.md`, and exits non-zero on any
+failure.
+
+**[2026-09-06] One harness is quarantined**, not three: `qa-ap2-use-in-game.mjs`
+(card **QA10**) still asserts 2 `.useg` buttons on a page that renders 307.
+`qa-lessons.mjs` and `qa-lessons-dom.mjs` were quarantined under card **QA11** for
+pre-NV2 Home assertions; both pass on today's `main`, so they are back in the gate
+for real. See AGENTS.md for the rule that no card is `done` without a green run.
 
 ---
 
@@ -346,27 +410,49 @@ fail the gate. See AGENTS.md for the rule that no card is `done` without a green
 QA1 is **find only**. Everything here is recorded, not fixed. Each item is written
 so QA2 or a later fix card can pick it up without re-deriving it.
 
-Each actionable finding now has a planner card in phase QA — **QA4** (feedback.html),
+Each actionable finding got a planner card in phase QA — **QA4** (feedback.html),
 **QA5** (Snakes and Ladders), **QA6** (croc-engine.html), **QA7** (play.html title),
 **QA8** (the ten games without shared nav) and **QA9** (harness coverage). The two
 content gaps in §8c — the six in-review books and the single shipped lesson — got no
 card: both are designed or planned state, not breakage.
 
-### 8a. Coverage gaps — 16 public pages with no harness  → card **QA9**
+**[2026-09-06] Where those cards stand on `main`:** QA4 is effectively done —
+`feedback.html` is routed now (though still nothing links to it). QA9 is done — see
+§8a. QA5, QA6, QA7 and QA8 are all still open and still true, re-verified against
+today's `main`.
 
-`/antcity-art-gallery.html` · `/chess-look-mock.html` · `/croc-engine.html` ·
-`/feedback.html` · `/landing.html` · `/partner.html` · `/planner.html` ·
-`/play-invite.html` · `/play.html` · `/question-review.html` ·
-`/skyflyer-mock.html` · `/song.html` · `/soundboard.html` · `/story.html` ·
-`/story-directions.html` · `/story-directions-cabin.html`
+### 8a. Coverage gaps — card **QA9**, DONE **[2026-09-06]**
 
-Six of these are mocks or superseded pages and want nothing more than QA2's
-headless console-error load. The ones that carry real kid- or grown-up-facing
-behaviour and have **no** check at all are: **`/soundboard.html`** (a live Make
-tile), **`/play.html`** (the Hop Heroes engine), **`/play-invite.html`** (the whole
-guest flow's front end — only its backend is covered), **`/song.html`** and
-**`/story.html`** (every shared link a parent opens), **`/landing.html`** (the front
-door) and **`/question-review.html`**.
+The August list was 16 pages with no harness. Every kid-facing one on it now has
+a real harness, written by card QA9:
+
+| Page | Harness | What it now guards |
+|---|---|---|
+| `/soundboard.html` | `qa-soundboard.mjs` | all 133 pads across 10 packs play a key `api/sfx.js` knows, so no pad is a silent dead button |
+| `/play-invite.html` | `qa-play-invite.mjs` | the guest flow's front end, and that every action it sends is one `api/invite.js` handles |
+| `/song.html`, `/story.html` | `qa-share-links.mjs` | the pretty share route resolves and really lands on the page (directly, or via the og-tag API that serves it) |
+| `/play.html` | `qa-play.mjs` | the Hop Heroes engine page, including its one RELATIVE script tag |
+| `/minutemath.html` (new since August) | `qa-minutemath.mjs` | routing, shape, and 10,000 generated problems checked for correct answers |
+
+Every one of them opens with the same reachability check the gate runs, because
+a harness passing on a page the server never serves is exactly how Practice
+shipped dead (§8c.7).
+
+**Still with no harness — 13 pages, and that is the right answer for 11 of them:**
+
+`/antcity-art-gallery.html` · `/skyflyer-mock.html` · `/story-directions.html` ·
+`/story-directions-cabin.html` (design references) · `/croc-engine.html`
+(superseded, card QA6) · `/audio-check.html` · `/audio-watch.html` ·
+`/planner.html` (internal tools) · `/cobuild.html` (a lead page) ·
+`/feedback.html` and `/partner.html` (grown-up pages nothing links to).
+
+The two that still carry real behaviour with no check are **`/landing.html`**
+(the front door) and **`/question-review.html`** (grown-up question review). Both
+get the gate's headless console-error load and nothing more.
+
+> A note on method, because the naive grep now lies: `/landing.html` is *named*
+> in five harnesses, but only inside failure messages ("the server would send
+> landing.html instead"). Being mentioned is not being checked.
 
 No shell component outside `BuildableKids.jsx`, `MyStuff.jsx`, `MusicMaker.jsx` and
 `QuickGame.jsx` has a harness — notably `AdminDashboard.jsx`, `GrownUpScreen.jsx`,
@@ -393,27 +479,46 @@ Tot, Math Cannon.
 
 ### 8c. Specific things found while building the map
 
-1. **`/feedback.html` is unreachable in production.** → card **QA4**. It is the only page under
-   `public/` with no entry in `vercel.json`, and `vercel.json` uses legacy `routes`
-   with no `handle: filesystem` phase, so the final `"/(.*)" → /landing.html`
-   catch-all swallows it. Nothing in the repo links to it either.
-2. **Snakes and Ladders is orphaned.** → card **QA5**. `/snakes-engine.html` exists, works and is
-   guarded by `qa-snakes.mjs`; `SCREEN_SNAKES` and `SnakesScreen` exist in the
-   shell; `onSnakes` is passed to the Home screen at
-   `src/BuildableKids.jsx:2053` — and **is never consumed**. There is no
-   `GAME_CATALOG` entry for it, so no tile renders and no kid can reach it.
-3. **`/croc-engine.html` is dead but still routed.** → card **QA6**. Croc Tot ships from
-   `/croctot.html`. Nothing links to `croc-engine.html`, yet `vercel.json` keeps a
-   route for it.
-4. **`/play.html` is titled "Buildable Runner — engine"** → card **QA7**. It is mounted as the
-   **Hop Heroes** platformer tile, while a *different* page,
-   `/runner-engine.html`, is the actual Sunny Town Drive runner. Confusing to
-   anyone reading either file cold.
+1. **`/feedback.html` was unreachable in production.** → card **QA4**, **route fixed
+   [2026-09-06]**. It used to be the only page under `public/` with no entry in
+   `vercel.json`, and `vercel.json` uses legacy `routes` with no
+   `handle: filesystem` phase, so the final `"/(.*)" → /landing.html` catch-all
+   swallowed it. It now has `/feedback.html` and `/feedback` routes and the gate's
+   serving check would catch a regression immediately. **The other half of the
+   finding still stands: nothing in the repo links to it**, so the page is reachable
+   but undiscoverable.
+2. **Snakes and Ladders is orphaned.** → card **QA5**, **still true [2026-09-06]**.
+   `/snakes-engine.html` exists, works and is guarded by `qa-snakes.mjs`;
+   `SCREEN_SNAKES` and `SnakesScreen` exist in the shell; `onSnakes` is passed to the
+   Home screen (now `src/BuildableKids.jsx:2063`) — and **is still never consumed**.
+   There is no `GAME_CATALOG` entry for it, so no tile renders and no kid can
+   reach it.
+3. **`/croc-engine.html` is dead but still routed.** → card **QA6**, **still true
+   [2026-09-06]**. Croc Tot ships from `/croctot.html`. Nothing links to
+   `croc-engine.html`, yet `vercel.json` keeps a route for it.
+4. **`/play.html` is titled "Buildable Runner — engine"** → card **QA7**, **still true
+   [2026-09-06]**. It is mounted as the **Hop Heroes** platformer tile, while a
+   *different* page, `/runner-engine.html`, is the actual Sunny Town Drive runner.
+   Confusing to anyone reading either file cold. `qa-play.mjs` prints this as a NOTE
+   rather than a failure, and will flip to a PASS telling you to update this entry
+   once the title is fixed.
 5. **The Kidspedia shelf shows 14 of 20 books.** Six books are `status: "in-review"`
    and correctly hidden. QA3d should count 14 and not file the other six as
    missing. *(No card: designed behaviour, not a defect.)*
 6. **Only one lesson exists** (`public/lessons/g1-making-ten.json`). The Learn
-   section is real but nearly empty. *(No card: a content gap, not a defect.)*
+   section is real but nearly empty. **[2026-09-06] Still one lesson**, but Learn
+   is no longer nearly empty in practice: Practice (the shared deck engine) and
+   Minute Math both shipped since, and both are covered. *(No card: a content gap,
+   not a defect.)*
+
+7. **Practice shipped completely dead, and no harness noticed. [2026-09-06]**
+   `qa-practice.mjs` passed the whole time, but `public/buildable-practice.js` had
+   no route in `vercel.json`, so the `/(.*)` catch-all served `landing.html` in its
+   place and the browser threw `Unexpected token '<'`. The page told kids "The sets
+   would not load." This is the reason the gate now begins with a serving check, and
+   the reason every harness written for card QA9 begins with one too. **A passing
+   harness does not mean the thing is reachable.** *(Fixed; kept here because it is
+   the cautionary tale the whole QA phase is built around.)*
 
 ### 8d. `GAME-CONSISTENCY-AUDIT.md` — not in this repo
 
@@ -438,7 +543,10 @@ already covered appended here.
 - A new game is a `GAME_CATALOG` entry: add a row to §2 in the same session.
 - A new page under `public/` needs a row in §6 **and** a `vercel.json` route —
   §8c.1 is what happens when the route is forgotten.
-- A new `qa-*.mjs` needs a row in §7. QA2 (`scripts/qa-all.mjs`) runs the harnesses;
-  this file says which ones should exist.
+- A new `qa-*.mjs` needs a row in §7. `npm run qa` (`scripts/qa-all.mjs`) runs the
+  harnesses; this file says which ones should exist.
+- A harness added to or released from the `QUARANTINE` table in
+  `scripts/qa-all.mjs` needs the §7 quarantine paragraph updated in the same
+  session. A quarantine nobody revisits is a check quietly switched off.
 - The counts table at the top is the drift check. If a count no longer matches the
   repo, this map is stale.
