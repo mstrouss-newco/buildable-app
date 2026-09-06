@@ -37,23 +37,24 @@ Counts, so a future session can tell at a glance whether this map has drifted:
 
 | Thing | Count | Was (Aug) |
 |---|---|---|
-| Pages under `public/` (`*.html`) | **57** | 53 |
+| Pages under `public/` (`*.html`) | **58** | 53 |
 | Home tiles in `GAME_CATALOG` | 27 (21 live, 6 soon) | unchanged |
 | Make tiles in `MAKE_CATALOG` | 5 (3 live, 2 soon) | unchanged |
 | Kidspedia books planned / shelved today | 20 / 14 | unchanged |
 | Kidspedia labs (exhibit templates) | 3 | unchanged |
-| `qa-*.mjs` harnesses in the repo root | **60** | 51 |
-| API functions in `api/` | **88** | 87 |
-| Public pages with **no** harness | **13** | 16 |
+| `qa-*.mjs` harnesses in the repo root | **61** | 51 |
+| API functions in `api/` | **91** | 87 |
+| Public pages with **no** harness | **12** | 16 |
 | Harnesses quarantined in the gate | **1** | 3 |
 
-**[2026-09-06] What moved.** Five pages arrived — `practice.html`,
-`minutemath.html`, `cobuild.html`, `audio-check.html`, `audio-watch.html` — and
-`chess-look-mock.html` was deleted (commit `51d96cb`, CP2). Nine harnesses
-arrived: `qa-practice.mjs`, `qa-practice-shot.mjs`, `qa-art-browser.mjs`,
-`qa-farm.mjs`, and the five written by card QA9 (§8a). The repo-root
-`qa-all.mjs` that briefly existed alongside `scripts/qa-all.mjs` was folded into
-it and deleted, so `npm run qa` is now the only gate.
+**[2026-09-06] What moved.** Six pages arrived — `practice.html`,
+`minutemath.html`, `cobuild.html`, `audio-check.html`, `audio-watch.html` and
+`g.html` (kid-made games, session CB1) — and `chess-look-mock.html` was deleted
+(commit `51d96cb`, CP2). Ten harnesses arrived: `qa-practice.mjs`,
+`qa-practice-shot.mjs`, `qa-art-browser.mjs`, `qa-farm.mjs`, `qa-kidgames.mjs`,
+and the five written by card QA9 (§8a). The repo-root `qa-all.mjs` that briefly
+existed alongside `scripts/qa-all.mjs` was folded into it and deleted, so
+`npm run qa` is now the only gate.
 
 ---
 
@@ -230,7 +231,7 @@ the first place. See §8c.7.
 
 ---
 
-## 6. Every page under `public/` — all 57 **[2026-09-06]**
+## 6. Every page under `public/` — all 58 **[2026-09-06]**
 
 Grouped by what they are. **[2026-09-06] Every one now has an explicit
 `vercel.json` route**, `feedback.html` included — that gap (§8c.1, card QA4) has
@@ -279,7 +280,7 @@ go quietly stale.
 
 `/lessons.html` itself is listed under §5.
 
-### 6d. Grown-up, parent and admin pages (6) **[2026-09-06]**
+### 6d. Grown-up, parent, admin and shared-creation pages (7) **[2026-09-06]**
 
 | Page | What it is | Opened from | S H N M | QA harness |
 |---|---|---|---|---|
@@ -289,6 +290,7 @@ go quietly stale.
 | `/question-review.html` | Grown-up question review (`/question-review`) | Direct link | · · · · | **none** |
 | `/feedback.html` | Share Feedback | **routed since QA4, but still nothing links to it — see §8c.1** | · · · · | **none** |
 | `/cobuild.html` | Cobuild — "build a game with your kid", a lead page backed by `api/cobuild-lead.js` **[2026-09-06]** | Direct link (`/cobuild`) | · · · · | **none** |
+| `/g.html` | A kid-made game (session CB1). `/g/<id>` goes through `api/g.js`, which serves this page with the kid's manifest **[2026-09-06]** | Share link, My Stuff | · · · M | `qa-kidgames.mjs` |
 
 The Grown-ups portal, parent dashboard, login and signup are **shell screens**, not
 pages under `public/` — see §1. `/admin` and `/admin.html` also rewrite to the
@@ -323,7 +325,7 @@ still open them, because a mock that throws still costs a console error.
 
 ---
 
-## 7. The 60 QA harnesses, and what each one guards **[2026-09-06]**
+## 7. The 61 QA harnesses, and what each one guards **[2026-09-06]**
 
 | Harness | Guards |
 |---|---|
@@ -345,6 +347,7 @@ still open them, because a mock that throws still costs a console error.
 | `qa-farm.mjs` | `/skyflyer-farm.html` — the farm corner, in a real browser **[2026-09-06]** |
 | `qa-invite.mjs` | `api/invite.js` (guest flow) |
 | `qa-kidspedia.mjs` | `/kidspedia.html` bookshelf |
+| `qa-kidgames.mjs` | Kid-made games (CB1): `api/kid-game.js`, `api/g.js`, `/g.html`, and the shared manifest validator across all four Cobuild engines **[2026-09-06]** |
 | `qa-kits.mjs` | Kit shelf: `/asset-library.html`, `/editor.html`, `public/kenney/` |
 | `qa-kp3-add-a-kit.mjs` | Add-a-kit loop from the editor |
 | `qa-lessons.mjs` / `qa-lessons-dom.mjs` | `/lessons.html` + `public/lessons/*.json` + `api/lesson-questions.js` |
@@ -392,7 +395,7 @@ Plus the shared harness helpers under `qa/`: `qa/qa-map.mjs`, `qa/sim-node.mjs`,
 gate there is. It does three things: the **serving check** (every
 `public/buildable-*.js` and `public/*.html` has a `vercel.json` route ahead of the
 `/(.*)` catch-all, plus `--live` to fetch each one from production), the **machine
-sweep** (all 60 harnesses), then the **page sweep** (serves `public/` and opens every
+sweep** (all 61 harnesses), then the **page sweep** (serves `public/` and opens every
 page in headless Chromium, failing on a console error, an uncaught error or a missing
 file). It prints one table, writes `QA-SWEEP-REPORT.md`, and exits non-zero on any
 failure.
@@ -438,7 +441,7 @@ Every one of them opens with the same reachability check the gate runs, because
 a harness passing on a page the server never serves is exactly how Practice
 shipped dead (§8c.7).
 
-**Still with no harness — 13 pages, and that is the right answer for 11 of them:**
+**Still with no harness — 12 pages, and that is the right answer for 10 of them:**
 
 `/antcity-art-gallery.html` · `/skyflyer-mock.html` · `/story-directions.html` ·
 `/story-directions-cabin.html` (design references) · `/croc-engine.html`
@@ -449,6 +452,9 @@ shipped dead (§8c.7).
 The two that still carry real behaviour with no check are **`/landing.html`**
 (the front door) and **`/question-review.html`** (grown-up question review). Both
 get the gate's headless console-error load and nothing more.
+
+`/landing.html` no longer appears in the harness-name grep as uncovered because
+five harnesses mention it in failure text; see the note below.
 
 > A note on method, because the naive grep now lies: `/landing.html` is *named*
 > in five harnesses, but only inside failure messages ("the server would send
