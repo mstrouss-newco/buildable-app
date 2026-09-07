@@ -66,7 +66,17 @@ const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable
 const page = await browser.newPage({ viewport: { width: 1100, height: 780 } });
 const errs = [];
 page.on('pageerror', e => errs.push('pageerror: ' + e.message));
-page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+// HD1: the shared info bar pulls its font (Baloo 2) from Google Fonts, which a
+// sandbox with no outbound network cannot reach. A missing web font is not a bug —
+// the chips fall back to the system stack and lay out identically — so a failed
+// fetch of an EXTERNAL resource is not counted. Everything else still is.
+const NET_ONLY = /Failed to load resource|ERR_(CONNECTION|NAME|INTERNET|NETWORK)/i;
+page.on('console', m => {
+  if (m.type() !== 'error') return;
+  const t = m.text();
+  if (NET_ONLY.test(t)) return;
+  errs.push('console: ' + t);
+});
 
 const ev = (fn, arg) => page.evaluate(fn, arg);
 // Park the kid far from everything, so nothing is fed or swept up by accident

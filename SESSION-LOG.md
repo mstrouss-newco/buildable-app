@@ -56,7 +56,17 @@ bridge or the info bar, at 390x844, 820x1180 and 1440x900, inside a mock that IS
 like the shell, then publishes the band it drew. It measures every shell button against
 every `.hud-chip` and prints one table. It runs inside `node qa-all.mjs`.
 
-Two things it found and one thing it forgave. It found a partial `bk:band` message
+**The bug the pilots found, which matters beyond the Farm.** With the bar mounted,
+the Farm's animals stopped being fed. The bar was repainting five times a second from
+inside the 3D frame loop, and every repaint measured the canvas and read the computed
+style of the document — two forced layouts — which dropped the frame rate far enough
+that the kid could not walk to the coop in the time the harness allowed. Nothing looked
+wrong; the game just got slow. `set()` now does nothing at all when the spec has not
+changed, not even a measure, and the alignment it used to do on every call is left to
+the resize and band events that are the only things that can change it. The Farm also
+skips building the spec at all unless a number a child can read has moved.
+
+Two things the gate found and one thing it forgave. It found a partial `bk:band` message
 publishing `undefinedpx` into a game, now impossible. It found that a mock which always
 draws the deepest cluster fails games that ask for less, which is a lie about the shell.
 And it waives exactly one row: **Ant City on a phone**, where a name plus three counters
@@ -64,10 +74,13 @@ cannot fit the `action` bar at 390px. That is what the `world` layout is for and
 HD2's card. The waiver is per page AND per size, and a waived row that starts PASSING
 fails the gate, so the list cannot rot into an excuse.
 
-**Checked.** `scripts/qa-hud-all.mjs` green (74 of 75 rows clean, 1 waived).
-`qa-skyflyer-hud.mjs` rewritten for the band and green. `qa-farm.mjs` updated to read the
-wallet off the shared chip. `npx vite build` clean. No console errors on any page in the
-gate run.
+**Checked.** `node qa-all.mjs` green: 54 harnesses, 13 skipped for want of a browser.
+`scripts/qa-hud-all.mjs` green (74 of 75 rows clean, 1 waived). `qa-skyflyer-hud.mjs`
+rewritten for the band and green. `qa-farm.mjs` green, updated to read the wallet off the
+shared chip and to stop counting a font it cannot fetch offline as a page error.
+`qa-skyflyer.mjs` updated to the new contract and green — its old checks asserted the
+cream coin pill and the 96px column depth, both of which HD1 removed. `npx vite build`
+clean.
 
 **Not done, on purpose.** Nothing is on `main`. Mike has not signed off on the look, and
 the block says the nine pilot screenshots go to him before anything else converts, so the

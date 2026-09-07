@@ -294,6 +294,13 @@
       // Line the overlay up with the play area, and size everything to the tier.
       // NOTHING may enter the rectangles the shell reserves, so the bar's left and
       // right insets come straight from --bk-nav-left / --bk-nav-right.
+      //
+      // This costs a getBoundingClientRect AND a getComputedStyle, both of which
+      // force layout, so set() must NOT call it: the numbers only change when the
+      // window resizes, the canvas resizes, or the shell republishes its band, and
+      // each of those fires its own event. (The Farm's animals stopped being fed
+      // when a version of this ran inside the 3D frame loop: the layout thrash
+      // dropped the frame rate far enough that the kid could not walk to the coop.)
       function sync() {
         if (canvas) {
           var r = canvas.getBoundingClientRect();
@@ -343,12 +350,10 @@
         // set the chips. The shape of `spec` depends on the layout — see the top.
         set: function (spec) {
           spec = spec || {};
-          lastSpec = spec;
           var key = layout + '|' + JSON.stringify(spec);
-          if (key === lastKey) { sync(); return; }   // no change -> just realign
+          if (key === lastKey) return;   // nothing changed -> do NOTHING, not even a measure
           lastKey = key;
           bar.innerHTML = LAYOUTS[layout](spec);
-          sync();
         },
         show: function () { host.style.display = ''; sync(); },
         hide: function () { host.style.display = 'none'; },

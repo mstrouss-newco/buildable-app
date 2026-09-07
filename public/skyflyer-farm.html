@@ -2462,8 +2462,17 @@ function readyCropCount(){
   for (var i = 0; i < PATCHES.length; i++) if (PATCHES[i].state === "ready") n++;
   return n;
 }
+var hudKey = "";
 function paintHud(){
   if (!farmHud) return;
+  // Build nothing unless a number a child can read has actually changed. The bar
+  // is on the same thread as the 3D frame loop, so "cheap" is not good enough:
+  // it has to be free on the frames where nothing happened.
+  var top = stack.length ? stack[stack.length - 1] : null;
+  var key = readyCropCount() + "|" + stack.length + "|" +
+    (top && top.userData ? top.userData.kind : "") + "|" + ORDERS_DONE + "|" + walletBalance();
+  if (key === hudKey) return;
+  hudKey = key;
   var counters = [];
   var ready = readyCropCount();
   if (ready) counters.push({ icon: PLANT_SVG, text: String(ready) });
@@ -2811,7 +2820,7 @@ function step(){
   // HD1: repaint the info bar a few times a second, not every frame — the
   // numbers on it change at the speed a child can read, not at 60Hz.
   hudT += dt;
-  if(hudT > 0.2){ hudT = 0; paintHud(); }
+  if(hudT > 0.25){ hudT = 0; paintHud(); }
 
   if(!NODRAW) renderer.render(scene,camera);
   requestAnimationFrame(step);

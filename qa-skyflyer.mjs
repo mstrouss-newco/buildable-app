@@ -2715,8 +2715,16 @@ chk('FM3 gap 3: buildable-gamenav is loaded, so the shell\'s Home reaches the pa
 chk('FM3 gap 3: the page tags itself in-shell BEFORE <body>, so nothing flashes',
   farm.indexOf("classList.add('bk-inshell')") > -1 &&
   farm.indexOf("classList.add('bk-inshell')") < farm.indexOf('\n<body>'));
-chk('FM3 gap 3: the HUD hangs off the strip the bridge publishes, not off a guess',
-  /\.bk-inshell \.pill\s*\{top:calc\(var\(--bk-nav-bottom/.test(farm));
+// HD1: the farm's own coin pill and title chip are GONE — the shared info bar
+// draws them, in the one dark glass, insetting itself from the band the bridge
+// publishes. What is left of the farm's own chrome is the shop button, and it
+// hangs off the published band rather than a hardcoded guess.
+chk('HD1: the farm no longer draws its own coin pill or title chip',
+  !/<div class="pill" title="coins">/.test(farm) && !/id="titlePill"/.test(farm));
+chk('HD1: the farm is on the shared info bar, world layout, tinted by its own color',
+  /buildable-hud\.js/.test(farm) && /layout:\s*"world"/.test(farm) && /setAccent\(/.test(farm));
+chk('HD1: what chrome the farm still owns hangs off the band the bridge publishes',
+  /\.bk-inshell #shopBtn\{top:calc\(var\(--bk-band-h/.test(farm));
 chk('FM3 gap 3: pause and resume are honoured, as the contract requires',
   /kind==="pause"/.test(farm) && /kind==="resume"/.test(farm) && /if\(PAUSED\)/.test(farm));
 
@@ -2749,8 +2757,8 @@ chk('FM3: the plane is the AR1Q silhouette rebuilt in the farm\'s own hb* shapes
   /function buildPlaneModel/.test(farm) && /hbTurn\(\[\s*\n?\s*\[0\.02,-4\.9\]/.test(farm));
 chk('FM3: the plane really taxis, rolls, climbs, goes away, comes back and parks',
   ['taxi','roll','climb','away','back','park'].every(k => new RegExp('PL\\.phase==="'+k+'"').test(farm)));
-chk('FM3: the coins fly into the wallet pill — a reward the body feels (feel law 3)',
-  /function coinBurstToPill/.test(farm) && /\.pill/.test(farm));
+chk('FM3: the coins fly into the wallet chip — a reward the body feels (feel law 3)',
+  /function coinBurstToPill/.test(farm) && /querySelector\("\.hud-coin"\)/.test(farm));
 
 // ---- the guardrails, as numbers rather than promises -----------------------
 chk('FM3: the whole flight is well under a minute',
@@ -2804,9 +2812,14 @@ chk('FL9: the right-hand column hangs off the strip the nav bridge publishes, no
   /\.bk-inshell\s+\.pill\s*\{[^}]*var\(--bk-nav-bottom/.test(html) &&
   /\.bk-inshell\s+#minimap\s*\{[^}]*var\(--bk-nav-bottom/.test(html) &&
   /\.bk-inshell\s+#banked\s*\{[^}]*var\(--bk-nav-bottom/.test(html));
-chk('FL9: the fallback depth is 96px — Sky Flyer asks for Sound + Help and no Menu, so the strip is two buttons deep',
-  (html.match(/var\(--bk-nav-bottom,\s*96px\)/g) || []).length === 3 &&
+// HD1: the shell's buttons are a ROW in a band now, not a column, so the depth a
+// game has to clear is simply the band height. 52px is the phone band, which is
+// the first-paint fallback until the bridge answers.
+chk('HD1: the fallback depth is the phone band, 52px, not the old column guess',
+  (html.match(/var\(--bk-nav-bottom,\s*52px\)/g) || []).length === 3 &&
   /onSound:function/.test(html) && /onHelp:function/.test(html) && !/onMenu:/.test(html));
+chk('HD1: the goal column clears the Home pill at every tier, not just the old 104px one',
+  /\.bk-inshell #goals\{left:calc\(var\(--bk-nav-left/.test(html));
 chk('FL9: no doubled safe-area inset — --bk-nav-bottom is already in the shell coordinate space this iframe fills',
   !/\.bk-inshell[^\n]*env\(safe-area-inset-top\)/.test(html));
 chk('FL9: the pad message is centred clear of the right-hand column, so moving the map down did not trade one overlap for another',
