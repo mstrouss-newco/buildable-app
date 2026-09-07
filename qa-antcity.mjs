@@ -1,6 +1,12 @@
-// Headless QA for public/antcity-engine.html (card AC2). House style, modelled on
-// qa-breaker.mjs: build the engine in a vm with the shared libs, drive it FROM the
-// manifest, and prove a perfect player finishes all ten missions.
+// Headless QA for public/antcity-engine.html (cards AC2, AC5, AC6, AC7). House style,
+// modelled on qa-breaker.mjs: build the engine in a vm with the shared libs, drive it
+// FROM the manifest, and prove a perfect player finishes all ten missions.
+//
+// AC7 put a REAL little DOM under this file. The engine's buttons, its one hint line
+// and its canvas are now things the robot can press, read and drag, so the tutorial is
+// tested the way a kid meets it: only the gestures the game actually teaches, done
+// exactly as taught, in a mouse profile AND a touch profile, with the rule that at
+// most one hint is ever on screen checked after every single one of them.
 //
 // What it asserts:
 //   1. /antcity/manifest.json is the shape the engine reads (ten levels, ids,
@@ -12,6 +18,9 @@
 //   4. Cartridge contract: pause freezes and resume continues, art resolves from
 //      the URLs the manifest gives, BUILDABLE_GAME + the ANTCITY_GAME alias exist,
 //      and there is no emoji anywhere in the engine.
+//   5. AC7: food only ever moves when an ant delivers, one hint at a time, the taught
+//      gestures all really work, idle ants stand still and never stack, the needs
+//      meters read true, and Build is reachable with a button.
 //
 //   node qa-antcity.mjs .
 import fs from 'fs'; import vm from 'vm';
@@ -36,40 +45,87 @@ ok('every mission has id, name, layout and coins',
   manifest.levels.every((l) => l.id && l.name && l.layout && typeof l.coins === 'number'));
 ok('every mission has its art parts', manifest.levels.every((l) => l.parts && l.parts.soil && l.parts.ant));
 
-// --- 2) build the engine in a sandbox -----------------------------------------
+// --- 2) a small real DOM, so gestures are gestures -----------------------------
+// The engine is a page. Stubbing its buttons away meant the robot could only ever
+// call the game's own functions, which is exactly how a tutorial ends up teaching a
+// gesture that does nothing. This is a tiny DOM: nodes with parents, listeners that
+// bubble, a class list, rectangles, and text you can read back.
 const noop = () => {};
+const VIEW = { w: 360, h: 640 };                     // the phone the robot is holding
 const ctxStub = new Proxy({}, {
   get: (_, k) => (k === 'createLinearGradient' || k === 'createRadialGradient')
     ? () => ({ addColorStop: noop })
-    : (k === 'canvas' ? { width: 900, height: 600 } : (typeof k === 'string' ? noop : undefined)),
+    : (k === 'canvas' ? { width: VIEW.w, height: VIEW.h } : (typeof k === 'string' ? noop : undefined)),
 });
-function el(withAppend) {
-  const e = {
-    style: { setProperty: noop }, classList: { add: noop, remove: noop, contains: () => false },
-    addEventListener: noop, removeEventListener: noop, getContext: () => ctxStub, onclick: null,
-    textContent: '', className: '', childElementCount: 0, width: 900, height: 600, naturalWidth: 0, complete: false,
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 900, height: 600 }), setPointerCapture: noop, closest: () => null,
-  };
-  Object.defineProperty(e, 'innerHTML', { set() {}, get() { return ''; } });
-  if (withAppend) { e.appendChild = noop; e.removeChild = noop; }
-  return e;
-}
-class ImageStub { set src(v) { this._src = v; } get src() { return this._src; } addEventListener() {} }
-// the "start" host has no appendChild, so BS.mount takes its headless path
-const documentStub = {
-  getElementById: (id) => (id === 'start' ? el(false) : el(true)), querySelector: () => el(true),
-  addEventListener: noop, createElement: () => el(true), head: el(true), documentElement: el(true), hidden: false,
+const byId = Object.create(null);
+const RECTS = {                                       // where the page's furniture sits
+  cv: { left: 0, top: 0, width: VIEW.w, height: VIEW.h },
+  bar: { left: 90, top: 560, width: 250, height: 22 },
 };
-// the wallet announcer posts coins UP to the shell; catch them here
+function node(tag) {
+  const classes = new Set();
+  const listeners = Object.create(null);
+  const n = {
+    tagName: String(tag || 'div').toUpperCase(), children: [], parentNode: null, id: '', type: '',
+    textContent: '', disabled: false, dataset: {}, style: { setProperty: noop },
+    getContext: () => ctxStub, width: VIEW.w, height: VIEW.h, naturalWidth: 0, complete: false,
+    focus: noop, blur: noop, setPointerCapture: noop, releasePointerCapture: noop, scrollIntoView: noop,
+    setAttribute(k, v) { n.dataset[k] = v; if (k === 'id') { n.id = v; byId[v] = n; } },
+    getAttribute(k) { return n.dataset[k]; }, removeAttribute(k) { delete n.dataset[k]; },
+    appendChild(c) { c.parentNode = n; n.children.push(c); if (c.id) byId[c.id] = c; return c; },
+    insertBefore(c) { return n.appendChild(c); },
+    removeChild(c) { const i = n.children.indexOf(c); if (i >= 0) n.children.splice(i, 1); return c; },
+    remove() { if (n.parentNode) n.parentNode.removeChild(n); },
+    contains(c) { return n.children.indexOf(c) >= 0; },
+    querySelector: () => null, querySelectorAll: () => [],
+    addEventListener(t, f) { (listeners[t] = listeners[t] || []).push(f); },
+    removeEventListener(t, f) { const a = listeners[t] || []; const i = a.indexOf(f); if (i >= 0) a.splice(i, 1); },
+    dispatchEvent(ev) {
+      ev.target = ev.target || n;
+      for (let cur = n; cur; cur = cur.parentNode) (cur._listeners()[ev.type] || []).slice().forEach((f) => f(ev));
+      return true;
+    },
+    _listeners: () => listeners,
+    closest(sel) { const want = String(sel).toUpperCase(); for (let cur = n; cur; cur = cur.parentNode) if (cur.tagName === want) return cur; return null; },
+    getBoundingClientRect: () => RECTS[n.id] || { left: 0, top: 0, width: 200, height: 24 },
+    classList: {
+      add: (...c) => c.forEach((x) => classes.add(x)), remove: (...c) => c.forEach((x) => classes.delete(x)),
+      toggle: (x, on) => (on == null ? (classes.has(x) ? classes.delete(x) : classes.add(x)) : (on ? classes.add(x) : classes.delete(x))),
+      contains: (x) => classes.has(x),
+    },
+  };
+  Object.defineProperty(n, 'className', {
+    get: () => [...classes].join(' '),
+    set: (v) => { classes.clear(); String(v || '').split(/\s+/).filter(Boolean).forEach((c) => classes.add(c)); },
+  });
+  Object.defineProperty(n, 'childElementCount', { get: () => n.children.length });
+  Object.defineProperty(n, 'firstChild', { get: () => n.children[0] || null });
+  Object.defineProperty(n, 'offsetHeight', { get: () => 0 });   // no layout engine: the game falls back
+  Object.defineProperty(n, 'innerHTML', { get: () => '', set: (v) => { if (!v) n.children.length = 0; } });
+  return n;
+}
+// every id the page's own markup carries exists before the engine asks for it
+[...html.matchAll(/id="([A-Za-z0-9_-]+)"/g)].forEach((m) => { const el = node('div'); el.id = m[1]; byId[m[1]] = el; });
+const documentStub = {
+  getElementById: (id) => byId[id] || (byId[id] = Object.assign(node('div'), { id })),
+  querySelector: () => null, querySelectorAll: () => [],
+  createElement: (t) => node(t), createElementNS: (_, t) => node(t),
+  addEventListener: noop, removeEventListener: noop,
+  head: node('head'), body: node('body'), documentElement: node('html'), hidden: false, visibilityState: 'visible',
+};
+class ImageStub { set src(v) { this._src = v; } get src() { return this._src; } addEventListener() {} }
 const coinPosts = [];
 const listeners = {};                     // a real window event bus, so shell messages land
 const send = (data) => (listeners.message || []).forEach((fn) => fn({ data }));
+const store = {};
 const sandbox = {
   document: documentStub, window: {}, Image: ImageStub, requestAnimationFrame: noop, cancelAnimationFrame: noop,
   addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); },
   removeEventListener: noop, setTimeout: () => 0, clearTimeout: noop,
   setInterval: () => 0, clearInterval: noop, performance: { now: () => Date.now() },
   URLSearchParams, location: { search: '' }, Date, Math, JSON, console,
+  innerWidth: VIEW.w, innerHeight: VIEW.h, devicePixelRatio: 2,
+  localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
   postMessage: (d) => { if (d && d.type === 'coins') coinPosts.push(d); },
 };
 sandbox.window = sandbox; sandbox.globalThis = sandbox;
@@ -80,6 +136,8 @@ const G = sandbox.BUILDABLE_GAME;
 console.log('\n--- CONTRACT ---');
 ok('BUILDABLE_GAME exposed', !!G);
 ok('ANTCITY_GAME alias', sandbox.ANTCITY_GAME === G);
+// AC7: no level picker. Loading the page IS opening the colony.
+ok('the game boots straight into the colony', !!G && G.state() === 'play', G && G.state());
 if (!G) { console.error('no game handle — aborting'); process.exit(2); }
 
 // the engine reads its own manifest through the shared loader; in a vm there is no
@@ -90,6 +148,7 @@ ok('engine took its missions from the manifest',
   named.length === 10 && named[0].id === manifest.levels[0].id, named.map((m) => m.id).join(','));
 ok('every manifest layout has a goal the engine understands',
   manifest.levels.every((l) => G._cfg().goals[l.layout]), manifest.levels.map((l) => l.layout).join(','));
+
 
 // --- 3) the perfect player: finish all ten missions ---------------------------
 console.log('\n--- THE BOT PLAYS THE TEN MISSIONS ---');
@@ -186,7 +245,11 @@ const art = G._art();
 ok('every art slot resolves to a URL from the manifest',
   Object.keys(art).length >= 8 && Object.values(art).every((u) => typeof u === 'string' && (u[0] === '/' || u.indexOf('http') === 0)),
   JSON.stringify(art));
-ok('the ant art is the one the manifest asked for', art.ant === manifest.levels[0].parts.ant, art.ant);
+// AC7: the ants are DRAWN, so the manifest's ant id picks the look rather than a
+// sprite. The id still has to be one the engine knows and a real file behind it.
+ok('the ant look is the one the manifest asked for',
+  html.indexOf(manifest.levels[0].parts.ant) > 0 && /ANT_TINT/.test(html), manifest.levels[0].parts.ant);
+ok('the ants are drawn geometry, not a sprite at ant size', /function drawAntShape/.test(html) && !/IMG\.antCarry/.test(html));
 ok('draws without throwing', G._draw() === 'ok', G._draw());
 const emoji = html.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/gu);
 ok('no emoji anywhere in the engine', !emoji, emoji ? emoji.join(' ') : '');
@@ -195,11 +258,241 @@ ok('the wordless show can be replayed', (G.showHow(), G.how() === true));
 // the game is still one colony the kid keeps: nothing above reset it
 ok('one colony the whole way through', G.dbg().ants > 0 && G.dbg().dug > 0);
 
+// --- 5a) AC7: one hint, taught gestures, and food that is carried -------------
+// This is the section that plays the game the way a kid does: no reaching into the
+// engine for anything the tutorial teaches. The robot presses the buttons the
+// tutorial points at and drags on the canvas, in a mouse profile and a touch
+// profile, and after every gesture it checks the rule that broke human QA before —
+// there is never more than one hint on screen.
+console.log('\n--- AC7: ONE HINT, TAUGHT GESTURES, CARRIED FOOD ---');
+
+const CV = byId.cv;
+const PRESS = { mouse: ['pointerdown', 'pointermove', 'pointerup'], touch: ['touchstart', 'touchmove', 'touchend'] };
+function gestureEvent(type, x, y, profile) {
+  const e = { type, pointerId: 1, pointerType: profile, preventDefault() {}, stopPropagation() {} };
+  if (type.indexOf('touch') === 0) e.touches = [{ clientX: x, clientY: y }];
+  else { e.clientX = x; e.clientY = y; }
+  return e;
+}
+function dragOn(el, pts, profile) {
+  const [down, move, up] = PRESS[profile];
+  el.dispatchEvent(gestureEvent(down, pts[0][0], pts[0][1], profile));
+  for (let i = 1; i < pts.length; i++) el.dispatchEvent(gestureEvent(move, pts[i][0], pts[i][1], profile));
+  const last = pts[pts.length - 1];
+  el.dispatchEvent(gestureEvent(up, last[0], last[1], profile));
+}
+const tapOn = (el, x, y, profile) => dragOn(el, [[x, y]], profile);
+const pressBtn = (el) => el && el.dispatchEvent({ type: 'click', preventDefault() {} });
+// the middle of a cell, in page pixels, exactly as a finger would find it
+const cellPt = (c, r) => { const g = G.geom(); return [g.ox + c * g.cs + g.cs / 2, g.sky + r * g.cs + g.cs / 2 - g.camY]; };
+const grassPt = () => { const g = G.geom(); return [Math.round(g.w * 0.33), Math.round(g.sky - 45)]; };
+// the three taught gestures, done in order — what every kid does in their first minute
+function playTutorial(profile) {
+  const q = G.queen();
+  dragOn(CV, [cellPt(q.c, q.r + 1), cellPt(q.c, q.r + 2)], profile);
+  G.seconds(1);
+  tapOn(CV, grassPt()[0], grassPt()[1], profile);
+  G.seconds(1);
+  pressBtn(byId.job_forager_up);
+  G.seconds(1);
+}
+
+for (const profile of ['mouse', 'touch']) {
+  console.log(`\n  .. the tutorial, ${profile} profile`);
+  const twice = [];                       // every moment two hints were up at once
+  const watch = (where) => { const h = G.hints(); if (h.length > 1) twice.push(`${where}: ${h.join(' | ')}`); return h[0] || ''; };
+
+  G._reset(); G.play();
+  ok(`${profile}: a brand new colony opens on step one of the guide`,
+    G.lesson().on && G.lesson().name === 'intro' && G.lesson().step === 0, JSON.stringify(G.lesson()));
+  ok(`${profile}: the one hint line is showing that step and nothing else`,
+    watch('step 1') === G.guide().text && G.hints().length === 1, G.hints().join(' | '));
+
+  // STEP ONE, as taught: "Drag down in the brown dirt to dig a tunnel"
+  const q = G.queen();
+  dragOn(CV, [cellPt(q.c, q.r + 1), cellPt(q.c, q.r + 2), cellPt(q.c, q.r + 3)], profile);
+  ok(`${profile}: the taught drag really digs`, G.dbg().planned >= 2, `${G.dbg().planned} cells planned`);
+  G.seconds(1); watch('after the drag');
+  ok(`${profile}: doing it advances the guide to step two`, G.lesson().step === 1, JSON.stringify(G.lesson()));
+  ok(`${profile}: and the finished step's words are gone from the screen`,
+    G.hints().length === 1 && G.hints()[0] === G.guide().text, G.hints().join(' | '));
+
+  // STEP TWO, as taught: "Now tap the green grass to drop some food"
+  const foodBefore = G.dbg().food;
+  tapOn(CV, grassPt()[0], grassPt()[1], profile);
+  ok(`${profile}: the taught tap really leaves a crumb on the meadow`,
+    G.items().filter((i) => i.kind === 'crumb').length === 1, JSON.stringify(G.items()));
+  ok(`${profile}: the tap itself does NOT move the food counter`, G.dbg().food === foodBefore, `${foodBefore} -> ${G.dbg().food}`);
+  G.seconds(1); watch('after the tap');
+  ok(`${profile}: dropping food advances the guide to step three`, G.lesson().step === 2, JSON.stringify(G.lesson()));
+
+  // STEP THREE, as taught: "Tap the plus on Foragers to give an ant that job".
+  // The old step three taught dragging the colour bar, which did nothing on a mouse.
+  ok(`${profile}: the step that teaches the job cards opens them first`, G.jobsOpen() === true);
+  const wasForagers = G.dbg().jobs.forager;
+  pressBtn(byId.job_forager_up);
+  ok(`${profile}: the taught tap on plus really moves an ant`, G.dbg().jobs.forager === wasForagers + 1,
+    `${wasForagers} -> ${G.dbg().jobs.forager}`);
+  G.seconds(1); watch('after the plus');
+  ok(`${profile}: that finishes the guide`, G.lesson().on === false, JSON.stringify(G.lesson()));
+  ok(`${profile}: one line is left saying what to do next`, G.hints().length === 1, G.hints().join(' | '));
+
+  // the crumb the kid dropped is carried in by an ant, and THAT is when food moves
+  let carried = false, sawCarry = false;
+  const before = G.dbg().food;
+  for (let i = 0; i < 400 && !carried; i++) {
+    G.seconds(0.25); watch('while the forager works');
+    if (G.crowd().some((a) => a.carry === 'crumb')) sawCarry = true;
+    if (!G.items().some((it) => it.kind === 'crumb')) carried = true;
+  }
+  ok(`${profile}: an ant is really seen carrying the crumb`, sawCarry);
+  ok(`${profile}: the crumb becomes food only when it is delivered`, carried && G.dbg().food > before,
+    `${before} -> ${G.dbg().food}`);
+
+  // the build lesson: it must arrive the moment rooms unlock, and teach the button
+  G.assign('digger', 3); G.digDown(6);
+  for (let i = 0; i < 200 && G.mission().index < 2; i++) {
+    G.drop('food', 120); G.assign('forager', 4); G.seconds(2); watch('growing to the room mission');
+  }
+  ok(`${profile}: the colony reaches the mission that unlocks rooms`, G.mission().index >= 2, JSON.stringify(G.mission().id));
+  for (let i = 0; i < 40 && !G.lesson().on; i++) { G.seconds(1); watch('waiting for the build lesson'); }
+  ok(`${profile}: the guide teaches Build the moment rooms unlock`,
+    G.lesson().on && G.lesson().name === 'build', JSON.stringify(G.lesson()));
+  ok(`${profile}: and it is still one hint, not two`, G.hints().length === 1, G.hints().join(' | '));
+  pressBtn(byId.toolBuild);
+  ok(`${profile}: the taught tap on Build opens the room cards`, G.buildOpen() === true);
+  G.seconds(1); watch('build card open');
+  ok(`${profile}: that advances the build lesson`, G.lesson().step === 1, JSON.stringify(G.lesson()));
+  for (let i = 0; i < 60 && G.dbg().food < 8; i++) { G.drop('food', 140); G.seconds(2); }
+  pressBtn(byId.toolBuild); pressBtn(byId.room_nursery);
+  ok(`${profile}: picking a room lights up every spot it could go`,
+    G.placing() === 'nursery' && G.spots().length > 0, `${G.spots().length} spots`);
+  const spot = G.spots()[0], costBefore = G.dbg().food;
+  tapOn(CV, cellPt(spot.c, spot.r)[0], cellPt(spot.c, spot.r)[1], profile);
+  ok(`${profile}: tapping a glowing spot puts the room there`,
+    G.placing() === null && G.dbg().food < costBefore, `food ${costBefore} -> ${G.dbg().food}`);
+  G.seconds(1); watch('room placed');
+  ok(`${profile}: that finishes the build lesson`, G.lesson().on === false, JSON.stringify(G.lesson()));
+  G.assign('builder', 4); G.seconds(60); watch('builders working');
+  ok(`${profile}: the ants really build it`, G.rooms().nursery >= 1, JSON.stringify(G.rooms()));
+
+  ok(`${profile}: never two hints on screen, at any point in the tutorial`, twice.length === 0, twice.slice(0, 3).join(' // '));
+}
+
+// the jobs bar drags, on a mouse as well as a finger. It is not what the tutorial
+// teaches any more, but a control that is on screen has to work.
+for (const profile of ['mouse', 'touch']) {
+  G._reset(); G.play();
+  G.assign('digger', 1); G.assign('forager', 5);
+  const bar = byId.bar, r = bar.getBoundingClientRect();
+  const was = JSON.stringify(G.dbg().jobs);
+  dragOn(bar, [[r.left + r.width * 0.5, r.top + 10], [r.left + r.width * 0.8, r.top + 10]], profile);
+  ok(`the colour bar really drags (${profile})`, JSON.stringify(G.dbg().jobs) !== was, `${was} -> ${JSON.stringify(G.dbg().jobs)}`);
+}
+
+// --- food is carried, never counted ------------------------------------------
+console.log('\n  .. food is carried, never counted');
+G._reset(); G.play();
+G.assign('forager', 0);
+const noFetch = G.dbg().food;                        // nobody to go and get it
+tapOn(CV, grassPt()[0], grassPt()[1], 'mouse');
+G.seconds(4);
+ok('with nobody on foraging, a dropped crumb is still lying there',
+  G.items().some((i) => i.kind === 'crumb'), JSON.stringify(G.items()));
+ok('and the food counter never went up on its own', G.dbg().food <= noFetch, `${noFetch} -> ${G.dbg().food}`);
+G.assign('forager', 4);
+let gone = false;
+for (let i = 0; i < 400 && !gone; i++) { G.seconds(0.25); gone = !G.items().some((it) => it.kind === 'crumb'); }
+ok('put an ant on it and the crumb comes home', gone && G.dbg().food > 0, `food=${G.dbg().food}`);
+
+// the meadow grows its own food, and picking it visibly empties the bush
+G._reset(); G.play();
+G.assign('forager', 0);
+for (let i = 0; i < 40 && G.items().filter((it) => it.kind === 'berry').length < 3; i++) G.seconds(1);
+const bushFull = G.items().filter((it) => it.kind === 'berry' && !it.held).length;
+ok('the berry bush grows berries a forager can go and get', bushFull >= 3, `${bushFull} berries`);
+G.assign('forager', 4);
+let picked = false;
+for (let i = 0; i < 300 && !picked; i++) { G.seconds(0.25); picked = G.crowd().some((a) => a.carry === 'berry'); }
+ok('an ant picks one up and carries it', picked);
+// the berry in an ant's mandibles is the SAME item, and it is off the bush while it
+// travels: that is what makes the plant visibly empty as it is picked
+ok('and the berry it is carrying is off the bush',
+  G.items().some((it) => it.kind === 'berry' && it.held), JSON.stringify(G.items().filter((it) => it.kind === 'berry')));
+
+// --- idle ants stand still, and nothing ever piles up -------------------------
+console.log('\n  .. idle ants stand still');
+G._reset(); G.play();
+G.assign('digger', G.dbg().ants);            // diggers with nothing drawn to dig
+G.seconds(8);
+const idlers = G.crowd().filter((a) => a.idle);
+ok('an ant with no job to do stands still in an idle pose', idlers.length > 0, `${idlers.length} of ${G.crowd().length}`);
+const where1 = idlers.map((a) => a.fc + ',' + a.fr).sort().join(' ');
+G.seconds(3);
+const where2 = G.crowd().filter((a) => a.idle).map((a) => a.fc + ',' + a.fr).sort().join(' ');
+ok('and it really does not wander off', where1 === where2, `${where1} -> ${where2}`);
+const posts = {};
+G.crowd().filter((a) => a.idle).forEach((a) => { posts[a.at] = (posts[a.at] || 0) + 1; });
+ok('ants stand two to a cell at most, never a pile', Object.values(posts).every((n) => n <= 2), JSON.stringify(posts));
+const queenKey = G.queen().c + ',' + G.queen().r;
+ok('and nobody is sitting on top of the queen', !posts[queenKey], JSON.stringify(posts));
+
+// a busy grown colony: still nothing stacked up
+G._reset(); G.play();
+G.assign('digger', 3); G.digDown(20);
+for (let i = 0; i < 30; i++) { G.drop('food', 100 + (i % 4) * 50); G.seconds(4); }
+const stack = {};
+G.crowd().filter((a) => a.fr >= 0 && a.state !== 'walk').forEach((a) => { stack[a.at] = (stack[a.at] || 0) + 1; });
+const worst = Math.max(0, ...Object.values(stack));
+ok('a working colony never piles ants on one cell', worst <= 2, `worst cell holds ${worst}`);
+ok('every ant on a job is walking to it or working it, never milling about',
+  G.crowd().filter((a) => a.task).every((a) => a.state === 'walk' || a.state === 'work'),
+  JSON.stringify(G.crowd().filter((a) => a.task && a.state !== 'walk' && a.state !== 'work').slice(0, 2)));
+
+// --- the needs panel, and the panel that no longer eats the screen ------------
+console.log('\n  .. needs, and a panel that stays out of the way');
+const needs = G.needs();
+ok('the needs panel reads food, water, rest and eggs',
+  ['food', 'water', 'rest', 'eggs'].every((k) => needs[k] && typeof needs[k].v === 'number'), JSON.stringify(needs));
+ok('the meters read the real colony', needs.food.v > 0 && needs.food.v <= 1 && needs.rest.v <= 1, JSON.stringify(needs));
+G._reset(); G.play();
+playTutorial('mouse');                               // past the first minute: no lesson running
+// nobody fetching: every ant hatched joins the foragers, so keep moving them off it
+for (let i = 0; i < 60 && !G.needs().food.low; i++) { G.assign('forager', 0); G.seconds(5); }
+ok('a store running low flags itself', G.needs().food.low === true, JSON.stringify(G.needs().food));
+const lowNow = Object.keys(G.needs()).filter((k) => G.needs()[k].low);
+ok('and the one hint line names a store that really is low',
+  lowNow.some((k) => new RegExp(k, 'i').test(G.coach())), `${lowNow.join(',')} :: ${G.coach()}`);
+ok('there is still only one hint saying it', G.hints().length === 1, G.hints().join(' | '));
+ok('the panel measures its own real height instead of guessing', /offsetHeight/.test(html));
+ok('and it never takes more than two fifths of the screen', G.panelH() <= G.geom().h * 0.42, `${G.panelH()} of ${G.geom().h}`);
+G._reset(); G.play();
+ok('the jobs panel starts collapsed', G.jobsOpen() === false);
+ok('there is exactly one hint surface in the markup',
+  (html.match(/data-hint/g) || []).length === 1 && !/id="hint"/.test(html));
+ok('the level picker is gone: the tile opens the colony', !/BS\.mount/.test(engine) && G.state() === 'play');
+
 // --- 5b) AC5: intentional ants, the game that teaches itself, and the swarm ---
 console.log('\n--- AC5: INTENTIONAL ANTS, TEACHING, SWARM ---');
 
+// grow one first: the AC7 section above leaves a young colony behind
+G._reset(); G.play();
+G.assign('nursery', 3); G.assign('digger', 2);
+const cols = G._cfg().cols;
+for (let i = 0; i < 90 && (G.dbg().ants < 34 || G.dbg().dug < 40); i++) {
+  if (G.dbg().planned < 6) {
+    G.digDown(3);                                  // and side branches, the way a kid draws
+    const r = Math.max(1, G.dbg().deepest - (i % 3));
+    for (let c = 1; c < cols - 1; c++) { G.dig(c, r); G.dig(c, r - 1); }
+  }
+  G.assign('digger', 4);
+  G.drop('food', 110); G.drop('water', 210); G.seconds(5);
+}
+G.seconds(10);
+
 // the swarm: many small ants, not a handful of big ones
-ok('the ants are drawn small enough to read as a swarm', G.antScale() > 0 && G.antScale() <= 0.3, `scale=${G.antScale()}`);
+ok('the ants are drawn small enough to read as a swarm, big enough to read as ants',
+  G.antScale() >= 0.28 && G.antScale() <= 0.38, `scale=${G.antScale()}`);
 ok('the drawn crowd can hold a swarm', G._cfg().sampleMax >= 60, `sampleMax=${G._cfg().sampleMax}`);
 ok('a grown colony really shows a crowd, not a handful', G.crowd().length > 26, `${G.crowd().length} ants on screen of ${G.dbg().ants}`);
 
@@ -230,7 +523,7 @@ for (let i = 0; i < 200; i++) {
   G.seconds(0.25);
   if (inDirt()) breach2++;
   const crowd = G.crowd();
-  if (crowd.some((a) => a.task === 'food')) sawFood = true;
+  if (crowd.some((a) => a.task === 'haul')) sawFood = true;
   if (crowd.some((a) => a.fr < -0.2)) sawSurface = true;
   if (crowd.some((a) => a.carry)) sawCarry = true;
   if (sawFood && sawSurface && sawCarry) break;
@@ -271,10 +564,11 @@ ok('the goal line is always saying something', typeof goalLine === 'string' && g
 ok('the goal line has no jargon or raw numbers dumped in it', !/undefined|NaN|null/.test(goalLine), goalLine);
 ok('the guide replays from the ? button', (G.showHow(), G.guide().on === true && G.guide().step === 0));
 
-// the controls say what they are, in words
-['toolDig', 'toolFood', 'toolWater', 'toolJobs'].forEach((id) =>
-  ok(`the ${id.replace('tool', '').toLowerCase()} control is a labelled button`, new RegExp(`id="${id}"[^>]*>[A-Z][a-z]+<`).test(html)));
-ok('the goal strip is in the markup', /id="goalText"/.test(html));
+// the controls say what they are, in words, and there is no unexplained mode tab
+['toolBuild', 'toolFood', 'toolWater'].forEach((id) =>
+  ok(`the ${id.replace('tool', '').toLowerCase()} control is a labelled button`, new RegExp(`id="${id}"[^>]*>[A-Z]`).test(html)));
+ok('the old unexplained mode tabs are gone', !/id="toolDig"/.test(html) && !/id="toolJobs"/.test(html));
+ok('the one hint line is in the markup', /id="coachText"/.test(html) && /data-hint/.test(html));
 
 // --- 5c) AC6: layout, felt job trade-offs, and the production chains ----------
 console.log('\n--- AC6: THE STRATEGY LAYER ---');
@@ -347,7 +641,7 @@ G.assign('forager', 5);
 G.seconds(60);
 const cut = G.chain();
 ok('the meadow grows leaves and foragers cut them', cut.cut > 0, JSON.stringify(cut));
-ok('an ant is really seen walking a leaf home', G.chain().hauling >= 0 && G.crowd().some((a) => a.task === 'food') === G.crowd().some((a) => a.task === 'food'));
+ok('an ant is really seen walking a leaf home', G.chain().hauling >= 0 && G.crowd().every((a) => a.task !== 'food'));
 // a garden with nobody on it just waits: nothing rots, nothing is lost
 G.assign('digger', 4); G.digDown(6); G.seconds(30);
 stock(24);

@@ -88,6 +88,20 @@ idle_happy, the digging/carrying ants) are plenty. Still on vectors (not yet AI)
 dig-marker, colony/anthill icon, rainy-meadow + flood overlay, loading screen, and the
 ruby/emerald ant + berry/loam customization variants.
 
+## The ants themselves are drawn now (AC7)
+
+Card AC7 changed one thing in this plan, on the evidence of a real playthrough: at
+`antScale` 0.34 (about a third of a cell, which is what a swarm needs) the glossy worker
+sprite reads as an orange blob on a phone. The ants are therefore **drawn** in the engine —
+a clean silhouette with a dark outline, six legs, antennae, and a job-coloured marker above
+the head — and the three worker poses (idle, carrying, digging) are no longer fetched.
+
+Nothing else changed. `antcity/ant/classic-v1` is still the manifest id for the ant slot,
+still resolves to `/antcity/art/ant-classic.svg`, and now also picks the drawn body colour
+(`ANT_TINT` in the engine), which is how the ruby and emerald customization options work.
+Putting a sprite back is a one-line change in `drawAnts`. The queen, the rooms, the crumb,
+the meadow and the rest are untouched and still come from the library.
+
 ## The chain pieces (AC6, drawn vectors, live)
 
 Card AC6 added the production chains, so four new pieces ship as clean drawn vectors in

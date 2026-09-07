@@ -74,7 +74,18 @@ await page.waitForTimeout(700);
 console.log('--- the guided first minute, in a real browser ---');
 const g0 = await page.evaluate(() => ANTCITY_GAME.guide());
 check('the guide is up on a brand new colony', g0.on && g0.step === 0, JSON.stringify(g0));
-check('the goal strip carries the step', (await page.textContent('#goalText')).length > 8, await page.textContent('#goalText'));
+check('the one hint line carries the step', (await page.textContent('#coachText')).length > 8, await page.textContent('#coachText'));
+// AC7: the rule human QA broke on. Count what a player can actually SEE.
+const hintsUp = () => page.evaluate(() => [...document.querySelectorAll('[data-hint]')]
+  .filter((el) => el.offsetParent !== null && (el.textContent || '').trim().length > 0)
+  .map((el) => el.textContent.trim()));
+const seenTwice = [];
+const watchHints = async (where) => { const h = await hintsUp(); if (h.length > 1) seenTwice.push(where + ': ' + h.join(' | ')); return h; };
+check('exactly one hint is on screen at the start', (await watchHints('start')).length === 1, JSON.stringify(await hintsUp()));
+// and the panel really is slim: it must not eat the dirt the guide is pointing at
+const panelBox = await page.locator('#panel').boundingBox();
+check('the jobs panel is a slim strip, not half the screen', panelBox.height < 860 * 0.32,
+  `${Math.round(panelBox.height)}px of 860`);
 await page.screenshot({ path: path.join(OUT, 'antcity-1-guide-dig.png') });
 
 // step one for real: drag down in the dirt with a finger, not through the API
@@ -88,6 +99,8 @@ await page.mouse.up();
 await page.waitForTimeout(900);
 const g1 = await page.evaluate(() => ANTCITY_GAME.guide());
 check('dragging in the dirt really moves the guide on', g1.step === 1, JSON.stringify(g1));
+await watchHints('after the drag');
+check('the finished step is gone, and only the new one is up', (await hintsUp()).length === 1, JSON.stringify(await hintsUp()));
 await page.screenshot({ path: path.join(OUT, 'antcity-2-guide-food.png') });
 
 // step two: tap the grass
@@ -95,12 +108,39 @@ await page.mouse.click(box.x + box.width * 0.3, box.y + sky - 45);
 await page.waitForTimeout(900);
 const g2 = await page.evaluate(() => ANTCITY_GAME.guide());
 check('tapping the grass really moves it on again', g2.step === 2, JSON.stringify(g2));
+await watchHints('after the tap');
+check('a tap on the grass leaves a crumb you can see',
+  (await page.evaluate(() => ANTCITY_GAME.items())).some((i) => i.kind === 'crumb'));
+// in a live browser an ant may deliver at any moment, so the honest browser form of
+// "a tap is not food" is: food only ever rose by what was actually carried in
+{
+  const b1 = await page.evaluate(() => ANTCITY_GAME.dbg());
+  await page.mouse.click(box.x + box.width * 0.5, box.y + sky - 45);
+  await page.waitForTimeout(120);
+  const b2 = await page.evaluate(() => ANTCITY_GAME.dbg());
+  check('a tap adds a crumb, never food: food only moved by what was delivered',
+    (b2.food - b1.food) <= (b2.carried - b1.carried) + 0.001, `food +${(b2.food - b1.food).toFixed(2)}, carried +${(b2.carried - b1.carried).toFixed(2)}`);
+}
 
-// step three: move an ant to another job with the panel button
-await page.locator('#jobs button[data-j="nursery"][data-d="1"]').click();
+// step three, exactly as taught: tap the plus on Foragers. The old step taught
+// dragging the colour bar, which did nothing at all with a mouse.
+check('the step that teaches the job cards opens them', await page.locator('#job_forager_up').isVisible());
+await page.locator('#job_forager_up').click();
 await page.waitForTimeout(900);
 const g3 = await page.evaluate(() => ANTCITY_GAME.guide());
 check('giving an ant a new job finishes the guide', g3.on === false, JSON.stringify(g3));
+await watchHints('guide finished');
+// the colour bar drags with a mouse, which is what a human tester could not do
+const barBox = await page.locator('#bar').boundingBox();
+const jobsWas = JSON.stringify(await page.evaluate(() => ANTCITY_GAME.dbg().jobs));
+await page.mouse.move(barBox.x + barBox.width * 0.45, barBox.y + barBox.height / 2);
+await page.mouse.down();
+await page.mouse.move(barBox.x + barBox.width * 0.8, barBox.y + barBox.height / 2, { steps: 6 });
+await page.mouse.up();
+await page.waitForTimeout(300);
+check('the colour bar really drags with a mouse',
+  JSON.stringify(await page.evaluate(() => ANTCITY_GAME.dbg().jobs)) !== jobsWas,
+  jobsWas + ' -> ' + JSON.stringify(await page.evaluate(() => ANTCITY_GAME.dbg().jobs)));
 
 console.log('\n--- ants that mean it ---');
 await page.evaluate(() => { ANTCITY_GAME.assign('digger', 4); ANTCITY_GAME.digDown(5); ANTCITY_GAME.drop('food', 120); ANTCITY_GAME.drop('food', 300); });
@@ -109,7 +149,7 @@ for (let i = 0; i < 30; i++) {
   await page.waitForTimeout(200);
   const crowd = await page.evaluate(() => ANTCITY_GAME.crowd());
   if (crowd.some((a) => a.task === 'dig')) sawDig = true;
-  if (crowd.some((a) => a.task === 'food')) sawFood = true;
+  if (crowd.some((a) => a.task === 'haul')) sawFood = true;
   if (crowd.some((a) => a.carry)) sawCarry = true;
   if (crowd.some((a) => a.fr < -0.2)) sawSurface = true;
   dirt += crowd.filter((a) => a.inDirt).length;
@@ -125,13 +165,52 @@ await page.screenshot({ path: path.join(OUT, 'antcity-3-ants-working.png') });
 console.log('\n--- the swarm ---');
 await page.evaluate(async () => {
   ANTCITY_GAME.assign('nursery', 3);
-  for (let i = 0; i < 40; i++) { ANTCITY_GAME.drop('food', 80 + i * 5); ANTCITY_GAME.drop('water', 200); ANTCITY_GAME.digDown(3); ANTCITY_GAME.seconds(6); }
+  const cols = ANTCITY_GAME._cfg().cols;
+  for (let i = 0; i < 40; i++) {
+    ANTCITY_GAME.drop('food', 80 + i * 5); ANTCITY_GAME.drop('water', 200);
+    ANTCITY_GAME.digDown(3);                         // and rooms out sideways, the way a kid digs
+    const r = Math.max(1, ANTCITY_GAME.dbg().deepest - 1);
+    for (let c = 1; c < cols - 1; c++) { ANTCITY_GAME.dig(c, r); ANTCITY_GAME.dig(c, r - 1); }
+    ANTCITY_GAME.seconds(6);
+  }
 });
 await page.waitForTimeout(900);
 const big = await page.evaluate(() => ({ crowd: ANTCITY_GAME.crowd().length, dbg: ANTCITY_GAME.dbg(), goal: ANTCITY_GAME.goal() }));
 check('a big colony shows a crowd, not a handful', big.crowd > 26, `${big.crowd} drawn of ${big.dbg.ants} ants`);
-check('the goal strip still says something useful', big.goal.length > 8, big.goal);
+check('the one hint line still says something useful', big.goal.length > 8, big.goal);
+check('and there is still only one of it', (await hintsUp()).length === 1, JSON.stringify(await hintsUp()));
+const idlers = big.crowd0 || (await page.evaluate(() => ANTCITY_GAME.crowd()));
+const stacked = {};
+idlers.filter((a) => a.fr >= 0 && a.state !== 'walk').forEach((a) => { stacked[a.at] = (stacked[a.at] || 0) + 1; });
+check('no pile of ants on one cell', Math.max(0, ...Object.values(stacked)) <= 2, JSON.stringify(stacked).slice(0, 120));
 await page.screenshot({ path: path.join(OUT, 'antcity-4-swarm.png') });
+
+console.log('\n--- AC7: Build is a button, and the spots are on screen ---');
+await page.evaluate(() => {
+  ANTCITY_GAME._reset(); ANTCITY_GAME.play(); ANTCITY_GAME._openAll();
+  ANTCITY_GAME.assign('digger', 3); ANTCITY_GAME.digDown(6); ANTCITY_GAME.seconds(40);
+  for (let i = 0; i < 20; i++) { ANTCITY_GAME.drop('food', 120); ANTCITY_GAME.assign('forager', 4); ANTCITY_GAME.seconds(6); }
+});
+await page.waitForTimeout(1200);
+await page.locator('#toolBuild').click();
+await page.waitForTimeout(300);
+check('the Build button opens the room cards', await page.locator('#roomList').isVisible());
+await page.screenshot({ path: path.join(OUT, 'antcity-8-build-cards.png') });
+await page.locator('#room_nursery').click();
+await page.waitForTimeout(500);
+const ghosts = await page.evaluate(() => ({ room: ANTCITY_GAME.placing(), spots: ANTCITY_GAME.spots().length }));
+check('picking a room lights up the spots it could go', ghosts.room === 'nursery' && ghosts.spots > 0, JSON.stringify(ghosts));
+await page.screenshot({ path: path.join(OUT, 'antcity-9-build-ghosts.png') });
+{
+  const g3b = await page.evaluate(() => ANTCITY_GAME.geom());
+  const spot = (await page.evaluate(() => ANTCITY_GAME.spots()))[0];
+  await page.mouse.click(box.x + g3b.ox + spot.c * g3b.cs + g3b.cs / 2,
+                         box.y + g3b.sky + spot.r * g3b.cs + g3b.cs / 2 - g3b.camY);
+  await page.waitForTimeout(500);
+  check('tapping a glowing spot puts the room there',
+    (await page.evaluate(() => ANTCITY_GAME.placing())) === null);
+  await watchHints('room placed');
+}
 
 console.log('\n--- AC6: the strategy layer, on screen ---');
 // the build popup has to SAY whether this is a good spot, before the kid commits
@@ -183,6 +262,7 @@ check('the ? button replays the guide', (await page.evaluate(() => ANTCITY_GAME.
 await page.screenshot({ path: path.join(OUT, 'antcity-5-replay.png') });
 
 console.log('');
+check('never two hints on screen at any point', seenTwice.length === 0, seenTwice.slice(0, 3).join(' // '));
 check('no page errors while playing', errs.length === 0, errs.slice(0, 3).join(' | '));
 if (missedArt) console.log('NOTE  some art 404d locally (the /api/asset-studio worker poses live on the deployed site); the drawn ants stood in.');
 console.log(`\npictures in ${OUT}/`);

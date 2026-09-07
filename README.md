@@ -6,6 +6,58 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AC7 — Ant City clarity rework: see what you do, know what to do (September 7 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `qa-antcity.mjs`,
+`qa-antcity-shot.mjs`, `antcity-README.md`. Phase **AC**, card **AC7**,
+branch `claude/ac7-clarity-rework-antcity-bqkazl`.
+
+AC5 and AC6 shipped with `qa-antcity.mjs` green, and the game still failed a human
+playthrough. Mike and a hands-on run hit the same ten problems, and every one of them was
+the same problem: the game did not show what it was doing, and did not say plainly what to
+do next. All ten are fixed here.
+
+**Food is carried, never counted.** Tapping the grass used to raise the Food number on the
+spot. Now every edible thing on the meadow is a real item in a real place — a crumb the kid
+taps out, a berry the bush grew, a leaf, a drop of honeydew, a drop of water — and a
+forager claims one, walks out of the anthill, picks it up (the moment the bush visibly
+loses that berry) and hauls it home. `deliver()` is the ONLY place a store ever grows. A
+tap leaves a crumb and nothing else.
+
+**One hint, not two.** The goal chip and the floating pill used to contradict each other
+all the way through the tutorial. There is one line now, and everything comes out of it in
+one order: the lesson step, then a message that just fired, then what is slowing the
+colony, then the mission. A finished step's words are gone the instant it is done.
+
+**Nothing is taught that does not work.** Step three told kids to slide the colour bar,
+which did nothing with a mouse. It teaches the plus button on a job card now, and the bar
+was fixed anyway — a press anywhere on it takes the nearest divider, mouse or finger. The
+minus button on Foragers used to take an ant and hand it straight back; it moves it to
+Diggers now.
+
+**Modes, needs and Build.** The Dig and Jobs tabs were never modes and are gone; Build,
+Drop Food and Drop Water are left and the lit one is what a meadow tap leaves behind. Four
+slim always-on meters carry food, water, rest and eggs, and a low one flags itself and
+hands the hint line a sentence. Rooms were undiscoverable, so there is a Build button: pick
+a room, every spot it could go glows, tap one to place it. A two-step lesson teaches that
+the first time a room is available, and never while the colony is hungry.
+
+**Ants that go somewhere, and a panel that gets out of the way.** Every working ant walks
+to a marked target and animates the work: diggers, foragers, nursery ants at the eggs or
+the mushroom garden, builders at the half-built room or the flood. Idle ants park and stand
+still. A cell holds two ants at most, never three, and nobody sits on the queen. The jobs
+panel is a slim strip that opens on a tap, and the engine measures its REAL height every
+frame — it used to assume 132 pixels while the thing on screen was far taller, which is why
+the tutorial pointed at dirt hidden behind it. The level picker is gone: the tile opens the
+colony. The ants are drawn rather than sprited, because at a third of a cell the library
+sprite read as an orange blob; the manifest ids still pick the look and the fallback path
+is untouched.
+
+QA: `qa-antcity.mjs` has a small real DOM under it now, so the tutorial is played with the
+gestures it actually teaches, in a mouse profile AND a touch profile, and "never two hints
+on screen" is asserted after every one of them (187 checks). `qa-antcity-shot.mjs` does the
+same in real Chromium and photographs it. `node qa-all.mjs` green.
+Ref: SESSION-LOG.md same date.
+
 ## PB1 — Paper Route: the spec, the cartridge, and Maple Street (September 6 2026)
 `public/paper-route-engine.html`, `public/paper-route/manifest.json`,
 `public/buildable-manifest.js` (new `paper-route` profile), `api/sfx.js`,

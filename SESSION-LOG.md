@@ -1,3 +1,45 @@
+## 2026-09-07 — AC7: Ant City clarity rework, see what you do and know what to do
+
+**Shipped.** All ten problems from Mike's playthrough, in one session, on branch
+`claude/ac7-clarity-rework-antcity-bqkazl`.
+
+1. **Food is carried.** The meadow holds real items — crumbs, berries, leaves, honeydew,
+   water — and a forager walks to one, picks it up and hauls it home. The Food number moves
+   when the ant arrives and at no other time. A tap makes a crumb appear; that is all it does.
+2. **One hint line.** Two hint systems collapsed into one surface. Lesson step beats a
+   fired message beats a setback beats the mission goal, and a step's words disappear the
+   moment the step is done.
+3. **The colour bar.** Dragging works from anywhere on the bar, mouse and touch, and the
+   tutorial teaches the plus button instead, because a tap cannot miss. The minus button on
+   Foragers used to be a no-op; it moves the ant to Diggers now.
+4. **Modes.** Dig and Jobs were never modes. Gone. Build, Drop Food, Drop Water remain and
+   the lit one is what a tap on the meadow leaves.
+5. **Needs.** Four slim always-on meters (food, water, rest, eggs); a low one flags itself
+   and says what to do about it in the one hint line.
+6. **Build.** A Build button, room cards, glowing spots to choose from, and a two-step
+   lesson the first time a room is available.
+7. **Movement.** Every job walks to a marked target and animates there; idle ants park and
+   stand still; two ants to a cell at most; nobody on the queen.
+8. **The panel.** A slim strip that opens on a tap, and the engine measures its real height
+   rather than assuming 132 pixels.
+9. **The picker.** Gone. The tile opens the colony.
+10. **The ants.** Drawn, with a dark outline and a job-coloured marker above.
+
+**Calls I made.** The bar is both fixed AND no longer taught: a control that is on screen
+has to work, but a tap is the thing to teach a five year old. The build lesson waits for a
+calm colony, so a starving anthill is never told about rooms. Two ants may share a cell
+side by side (a one-wide shaft cannot hold a crowd otherwise); three is what reads as a
+pile, and three can no longer happen.
+
+**QA.** `qa-antcity.mjs` now has a small real DOM under it: the tutorial is played with
+real pointer and touch gestures on the real buttons, only the gestures the game teaches,
+and at most one hint is asserted after every one of them. 187 checks pass.
+`qa-antcity-shot.mjs` does it in real Chromium and writes pictures. `node qa-all.mjs` green.
+
+**Not done.** The planner could not be reached from this session (`node scripts/planner.mjs
+list` answers HTTP 403 through the sandbox proxy), so card AC7 has not been ticked. It needs
+marking done with a note, and deployed once the live site is checked.
+
 ## 2026-09-06 — PB1: Paper Route, the delivery ride
 
 **Shipped.** A whole new game as a cartridge. `public/paper-route-engine.html` is the
