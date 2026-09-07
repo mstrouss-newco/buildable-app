@@ -53,7 +53,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
   /* ---- the three things a tap can do. The lit one is what the meadow tap drops. ---- */
   #acts{display:flex;gap:6px;margin:0 2px 5px;}
-  .tool{flex:1 1 0;border:none;border-radius:12px;padding:8px 4px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
+  /* AC7b: the three actions are PICTURES first. A five year old should know what a
+     tap will leave on the meadow without reading the word under it, and the picture
+     is the same thing the game really draws there: a crumb, a drop, a room. */
+  .tool{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;
+        border:none;border-radius:12px;padding:7px 4px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
+  .tool .ic{flex:0 0 24px;width:24px;height:24px;display:block;}
   .tool.on{background:#ffd166;box-shadow:0 0 0 3px rgba(255,209,102,.35);}
   .tool.pulse{animation:tpulse 1s ease-in-out infinite;}
   @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.8);}}
@@ -119,9 +124,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       <div class="need" id="need_eggs"><span class="nl">Eggs</span><span class="mtr"><i id="mt_eggs"></i></span></div>
     </div>
     <div id="acts">
-      <button class="tool" id="toolBuild" type="button">Build</button>
-      <button class="tool on" id="toolFood" type="button">Drop Food</button>
-      <button class="tool" id="toolWater" type="button">Drop Water</button>
+      <button class="tool" id="toolBuild" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="15" rx="4.5" fill="#e9c46a" stroke="#8a5a2b" stroke-width="2"/><path d="M9 20.5v-4a3 3 0 0 1 6 0v4z" fill="#6b431c"/></svg><span>Build</span></button>
+      <button class="tool on" id="toolFood" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="12.5" r="7" fill="#d9a05b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="17" cy="15.5" r="4.2" fill="#c98b4b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="8" cy="10" r="1.7" fill="#f0c48f"/></svg><span>Food</span></button>
+      <button class="tool" id="toolWater" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><span>Water</span></button>
     </div>
     <div id="jobsStrip">
       <div id="stripRow">

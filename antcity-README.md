@@ -151,8 +151,11 @@ not SHOW what it was doing, and it did not say clearly what to do next.
   takes hold of the nearest divider, on mouse and on touch.
 - **No unexplained modes.** Dig and Jobs were never modes (you dig by dragging in the
   dirt, you set jobs on the strip), so those tabs are gone. What is left is **Build**,
-  **Drop Food** and **Drop Water**, and the lit one is what a tap on the meadow leaves
-  behind. Water now goes somewhere you can see: its own meter.
+  **Food** and **Water**, and the lit one is what a tap on the meadow leaves behind. Each
+  one is a picture first — the crumb, the drop of water and the room are drawn on the
+  button as the same shapes the game really puts on the meadow, so a kid who cannot read
+  yet still knows what a tap will leave — with the word beside it for one who can. Drawn
+  SVG geometry, no glyphs. Water now goes somewhere you can see: its own meter.
 - **A needs panel.** Four slim always-on meters: food, water, rest, eggs. One that runs
   low flags itself and hands the hint line a sentence about what to do.
 - **Build is a button.** Rooms were undiscoverable because the only way in was to tap a

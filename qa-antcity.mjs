@@ -564,9 +564,11 @@ ok('the goal line is always saying something', typeof goalLine === 'string' && g
 ok('the goal line has no jargon or raw numbers dumped in it', !/undefined|NaN|null/.test(goalLine), goalLine);
 ok('the guide replays from the ? button', (G.showHow(), G.guide().on === true && G.guide().step === 0));
 
-// the controls say what they are, in words, and there is no unexplained mode tab
-['toolBuild', 'toolFood', 'toolWater'].forEach((id) =>
-  ok(`the ${id.replace('tool', '').toLowerCase()} control is a labelled button`, new RegExp(`id="${id}"[^>]*>[A-Z]`).test(html)));
+// the controls say what they are with a PICTURE and a word, and there is no
+// unexplained mode tab left. The picture is drawn SVG geometry, never a glyph.
+[['toolBuild', 'Build'], ['toolFood', 'Food'], ['toolWater', 'Water']].forEach(([id, word]) =>
+  ok(`the ${word.toLowerCase()} control is a picture button with its word on it`,
+    new RegExp(`id="${id}"[^>]*>\\s*<svg class="ic"[\\s\\S]{40,900}?</svg><span>${word}</span>`).test(html)));
 ok('the old unexplained mode tabs are gone', !/id="toolDig"/.test(html) && !/id="toolJobs"/.test(html));
 ok('the one hint line is in the markup', /id="coachText"/.test(html) && /data-hint/.test(html));
 

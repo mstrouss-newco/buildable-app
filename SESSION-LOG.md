@@ -118,8 +118,10 @@ asks.
 3. **The colour bar.** Dragging works from anywhere on the bar, mouse and touch, and the
    tutorial teaches the plus button instead, because a tap cannot miss. The minus button on
    Foragers used to be a no-op; it moves the ant to Diggers now.
-4. **Modes.** Dig and Jobs were never modes. Gone. Build, Drop Food, Drop Water remain and
-   the lit one is what a tap on the meadow leaves.
+4. **Modes.** Dig and Jobs were never modes. Gone. Build, Food and Water remain and the lit
+   one is what a tap on the meadow leaves. Each is a picture button: the crumb, the water
+   drop and the room are drawn on it as the same shapes the game puts on the meadow, with
+   the word beside them. Drawn SVG geometry, no glyphs.
 5. **Needs.** Four slim always-on meters (food, water, rest, eggs); a low one flags itself
    and says what to do about it in the one hint line.
 6. **Build.** A Build button, room cards, glowing spots to choose from, and a two-step
