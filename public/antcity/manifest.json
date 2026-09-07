@@ -8,17 +8,26 @@
   "shellVersion": 2,
   "engine": "canvas",
   "entry": "/antcity-engine.html",
-
   "features": {
     "demoOnLoad": true,
     "journey": true,
     "customization": true,
     "coins": true,
-    "buddy": { "on": true, "personality": "guide" },
+    "buddy": {
+      "on": true,
+      "personality": "guide"
+    },
     "multiplayer": "off",
-    "learning": { "beforeUnlock": false, "coinTopUp": true, "bonusAfterWin": true, "subjects": ["math", "reading"] }
+    "learning": {
+      "beforeUnlock": false,
+      "coinTopUp": true,
+      "bonusAfterWin": true,
+      "subjects": [
+        "math",
+        "reading"
+      ]
+    }
   },
-
   "art": {
     "badge": "/api/asset-studio?asset=ant_city/prop/meadow/badge",
     "hero": "/api/asset-studio?asset=ant_city/queen_ant/meadow/main",
@@ -26,7 +35,6 @@
     "loadingScreen": "antcity/loading/v1",
     "music": "audio/antcity/meadow-v1"
   },
-
   "levels": [
     {
       "id": "first-tunnel",
@@ -170,26 +178,88 @@
       }
     }
   ],
-
   "customization": [
-    { "slot": "Ant", "options": [
-      { "name": "Classic", "asset": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal", "price": 0 },
-      { "name": "Ruby", "asset": "antcity/ant/ruby-v1", "price": 40 },
-      { "name": "Emerald", "asset": "antcity/ant/emerald-v1", "price": 40 }
-    ]},
-    { "slot": "Meadow", "options": [
-      { "name": "Mushroom Patch", "asset": "antcity/surface/meadow-v1", "price": 0 },
-      { "name": "Berry Bushes", "asset": "antcity/surface/meadow-berry-v1", "price": 60 }
-    ]},
-    { "slot": "Dirt", "options": [
-      { "name": "Sandy", "asset": "antcity/soil/sandy-v1", "price": 0 },
-      { "name": "Rich Loam", "asset": "antcity/soil/loam-v1", "price": 60 }
-    ]}
+    {
+      "slot": "Ant",
+      "options": [
+        {
+          "name": "Classic",
+          "asset": "/api/asset-studio?asset=ant_city/worker_ants/meadow/idle_normal",
+          "price": 0
+        },
+        {
+          "name": "Ruby",
+          "asset": "antcity/ant/ruby-v1",
+          "price": 40
+        },
+        {
+          "name": "Emerald",
+          "asset": "antcity/ant/emerald-v1",
+          "price": 40
+        }
+      ]
+    },
+    {
+      "slot": "Meadow",
+      "options": [
+        {
+          "name": "Mushroom Patch",
+          "asset": "antcity/surface/meadow-v1",
+          "price": 0
+        },
+        {
+          "name": "Berry Bushes",
+          "asset": "antcity/surface/meadow-berry-v1",
+          "price": 60
+        }
+      ]
+    },
+    {
+      "slot": "Dirt",
+      "options": [
+        {
+          "name": "Sandy",
+          "asset": "antcity/soil/sandy-v1",
+          "price": 0
+        },
+        {
+          "name": "Rich Loam",
+          "asset": "antcity/soil/loam-v1",
+          "price": 60
+        }
+      ]
+    }
   ],
-
   "feel": {
     "pace": "chill",
     "celebration": "calm",
     "haptics": "on"
-  }
+  },
+  "rooms": {
+    "fungus": {
+      "name": "Fungus Garden",
+      "desc": "Nursery ants grow mushrooms",
+      "food": 10,
+      "color": "#cbbd85",
+      "asset": "antcity/prop/fungus-v1"
+    }
+  },
+  "milestones": [
+    {
+      "id": "leaves-20",
+      "type": "leaves",
+      "n": 20,
+      "coins": 20,
+      "unlock": "fungus",
+      "fact": "Leafcutter ants do not eat the leaves. They feed them to a mushroom garden and eat the mushrooms."
+    },
+    {
+      "id": "aphids",
+      "type": "ants",
+      "n": 20,
+      "coins": 20,
+      "aphids": true,
+      "fact": "Ants really do keep aphids like tiny cows, and drink the sweet honeydew they make."
+    }
+  ]
 }

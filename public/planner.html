@@ -177,6 +177,51 @@
   #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:60}
   #gate .box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;width:min(340px,90vw);text-align:center}
   #gate input{width:100%;text-align:center;font-size:20px;letter-spacing:4px;margin:12px 0}
+
+  /* ---- Run builder (card RB1) ---- */
+  .rb-modal{max-width:780px}
+  .rb-sec{margin:18px 0 0}
+  .rb-sec h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:800}
+  .rb-phase{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden;background:var(--card)}
+  .rb-phead{display:flex;align-items:center;gap:10px;padding:10px 12px;flex-wrap:wrap;cursor:pointer}
+  .rb-phead b{font-size:14px;flex:1 1 140px;min-width:0}
+  .rb-plist{display:none;padding:0 12px 10px}
+  .rb-phase.open .rb-plist{display:block}
+  .rb-pick{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:10px;background:var(--card2);
+    border:1px solid var(--line);margin-bottom:6px;cursor:pointer}
+  .rb-pick input{margin:2px 0 0;width:19px;height:19px;flex:0 0 auto;accent-color:var(--accent)}
+  .rb-pick .nm{flex:1;min-width:0;font-size:13.5px;line-height:1.4}
+  .rb-pick.on{border-color:var(--accent);background:rgba(107,78,255,.07)}
+  .rb-flag{font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap;align-self:flex-start}
+  .rb-flag.review{background:rgba(185,119,10,.16);color:var(--warn)}
+  .rb-row{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);
+    border-radius:11px;padding:9px 10px;margin-bottom:7px}
+  .rb-row.dragging{opacity:.4}
+  .rb-row.over{border-color:var(--accent);box-shadow:0 0 0 2px rgba(107,78,255,.18)}
+  .rb-row input.gsel{width:19px;height:19px;flex:0 0 auto;accent-color:var(--accent)}
+  .rb-row .step{font-weight:800;color:var(--muted);font-size:12px;min-width:16px;text-align:right}
+  .rb-row .what{flex:1;min-width:0;font-size:13.5px;line-height:1.35}
+  .rb-row .what small{display:block;color:var(--muted);font-size:12px;margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rb-arrows{display:flex;flex-direction:column;gap:3px}
+  .rb-arrow{background:var(--card);border:1px solid var(--line);border-radius:7px;color:var(--muted);
+    cursor:pointer;font-size:9px;line-height:1;padding:4px 7px}
+  .rb-arrow:hover{color:var(--accent)}
+  .rb-arrow:disabled{opacity:.35;cursor:not-allowed}
+  .rb-grip{cursor:grab;color:var(--muted);font-size:15px;padding:0 2px;user-select:none;touch-action:none}
+  .rb-warn{background:#fff5e6;border:1px solid #f0d9a8;color:#7a5600;border-radius:11px;padding:10px 12px;
+    font-size:13.5px;line-height:1.5;margin-bottom:8px}
+  .rb-empty{color:var(--muted);font-size:13.5px;padding:10px 2px}
+  .rb-set{display:flex;flex-direction:column;gap:13px}
+  .rb-setrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .rb-setrow > .lbl{flex:1 1 210px;font-size:13.5px;font-weight:600}
+  .rb-setrow > .lbl small{display:block;color:var(--muted);font-weight:500;font-size:12px;margin-top:2px}
+  .rb-setrow input[type=number]{width:74px}
+  .rb-setrow input[type=time]{width:120px}
+  .rb-bar{background:#eef3ff;border:1px solid #c6d4f5;border-radius:12px;padding:11px 14px;font-size:14px;
+    line-height:1.45;margin-bottom:12px}
+  .rb-bar.ran{background:#eaf7ef;border-color:#bde5cb}
+  .rb-bar b{display:block;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -199,6 +244,7 @@
     <a href="/app" style="margin-left:auto;color:#8388b5;font-size:13px;text-decoration:none">Kids app &rarr;</a>
   </div>
   <div id="autorun-bar"></div>
+  <div id="run-bar"></div>
   <div id="reportModal"></div>
   <header>
     <div>
@@ -309,6 +355,18 @@
   </div>
 </div></div>
 
+<!-- Run builder (card RB1) -->
+<div class="modal-bg" id="runModal"><div class="modal rb-modal">
+  <h3>Build a run</h3>
+  <p class="hint">Tick the cards you want worked, put them in the order you want them done, then save.
+    Nothing starts from this page &mdash; the run waits until something picks it up.</p>
+  <div id="rb-body"></div>
+  <div class="mfoot">
+    <button class="btn ghost" onclick="closeModal('runModal')">Close</button>
+    <button class="btn" id="rb-save" onclick="rbSave()">Save the run</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -339,6 +397,7 @@ function openApp(){
   document.getElementById("gate").style.display="none";
   document.getElementById("appwrap").style.display="block";
   load(false);
+  rbLoadRuns();
 }
 
 /* ---- network ---- */
@@ -1196,7 +1255,7 @@ async function rmDelNote(id,i){
 }
 
 function rmAddBar(){
-  return '<div class="rm-addbar"><button class="btn" onclick="rmAddPhase()">+ New phase</button> <button class="btn ghost" onclick="rmTogglePaste()">Import roadmap</button></div>';
+  return '<div class="rm-addbar"><button class="btn" onclick="rbOpen()">Build a run</button> <button class="btn ghost" onclick="rmAddPhase()">+ New phase</button> <button class="btn ghost" onclick="rmTogglePaste()">Import roadmap</button></div>';
 }
 function rmTogglePaste(){ const c=document.getElementById("rm-paste-card"); if(c) c.classList.toggle("collapsed"); }
 function nextPhaseNum(){
@@ -1295,6 +1354,298 @@ async function rmMarkDeployed(){
   copyEl("rm-pm-box");
   closeModal("rmPromptModal");
   if(rmPromptId!=null) await rmSetDeployed(rmPromptId,true);
+}
+
+
+/* ---- Run builder (card RB1) -------------------------------------------------
+   Mike ticks the cards he wants worked, puts them in order, and saves. Saving
+   writes ONE row to planner_runs with status 'ready'. Nothing runs from this
+   page: a later card adds the runner that claims a ready row and works it.
+
+   Two or more cards in one row is the GROUPED law in AGENTS.md — one clone, one
+   deploy, one QA pass, and every card in the group ticked as its part lands. */
+const RB_DEFAULTS={ship:true,carryOn:true,stopAfterFailures:2,hardStop:{kind:"none",hours:6,clock:"07:00"}};
+let rbRun=null;          /* {sessions:[[id,...]], settings, startMode, startAt} */
+let rbRuns=[];           /* what the server has saved */
+let rbPhaseOpen={};      /* which phases are expanded in the picker */
+let rbSel={};            /* which run rows are ticked for grouping */
+let rbDragFrom=null;
+
+function rbFresh(){ return {sessions:[],settings:JSON.parse(JSON.stringify(RB_DEFAULTS)),startMode:"now",startAt:"07:00"}; }
+function rbCards(){ const rd=rmData(); return Array.isArray(rd.sessions)?rd.sessions:[]; }
+function rbCard(id){ return rbCards().find(c=>c.id===id)||null; }
+/* Open, not parked, not already done — the cards a run can legally hold. */
+function rbEligible(c){ return c && !c.done && !c.later; }
+function rbInRun(id){ return rbRun.sessions.some(g=>g.indexOf(id)>-1); }
+function rbFlat(){ return rbRun.sessions.reduce((a,g)=>a.concat(g),[]); }
+
+/* A card that says "AFTER RB2." depends on RB2. Reading it off the card text is
+   what makes the order warning work without anyone maintaining a second list. */
+function rbDeps(desc){
+  const out=[]; const re=/\bAFTER\s+([A-Z]{1,5}\d{1,3})\b/gi; let m;
+  while((m=re.exec(String(desc||"")))) out.push(m[1].toUpperCase());
+  return out;
+}
+/* Everything worth saying out loud before the run is saved. Plain sentences, not
+   error codes: this list is the whole point of the builder. */
+function rbWarnings(){
+  const w=[]; const pos={};
+  rbRun.sessions.forEach((g,i)=>g.forEach(id=>{pos[id]=i;}));
+  rbFlat().forEach(id=>{
+    const c=rbCard(id); if(!c) return;
+    if(c.needsReview) w.push(esc(id)+" is waiting for your review. Working it again could redo something you have not looked at yet.");
+    rbDeps(c.desc).forEach(dep=>{
+      const dc=rbCard(dep);
+      if(dc&&dc.done) return;
+      if(pos[dep]===undefined){
+        w.push(esc(id)+" says it comes after "+esc(dep)+", and "+esc(dep)+" is neither finished nor in this run.");
+      }else if(pos[dep]>pos[id]){
+        w.push(esc(id)+" says it comes after "+esc(dep)+", but "+esc(dep)+" is later in this run. Move it up.");
+      }else if(pos[dep]===pos[id]){
+        w.push(esc(dep)+" and "+esc(id)+" are grouped into one session, and "+esc(id)+" comes after "+esc(dep)+". The session must do them in that order.");
+      }
+    });
+  });
+  rbRun.sessions.forEach((g,i)=>{ if(g.length>3) w.push("Session "+(i+1)+" holds "+g.length+" cards. That is a lot for one sitting — three is usually the most that lands well."); });
+  return w;
+}
+
+/* ---- picking ---- */
+function rbToggleCard(id){
+  if(rbInRun(id)){
+    rbRun.sessions=rbRun.sessions.map(g=>g.filter(x=>x!==id)).filter(g=>g.length);
+  }else{
+    rbRun.sessions.push([id]);
+  }
+  rbSel={}; rbRender();
+}
+function rbAddPhase(num){
+  rbCards().filter(c=>String(c.phaseNum)===String(num)&&rbEligible(c)&&!rbInRun(c.id))
+    .forEach(c=>rbRun.sessions.push([c.id]));
+  rbSel={}; rbRender();
+}
+function rbClearRun(){ rbRun.sessions=[]; rbSel={}; rbRender(); }
+function rbTogglePhase(num){ rbPhaseOpen[num]=!rbPhaseOpen[num]; rbRender(); }
+
+/* ---- ordering and grouping ---- */
+function rbMove(i,dir){
+  const j=i+dir; if(j<0||j>=rbRun.sessions.length) return;
+  const s=rbRun.sessions; const t=s[i]; s[i]=s[j]; s[j]=t;
+  const a=!!rbSel[i], b=!!rbSel[j]; rbSel[i]=b; rbSel[j]=a;
+  rbRender();
+}
+function rbRemove(i){ rbRun.sessions.splice(i,1); rbSel={}; rbRender(); }
+function rbToggleSel(i){ rbSel[i]=!rbSel[i]; rbRender(); }
+/* Group the ticked rows into ONE session, landing where the first ticked row was
+   so the run keeps the order Mike put it in. */
+function rbGroup(){
+  const idx=Object.keys(rbSel).filter(k=>rbSel[k]).map(Number).sort((a,b)=>a-b);
+  if(idx.length<2) return;
+  const merged=idx.reduce((a,i)=>a.concat(rbRun.sessions[i]),[]);
+  if(merged.length>6){ alert("A session can hold at most 6 cards."); return; }
+  const keep=[];
+  rbRun.sessions.forEach((g,i)=>{ if(i===idx[0]) keep.push(merged); else if(idx.indexOf(i)===-1) keep.push(g); });
+  rbRun.sessions=keep; rbSel={}; rbRender();
+}
+function rbUngroup(i){
+  const g=rbRun.sessions[i]; if(!g||g.length<2) return;
+  rbRun.sessions.splice(i,1,...g.map(id=>[id]));
+  rbSel={}; rbRender();
+}
+/* Drag to reorder on a mouse. The arrows do the same job on a phone, where a
+   long-press drag inside a scrolling sheet is a fight. */
+function rbDragStart(e,i){ rbDragFrom=i; e.dataTransfer.effectAllowed="move"; try{e.dataTransfer.setData("text/plain",String(i));}catch(err){} e.currentTarget.classList.add("dragging"); }
+function rbDragOver(e,i){ e.preventDefault(); e.dataTransfer.dropEffect="move"; e.currentTarget.classList.add("over"); }
+function rbDragLeave(e){ e.currentTarget.classList.remove("over"); }
+function rbDrop(e,i){
+  e.preventDefault(); e.currentTarget.classList.remove("over");
+  const from=rbDragFrom; rbDragFrom=null;
+  if(from==null||from===i) { rbRender(); return; }
+  const s=rbRun.sessions; const moved=s.splice(from,1)[0]; s.splice(i,0,moved);
+  rbSel={}; rbRender();
+}
+function rbDragEnd(e){ e.currentTarget.classList.remove("dragging"); rbDragFrom=null; }
+
+/* ---- settings ---- */
+function rbSet(k,v){ rbRun.settings[k]=v; rbRender(); }
+function rbSetHard(kind){ rbRun.settings.hardStop.kind=kind; rbRender(); }
+function rbSetHardVal(k,v){ rbRun.settings.hardStop[k]=v; rbRender(); }
+function rbSetStart(mode){ rbRun.startMode=mode; rbRender(); }
+/* "07:00" means the next 07:00 that has not happened yet, in Mike's own clock. */
+function rbStartIso(){
+  if(rbRun.startMode!=="at") return null;
+  const m=/^(\d{1,2}):(\d{2})$/.exec(rbRun.startAt||""); if(!m) return null;
+  const t=new Date(); t.setHours(+m[1],+m[2],0,0);
+  if(t.getTime()<=Date.now()) t.setDate(t.getDate()+1);
+  return t.toISOString();
+}
+
+/* ---- drawing ---- */
+function rbRender(){
+  const box=document.getElementById("rb-body"); if(!box) return;
+  const rd=rmData();
+  const st=rbRun.settings;
+  const phases=(rd.phases||[]).filter(p=>rbCards().some(c=>String(c.phaseNum)===String(p.num)&&rbEligible(c)));
+
+  /* 1 — pick the work */
+  let h='<div class="rb-sec"><h4>1 &middot; Pick the work</h4>';
+  if(!phases.length) h+='<div class="rb-empty">Nothing open. Every card is done or parked.</div>';
+  phases.forEach(p=>{
+    const cs=rbCards().filter(c=>String(c.phaseNum)===String(p.num)&&rbEligible(c));
+    const picked=cs.filter(c=>rbInRun(c.id)).length;
+    const open=rbPhaseOpen[p.num]?"open":"";
+    h+='<div class="rb-phase '+open+'">'
+      +'<div class="rb-phead" onclick=\'rbTogglePhase('+JSON.stringify(p.num)+')\'>'
+      +'<b>Phase '+esc(p.num)+' '+esc(p.title||"")+'</b>'
+      +'<span class="count">'+picked+' of '+cs.length+' picked</span>'
+      +'<button class="btn mini" onclick=\'event.stopPropagation();rbAddPhase('+JSON.stringify(p.num)+')\'>Add the whole phase</button>'
+      +'</div><div class="rb-plist">';
+    cs.forEach(c=>{
+      const on=rbInRun(c.id);
+      h+='<label class="rb-pick '+(on?"on":"")+'">'
+        +'<input type="checkbox" '+(on?"checked":"")+' onchange=\'rbToggleCard('+JSON.stringify(c.id)+')\'>'
+        +'<span class="nm"><b>'+esc(c.id)+'</b> '+esc(c.name||"")+'</span>'
+        +(c.needsReview?'<span class="rb-flag review">needs your review</span>':'')
+        +'</label>';
+    });
+    h+='</div></div>';
+  });
+  h+='</div>';
+
+  /* 2 — the run itself */
+  const nSel=Object.keys(rbSel).filter(k=>rbSel[k]).length;
+  h+='<div class="rb-sec"><h4>2 &middot; The run, in order</h4>';
+  if(!rbRun.sessions.length){
+    h+='<div class="rb-empty">Nothing picked yet. Tick a card above and it lands here.</div>';
+  }else{
+    rbRun.sessions.forEach((g,i)=>{
+      const names=g.map(id=>{const c=rbCard(id);return c?c.name:"(gone)";});
+      const grouped=g.length>1;
+      h+='<div class="rb-row" draggable="true"'
+        +' ondragstart="rbDragStart(event,'+i+')" ondragover="rbDragOver(event,'+i+')"'
+        +' ondragleave="rbDragLeave(event)" ondrop="rbDrop(event,'+i+')" ondragend="rbDragEnd(event)">'
+        +'<input class="gsel" type="checkbox" title="Tick two or more, then group them" '+(rbSel[i]?"checked":"")+' onchange="rbToggleSel('+i+')">'
+        +'<span class="rb-grip" title="Drag to reorder">&#9776;</span>'
+        +'<span class="step">'+(i+1)+'</span>'
+        +'<span class="what"><b>'+g.map(esc).join(" + ")+'</b>'
+          +(grouped?' <span class="count">one session</span>':'')
+          +'<small>'+names.map(n=>esc(String(n).slice(0,60))).join(" &middot; ")+'</small></span>'
+        +'<span class="rb-arrows">'
+          +'<button class="rb-arrow" title="Move up" '+(i===0?"disabled":"")+' onclick="rbMove('+i+',-1)">&#9650;</button>'
+          +'<button class="rb-arrow" title="Move down" '+(i===rbRun.sessions.length-1?"disabled":"")+' onclick="rbMove('+i+',1)">&#9660;</button>'
+        +'</span>'
+        +(grouped?'<button class="btn mini ghost" onclick="rbUngroup('+i+')">Split</button>':'')
+        +'<span class="x" title="Take it out" onclick="rbRemove('+i+')">&#10005;</span>'
+        +'</div>';
+    });
+    h+='<div class="row" style="margin-top:4px">'
+      +'<button class="btn mini" '+(nSel<2?"disabled":"")+' onclick="rbGroup()">Group '+(nSel>1?nSel+" ":"")+'ticked into one session</button>'
+      +'<button class="btn mini ghost" onclick="rbClearRun()">Start over</button>'
+      +'</div>';
+  }
+  h+='</div>';
+
+  /* 3 — what to do about it */
+  const warns=rbRun.sessions.length?rbWarnings():[];
+  if(warns.length){
+    h+='<div class="rb-sec"><h4>Worth knowing</h4>'
+      +warns.map(t=>'<div class="rb-warn">'+t+'</div>').join("")+'</div>';
+  }
+
+  /* 4 — settings */
+  const seg=(on,onLabel,offLabel,fn)=>'<div class="toggle">'
+    +'<button class="'+(on?"on":"")+'" onclick="'+fn+'(true)">'+onLabel+'</button>'
+    +'<button class="'+(on?"":"on")+'" onclick="'+fn+'(false)">'+offLabel+'</button></div>';
+  h+='<div class="rb-sec"><h4>3 &middot; How it should be worked</h4><div class="rb-set">'
+    +'<div class="rb-setrow"><span class="lbl">When a card is finished<small>Ship it goes live. Park it puts the whole run on one branch for you to look at first.</small></span>'
+      +seg(st.ship,"Ship it","Park it","rbSetShip")+'</div>'
+    +'<div class="rb-setrow"><span class="lbl">If a card needs you<small>Carrying on leaves a one-line question on that card and moves to the next one.</small></span>'
+      +seg(st.carryOn,"Carry on","Stop","rbSetCarry")+'</div>'
+    +'<div class="rb-setrow"><span class="lbl">Give up after this many failures</span>'
+      +'<input type="number" min="1" max="9" value="'+st.stopAfterFailures+'" onchange="rbSetFails(this.value)"></div>'
+    +'<div class="rb-setrow"><span class="lbl">Hard stop<small>A line it never works past, whatever is left.</small></span>'
+      +'<div class="toggle">'
+        +'<button class="'+(st.hardStop.kind==="none"?"on":"")+'" onclick="rbSetHard(\'none\')">None</button>'
+        +'<button class="'+(st.hardStop.kind==="hours"?"on":"")+'" onclick="rbSetHard(\'hours\')">After hours</button>'
+        +'<button class="'+(st.hardStop.kind==="clock"?"on":"")+'" onclick="rbSetHard(\'clock\')">At a time</button>'
+      +'</div>'
+      +(st.hardStop.kind==="hours"?'<input type="number" min="1" max="24" value="'+st.hardStop.hours+'" onchange="rbSetHardVal(\'hours\',this.value)"> <span class="legend">hours</span>':"")
+      +(st.hardStop.kind==="clock"?'<input type="time" value="'+esc(st.hardStop.clock||"07:00")+'" onchange="rbSetHardVal(\'clock\',this.value)">':"")
+      +'</div>'
+    +'<div class="rb-setrow"><span class="lbl">Start</span>'
+      +'<div class="toggle">'
+        +'<button class="'+(rbRun.startMode==="now"?"on":"")+'" onclick="rbSetStart(\'now\')">Now</button>'
+        +'<button class="'+(rbRun.startMode==="at"?"on":"")+'" onclick="rbSetStart(\'at\')">At a time</button>'
+      +'</div>'
+      +(rbRun.startMode==="at"?'<input type="time" value="'+esc(rbRun.startAt||"07:00")+'" onchange="rbSetStartAt(this.value)">':"")
+      +'</div>'
+    +'</div></div>';
+
+  const n=rbFlat().length;
+  h+='<p class="hint" style="margin:14px 0 0">'+(n?n+' card'+(n===1?"":"s")+' in '+rbRun.sessions.length+' session'+(rbRun.sessions.length===1?"":"s")+'. ':"")
+    +'Saving parks the run as ready. It does not start anything from here.</p>';
+  box.innerHTML=h;
+  const sv=document.getElementById("rb-save"); if(sv) sv.disabled=!rbRun.sessions.length;
+}
+function rbSetShip(v){ rbSet("ship",!!v); }
+function rbSetCarry(v){ rbSet("carryOn",!!v); }
+function rbSetFails(v){ rbRun.settings.stopAfterFailures=Math.min(9,Math.max(1,parseInt(v,10)||2)); rbRender(); }
+function rbSetStartAt(v){ rbRun.startAt=v; rbRender(); }
+
+function rbOpen(){
+  if(!rbRun) rbRun=rbFresh();
+  const ready=rbRuns.find(r=>r.status==="ready");
+  if(ready){ alert("A run is already saved and waiting. Cancel it first if you want to build a different one."); return; }
+  rbRender();
+  document.getElementById("runModal").classList.add("show");
+}
+
+/* ---- saving, and the bar that shows what is waiting ---- */
+async function rbSave(){
+  const btn=document.getElementById("rb-save"); if(btn) btn.disabled=true;
+  const r=await apiPost({op:"saveRun",sessions:rbRun.sessions,settings:rbRun.settings,startAt:rbStartIso()});
+  if(btn) btn.disabled=false;
+  if(!r||!r.ok){ alert((r&&(r.error||r.hint))||"Could not save that run."); return; }
+  rbRun=rbFresh(); rbSel={};
+  closeModal("runModal");
+  toast("Run saved and waiting");
+  rbLoadRuns();
+}
+async function rbCancelRun(id){
+  if(!confirm("Cancel the run that is waiting?")) return;
+  const r=await apiPost({op:"cancelRun",id:id});
+  if(!r||!r.ok){ alert((r&&r.error)||"Could not cancel that run."); return; }
+  toast("Run cancelled"); rbLoadRuns();
+}
+async function rbLoadRuns(){
+  try{
+    const r=await fetch("/api/planner?scope=runs",{cache:"no-store"}).then(x=>x.json());
+    rbRuns=(r&&r.ok&&r.runs)?r.runs:[];
+  }catch(e){ rbRuns=[]; }
+  rbRenderBar();
+}
+/* The one way anything outside sets the saved-run list, so the bar can be drawn
+   from a known list in the QA harness as well as from the server. */
+function rbSetRuns(list){ rbRuns=Array.isArray(list)?list:[]; rbRenderBar(); }
+function rbRenderBar(){
+  const el=document.getElementById("run-bar"); if(!el) return;
+  const r=rbRuns.find(x=>x.status==="ready"||x.status==="running");
+  if(!r){ el.innerHTML=""; return; }
+  const sess=Array.isArray(r.sessions)?r.sessions:[];
+  const n=sess.reduce((a,g)=>a+g.length,0);
+  const st=r.settings||{};
+  const when=r.start_at?("from "+new Date(r.start_at).toLocaleString()):"as soon as something picks it up";
+  const bits=[st.ship===false?"parked on one branch":"shipped as it goes",
+              st.carryOn===false?"stops when a card needs you":"carries on and leaves you a question"];
+  if(st.hardStop&&st.hardStop.kind==="hours") bits.push("hard stop after "+st.hardStop.hours+"h");
+  if(st.hardStop&&st.hardStop.kind==="clock") bits.push("hard stop at "+esc(st.hardStop.clock));
+  el.innerHTML='<div class="rb-bar'+(r.status==="running"?" ran":"")+'">'
+    +'<b>'+(r.status==="running"?"A run is going":"A run is saved and waiting")+'</b>'
+    +n+' card'+(n===1?"":"s")+' in '+sess.length+' session'+(sess.length===1?"":"s")+', '+esc(when)+'.'
+    +'<div style="opacity:.75;font-size:13px;margin-top:3px">'+sess.map(g=>g.map(esc).join(" + ")).join(" &rarr; ")+'</div>'
+    +'<div style="opacity:.7;font-size:12.5px;margin-top:3px">'+esc(bits.join(" &middot; ")).replace(/&amp;middot;/g,"&middot;")+'</div>'
+    +(r.status==="ready"?'<button class="btn mini ghost" style="margin-top:8px" onclick="rbCancelRun('+r.id+')">Cancel this run</button>':"")
+    +'</div>';
 }
 
 document.getElementById("f-desc")&&document.getElementById("f-desc").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))addTask();});

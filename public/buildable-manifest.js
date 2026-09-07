@@ -1004,7 +1004,17 @@
     // never two plays.
     var count = "1";
     try{ if(/[?&]kgplay=0(?:&|$)/.test(location.search)) count = "0"; }catch(e){}
-    fetch("/api/kid-game?op=load&play="+count+"&id="+encodeURIComponent(id))
+    // CB-QA: a game nobody has shared is readable only by the family that made
+    // it, so say who is asking. These two ids are the same ones the studio saved
+    // the game with; a guest page has neither, and only ever gets shared games.
+    var who = "";
+    try{
+      var dev = localStorage.getItem("deviceId");
+      if(dev) who += "&familyId=" + encodeURIComponent(dev);
+      var k = JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");
+      if(k && k.id) who += "&kidId=" + encodeURIComponent(k.id);
+    }catch(e){}
+    fetch("/api/kid-game?op=load&play="+count+"&id="+encodeURIComponent(id)+who)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ done(j && j.ok && j.game ? j.game : null); })
       .catch(function(){ done(null); });

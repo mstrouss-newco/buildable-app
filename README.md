@@ -45,6 +45,79 @@ Ref: SESSION-LOG.md same date.
 Also fixed here: `README.md` carried committed merge-conflict markers from the AC4 merge
 (`<<<<<<<` at the top of the log, `>>>>>>>` 200 lines down). Resolved as the plain union
 the repo's own rule prescribes — both sides kept, markers removed.
+## AC6 - Ant City's strategy layer: layout, felt job trade-offs, and real ant chains (September 7 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/` (4 new
+files), `qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`, `ANTCITY-ASSET-PLAN.md`.
+Phase **AC**, card **AC6**, branch `claude/ac5-planner-launch-u3ciu2`.
+
+**Layout matters.** Storage near the top means quicker forager trips, a nursery beside the
+queen hatches eggs sooner, a den dug deep rests better, a fungus garden close to home grows
+faster. The build popup names the good spot in kid words, in green, before the kid commits.
+The rules are data in `GAME_CONFIG.placement` and they are bonuses ONLY: a plain spot earns
+nothing and costs nothing, so every existing colony is untouched.
+
+**Job trade-offs you can feel.** The food chip says up or down, and a line over the job bar
+says what the mix is doing (tunnels flying while food drops, food piling up while nothing
+moves, nobody clearing the water). Rain now rewards a stocked pantry: with food put by the
+colony works straight through a flood, with an empty one it only slows. It still takes
+nothing, ever.
+
+**Production chains.** Leaves grow on the meadow and a forager with no crumb to fetch cuts
+one and hauls it, visibly, to the new Fungus Garden, where nursery ants turn leaves into
+mushroom food (so nursery duty is a real choice between eggs and mushrooms). A milestone
+brings an aphid plant and honeydew herding. The queen shares the true leafcutter and aphid
+facts the first time each appears. Nothing rots, nothing dies, an unstaffed garden waits.
+
+The new room and both chain milestones live in the manifest, merged over the engine's own
+fallback values, so a future room is a recipe change rather than an engine change. Four new
+drawn vectors ship with it. `qa-antcity.mjs` gained an AC6 section and `qa-antcity-shot.mjs`
+proves the same in real Chromium. `node qa-all.mjs` green.
+
+## AC5 — Ant City: ants that mean it, a game that teaches itself, and a real swarm (September 6 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs`, new `qa-antcity-shot.mjs`, `antcity-README.md`.
+Phase **AC**, card **AC5**, branch `claude/ac5-planner-launch-u3ciu2`.
+
+Mike's playtest after AC1, AC2 and AC4: kinda cool but not delightful, the ants do not move
+intentionally, and he was completely clueless how to play. Three parts, one session.
+
+**Intentional ants.** The drawn ants used to wander at random, which is exactly why the
+colony read as scenery. Now every one of them is doing something the colony is really doing.
+Pick a dig spot and a nearby digger walks to it through the existing tunnels (a real
+breadth-first route, never through solid dirt, and no route means it does not take the job),
+then digs it with dirt puffs while the marker on the spot brightens. Drop a crumb and a
+forager climbs up and out of the anthill, picks it up in the carrying pose, and hauls it
+back down to storage. Ants face the way they walk, hustle when on a job, hop when they
+finish one, leave tiny footprints, and the queen bobs at every hatch. The counts-and-rates
+simulation stays the ONLY source of truth: nothing in the visible layer changes a number,
+and it runs on the same fixed 1/60 step and the same seeded random, so the robot repeats
+exactly.
+
+**The game explains itself.** A new colony opens into a guided first minute driven by the
+queen: three steps, one at a time, each WAITING until the kid really does it (drag in the
+dirt, tap the grass, slide an ant to a new job). A pointing mark shows the spot, the control
+being taught glows, and nothing is blocked or has to be dismissed. Alongside it, always-on
+clarity: every control now says what it is in a word (Dig, Food, Water, Jobs), and a goal
+strip above the panel carries what the colony wants next in kid words the whole time,
+handing over to whatever is slowing the colony down when there is one. Fifteen seconds idle
+brings one friendly bubble pointing at the next thing to do, never repeating the strip. The
+? button replays the guide.
+
+**Swarm scale.** Ants drawn at 0.30 of a cell instead of 0.44, up to seventy on screen
+instead of twenty six. The drawn crowd is a sample taken from the rows the camera is looking
+at, so a shaft a hundred levels deep no longer leaves the view empty, and it wears the job
+mix the panel says. The ant the guide points at is bigger with a soft halo.
+
+`qa-antcity.mjs` gained an AC5 section (a digger takes the drawn spot, a forager carries a
+crumb home, no ant ever stands in solid dirt, the guide advances only on the real action).
+New `qa-antcity-shot.mjs` drives it in real Chromium with a real drag and tap and writes
+pictures. `node qa-all.mjs` green. Also fixed: a window reporting no size used to turn the
+grid into NaN, which never mattered until the ants started reading the geometry.
+
+Not done: the carrying and digging worker poses live at `/api/asset-studio`, which only
+exists on the deployed site, so they were never loaded for real here (the drawn ants stand
+in, as designed). AC3 is still open.
+
+---
 
 ## AC4 — Ant City gets its own sounds, a meadow loop, and the last of its art (September 6 2026)
 `api/sfx.js`, `api/library-music.js`, `public/antcity-engine.html`, `public/antcity/art/` (8 new
@@ -85,6 +158,7 @@ into existence; if one comes back 503 the prompt or the duration needs a nudge, 
 in the game breaks meanwhile.
 
 ---
+
 ## CB4 — the grown-up studio: shelves, games a month, the share sheet, house rules, real signup (September 6 2026)
 `db/create-cobuild-plans.sql` (written AND applied), `api/cobuild-billing.js`,
 `api/cobuild-rules.js`, `api/cobuild-poster.js`, `api/cobuild-lead.js`,
@@ -247,6 +321,9 @@ recipe, and nothing is kept until a robot has played it.
    the source. `node qa-all.mjs` green: 48 harnesses.
 
 No database change: the `robot` column CB1 created is the one the verdict lands in.
+
+---
+
 ## Hop Heroes: four worlds, a cast, and the shared Feel Kit (HH4 + HH5, September 6 2026)
 `public/play.html`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`, `qa-hopheroes-shot.mjs`.
 Phase **HH**, cards **HH4 + HH5**, branch `claude/hop-heroes-mario-feel-safrvp`.
@@ -3901,6 +3978,20 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-06 (RB1: a Run builder in the planner)
+
+The Roadmap tab gains **Build a run**: tick the cards you want worked, drag or arrow them
+into order, group two or more into ONE session, set Ship-or-Park / Carry-on-or-Stop / give
+up after N failures / a hard stop / start now or at a time, and save. Saving writes one
+`ready` row to the new `planner_runs` table and nothing else — the page never starts
+anything, which is card RB2's job. Before saving it says out loud what is wrong: a card
+waiting on review, a card whose text says it comes AFTER one that is later in the run or
+missing, a grouped pair that needs a set order, a session holding more than three cards.
+`api/planner.js` gains `?scope=runs`, `saveRun` and `cancelRun`, all validating card ids
+against the live roadmap server-side and allowing only one waiting run at a time.
+`db/create-planner-runs.sql` was written AND applied to Buildable Kids in the same session.
+New `qa-runbuilder.mjs`: 50 checks, all pass. See SESSION-LOG.md for detail.
+
 ## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
 
 Mike found the Make section tiles unexciting. From four mocked options he picked

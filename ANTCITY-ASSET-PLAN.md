@@ -88,6 +88,19 @@ idle_happy, the digging/carrying ants) are plenty. Still on vectors (not yet AI)
 dig-marker, colony/anthill icon, rainy-meadow + flood overlay, loading screen, and the
 ruby/emerald ant + berry/loam customization variants.
 
+## The chain pieces (AC6, drawn vectors, live)
+
+Card AC6 added the production chains, so four new pieces ship as clean drawn vectors in
+`public/antcity/art/` with the usual `BR` fallback behind them. AI-pipeline upgrades are a
+follow-up, exactly as this plan says for anything new.
+
+| Manifest ID | File |
+|---|---|
+| `antcity/prop/leaf-v1` | `leaf.svg` (a cut leaf, the shape a leafcutter carries) |
+| `antcity/prop/fungus-v1` | `room-fungus.svg` (the mushroom garden chamber) |
+| `antcity/prop/aphid-plant-v1` | `aphid-plant.svg` (the host plant with its herd) |
+| `antcity/prop/honeydew-v1` | `honeydew.svg` (a sweet drop) |
+
 ## Coverage gaps (honest)
 
 - **Ants, eggs, rooms, buried find, badge, loading:** no ant or bug art exists in the
