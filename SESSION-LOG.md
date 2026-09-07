@@ -1,3 +1,40 @@
+## 2026-09-07 — AC8: one smart bar, and a Build menu made of pictures
+
+**Shipped.** Mike picked Option C from the HUD mock. Every element now assumes the player
+cannot read.
+
+- **One slim bar.** Left: four little vertical meters with a picture each (green apple,
+  blue drop, pink moon, gold egg); a low one wiggles and wears a small red tag. Middle: one
+  big button carrying the tool in your hand, its name and two or three words saying where to
+  use it. Right: a round button that opens a sheet of four picture cards and hides again the
+  moment one is picked. The jobs strip is unchanged, collapsed at the bottom, opens on a tap.
+- **The tool really decides.** A tap can only do what the big button says is in your hand,
+  and a tap in the wrong place says which picture to swap to instead of doing nothing.
+- **The guide teaches the swap** — tap the round button, then pick the apple — so the intro
+  lesson is four steps now. Picking the hammer opens the room cards by itself.
+- **The Build menu is pictures**: eggs in a pink room, a pile of berries, an ant asleep
+  under a Zz, mushrooms. Cost is a row of apples you count. Unaffordable rooms grey out and
+  flash their apples. Close is a big orange X.
+
+**Calls I made.** The tool is now exclusive, which AC7's Dig button was not: dragging in the
+dirt with the apple out no longer digs. That is the whole point of showing what is in your
+hand, and the wrong-tool tap answers with the picture to swap to, so nothing is silent. The
+toolbox sheet lives INSIDE the bottom stack rather than floating over the screen, because a
+floating sheet covered the one hint line that AC7 exists to protect. And tapping a tunnel
+opens the room cards for that spot only while the hammer is out, which keeps the AC6
+good-spot line reachable without making a tunnel tap mean two different things.
+
+**Could not do.** The mock at the Buildable MVP folder root is not in this sandbox and
+there is no way to reach it from here, so I built to the card's written spec rather than to
+the picture. If the mock differs in layout, the parts are all there to rearrange.
+
+**QA.** `qa-antcity.mjs` drives the new controls as a kid would (press the round button,
+press a picture card, then tap the world) in both a mouse and a touch profile, and asserts
+the old text row is gone, the meters are bars with icons, the big button carries a picture
+of every tool, the room cards are pictures, and the cost is countable apples.
+`qa-antcity-shot.mjs` proves the same in real Chromium, counts six apples on a six-food
+room, and checks nothing spills off a 360px phone. `node qa-all.mjs` green.
+
 ## 2026-09-07 — PB3: real art on the street
 
 **Shipped.** Paper Route was drawn geometry from top to bottom. It now has an art set,

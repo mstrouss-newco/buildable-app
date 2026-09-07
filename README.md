@@ -73,6 +73,41 @@ through the editor and a save is gated by its own robot. QA: 113 checks green, `
 qa-all.mjs` green, both streets played in real Chromium. Not flagged deployed: the live
 phone check could not run from this session. Ref: SESSION-LOG.md same date.
 
+## AC8 — Ant City: one smart bar, and a Build menu made of pictures (September 7 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`.
+Phase **AC**, card **AC8**, branch `claude/ac7-clarity-rework-antcity-bqkazl`.
+
+Mike picked Option C from the HUD mock. The rule for every element: **assume the player
+cannot read.** Information is bars, icons, pictures and countable things; words are tiny
+labels on top of pictures, never the message.
+
+**One slim bar** replaces the row of need words over the row of word buttons. On the left,
+four little vertical meters with a picture each — a green apple, a blue drop, a pink moon,
+a gold egg — and the one running out wiggles and wears a small red tag, so the thing that
+needs you is the thing that moves. In the middle, one big button carrying the tool in your
+hand: its picture, its name, and two or three words saying where to use it. On the right, a
+round button that opens a sheet of four picture cards and hides again the moment one is
+picked.
+
+**The tool really decides now.** The oldest confusion in this game was that a tap could
+mean four things and nothing said which. The big button states it at all times, and a tap
+in the wrong place is never silent: it says which picture to swap to. The guide teaches the
+swap, because it is the one genuinely new thing to learn — tap the round button, then pick
+the apple — so the intro is four steps instead of three.
+
+**The Build menu is pictures.** Four cards in a 2x2 grid, each a little scene of what the
+room does: eggs in a pink room, a pile of berries, an ant asleep under a Zz, mushrooms
+growing. What a room costs is a row of apples to count, not a number to read; a room you
+cannot afford greys out and flashes its apples; closing is a big orange X. Picking a room
+still lights up every spot it could go, exactly as AC7 left it.
+
+Presentation only: one hint line, food that only arrives when an ant carries it in, ants
+that walk to marked targets and park when idle, and straight into the colony are all
+untouched. QA drives the new controls the way a kid does — press the round button, press a
+picture card, then tap the world — in both a mouse and a touch profile, and asserts the old
+text row is gone, that the cost is countable apples, and that nothing spills off a 360px
+phone. `node qa-all.mjs` green. Ref: SESSION-LOG.md same date.
+
 ## AC7 — Ant City clarity rework: see what you do, know what to do (September 7 2026)
 `public/antcity-engine.html`, `public/antcity/manifest.json`, `qa-antcity.mjs`,
 `qa-antcity-shot.mjs`, `antcity-README.md`. Phase **AC**, card **AC7**,
