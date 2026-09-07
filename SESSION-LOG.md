@@ -1,3 +1,48 @@
+## 2026-09-07 — TS1-TS3: tile shots for the rest of the catalogue
+
+**Shipped.** Nineteen games now have a tile shot, up from two, and the camera grew two
+ways to take one WITHOUT touching a game's code:
+
+- **`demo`** — the game's own `?screen=demo` attract mode is real play, so the camera lets
+  it run for a few seconds and photographs it. Thirteen games needed nothing else.
+- **`drive`** — four games have no attract mode but do expose the control surface their QA
+  harness drives (`BUILDABLE_GAME.moves/_play/_draw`, `TENNIS_GAME._begin/_step/_draw`), so
+  the camera plays a fixed number of moves itself and photographs the board mid-game.
+- **`photo`** — the hand-posed mode from TS0. Only Survival and Castle Guard use it, and
+  after this it looks like the exception rather than the plan: an attract shot is cheaper,
+  is real play, and needs no edit inside the game.
+
+**The zoom stopped needing engine changes too.** Every engine sizes its world by the
+window's ASPECT, not its pixel size, so a 960x720 window shows exactly the same world as a
+600x450 one, just bigger. The camera now shoots in a window scaled up by the zoom and crops
+the middle 600x450 back out: a true crop, full resolution, no engine involvement. Per-game
+`zoom` and `focus` are how a shot gets framed now.
+
+**`/tile-shots` is data-driven.** It renders `/tile-shots/shots.json`, which the camera
+rewrites (merging, so shooting one game does not wipe the sheet). Adding a game to the
+camera's table puts it on the page with nothing to edit. The page opens with the real Play
+grid card at laptop and phone size, because 226x170 is the only size that matters.
+
+**Three are not right, and none of them is the camera's fault.**
+1. **Tennis** — washed out, pale ball on pale lines. That is the court art, already logged
+   as QA30. Fix the art first; a photo of it now is not worth having.
+2. **Riley's Garden** — the shot is honest and the game is thin: a fairy, a bee and a wide
+   empty field. No crop fills it. The game needs more on screen.
+3. **Chess** — no shot at all. The only game with no attract mode, no QA hook and no way to
+   deep-link into a board, so it needs a small photo mode of its own.
+
+**Calls I made for you.**
+1. **Attract mode over hand-posed scenes.** TS1-TS3 were written assuming a photo mode per
+   game. Thirteen games did not need one, so they did not get one. Less code, real play,
+   and a new game joins the sheet with one line in a table.
+2. **Every shot judged at 226 pixels, never full size.** Six games looked fine big and
+   turned out to be black letterbox bars, empty sky or a text banner once shrunk. They were
+   reframed until they read small.
+
+**QA.** `node qa-all.mjs`: ALL CHECKS PASS (46 harnesses, serving check green). No game's code changed in this session except
+the two that already carried a photo mode, so the risk is in the camera and the page, not
+in the games.
+
 ## 2026-09-06 — TS0: the Tile Shots rig (Survival + Castle Guard)
 
 **Shipped.** The one-time rig for the Tile Shots rollout, plus photo modes for the

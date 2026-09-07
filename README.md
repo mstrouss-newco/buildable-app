@@ -6,6 +6,29 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## TS1-TS3 — the whole catalogue gets a real tile shot (September 7 2026)
+`scripts/tile-shot.mjs`, `public/tile-shots.html`, `public/tile-shots/`
+
+Nineteen games photographed, up from two, with no game code changed. The camera learned to
+shoot a game's own `?screen=demo` attract mode (thirteen games), and to drive the control
+surface a game already exposes to its QA harness (`BUILDABLE_GAME.moves/_play/_draw`,
+`TENNIS_GAME._begin/_step/_draw`) for four more that have no attract mode. The hand-posed
+`?tileshot=1` mode from TS0 is now the exception, not the plan.
+
+Zoom needs no engine help either: engines size their world by the window's ASPECT, not its
+pixel size, so the camera shoots in a window scaled up by the zoom and crops the middle
+back out — a true crop at full resolution. Framing is per-game `zoom` and `focus`.
+
+`/tile-shots` renders `/tile-shots/shots.json`, which the camera merges on each run, so
+adding a game to its table puts it on the page with nothing to edit. The page opens with
+the real Play grid card at 226x170 and 175x131, because that is the only size that matters.
+
+Not working, and not the camera's fault: **Tennis** (washed-out court art, logged as QA30),
+**Riley's Garden** (the game itself is a fairy, a bee and an empty field), and **Chess**
+(no attract mode, no QA hook, no deep link — it needs a photo mode of its own).
+
+---
+
 ## TS0 — the Tile Shots rig, proved on Survival and Castle Guard (September 6 2026)
 `public/buildable-tileshot.js`, `scripts/tile-shot.mjs`, `public/tile-shots.html`,
 `public/survival-engine.html`, `public/castle-guard.html`, `vercel.json`

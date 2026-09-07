@@ -1,12 +1,192 @@
 [
   {
+    "id": "breaker",
+    "name": "Breaker",
+    "imgId": "breaker",
+    "color": "#FF6B6B",
+    "label": "breaker",
+    "file": "public/tile-shots/breaker.png",
+    "kb": 1019,
+    "mode": "demo"
+  },
+  {
+    "id": "sling",
+    "name": "Sling Squad",
+    "imgId": "sling",
+    "color": "#7BD0FF",
+    "label": "sling",
+    "file": "public/tile-shots/sling.png",
+    "kb": 543,
+    "mode": "demo"
+  },
+  {
+    "id": "bubble",
+    "name": "Bubble Buddies",
+    "imgId": "bubble",
+    "color": "#5BC0EB",
+    "label": "bubble",
+    "file": "public/tile-shots/bubble.png",
+    "kb": 143,
+    "mode": "demo"
+  },
+  {
+    "id": "croctot",
+    "name": "Croc Tot",
+    "imgId": "croctot",
+    "color": "#3AA655",
+    "label": "croctot",
+    "file": "public/tile-shots/croctot.png",
+    "kb": 125,
+    "mode": "demo"
+  },
+  {
+    "id": "rileys",
+    "name": "Riley's Garden",
+    "imgId": "rileys",
+    "color": "#4CAF50",
+    "label": "rileys",
+    "file": "public/tile-shots/rileys.png",
+    "kb": 79,
+    "mode": "demo"
+  },
+  {
+    "id": "tumble",
+    "name": "Tumble Blocks",
+    "imgId": "tetris",
+    "color": "#67C7FF",
+    "label": "tumble",
+    "file": "public/tile-shots/tumble.png",
+    "kb": 206,
+    "mode": "demo"
+  },
+  {
+    "id": "stringmatch",
+    "name": "String Match",
+    "imgId": "stringmatch",
+    "color": "#57A93F",
+    "label": "stringmatch",
+    "file": "public/tile-shots/stringmatch.png",
+    "kb": 1149,
+    "mode": "dom"
+  },
+  {
+    "id": "mathcannon",
+    "name": "Math Cannon",
+    "imgId": "mathcannon",
+    "color": "#F4A63B",
+    "label": "mathcannon",
+    "file": "public/tile-shots/mathcannon.png",
+    "kb": 106,
+    "mode": "demo"
+  },
+  {
+    "id": "typing",
+    "name": "Typing",
+    "imgId": "typing",
+    "color": "#1FA897",
+    "label": "typing",
+    "file": "public/tile-shots/typing.png",
+    "kb": 178,
+    "mode": "dom"
+  },
+  {
+    "id": "checkers",
+    "name": "Checkers",
+    "imgId": "checkers",
+    "color": "#8E6BFF",
+    "label": "checkers",
+    "file": "public/tile-shots/checkers.png",
+    "kb": 256,
+    "mode": "dom"
+  },
+  {
     "id": "survival",
-    "name": "Space Survival",
-    "url": "/survival-engine.html",
+    "name": "Survival",
     "imgId": "survival",
-    "note": "dark world",
-    "label": "survival-z2.9",
-    "file": "public/tile-shots/survival-z2.9.png",
-    "kb": 614
+    "color": "#8A6BFF",
+    "label": "survival",
+    "file": "public/tile-shots/survival.png",
+    "kb": 988,
+    "mode": "photo"
+  },
+  {
+    "id": "castleguard",
+    "name": "Castle Guard",
+    "imgId": "castleguard",
+    "color": "#2E8B57",
+    "label": "castleguard",
+    "file": "public/tile-shots/castleguard.png",
+    "kb": 178,
+    "mode": "photo"
+  },
+  {
+    "id": "skyflyer",
+    "name": "Sky Flyer",
+    "imgId": "skyflyer",
+    "color": "#2FB7D6",
+    "label": "skyflyer",
+    "file": "public/tile-shots/skyflyer.png",
+    "kb": 618,
+    "mode": "demo"
+  },
+  {
+    "id": "mahjong",
+    "name": "Mahjong",
+    "imgId": "mahjong",
+    "color": "#F0B429",
+    "label": "mahjong",
+    "file": "public/tile-shots/mahjong.png",
+    "kb": 679,
+    "mode": "demo"
+  },
+  {
+    "id": "memory",
+    "name": "Memory Match",
+    "imgId": "memory",
+    "color": "#A78BFF",
+    "label": "memory",
+    "file": "public/tile-shots/memory.png",
+    "kb": 131,
+    "mode": "demo"
+  },
+  {
+    "id": "tennis",
+    "name": "Tennis",
+    "imgId": "tennis",
+    "color": "#34D399",
+    "label": "tennis",
+    "file": "public/tile-shots/tennis.png",
+    "kb": 70,
+    "mode": "drive"
+  },
+  {
+    "id": "tictactoe",
+    "name": "Tic-Tac-Toe",
+    "imgId": "tictactoe",
+    "color": "#5B8CFF",
+    "label": "tictactoe",
+    "file": "public/tile-shots/tictactoe.png",
+    "kb": 184,
+    "mode": "drive"
+  },
+  {
+    "id": "connectfour",
+    "name": "Connect Four",
+    "imgId": "connectfour",
+    "color": "#FF5A6E",
+    "label": "connectfour",
+    "file": "public/tile-shots/connectfour.png",
+    "kb": 365,
+    "mode": "drive"
+  },
+  {
+    "id": "dotsboxes",
+    "name": "Dots and Boxes",
+    "imgId": "dotsboxes",
+    "color": "#36D6C3",
+    "label": "dotsboxes",
+    "file": "public/tile-shots/dotsboxes.png",
+    "kb": 60,
+    "mode": "drive"
   }
 ]
