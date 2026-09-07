@@ -141,7 +141,10 @@ console.log("\n--- 6. the pages ---");
   const grown = read("public/studio-grownups.html"), studio = read("public/studio.html"), shell = read("src/BuildableKids.jsx");
   const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
   chk("the grown-up page ships and has no emojis", grown.length > 3000 && !emoji.test(grown));
-  chk("it is behind the grown-up code", /bk_studio_grown_v1/.test(grown) && /"1111"/.test(grown));
+  // CB-QA: it used to be enough for the page to hold the string "1111". It is
+  // not: that is the preview password a child types to get INTO the studio, and
+  // it sat in view-source. The gate now asks the server and keeps a token.
+  chk("it is behind the grown-up code", /bk_studio_grown_v1/.test(grown) && /\/api\/cobuild-grownup/.test(grown) && !/1111/.test(grown));
   chk("it shows a shelf per kid with plays per game", /op=kids/.test(grown) && /play'\+\(g\.plays===1/.test(grown));
   chk("the share sheet has all four doors", /Copy the link/.test(grown) && /navigator\.share/.test(grown) && /Top Board/.test(grown) && /cobuild-poster/.test(grown));
   chk("the Top Board toggle goes through CB1's own share op", /op:"share"/.test(grown) && /public:next/.test(grown));
@@ -173,6 +176,35 @@ console.log("\n--- 7. the routes ---");
   chk("/studio-grownups.html is routed", before("/studio-grownups.html"));
   chk("...and it comes BEFORE the /studio/<id> route, or it would open as a game",
     routes.indexOf("/studio/grownups") < routes.findIndex((r) => /^\/studio\/\(/.test(r)));
+}
+
+console.log("\n--- 8. the grown-up gate is real (CB-QA) ---");
+{
+  const { codeIsRight, mintToken, tokenOk, GROWNUP_CODE, grownupOk } = await import("./api/_grownup.js");
+  chk("the grown-up code is NOT the preview password every child knows", GROWNUP_CODE !== "1111" && codeIsRight("1111") === false);
+  chk("the right code opens it", codeIsRight(GROWNUP_CODE));
+  chk("a near miss does not", !codeIsRight(GROWNUP_CODE + "1") && !codeIsRight("") && !codeIsRight(null));
+  const t = mintToken();
+  chk("a pass mints a token that works", tokenOk(t));
+  chk("a made-up token does not", !tokenOk("9999999999999.deadbeefdeadbeefdeadbeefdeadbeef") && !tokenOk("") && !tokenOk("nonsense"));
+  chk("a token runs out", !tokenOk(mintToken(Date.now() - 13 * 60 * 60 * 1000)));
+  chk("the token may ride in a header or in the body",
+    grownupOk({ headers: { "x-bk-grownup": t }, url: "/api/x" }, null) && grownupOk({ headers: {}, url: "/api/x" }, { grownupToken: t }));
+  chk("...or in the link, for a poster a window opens", grownupOk({ headers: {}, url: "/api/cobuild-poster?id=a&gt=" + encodeURIComponent(t) }, null));
+
+  const grown = read("public/studio-grownups.html"), studio = read("public/studio.html");
+  chk("no page carries the grown-up code where a child could read it",
+    !/1111/.test(grown) && !/"1025"|'1025'/.test(grown) && !/"1025"|'1025'/.test(studio));
+  chk("the grown-up studio asks the server, not itself", /\/api\/cobuild-grownup/.test(grown));
+  chk("the studio's grown-up switch asks the server too", /\/api\/cobuild-grownup/.test(studio));
+  chk("the kid studio still has its own preview gate, and it is a different door", /1111/.test(studio));
+
+  const rules = read("api/cobuild-rules.js"), bill = read("api/cobuild-billing.js"), poster = read("api/cobuild-poster.js");
+  chk("changing house rules needs the code", /op === "set"[\s\S]{0,300}grownupOk/.test(rules));
+  chk("reading house rules does not, or the games would stall", !/op === "gate"[\s\S]{0,200}grownupOk/.test(rules));
+  chk("buying anything needs the code", /checkout" \|\| op === "addon" \|\| op === "portal"[\s\S]{0,120}grownupOk/.test(bill));
+  chk("reading the plan and the meter does not", !/op === "plan"[\s\S]{0,200}grownupOk/.test(bill));
+  chk("printing a poster needs the code, because printing turns a link on", /grownupOk\(req, null\)/.test(poster));
 }
 
 console.log(ok ? "\nALL CHECKS PASS" : "\nSOME CHECKS FAILED");

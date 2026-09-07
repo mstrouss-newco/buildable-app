@@ -19,6 +19,7 @@
 // image wants raw samples and a PNG's own bytes are filtered. A game with no
 // cover gets a painted card in its own colour instead of a hole.
 import zlib from "zlib";
+import { grownupOk, refuseGrownup } from "./_grownup.js";
 import QRCode from "qrcode";
 import { PNG } from "pngjs";
 
@@ -171,6 +172,9 @@ export default async function handler(req, res) {
   const familyId = String(q.get("familyId") || "").trim();
   res.setHeader("Cache-Control", "no-store");
   if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(id)) return res.status(400).json({ ok: false, error: "id required" });
+  // Printing a poster turns the private link on, so it is a grown-up action.
+  // A window.open cannot set a header, so the token rides as ?gt=.
+  if (!grownupOk(req, null)) return refuseGrownup(res);
   if (!URL_ || !KEY) return res.status(503).json({ ok: false, error: "not configured" });
   try {
     const r = await rows(`kid_games?id=eq.${enc(id)}&deleted_at=is.null&select=id,name,kid_name,grownup_name,cover,manifest,family_id,shared,public&limit=1`);

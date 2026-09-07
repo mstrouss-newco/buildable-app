@@ -24,6 +24,7 @@
 // Only /studio, /studio/grownups and the app's own game launcher call this. It
 // carries the service key server-side, like every other Cobuild endpoint.
 import { sheetFor, recipeLib } from "./_cobuild.js";
+import { grownupOk, refuseGrownup } from "./_grownup.js";
 import { ENGINES, checkManifest, robotCheck, robotRow } from "./kid-game.js";
 
 const URL_ = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -138,6 +139,9 @@ export default async function handler(req, res) {
 
     // ---- a grown-up sets them ---------------------------------------------
     if (op === "set") {
+      // House rules are a grown-up's setting, not a child's: the same gate as
+      // sharing and money guards them. (Reads stay open — the games need them.)
+      if (!grownupOk(req, body)) return refuseGrownup(res);
       const r = body.rules || {};
       const cur = await get(familyId, kidId);
       const patch = {};

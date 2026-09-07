@@ -22,6 +22,7 @@
 // and the meter lets everyone through, which is exactly right while /studio is
 // still behind the preview gate.
 import crypto from "crypto";
+import { grownupOk, refuseGrownup } from "./_grownup.js";
 
 const URL_ = process.env.SUPABASE_URL, KEY = process.env.SUPABASE_SERVICE_KEY;
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
@@ -258,6 +259,12 @@ export default async function handler(req, res) {
 
     if (op === "check") return res.status(200).json(await meterCheck(familyId, str(get("kind"), 12) || "new"));
     if (op === "count") return res.status(200).json(await meterCount(familyId, str(get("kind"), 12) || "new"));
+    // Money: only a grown-up who typed the code may open a checkout or the
+    // billing portal. Reading the plan and the meter stays open, because the
+    // child's studio has to be able to say "ask a grown-up" without one.
+    if (op === "checkout" || op === "addon" || op === "portal") {
+      if (!grownupOk(req, body)) return refuseGrownup(res);
+    }
     if (op === "checkout") {
       const which = str(get("plan"), 20);
       const out = await checkout(familyId, PLANS[which] ? which : "cobuild", str(get("email"), 200));

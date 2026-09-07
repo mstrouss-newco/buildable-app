@@ -69,6 +69,12 @@ async function loadGame(id) {
     const rows = await r.json();
     const g = Array.isArray(rows) && rows[0] ? rows[0] : null;
     if (!g) return null;
+    // CB-QA: a LINK IS A SHARE. Until a grown-up turns sharing on (or puts the
+    // game on the Top Board) this page hands out nothing at all — no manifest,
+    // no name, no cover, and no play is counted. Before this check any row could
+    // be played by anyone who guessed the slug, which is not what "games only go
+    // where you send them" means.
+    if (!g.shared && !g.public) return { private: true };
     // Counting the open here (not in the page) keeps one visit to one play: the
     // engine's loader is told kgplay=0 by g.html.
     fetch(`${URL_}/rest/v1/kid_games?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: H, body: JSON.stringify({ plays: (g.plays || 0) + 1 }) }).catch(() => {});
@@ -83,7 +89,9 @@ export default async function handler(req, res) {
   const page = await readPage();
   if (!page) { res.status(500).setHeader("Content-Type", "text/plain; charset=utf-8"); return res.end("The viewer page could not be read."); }
 
-  const game = /^[A-Za-z0-9][A-Za-z0-9-]{1,63}$/.test(id) ? await loadGame(id) : null;
+  const found = /^[A-Za-z0-9][A-Za-z0-9-]{1,63}$/.test(id) ? await loadGame(id) : null;
+  const notShared = !!(found && found.private);
+  const game = notShared ? null : found;
 
   let head;
   if (game) {
@@ -105,6 +113,17 @@ export default async function handler(req, res) {
       `<meta name="twitter:description" content="${esc(desc)}">`,
       `<meta name="twitter:image" content="${esc(img)}">`,
       `<script>window.BK_KID_GAME=${JSON.stringify(game).replace(/</g, "\\u003c")}</script>`,
+    ].join("\n");
+  } else if (notShared) {
+    // Deliberately says nothing about the game itself, not even its name: an
+    // unfurl of a link that was never shared should reveal nothing.
+    head = [
+      `<title>This game is not shared — Buildable Kids</title>`,
+      `<meta name="description" content="Games kids build with a grown-up, in an afternoon. No coding, no ads, ever.">`,
+      `<meta property="og:title" content="A game on Buildable Kids">`,
+      `<meta property="og:description" content="This one is private. Games kids build with a grown-up, in an afternoon.">`,
+      `<meta property="og:image" content="${SITE}/api/images?kind=game&id=skyflyer">`,
+      `<script>window.BK_KID_GAME_PRIVATE=1</script>`,
     ].join("\n");
   } else {
     head = [

@@ -123,8 +123,10 @@
       return id; }catch(e){ return "dev_anon"; }
   }
   function activeKid(){ try{ return JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); }catch(e){ return null; } }
+  function grownToken(){ try{ return sessionStorage.getItem(GROWN_KEY)||""; }catch(e){ return ""; } }
   function post(url, body){
-    return fetch(url,{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body||{}) })
+    var h={"Content-Type":"application/json"}, t=grownToken(); if(t) h["x-bk-grownup"]=t;
+    return fetch(url,{ method:"POST", headers:h, body:JSON.stringify(body||{}) })
       .then(function(r){ return r.json().catch(function(){ return { ok:false, error:"the studio could not answer" }; }); })
       .catch(function(){ return { ok:false, error:"we could not reach the studio" }; });
   }
@@ -512,8 +514,11 @@
       '<p class="note">Putting a game on the Top Board for everyone comes with the grown-up studio.</p>'+
       '<button class="btn alt" id="back">Back</button>');
     on("copy", function(){
-      try{ navigator.clipboard.writeText(url); document.getElementById("link").textContent="Copied."; }catch(e){}
-      post("/api/kid-game", { op:"share", id:g.id, shared:true, familyId:deviceId() });
+      post("/api/kid-game", { op:"share", id:g.id, shared:true, familyId:deviceId() }).then(function(j){
+        if(!j||!j.ok){ document.getElementById("link").textContent=(j&&j.error)||"That did not turn on."; return; }
+        try{ navigator.clipboard.writeText(url); }catch(e){}
+        document.getElementById("link").textContent="Copied. The link works now.";
+      });
     });
     on("back", function(){ screenPlay(); });
   }
@@ -601,9 +606,17 @@
     if(S.grown){ S.grown=false; try{ sessionStorage.removeItem(GROWN_KEY); }catch(e){} paintMode(); return repaint(); }
     var pw=window.prompt("Grown-up code");
     if(pw===null) return;
-    if(String(pw).trim()!=="1111") return;
-    S.grown=true; try{ sessionStorage.setItem(GROWN_KEY,"1"); }catch(e){}
-    paintMode(); repaint();
+    // CB-QA: the grown-up code is NOT the preview password, and it is checked on
+    // the server (api/cobuild-grownup.js). What this page keeps is a token that
+    // runs out, so reading the page teaches a child nothing.
+    fetch("/api/cobuild-grownup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"open",code:String(pw).trim()})})
+      .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
+      .then(function(j){
+        if(!j||!j.ok||!j.token){ say((j&&j.error)||"Not that one."); return; }
+        S.grown=true; try{ sessionStorage.setItem(GROWN_KEY,j.token); }catch(e){}
+        paintMode(); repaint();
+      })
+      .catch(function(){ say("We could not reach the studio."); });
   };
   function repaint(){ if(S.game) screenPlay(); else if(S.plan) screenPlan(); else screenAsk(); }
 
@@ -676,7 +689,12 @@
   }
 
   // ---- start ---------------------------------------------------------------
-  try{ S.grown = sessionStorage.getItem(GROWN_KEY)==="1"; }catch(e){}
+  try{
+    var gt = sessionStorage.getItem(GROWN_KEY)||"";
+    var gexp = parseInt(String(gt).split(".")[0],10);
+    if(gt && gexp && gexp > Date.now()) S.grown = true;
+    else if(gt) sessionStorage.removeItem(GROWN_KEY);
+  }catch(e){}
   paintMode();
   function reopenId(){
     var m=/^\/studio\/([A-Za-z0-9][A-Za-z0-9-]{1,63})\/?$/.exec(location.pathname);

@@ -22,6 +22,7 @@
 //        from public/<game>/manifest.json) or another kid_games row — allowed
 //        only when that row is public or belongs to the same family.
 import fs from "fs";
+import { grownupOk, refuseGrownup } from "./_grownup.js";
 import path from "path";
 import { manifestLib } from "./_manifestLib.js";
 import { readPublic, sheetFor, recipeLib } from "./_cobuild.js";
@@ -177,6 +178,13 @@ export default async function handler(req, res) {
       const r = await rows(`kid_games?id=eq.${enc(id)}&deleted_at=is.null&select=${PLAY_COLS}&limit=1`);
       if (!r || !r[0]) return res.status(404).json({ ok: false, error: "no game with that link" });
       const game = r[0];
+      // CB-QA: a game nobody shared is readable only by the family that made it.
+      // The engine's loader (public/buildable-manifest.js) sends the family and
+      // kid id with ?kg=, so a child playing their own game is unaffected and a
+      // stranger with a guessed link gets nothing.
+      if (!game.shared && !game.public && !ownsRow(game, str(get("familyId")), str(get("kidId")))) {
+        return res.status(403).json({ ok: false, error: "that game is not shared" });
+      }
       if (str(get("play")) === "1") {
         // Fire and forget: a play count must never delay or fail the game opening.
         sb(`kid_games?id=eq.${enc(id)}`, { method: "PATCH", body: JSON.stringify({ plays: (game.plays || 0) + 1 }) }).catch(() => {});
@@ -329,6 +337,9 @@ export default async function handler(req, res) {
     // -------------------------------------------------------------- share ----
     // Flip the private share link / the public listing. Owner only.
     if (op === "share") {
+      // Turning a link on or off, or putting a game in front of everyone, is a
+      // grown-up decision — so it needs the grown-up code, not just the page.
+      if (!grownupOk(req, body)) return refuseGrownup(res);
       const id = str(get("id")), familyId = str(get("familyId")), kidId = str(get("kidId"));
       if (!validSlug(id)) return res.status(400).json({ ok: false, error: "id required" });
       const cur = await rows(`kid_games?id=eq.${enc(id)}&deleted_at=is.null&select=id,family_id,kid_id&limit=1`);

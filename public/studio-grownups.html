@@ -82,8 +82,15 @@
       if(!id){ id="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10); localStorage.setItem("deviceId",id); }
       return id; }catch(e){ return "dev_anon"; }
   }
+  // ---- the grown-up token --------------------------------------------------
+  // CB-QA: the code used to be a literal string checked right here in the page,
+  // and it was the same preview password every child already knows. Now it is
+  // checked by api/cobuild-grownup.js and this page only ever holds a signed
+  // token that runs out. Nothing in view-source helps a child guess anything.
+  function token(){ try{ return sessionStorage.getItem(GATE)||""; }catch(e){ return ""; } }
   function post(url, body){
-    return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})})
+    var h={"Content-Type":"application/json"}, t=token(); if(t) h["x-bk-grownup"]=t;
+    return fetch(url,{method:"POST",headers:h,body:JSON.stringify(body||{})})
       .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
       .catch(function(){ return {ok:false,error:"we could not reach the studio"}; });
   }
@@ -96,15 +103,28 @@
   }
 
   // ---- the grown-up gate ---------------------------------------------------
-  function gated(){ try{ return sessionStorage.getItem(GATE)==="1"; }catch(e){ return false; } }
+  function gated(){
+    var t=token(); if(!t) return false;
+    var exp=parseInt(String(t).split(".")[0],10);
+    if(!exp || exp<Date.now()){ try{ sessionStorage.removeItem(GATE); }catch(e){} return false; }
+    return true;
+  }
   function screenGate(){
     main.innerHTML='<h2>Grown-ups only</h2><p class="sub">This is where the plan, the sharing and the house rules live. Enter the grown-up code.</p>'+
       '<input id="pw" type="password" inputmode="numeric" autocomplete="off" placeholder="&bull;&bull;&bull;&bull;">'+
       '<div class="err" id="err"></div><button class="btn" id="go">Open it</button>';
     var pw=document.getElementById("pw");
     var submit=function(){
-      if(pw.value.trim()==="1111"){ try{ sessionStorage.setItem(GATE,"1"); }catch(e){} load(); }
-      else document.getElementById("err").textContent="Not that one. Try again.";
+      var code=pw.value.trim(); if(!code) return;
+      document.getElementById("err").textContent="";
+      fetch("/api/cobuild-grownup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({op:"open",code:code})})
+        .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
+        .then(function(j){
+          if(j&&j.ok&&j.token){ try{ sessionStorage.setItem(GATE,j.token); }catch(e){} load(); return; }
+          document.getElementById("err").textContent=(j&&j.error)||"Not that one. Try again.";
+          pw.value=""; pw.focus();
+        })
+        .catch(function(){ document.getElementById("err").textContent="We could not reach the studio."; });
     };
     on("go", submit);
     pw.addEventListener("keydown", function(e){ if(e.key==="Enter") submit(); });
@@ -185,8 +205,15 @@
     state.kids.forEach(function(k){ k.games.forEach(function(g){ if(g.id===id){ kid=k; game=g; } }); });
     if(!game) return;
     var link=location.origin+"/g/"+game.id;
+    // CB-QA: the link is OFF until this switch is on. /api/g.js checks the same
+    // flag, so a link that was never shared, or one turned off again, plays for
+    // nobody. Copying or texting the link turns it on for you.
+    var on0=!!(game.shared||game.public);
     main.innerHTML='<h2>'+esc(game.name)+'</h2><p class="sub">'+esc(kid.kidName||"")+' &middot; '+game.plays+' play'+(game.plays===1?"":"s")+'</p>'+
-      '<div class="card"><h3>The link</h3><p class="sub" style="margin:0 0 8px">Anyone with it can play. No account, no ads.</p>'+
+      '<div class="card"><div class="toggle" style="border-top:none"><div class="t"><b>The link works</b>'+
+      '<small>Turn it off and the link stops playing for everyone, straight away.</small></div>'+
+      '<div class="sw'+(on0?" on":"")+'" id="lnk"><i></i></div></div>'+
+      '<p class="sub" style="margin:8px 0" id="lnknote">'+(on0?"Anyone with it can play. No account, no ads.":"Nobody can play this link yet.")+'</p>'+
       '<input type="text" id="link" value="'+esc(link)+'" readonly>'+
       '<div class="row"><button class="btn" id="copy">Copy the link</button>'+
       '<button class="btn alt" id="text">Text it to someone</button></div><div class="err" id="serr"></div></div>'+
@@ -197,20 +224,34 @@
       '<button class="btn wide" id="poster">Print the poster</button>'+
       '<p class="note">Printing turns the link on, so the code on the poster works.</p></div>'+
       '<button class="btn alt wide" id="back">Back</button>';
+    function setLink(next, then){
+      return post("/api/kid-game",{op:"share",id:game.id,shared:next,public:next?undefined:false,familyId:FAM}).then(function(j){
+        if(!j||!j.ok){ document.getElementById("serr").textContent=(j&&j.error)||"That did not save."; return false; }
+        game.shared=next; if(!next) game.public=false;
+        var sw=document.getElementById("lnk"); if(sw) sw.classList.toggle("on", next);
+        var n=document.getElementById("lnknote");
+        if(n) n.textContent = next ? "Anyone with it can play. No account, no ads." : "Nobody can play this link yet.";
+        var pb=document.getElementById("pub"); if(pb && !next) pb.classList.remove("on");
+        if(then) then();
+        return true;
+      });
+    }
     on("copy", function(){
       var i=document.getElementById("link"); i.select();
       try{ navigator.clipboard.writeText(link); document.getElementById("serr").innerHTML='<span class="ok">Copied.</span>'; }catch(e){}
-      post("/api/kid-game",{op:"share",id:game.id,shared:true,familyId:FAM});
+      setLink(true);
     });
     on("text", function(){
       var line=(kid.kidName?kid.kidName:"My kid")+" made a game called "+game.name+". Have a go: "+link;
-      post("/api/kid-game",{op:"share",id:game.id,shared:true,familyId:FAM});
+      setLink(true);
       if(navigator.share) navigator.share({ title:game.name, text:line, url:link }).catch(function(){});
       else location.href="sms:?&body="+encodeURIComponent(line);
     });
     on("poster", function(){
-      window.open("/api/cobuild-poster?id="+encodeURIComponent(game.id)+"&familyId="+encodeURIComponent(FAM), "_blank");
+      window.open("/api/cobuild-poster?id="+encodeURIComponent(game.id)+"&familyId="+encodeURIComponent(FAM)+"&gt="+encodeURIComponent(token()), "_blank");
     });
+    var lsw=document.getElementById("lnk");
+    lsw.onclick=function(){ setLink(!lsw.classList.contains("on")); };
     var sw=document.getElementById("pub");
     sw.onclick=function(){
       var next=!sw.classList.contains("on");
