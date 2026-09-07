@@ -120,6 +120,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   .job button{width:28px;height:26px;border:none;border-radius:8px;background:rgba(255,255,255,.20);color:#fff;font-size:15px;font-weight:800;line-height:1;cursor:pointer;}
   .job button:active{background:rgba(255,255,255,.34);}
   .job button.pulse{animation:tpulse 1s ease-in-out infinite;}
+  /* AC9: the fifth job. Until the colony has met soldiers the card is simply not
+     there, and when it arrives the row tightens so five still fit a phone. */
+  .job.locked{display:none;}
+  #jobs.five{gap:4px;}
+  #jobs.five .job{padding:4px 2px 5px;}
+  #jobs.five .nm{font-size:10px;letter-spacing:0;}
+  #jobs.five .ct{font-size:16px;}
+  #jobs.five .job button{width:25px;height:25px;font-size:14px;}
 
 
   /* ---- build a room popup ---- */
@@ -239,7 +247,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     rain:    "antcity_rain",     // a tunnel floods
     win:     "antcity_hatch",    // Feel.celebrate
     levelup: "antcity_hatch",
-    hurt:    "antcity_rain"      // Feel.miss — a setback, never a buzzer
+    hurt:    "antcity_rain",     // Feel.miss — a setback, never a buzzer
+    // AC9: a bad bug turning up is a setback cue, and shooing it off is a march.
+    // Both reuse clips Ant City already owns, so nothing goes silently missing.
+    bug:     "antcity_rain",
+    scare:   "antcity_march"
   };
   var MUSIC_URL = "/api/library-music?name=meadow_busy_bright";
   function sfx(name){ try{ if(BA && BA.sfx && !DEMO) BA.sfx(name); }catch(e){} }
@@ -351,7 +363,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         fact:"Leafcutter ants do not eat the leaves. They feed them to a mushroom garden and eat the mushrooms." },
       { id:"aphids",  type:"ants", n:20, coins:20, aphids:true,
         fact:"Ants really do keep aphids like tiny cows, and drink the sweet honeydew they make." },
-      { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" }
+      { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" },
+      // AC9: the fifth job arrives on its own, once the colony is big enough that a
+      // guard makes sense. Before that the early game stays calm and four-job simple.
+      { id:"soldiers-15", type:"ants", n:15, coins:20, soldiers:true,
+        fact:"Soldier ants really do have bigger jaws than the other ants, and they stand guard at the door of the nest." },
+      { id:"bugs-5", type:"bugs", n:5, coins:25 }
     ],
     // gentle setbacks: they pause work, they never take anything away
     setback: {
@@ -364,6 +381,43 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       // straight through it; an empty one just goes slower until it is cleared.
       stockedFood: 12,
       floodRate: 0.7
+    },
+    // ---- AC9: soldiers, and the bad bugs they shoo off ----------------------
+    //  A visit is a RARE TREAT, never a punishment: nothing is destroyed, nothing
+    //  is taken, and ONE soldier always ends it. The numbers live here so the
+    //  recipe can retune how often a bug calls without touching the engine.
+    soldier: { unlockAnts: 15 },
+    bug: {
+      everySec: 750,             // the middle of "every ten to fifteen minutes", then the dial
+      jitter: 0.18,              // one visit waits about ten minutes, the next about fifteen
+      napAfter: 12,              // with nobody on Soldiers it settles down and naps
+      // ONE soldier always clears a visit, in about twelve seconds. Deliberately NOT
+      // multiplied by the colony's pace: a hungry, sleepy, flooded colony must still
+      // be able to shoo a bug away, or a visit could sit there for ever.
+      scarePerAntPerSec: 0.085,
+      fleeSecs: 1.6,             // the comic yikes on the way out
+      coins: 8,                  // the thank-you, paid through the shared wallet
+      crumb: true,               // and a bonus crumb dropped on the meadow
+      kinds: {
+        beetle: { name:"Beetle", art:"antcity/bug/beetle-v1", color:"#7d8f45", where:"store",
+          call:"A beetle is nosing at your food store. Put an ant on Soldiers.",
+          busy:"Your soldiers are marching over to see it off.",
+          nap:"The beetle has settled in for a nap. One soldier would move it along.",
+          cheer:"The beetle ran off!",
+          gone:"The beetle scuttled off and dropped a crumb." },
+        caterpillar: { name:"Caterpillar", art:"antcity/bug/caterpillar-v1", color:"#8fc44f", where:"leaf",
+          call:"A caterpillar is munching your leaf bush. Put an ant on Soldiers.",
+          busy:"Your soldiers are marching over to see it off.",
+          nap:"The caterpillar has curled up for a nap. One soldier would move it along.",
+          cheer:"The caterpillar left!",
+          gone:"The caterpillar wriggled off and dropped a crumb." },
+        grasshopper: { name:"Grasshopper", art:"antcity/bug/grasshopper-v1", color:"#8ed05a", where:"door",
+          call:"A grasshopper is by the door and your foragers are hiding. Put an ant on Soldiers.",
+          busy:"Your soldiers are marching over to see it off.",
+          nap:"The grasshopper has dozed off by the door. One soldier would move it along.",
+          cheer:"The grasshopper hopped off!",
+          gone:"The grasshopper sprang away and dropped a crumb." }
+      }
     },
     findRow: 11,                 // how deep the buried find is buried
 
@@ -381,8 +435,18 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     { id:"digger",  name:"Diggers",  color:"#c98b4b" },
     { id:"forager", name:"Foragers", color:"#7ec46a" },
     { id:"nursery", name:"Nursery",  color:"#f2a2c0" },
-    { id:"builder", name:"Builders", color:"#6fc7e8" }
+    { id:"builder", name:"Builders", color:"#6fc7e8" },
+    // AC9: the fifth job. Red, because it is the colour the attention marker and the
+    // low-meter tag already use for "this needs you". It is hidden until it unlocks.
+    { id:"soldier",  name:"Soldiers", color:"#e2685f", locked:true }
   ];
+  // which jobs are on screen right now. The soldier card and its slice of the bar
+  // simply are not there until the colony has met them.
+  function activeJobs(){
+    var out = [], i;
+    for(i=0;i<JOBS.length;i++){ if(!JOBS[i].locked || soldiersUnlocked()) out.push(JOBS[i]); }
+    return out;
+  }
 
   // ======================================================================
   //  Art. Cartridge rule: every picture is fetched at load time from the URL
@@ -408,6 +472,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     "antcity/prop/aphid-plant-v1":"/antcity/art/aphid-plant.svg",
     "antcity/prop/honeydew-v1":   "/antcity/art/honeydew.svg",
     "antcity/prop/buried-find-v1":"/antcity/art/buried-find.svg",
+    // AC9: the bad bugs. Original generic cartoon bugs, silly and never scary, and
+    // every one of them has a drawn fallback in the engine if the file misses.
+    "antcity/bug/beetle-v1":      "/antcity/art/bug-beetle.svg",
+    "antcity/bug/caterpillar-v1": "/antcity/art/bug-caterpillar.svg",
+    "antcity/bug/grasshopper-v1": "/antcity/art/bug-grasshopper.svg",
     "antcity/soil/sandy-v1":      "/antcity/art/soil-tile.svg",
     "antcity/soil/deep-v1":       "/antcity/art/soil-deep.svg",
     "antcity/soil/loam-v1":       "/antcity/art/soil-loam.svg",
@@ -486,7 +555,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function freshColony(diff){
     var g = GAME_CONFIG, col = {
       cells:{}, plan:[], ants:g.startAnts, eggs:0, food:g.startFood, water:g.startWater,
-      jobs:{ digger:2, forager:2, nursery:1, builder:1 },
+      jobs:{ digger:2, forager:2, nursery:1, builder:1, soldier:0 },
       surface:[], sample:[],
       layProg:0, hatchProg:0, deepest:g.startRow, difficulty:diff||3,
       queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0,
@@ -496,7 +565,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       // --- AC6: the production chains ---
       leaves:0, leavesCut:0, leafReady:3, aphids:false, dew:0, dewGot:0, mush:0,
       // --- AC7: what the meadow is growing, and whether the kid has met Build ---
-      berryReady:2, taught:{}, tapped:0
+      berryReady:2, taught:{}, tapped:0,
+      // --- AC9: the fifth job and the bad bug visits ---
+      soldiers:false, bug:null, bugT:0, bugsSeen:0, bugsScared:0
     };
     // the buried find for the last mission, waiting under the deep soil
     col.find = { c:Math.floor(g.cols/2) + 2, r:g.findRow };
@@ -556,6 +627,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // what is slowing the colony right now, in the kid's words. Never a failure,
   // always a thing they can go and fix.
   function setbackNow(){
+    // AC9: a bad bug is the thing that wants the kid right now, so it takes the line.
+    // It is still only ever a pause: whatever it is sitting on starts again the moment
+    // a soldier moves it along, and nothing was lost while it sat there.
+    var bug = bugHere();
+    if(bug){
+      var bd = bugDef(bug.kind);
+      if(jobCount("soldier") > 0) return bd.busy;
+      return bug.state === "nap" ? bd.nap : bd.call;
+    }
     if(C.food <= 0)  return "Your ants are hungry. Drop food up on the meadow.";
     if(C.rest <= 0)  return "Your ants are sleepy. Build a resting den.";
     if(floodCount())  return C.food >= GAME_CONFIG.setback.stockedFood
@@ -565,6 +645,36 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   function floodCount(){ var n=0; for(var k in C.cells){ if(C.cells[k].flooded) n++; } return n; }
   function jobCount(id){ return C.jobs[id]|0; }
+
+  // ======================================================================
+  //  AC9: soldiers, and the bad bugs they see off.
+  //
+  //  A visit is a RARE TREAT, not a punishment. Every rule below follows the
+  //  same law the rest of Ant City follows: a setback PAUSES one thing you can
+  //  see, and never takes anything away. Nothing is destroyed, no ant is lost,
+  //  no store goes down, and there is no timer to beat. With nobody on Soldiers
+  //  the bug simply settles in and naps on the spot it is blocking, until the
+  //  kid moves one ant across — and ONE soldier always ends it, provably.
+  // ======================================================================
+  function soldiersUnlocked(){
+    // the milestone is what really unlocks it; free-build and a big colony are
+    // there so a colony saved before AC9 existed is never left without its guards
+    return !!(C && (C.soldiers || C.freeBuild || C.ants >= (GAME_CONFIG.soldier.unlockAnts||15)));
+  }
+  function bugDef(kind){ return GAME_CONFIG.bug.kinds[kind] || GAME_CONFIG.bug.kinds.beetle; }
+  // a bug that is really here: on its way out does not block anything any more
+  function bugHere(kind){
+    var b = C && C.bug;
+    if(!b || b.state === "flee") return null;
+    return (!kind || b.kind === kind) ? b : null;
+  }
+  //  ONE thing pauses per visitor, and it is the thing the bug is sitting on:
+  //  the beetle stops the food store's quick trips, the caterpillar stops the
+  //  leaf bush growing, and the grasshopper keeps the foragers indoors. All
+  //  three come straight back the moment the bug goes.
+  function bugStopsStore(){ return !!bugHere("beetle"); }
+  function bugStopsLeaves(){ return !!bugHere("caterpillar"); }
+  function bugStopsForaging(){ return !!bugHere("grasshopper"); }
 
   // ======================================================================
   //  AC7: the things on the meadow. A crumb the kid taps out, a berry the bush
@@ -614,7 +724,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var ch = GAME_CONFIG.chain, md = GAME_CONFIG.meadow;
     C.berryReady = Math.min(md.berryMax, (C.berryReady||0) + md.berryGrowPerSec * dt);
     if(C.berryReady >= 1 && countItems("berry") < md.berryMax){ C.berryReady -= 1; spawnItem("berry"); }
-    C.leafReady = Math.min(ch.leafMax, C.leafReady + ch.leafGrowPerSec * dt);
+    // AC9: a caterpillar on the bush stops it putting out new leaves while it is
+    // there. Every leaf already cut or waiting stays exactly where it is.
+    if(!bugStopsLeaves()) C.leafReady = Math.min(ch.leafMax, C.leafReady + ch.leafGrowPerSec * dt);
     if(C.leafReady >= 1 && countItems("leaf") < md.leafOut && C.leaves < ch.leafStore){ C.leafReady -= 1; spawnItem("leaf"); }
     if(C.aphids){
       C.dew = Math.min(ch.aphidMax, C.dew + ch.aphidPerSec * dt);
@@ -645,6 +757,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // what a free forager goes for: the kid's own crumbs first, then the meadow's own
   function pickItem(){
     var best = null, i;
+    if(bugStopsForaging()) return null;      // AC9: a grasshopper by the door, so nobody goes out
     for(i=0;i<C.surface.length;i++){
       var it = C.surface[i];
       if(it.claim || it.gone || it.held) continue;
@@ -765,9 +878,17 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     C.floodT += dt * tune().setbacks;
     if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
 
+    // AC9: a bad bug may call in. Free-build only, one at a time, and it can never
+    // change a number the colony owns.
+    bugTick(dt);
+
     normalizeJobs();
     foodTrend(dt);
     checkMission();
+    // milestones used to be checked inside checkMission, which returns early once the
+    // colony is in free build — so the rewards a grown colony is meant to reach (fifty
+    // ants, five bugs seen off) could never fire. They are their own thing now.
+    checkMilestones();
     walkSample(dt);
     tickHow(dt); tickIdle(dt);
     // the one hint line and the needs meters are kept true by the simulation itself,
@@ -797,6 +918,120 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       ? "Rain flooded a tunnel. Your food store keeps them going."
       : "Rain flooded a tunnel. Builders will clear it.");
     return pick;
+  }
+  // ======================================================================
+  //  A bad bug calls in (AC9). Rare, gentle, and always endable.
+  // ======================================================================
+  //  where each visitor makes for. A beetle wants the food store, a caterpillar
+  //  wants the leaf bush, a grasshopper plants itself by the front door.
+  function bugTarget(kind){
+    var where = bugDef(kind).where;
+    if(where === "store"){
+      var k, x;
+      for(k in C.cells){ x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "storage") return { c:x.c, r:x.r }; }
+      // no store dug yet: the first plain tunnel that is not the queen's own seat
+      for(k in C.cells){ x = C.cells[k];
+        if(x.kind === "tunnel" && !x.flooded && !(x.c === C.queen.c && x.r <= C.queen.r)) return { c:x.c, r:x.r }; }
+      return null;                       // nowhere to go underground: it stays up top
+    }
+    if(where === "leaf") return { surface:true, fc:xToFc(plantX("leaf")) };
+    return { surface:true, fc:Math.max(0.6, entranceCell().c - 1.6) };
+  }
+  // ONE bug at a time, and never in the tutorial: the colony has to have finished
+  // the ten missions AND the first-minute lesson before anything comes calling.
+  function bugsAllowed(){
+    return !!(C.freeBuild && C.guided && !(guide.on && guide.lesson === "intro"));
+  }
+  function sendBug(kind){
+    if(C.bug || !bugsAllowed()) return null;
+    var ks = Object.keys(GAME_CONFIG.bug.kinds);
+    if(!kind || !GAME_CONFIG.bug.kinds[kind]) kind = ks[Math.floor(srand()*ks.length) % ks.length];
+    var t = bugTarget(kind);
+    if(!t) t = { surface:true, fc:Math.max(0.6, entranceCell().c - 1.6) };
+    var en = entranceCell();
+    var b = { kind:kind, state:"come", t:0, scare:0, nap:0, flip:false, hop:srand()*6,
+              fc:-1.2, fr:SURF_R, wp:[], c:null, r:null };
+    if(t.surface){
+      b.wp = [{ fc:t.fc, fr:SURF_R }];
+    } else {
+      var route = routeTo(en.c, en.r, t.c, t.r) || [];
+      b.wp = [{ fc:en.c, fr:SURF_R }, { fc:en.c, fr:en.r }].concat(route);
+      b.c = t.c; b.r = t.r;
+    }
+    C.bug = b; C.bugsSeen = (C.bugsSeen|0) + 1;
+    sfx("bug");
+    hint(bugDef(kind).call, 6);
+    lookAt(b);                                // the camera shows the kid where, once
+    saveSoon();
+    return b;
+  }
+  // the visit itself: it walks in, it settles, soldiers see it off. Nothing here
+  // ever changes a store, a cell, an ant or an egg — that is the whole point.
+  function bugTick(dt){
+    var g = GAME_CONFIG.bug;
+    if(!C.bug){
+      if(!bugsAllowed()) return;                           // never during the tutorial
+      C.bugT = (C.bugT||0) + dt * tune().setbacks;
+      var wait = g.everySec * (1 + (((C.bugsSeen|0) % 2) ? -g.jitter : g.jitter));
+      if(C.bugT >= wait){ C.bugT = 0; sendBug(null); }
+      return;
+    }
+    var b = C.bug, def = bugDef(b.kind);
+    b.t += dt;
+    // walking in, or hopping out: the same little mover either way
+    if(b.wp && b.wp.length){
+      var tgt = b.wp[0], dx = tgt.fc - b.fc, dy = tgt.fr - b.fr, d = Math.sqrt(dx*dx + dy*dy), sp = 1.6 * dt;
+      if(d <= sp || d < 0.0005){ b.fc = tgt.fc; b.fr = tgt.fr; b.wp.shift(); }
+      else { b.fc += dx/d*sp; b.fr += dy/d*sp; if(Math.abs(dx) > 0.02) b.flip = dx < 0; }
+    } else if(b.state === "come"){ b.state = "here"; b.t = 0; }
+    if(b.state === "flee"){
+      b.fr -= dt * 2.2;                                    // the comic hop away
+      if(b.t >= g.fleeSecs){ C.bug = null; saveSoon(); }
+      return;
+    }
+    // soldiers do the work. NOT scaled by the colony's pace: a tired, hungry,
+    // flooded colony must still be able to shoo a bug off, or it could sit for ever.
+    var guards = jobCount("soldier");
+    if(guards > 0){
+      if(b.state === "nap"){ b.state = "here"; b.nap = 0; }
+      b.scare += guards * g.scarePerAntPerSec * dt;
+      if(b.scare >= 1) scareBugOff();
+      return;
+    }
+    // nobody on Soldiers: it settles in and naps on the spot it is blocking, and
+    // waits. It never gets worse, it never spreads, and it never takes anything.
+    b.scare = 0;
+    if(b.state === "here" && b.t >= g.napAfter){
+      b.state = "nap"; b.nap = 0; hint(def.nap, 5);
+    }
+    if(b.state === "nap") b.nap += dt;
+  }
+  // the pay-off: a comic yikes, a bonus crumb and coins through the shared wallet
+  function scareBugOff(){
+    var b = C.bug; if(!b || b.state === "flee") return;
+    var g = GAME_CONFIG.bug, def = bugDef(b.kind);
+    b.state = "flee"; b.t = 0; b.wp = [];
+    C.bugsScared = (C.bugsScared|0) + 1;
+    if(g.crumb) dropSurface("crumb", (b.fr > -0.2 ? fcToX(C.queen.c) : fcToX(b.fc)));
+    award("antcity:bug:" + C.bugsScared, g.coins);
+    celebrate(def.cheer || def.name, g.coins);
+    hint(def.gone, 5);
+    sfx("scare");
+    if(!C.taught) C.taught = {};
+    if(!C.taught.scare){
+      C.taught.scare = true;
+      say("A soldier ant hardly ever has to fight. Puffing up and waving its antennae is usually enough to send a bug away.");
+    }
+    signal("cheer", { game:"antcity", bug:b.kind, scared:C.bugsScared });
+    saveSoon();
+  }
+  // point the camera at something for a few seconds, so a kid who taps the
+  // attention marker really is taken to the thing that wants them
+  var camLook = null, camLookT = 0;
+  function lookAt(b){
+    if(!b) return;
+    camLook = (b.fr > -0.2) ? Math.round(b.fr) : 0;
+    camLookT = (C ? C.t : 0) + 6;
   }
   function hasOpenNeighbour(c,r){
     return isOpen(c-1,r) || isOpen(c+1,r) || isOpen(c,r-1) || isOpen(c,r+1) || r === 0;
@@ -906,6 +1141,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var total = Math.max(1, C.ants), want = {}, have = {}, made = 0, i, j;
     for(i=0;i<JOBS.length;i++){ var id0 = JOBS[i].id; want[id0] = Math.round(((C.jobs[id0]|0)/total) * n); have[id0] = 0; made += want[id0]; }
     want.forager = Math.max(0, want.forager + (n - made));
+    // AC9: one ant on Soldiers has to be one soldier you can SEE marching. In a colony
+    // of hundreds its share of the drawn crowd rounds down to nothing, which would have
+    // left the kid moving an ant across and watching nobody go.
+    if((C.jobs.soldier|0) > 0 && bugHere() && !(want.soldier|0)){
+      want.soldier = 1; want.forager = Math.max(0, (want.forager|0) - 1);
+    }
     for(i=0;i<n;i++){ if(C.sample[i].task) have[C.sample[i].job] = (have[C.sample[i].job]|0) + 1; }
     for(i=0;i<n;i++){
       var a = C.sample[i]; if(a.task) continue;
@@ -1058,6 +1299,38 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return true;
   }
 
+  // AC9: soldier duty. A soldier with no bug to see off stands guard at its post
+  // like any other idle ant; the moment one calls in, it marches over — through the
+  // tunnels if the bug is down in the colony, out of the front door if it is up top.
+  function scareTask(a, here){
+    var b = bugHere(); if(!b) return false;
+    if(b.r != null){                                        // down in the colony
+      var mk = occKey(b.c, b.r);
+      var on = workersOn(mk);
+      if(on >= 2) return false;                             // two see a bug off; a third is a crowd
+      // it goes to the bug itself, and it does NOT take a parked spot on the way:
+      // a soldier answering a bug must never be turned back because two idle ants
+      // happened to be standing where it needed to be.
+      var t0 = isOpen(b.c, b.r) ? { c:b.c, r:b.r } : openNeighbour(b.c, b.r);
+      if(!t0) return false;
+      var route = routeTo(here.c, here.r, t0.c, t0.r); if(!route) return false;
+      dropPost(a);
+      a.task = { kind:"scare", k:mk, c:t0.c, r:t0.r, mark:mk, surface:false };
+      a.ox = on ? 0.26 : -0.26; a.oy = 0.06;
+      a.wp = route; a.state = "walk";
+      return true;
+    }
+    // up on the meadow: march out of the anthill and stand between it and the door
+    if(countTask(function(t){ return t && t.kind === "scare"; }) >= 3) return false;
+    var en = entranceCell(), route2 = routeTo(here.c, here.r, en.c, en.r); if(!route2) return false;
+    dropPost(a);
+    a.task = { kind:"scare", surface:true };
+    a.ox = 0; a.oy = 0;
+    a.wp = route2.concat([{ fc:en.c, fr:SURF_R }, { fc:b.fc + (b.fc > en.c ? -0.8 : 0.8), fr:SURF_R }]);
+    a.state = "walk";
+    return true;
+  }
+
   // give one idle ant something real to do. If there is nothing, it parks and stands.
   function giveTask(a){
     var here = antCell(a);
@@ -1066,6 +1339,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(a.job === "forager") return haulTask(a, here);
     if(a.job === "nursery") return tendTask(a, here);
     if(a.job === "builder") return buildTask(a, here);
+    if(a.job === "soldier")  return scareTask(a, here);
     return false;
   }
 
@@ -1102,6 +1376,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       }
       return;
     }
+    if(a.task.kind === "scare"){
+      // it stands its ground until the visitor gives up. The moment the bug is on
+      // its way out, the soldier hops and goes back to guarding.
+      var bg = bugHere();
+      if(!bg){ dropTask(a); a.state = "hop"; a.t = 0.45; return; }
+      if(!a.task.surface) a.flip = a.task.c < a.fc;
+      else a.flip = bg.fc < a.fc;
+      return;
+    }
     if(a.task.kind === "tend" || a.task.kind === "build"){
       if(a.task.kind === "build"){
         var c2 = C.cells[a.task.k];
@@ -1135,10 +1418,19 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     rebuildOcc();
     if(qReact > 0) qReact = Math.max(0, qReact - dt);
     var pace = tune().pace, grants = 0, moves = 0, i;
-    var haulBoost = Math.min(GAME_CONFIG.forage.storageSpeedMax, roomMul("storage"));
+    // AC9: a beetle nosing at the store pauses the quick trips it earns. The store
+    // itself, and everything in it, is untouched — the trips just go back to normal.
+    var haulBoost = bugStopsStore() ? 1 : Math.min(GAME_CONFIG.forage.storageSpeedMax, roomMul("storage"));
     for(i=0;i<C.sample.length;i++){
       var a = C.sample[i];
       if(a.cool > 0) a.cool -= dt;                        // the look-for-work timer runs all the time
+      // AC9: a soldier answering a bug does not wait its turn in the look-for-work
+      // budget. The one promise this layer makes is that moving an ant to Soldiers
+      // sends somebody, now.
+      if(a.job === "soldier" && !a.task && a.state !== "hop" && bugHere()){
+        var hs = antCell(a);
+        if(isOpen(hs.c, hs.r)) scareTask(a, hs);
+      }
       // an idle ant well outside the view is swapped for one inside it. They are a
       // sample of a colony of hundreds, not named individuals, so nothing is lost.
       if(!a.task && moves < 2 && bandPool.length && (a.fr < b.lo - 2 || a.fr > b.hi + 2)){
@@ -1292,7 +1584,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var m = currentMission(), g = goalFor(m);
     if(!m || !g) { C.freeBuild = true; return; }
     if(haveFor(g) >= g.n) completeMission();
-    checkMilestones();
   }
   function completeMission(){
     var m = currentMission(); if(!m) return;
@@ -1311,10 +1602,19 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var ms = GAME_CONFIG.milestones || [], i;
     for(i=0;i<ms.length;i++){
       var ml = ms[i]; if(C.hit[ml.id]) continue;
-      var have = ml.type === "ants" ? C.ants : (ml.type === "leaves" ? C.leavesCut : C.deepest);
+      var have = ml.type === "ants" ? C.ants
+               : ml.type === "leaves" ? C.leavesCut
+               : ml.type === "bugs"   ? (C.bugsScared|0)
+               : C.deepest;
       if(have < ml.n) continue;
       C.hit[ml.id] = true;
       if(ml.aphids) C.aphids = true;                 // the herd arrives on the meadow
+      if(ml.soldiers){                                // AC9: the fifth job appears
+        C.soldiers = true;
+        if(!C.taught) C.taught = {};
+        C.taught.soldier = true;                      // the milestone itself carries the fact
+        syncJobsUI();
+      }
       award("antcity:milestone:" + ml.id, ml.coins);
       celebrate(milestoneTitle(ml), ml.coins, ml.type === "ants");
       signal("cheer", { game:"antcity", milestone:ml.id });
@@ -1323,6 +1623,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
   }
   function milestoneTitle(ml){
+    if(ml.soldiers)          return "Soldier ants!";
+    if(ml.type === "bugs")   return "You saw off " + ml.n + " bugs!";
     if(ml.aphids)            return "You found aphids!";
     if(ml.type === "leaves") return "Cut " + ml.n + " leaves!";
     if(ml.type === "ants")   return ml.n + " ants!";
@@ -1366,6 +1668,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     // camera follows the colony down as it deepens
     var bottomLimit = H - PANEL - CS*1.2;
     camTarget = Math.max(0, SKY + (C.deepest+2)*CS - bottomLimit);
+    // AC9: while the kid is being shown where a bug is, the camera holds there
+    // instead of riding the dig face. It lets go on its own a few seconds later.
+    if(camLook != null && C.t < camLookT) camTarget = Math.max(0, SKY + (camLook+2)*CS - bottomLimit);
+    else if(camLook != null && C.t >= camLookT) camLook = null;
     camY += (camTarget - camY) * 0.06;
 
     drawSky();
@@ -1377,7 +1683,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     drawPlants();
     drawSurfaceItems();
     drawAnts();
+    drawBug();
     drawPuffs();
+    drawBugMark();
   }
   // AC7: every job in progress wears a marker in its own job colour, on the exact
   // cell the ants walked to. Nothing is ever "being worked on" invisibly.
@@ -1655,12 +1963,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         else if(a.task.kind === "build") bob += Math.sin(C.t*14) * CS*0.035;
         else if(a.task.kind === "tend")  bob += Math.sin(C.t*5 + a.bob) * CS*0.018;
       }
-      var star = (a === starAnt), scale = base * (star ? 1.75 : 1);
+      // AC9: a soldier is the same ant, a size up, with a helmet and bigger jaws.
+      // Its marker is red, the same red the low meters use for "this needs you".
+      var sold = (a.job === "soldier");
+      var star = (a === starAnt), scale = base * (star ? 1.75 : (sold ? 1.18 : 1));
       if(star){                                           // a soft halo, no words, no emoji
         X.globalAlpha = 0.30 + 0.18*Math.sin(C.t*5); X.fillStyle = "#fff3d6";
         X.beginPath(); X.arc(px, py+bob, CS*0.34, 0, 7); X.fill(); X.globalAlpha = 1;
       }
-      drawAntShape(px, py+bob, CS*scale*0.42, body, a.flip, idle);
+      drawAntShape(px, py+bob, CS*scale*0.42, body, a.flip, idle, sold);
       // what it is hauling, in its mandibles, drawn as the very same item
       if(a.carry) drawItem(a.carry.kind, px + (a.flip ? CS*0.15 : -CS*0.15), py + bob - CS*0.12, CS*0.30);
       jobMark(px, py + bob - CS*scale*0.85, CS*0.070, jobColor(a.job));
@@ -1677,7 +1988,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function jobColor(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i].color; return "#fff"; }
   // one ant: three segments, six legs, two antennae, a dark outline so the shape
   // holds up small. An idle ant has its legs planted and does not move.
-  function drawAntShape(x, y, r, col, flip, idle){
+  function drawAntShape(x, y, r, col, flip, idle, soldier){
     var line = "rgba(28,16,6,.85)";
     X.save(); X.translate(x,y); if(flip) X.scale(-1,1);
     X.fillStyle = "rgba(0,0,0,.18)"; X.beginPath(); X.ellipse(0, r*0.95, r*1.15, r*0.32, 0, 0, 7); X.fill();
@@ -1693,6 +2004,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.beginPath(); X.ellipse(-r*0.88, -r*0.05, r*0.62, r*0.48, 0.15, 0, 7); X.fill(); X.stroke();
     X.beginPath(); X.ellipse(-r*0.12, 0, r*0.34, r*0.30, 0, 0, 7); X.fill(); X.stroke();
     X.beginPath(); X.arc(r*0.62, -r*0.08, r*0.42, 0, 7); X.fill(); X.stroke();
+    // AC9: a soldier wears a helmet and carries the bigger jaws real soldier ants have
+    if(soldier){
+      X.lineWidth = Math.max(1, r*0.18);
+      X.beginPath(); X.moveTo(r*0.98, -r*0.02); X.quadraticCurveTo(r*1.50, -r*0.16, r*1.30, -r*0.44); X.stroke();
+      X.beginPath(); X.moveTo(r*0.98, r*0.16); X.quadraticCurveTo(r*1.46, r*0.20, r*1.24, r*0.46); X.stroke();
+      X.fillStyle = "#e2685f"; X.lineWidth = Math.max(1, r*0.14);
+      X.beginPath(); X.arc(r*0.62, -r*0.18, r*0.46, Math.PI, 0); X.closePath(); X.fill(); X.stroke();
+      X.fillStyle = col;
+    }
     // antennae
     X.lineWidth = Math.max(1, r*0.13);
     X.beginPath(); X.moveTo(r*0.80, -r*0.36); X.lineTo(r*1.20, -r*0.92); X.stroke();
@@ -1701,6 +2021,144 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.fillStyle = "#fff8ec"; X.beginPath(); X.arc(r*0.78, -r*0.14, r*0.15, 0, 7); X.fill();
     X.fillStyle = "#241505"; X.beginPath(); X.arc(r*0.83, -r*0.14, r*0.08, 0, 7); X.fill();
     X.restore();
+  }
+  // ======================================================================
+  //  AC9: the visitor. Drawn art first, and a hand-drawn fallback behind every
+  //  one of them, so a missing file can never leave a bug invisible while the
+  //  colony is telling the kid to go and deal with it. Silly, never scary: round
+  //  bodies, big white eyes and a small smile, and it only ever ambles.
+  // ======================================================================
+  function drawBugShape(kind, x, y, r){
+    var line = "rgba(28,40,10,.85)", i;
+    X.save(); X.translate(x, y);
+    X.lineCap = "round"; X.lineJoin = "round";
+    X.fillStyle = "rgba(0,0,0,.18)"; X.beginPath(); X.ellipse(0, r*0.92, r*1.05, r*0.26, 0, 0, 7); X.fill();
+    X.strokeStyle = line;
+    if(kind === "caterpillar"){
+      X.lineWidth = Math.max(1, r*0.13);
+      for(i=0;i<3;i++){ X.beginPath(); X.moveTo(-r*0.55 + i*r*0.5, r*0.35); X.lineTo(-r*0.62 + i*r*0.5, r*0.80); X.stroke(); }
+      X.lineWidth = Math.max(1, r*0.15);
+      for(i=0;i<3;i++){
+        X.fillStyle = i%2 ? "#9fce5c" : "#8fc44f";
+        X.beginPath(); X.arc(-r*0.75 + i*r*0.5, r*0.05, r*0.34, 0, 7); X.fill(); X.stroke();
+      }
+      X.fillStyle = "#a8d768"; X.beginPath(); X.arc(r*0.60, -r*0.06, r*0.42, 0, 7); X.fill(); X.stroke();
+      X.lineWidth = Math.max(1, r*0.12);
+      X.beginPath(); X.moveTo(r*0.45, -r*0.42); X.lineTo(r*0.30, -r*0.86); X.stroke();
+      X.beginPath(); X.moveTo(r*0.78, -r*0.40); X.lineTo(r*0.96, -r*0.84); X.stroke();
+      bugFace(r*0.60, -r*0.06, r*0.42, line);
+      X.restore(); return;
+    }
+    if(kind === "grasshopper"){
+      X.lineWidth = Math.max(1, r*0.16);
+      X.beginPath(); X.moveTo(-r*0.10, r*0.10); X.quadraticCurveTo(r*0.55, -r*0.55, r*0.30, r*0.20);
+      X.quadraticCurveTo(r*0.20, r*0.70, -r*0.20, r*0.86); X.stroke();
+      X.lineWidth = Math.max(1, r*0.12);
+      X.beginPath(); X.moveTo(-r*0.20, r*0.20); X.lineTo(-r*0.34, r*0.82); X.stroke();
+      X.fillStyle = "#8ed05a";
+      X.beginPath(); X.ellipse(-r*0.10, 0, r*0.86, r*0.36, -0.12, 0, 7); X.fill();
+      X.lineWidth = Math.max(1, r*0.15); X.stroke();
+      X.fillStyle = "#9fdc68"; X.beginPath(); X.arc(-r*0.86, -r*0.14, r*0.40, 0, 7); X.fill(); X.stroke();
+      X.lineWidth = Math.max(1, r*0.12);
+      X.beginPath(); X.moveTo(-r*1.02, -r*0.46); X.lineTo(-r*1.36, -r*0.96); X.stroke();
+      X.beginPath(); X.moveTo(-r*0.72, -r*0.48); X.lineTo(-r*0.60, -r*1.00); X.stroke();
+      bugFace(-r*0.86, -r*0.14, r*0.40, line);
+      X.restore(); return;
+    }
+    // the beetle
+    X.lineWidth = Math.max(1, r*0.13);
+    for(i=-1;i<=1;i++){
+      X.beginPath(); X.moveTo(i*r*0.34, r*0.20); X.lineTo(i*r*0.42 - r*0.16, r*0.86); X.stroke();
+      X.beginPath(); X.moveTo(i*r*0.34, -r*0.10); X.lineTo(i*r*0.50 + r*0.10, -r*0.62); X.stroke();
+    }
+    X.fillStyle = "#7d8f45"; X.lineWidth = Math.max(1, r*0.16);
+    X.beginPath(); X.ellipse(0, r*0.10, r*0.86, r*0.62, 0, 0, 7); X.fill(); X.stroke();
+    X.lineWidth = Math.max(1, r*0.12);
+    X.beginPath(); X.moveTo(0, -r*0.50); X.lineTo(0, r*0.70); X.stroke();
+    X.fillStyle = "#6a7a3a"; X.lineWidth = Math.max(1, r*0.15);
+    X.beginPath(); X.arc(0, -r*0.70, r*0.38, 0, 7); X.fill(); X.stroke();
+    X.lineWidth = Math.max(1, r*0.12);
+    X.beginPath(); X.moveTo(-r*0.22, -r*1.00); X.lineTo(-r*0.50, -r*1.42); X.stroke();
+    X.beginPath(); X.moveTo(r*0.22, -r*1.00); X.lineTo(r*0.50, -r*1.42); X.stroke();
+    bugFace(0, -r*0.70, r*0.38, line);
+    X.restore();
+  }
+  // two big friendly eyes and a small smile: the whole reason it reads as silly
+  function bugFace(cx, cy, r, line){
+    X.fillStyle = "#fff8ec";
+    X.beginPath(); X.arc(cx - r*0.38, cy - r*0.08, r*0.34, 0, 7); X.fill();
+    X.beginPath(); X.arc(cx + r*0.38, cy - r*0.08, r*0.34, 0, 7); X.fill();
+    X.fillStyle = "#241505";
+    X.beginPath(); X.arc(cx - r*0.30, cy, r*0.17, 0, 7); X.fill();
+    X.beginPath(); X.arc(cx + r*0.46, cy, r*0.17, 0, 7); X.fill();
+    X.strokeStyle = line; X.lineWidth = Math.max(1, r*0.16);
+    X.beginPath(); X.arc(cx, cy + r*0.34, r*0.34, 0.35, Math.PI - 0.35); X.stroke();
+  }
+  function drawBug(){
+    var b = C && C.bug; if(!b) return;
+    var x = fcToX(b.fc), y = frToY(b.fr);
+    if(!isFinite(x) || !isFinite(y)) return;
+    var amble = Math.sin(C.t*4 + b.hop) * CS*0.05;
+    if(b.state === "flee"){
+      var f = Math.max(0, Math.min(1, b.t / Math.max(0.01, GAME_CONFIG.bug.fleeSecs)));
+      X.globalAlpha = 1 - f;
+      y -= Math.sin(f * Math.PI) * CS*1.1;                 // the comic hop away
+      amble = 0;
+    }
+    // the red ring: the same "this needs you" language the low meters speak
+    if(b.state !== "flee"){
+      X.globalAlpha = 0.35 + 0.25*Math.sin(C.t*4);
+      X.strokeStyle = "#e24b4b"; X.lineWidth = 3;
+      X.beginPath(); X.arc(x, y + amble, CS*0.62, 0, 7); X.stroke();
+      X.globalAlpha = 1;
+    }
+    var img = IMG["bug_" + b.kind];
+    X.save(); X.translate(x, y + amble); if(b.flip) X.scale(-1, 1);
+    var size = (b.r == null) ? CS*1.3 : CS*1.05;      // a bug up on the grass has room to be seen
+    if(img) drawImg(img, 0, 0, size);
+    else drawBugShape(b.kind, 0, 0, size*0.38);
+    X.restore();
+    // napping: it is not gone, it is just having a lie down on the spot it is blocking
+    if(b.state === "nap"){
+      X.strokeStyle = "#fff8ec"; X.lineWidth = 2.4; X.lineCap = "round";
+      for(var z=0; z<2; z++){
+        var zs = CS*(0.16 + z*0.10), zx = x + CS*0.48 + z*CS*0.26;
+        var zy = y - CS*0.55 - z*CS*0.30 - Math.sin(C.t*1.6 + z)*CS*0.06;
+        X.globalAlpha = 0.85 - z*0.25;
+        X.beginPath(); X.moveTo(zx, zy); X.lineTo(zx + zs, zy);
+        X.lineTo(zx, zy + zs); X.lineTo(zx + zs, zy + zs); X.stroke();
+      }
+      X.globalAlpha = 1;
+    }
+  }
+  // the attention marker: a bouncing red badge at the edge of the screen that says
+  // WHERE, without a word, and takes the kid there when it is tapped.
+  var bugMark = null;
+  function drawBugMark(){
+    bugMark = null;
+    var b = C && C.bug; if(!b || b.state === "flee") return;
+    var bx = fcToX(b.fc), by = frToY(b.fr);
+    if(!isFinite(bx) || !isFinite(by)) return;
+    var bottom = H - PANEL - 22, top = 30;
+    var x = Math.max(28, Math.min(W - 28, bx));
+    var y = by < top ? top : (by > bottom ? bottom : by - CS*1.1);
+    y = Math.max(top, Math.min(bottom, y));
+    var r = 17, bounce = Math.sin(C.t*5) * 4;
+    y += bounce;
+    X.fillStyle = "rgba(0,0,0,.28)"; X.beginPath(); X.arc(x, y + 3, r, 0, 7); X.fill();
+    X.fillStyle = "#e24b4b"; X.beginPath(); X.arc(x, y, r, 0, 7); X.fill();
+    X.strokeStyle = "#fff8ec"; X.lineWidth = 2.4; X.beginPath(); X.arc(x, y, r, 0, 7); X.stroke();
+    // the mark itself is drawn geometry, never a glyph: a bar and a dot
+    X.fillStyle = "#fff8ec";
+    if(BR) BR.rrect(X, x - 2.4, y - 8.5, 4.8, 10, 2.4); else X.fillRect(x - 2.4, y - 8.5, 4.8, 10);
+    X.fill();
+    X.beginPath(); X.arc(x, y + 6.4, 2.6, 0, 7); X.fill();
+    bugMark = { x:x, y:y, r:r + 10 };
+  }
+  function bugMarkHit(px, py){
+    if(!bugMark || !C || !C.bug) return false;
+    var dx = px - bugMark.x, dy = py - bugMark.y;
+    return (dx*dx + dy*dy) <= bugMark.r * bugMark.r;
   }
   function drawImg(img, cx, cy, size, flip){
     var iw = img.naturalWidth||img.width, ih = img.naturalHeight||img.height; if(!iw||!ih) return;
@@ -1719,13 +2177,21 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(BR){ BR.rrect(X, cx, cy, cw, ch, 20); X.fill(); } else X.fillRect(cx, cy, cw, ch);
     if(party.icon && IMG.colony) drawImg(IMG.colony, W/2, cy - 6, 54);
     X.fillStyle = "#4a2f10"; X.textAlign = "center";
-    X.font = "800 22px 'Baloo 2','Nunito',system-ui,sans-serif";
+    // the title shrinks to fit rather than running off both edges of the card
+    var fs = 22, maxw = cw - 26;
+    X.font = "800 " + fs + "px 'Baloo 2','Nunito',system-ui,sans-serif";
+    while(fs > 13 && textW(party.title) > maxw){
+      fs -= 1; X.font = "800 " + fs + "px 'Baloo 2','Nunito',system-ui,sans-serif";
+    }
     X.fillText(party.title, W/2, cy + 46);
     if(party.coins){
       X.fillStyle = "#c9862b"; X.font = "800 17px 'Baloo 2','Nunito',system-ui,sans-serif";
       X.fillText("+" + party.coins + " coins", W/2, cy + 78);
     }
     X.textAlign = "left"; X.globalAlpha = 1;
+  }
+  function textW(t){
+    try{ var m = X.measureText ? X.measureText(t) : null; return (m && m.width) || 0; }catch(e){ return 0; }
   }
   function drawPuffs(){
     for(var i=puffs.length-1;i>=0;i--){
@@ -1760,6 +2226,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return _foodTrend;
   }
   function mixLine(){
+    if(bugHere() && !jobCount("soldier")) return "A bug is visiting and nobody is shooing it";
     var t = Math.max(1, C.ants), dig = (C.jobs.digger|0)/t, fo = (C.jobs.forager|0)/t,
         nu = (C.jobs.nursery|0)/t, bu = (C.jobs.builder|0)/t;
     var falling = _foodTrend === " down";
@@ -1857,6 +2324,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function bumpIdle(){ idleT = 0; idleNext = 15; }
   function idleNudge(){
     if(guide.on){ var st = stepNow(); if(st) return st.text; }
+    if(bugHere() && !jobCount("soldier")) return "Tap plus on Soldiers to shoo the bug away";
     var sb = setbackNow() || lowNeedLine(); if(sb) return sb;
     var g = goalFor(currentMission());
     if(!g) return "Drag in the dirt to dig deeper";
@@ -1916,7 +2384,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       (function(j){
         // built as real elements, not an innerHTML blob, so every button is a thing
         // the game (and the QA robot) can reach and press
-        var card = document.createElement("div"); card.className = "job";
+        var card = document.createElement("div");
+        card.className = "job" + (j.locked ? " locked" : "");
+        card.id = "jobcard_" + j.id;
         var nm = document.createElement("div"); nm.className = "nm";
         nm.textContent = j.name; if(nm.style) nm.style.color = j.color;
         var ct = document.createElement("div"); ct.className = "ct"; ct.id = "ct_"+j.id; ct.textContent = "0";
@@ -1937,6 +2407,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // move one ant into (+1) or out of (-1) a job; the foragers are the pool it comes from
   function moveAnt(job, d){
     if(DEMO) return;
+    if(job === "soldier" && !soldiersUnlocked()) return;    // not met yet: the card is not even there
     if(d > 0){
       var from = null, i;
       for(i=JOBS.length-1;i>=0;i--){ var o=JOBS[i].id; if(o!==job && (C.jobs[o]|0) > 0){ if(o==="forager"){ from=o; break; } if(!from) from=o; } }
@@ -1950,27 +2421,39 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       C.jobs[job]--; C.jobs[to] = (C.jobs[to]|0) + 1;
     }
     if(Feel){ try{ Feel.tap(); }catch(e){} }
+    // the queen shares the real science the first time a kid posts a guard
+    if(!C.taught) C.taught = {};
+    if(job === "soldier" && d > 0 && !C.taught.soldier){
+      C.taught.soldier = true;
+      say("Soldier ants really do have bigger jaws than the other ants, and they stand guard at the door of the nest.");
+    }
     guide.moved = true; bumpIdle();
     syncJobsUI(); saveSoon();
   }
   var _jobsKey = "";
   function syncJobsUI(){
     var mx = $("barMix"); if(mx){ var ml = mixLine(); if(mx.textContent !== ml) mx.textContent = ml; }
-    var k = C.ants + "|" + JOBS.map(function(j){ return C.jobs[j.id]|0; }).join(",");
+    var k = C.ants + "|" + JOBS.map(function(j){ return C.jobs[j.id]|0; }).join(",") + "|" + (soldiersUnlocked() ? "5" : "4");
     if(k === _jobsKey) return;                 // called every frame: only redraw on a real change
     _jobsKey = k;
     for(var i=0;i<JOBS.length;i++){ var el = $("ct_"+JOBS[i].id); if(el) el.textContent = C.jobs[JOBS[i].id]|0; }
+    // AC9: the fifth card appears the moment soldiers unlock, and the row tightens
+    // up to hold five without any of them getting too small to tap.
+    var on = soldiersUnlocked();
+    var sc = $("jobcard_soldier"); if(sc && sc.classList) sc.classList[on ? "remove" : "add"]("locked");
+    var jh = $("jobs"); if(jh && jh.classList) jh.classList[on ? "add" : "remove"]("five");
     var ct = $("barAnts"); if(ct) ct.textContent = C.ants + (C.ants === 1 ? " ant" : " ants");
     drawBar();
   }
   // the colour bar: it SHOWS the mix, and dragging it moves ants between two jobs
   function drawBar(){
     var bar = $("bar"); if(!bar) return;
+    var AJ = activeJobs();
     var total = Math.max(1, C.ants), acc = 0, html = "", cum = [];
-    for(var i=0;i<JOBS.length;i++){
-      var n = C.jobs[JOBS[i].id]|0, w = (n/total)*100;
-      html += '<div class="seg" style="left:'+acc+'%;width:'+w+'%;background:'+JOBS[i].color+'"></div>';
-      acc += w; if(i < JOBS.length-1) cum.push(acc);
+    for(var i=0;i<AJ.length;i++){
+      var n = C.jobs[AJ[i].id]|0, w = (n/total)*100;
+      html += '<div class="seg" style="left:'+acc+'%;width:'+w+'%;background:'+AJ[i].color+'"></div>';
+      acc += w; if(i < AJ.length-1) cum.push(acc);
     }
     for(var d=0;d<cum.length;d++) html += '<div class="gr" style="left:'+cum[d]+'%"></div>';
     bar.innerHTML = html;
@@ -1987,12 +2470,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var cx = (ev.clientX != null) ? ev.clientX : ((ev.touches && ev.touches[0]) ? ev.touches[0].clientX : 0);
       return Math.max(0, Math.min(1, (cx - (r.left||0)) / Math.max(1, r.width||1)));
     }
-    function cumFor(i){ var t = Math.max(1, C.ants), s2 = 0; for(var j=0;j<=i;j++) s2 += C.jobs[JOBS[j].id]|0; return s2/t; }
+    function cumFor(i){ var A = activeJobs(), t = Math.max(1, C.ants), s2 = 0; for(var j=0;j<=i && j<A.length;j++) s2 += C.jobs[A[j].id]|0; return s2/t; }
     function grab(ev){
       if(DEMO) return;
       BA.unlock(); bumpIdle();
-      var p = pct(ev), best = 0, bd = 9;
-      for(var i=0;i<JOBS.length-1;i++){ var d = Math.abs(cumFor(i) - p); if(d < bd){ bd = d; best = i; } }
+      var p = pct(ev), best = 0, bd = 9, AJ = activeJobs();
+      for(var i=0;i<AJ.length-1;i++){ var d = Math.abs(cumFor(i) - p); if(d < bd){ bd = d; best = i; } }
       dragging = best;
       try{ if(bar.setPointerCapture && ev.pointerId != null) bar.setPointerCapture(ev.pointerId); }catch(e){}
       move(ev);
@@ -2000,8 +2483,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     function move(ev){
       if(dragging < 0) return;
       if(ev.preventDefault) ev.preventDefault();
-      var a2 = JOBS[dragging].id, b2 = JOBS[dragging+1].id, before = 0, i;
-      for(i=0;i<dragging;i++) before += C.jobs[JOBS[i].id]|0;
+      var AJ = activeJobs();
+      if(!AJ[dragging] || !AJ[dragging+1]) return;
+      var a2 = AJ[dragging].id, b2 = AJ[dragging+1].id, before = 0, i;
+      for(i=0;i<dragging;i++) before += C.jobs[AJ[i].id]|0;
       var pair = (C.jobs[a2]|0) + (C.jobs[b2]|0);
       var want = Math.round(pct(ev) * C.ants) - before;
       want = Math.max(0, Math.min(pair, want));
@@ -2111,10 +2596,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // AC8: the tool in your hand decides what a tap means, and the big button has been
   // saying which tool that is the whole time. A tap in the wrong place is never
   // silent: it says, in a few words, which picture to swap to.
+  function eventPoint(ev){
+    var r = CV.getBoundingClientRect ? CV.getBoundingClientRect() : { left:0, top:0 };
+    return { x:evX(ev) - (r.left||0), y:evY(ev) - (r.top||0) };
+  }
   function onDown(ev){
     if(state !== "play" || DEMO || paused) return;
     BA.unlock(); bumpIdle();
     if(sheetOpen) closeSheet();
+    // AC9: the bouncing red marker is the one thing that means the same wherever it
+    // is on screen — it takes you to the bug, whatever is in your hand.
+    var pt = eventPoint(ev);
+    if(bugMarkHit(pt.x, pt.y)){
+      lookAt(C.bug);
+      hint(setbackNow() || "", 5);
+      if(Feel){ try{ Feel.tap(); }catch(e){} }
+      return;
+    }
     var g = cellFromEvent(ev); if(!g) return;
     // placing a room: the glowing spots are the only thing a tap means right now
     if(placing){
@@ -2302,6 +2800,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
         leaves:C.leaves, leavesCut:C.leavesCut, leafReady:C.leafReady, aphids:C.aphids, dew:C.dew, dewGot:C.dewGot, mush:C.mush,
         berryReady:C.berryReady, tapped:C.tapped, taught:C.taught,
+        soldiers:!!C.soldiers, bug:C.bug, bugT:C.bugT||0, bugsSeen:C.bugsSeen|0, bugsScared:C.bugsScared|0,
         seen:C.seen, guided:C.guided, savedAt:Date.now()
       }));
     }catch(e){}
@@ -2339,6 +2838,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       col.aphids = !!s.aphids; col.dew = s.dew||0; col.dewGot = s.dewGot||0; col.mush = s.mush||0;
       col.berryReady = s.berryReady == null ? 2 : s.berryReady;
       col.tapped = s.tapped||0; col.taught = s.taught || {};
+      // AC9: the fifth job, and any visitor that was still here when the app closed
+      col.soldiers = !!s.soldiers; col.bug = s.bug || null;
+      col.bugT = s.bugT||0; col.bugsSeen = s.bugsSeen|0; col.bugsScared = s.bugsScared|0;
+      if(col.jobs && col.jobs.soldier == null) col.jobs.soldier = 0;
       return col;
     }catch(e){ return null; }
   }
@@ -2596,7 +3099,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     flood:"antcity/prop/flood-v1", colony:"antcity/prop/colony-v1", loading:"antcity/loading/v1",
     room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1",
     room_fungus:"antcity/prop/fungus-v1", leaf:"antcity/prop/leaf-v1",
-    aphid:"antcity/prop/aphid-plant-v1", honeydew:"antcity/prop/honeydew-v1"
+    aphid:"antcity/prop/aphid-plant-v1", honeydew:"antcity/prop/honeydew-v1",
+    bug_beetle:"antcity/bug/beetle-v1", bug_caterpillar:"antcity/bug/caterpillar-v1",
+    bug_grasshopper:"antcity/bug/grasshopper-v1"
   };
   // The shell owns the kid's picks and hands the engine the option INDEX per slot
   // (?ant=1&meadow=0&dirt=1), the same tiny-param handoff Breaker and Sky Flyer use.
@@ -2641,6 +3146,21 @@ input,textarea{-webkit-user-select:text;user-select:text;}
             for(var f in ml) cur[f] = ml[f];
           } else GAME_CONFIG.milestones.push(ml);
         });
+      }
+      // AC9: the bad bugs are recipe too. The manifest may retune how often one calls,
+      // what it pays and every word it says; anything it leaves out keeps the engine's.
+      if(m.bugs && typeof m.bugs === "object"){
+        var bg = GAME_CONFIG.bug;
+        if(typeof m.bugs.everySec === "number") bg.everySec = m.bugs.everySec;
+        if(typeof m.bugs.coins === "number") bg.coins = m.bugs.coins;
+        if(m.bugs.kinds && typeof m.bugs.kinds === "object"){
+          for(var bk in m.bugs.kinds){
+            var bd0 = m.bugs.kinds[bk] || {};
+            bg.kinds[bk] = bg.kinds[bk] || { name:bk, color:"#7d8f45", where:"door" };
+            for(var bf in bd0) bg.kinds[bk][bf] = bd0[bf];
+            if(bd0.art) ART_IDS["bug_"+bk] = bd0.art;
+          }
+        }
       }
       if(m.levels && m.levels.length){
         MISSIONS = m.levels.map(function(l){ return { id:l.id, name:l.name, layout:l.layout, coins:l.coins || 10, difficulty:l.difficulty }; });
@@ -2776,6 +3296,24 @@ input,textarea{-webkit-user-select:text;user-select:text;}
                hauling:countTask(function(t){ return t && t.kind === "haul" && t.it && (t.it.kind === "leaf" || t.it.kind === "dew"); }) };
     },
     setAphids: function(on){ C.aphids = !!on; return C.aphids; },
+    // --- AC9: soldiers and the bad bug visits ---
+    soldiersOn: function(){ return soldiersUnlocked(); },
+    jobsList: function(){ return activeJobs().map(function(j){ return j.id; }); },
+    jobColor: function(id){ return jobColor(id); },
+    bug: function(){
+      var b = C.bug; if(!b) return null;
+      var def = bugDef(b.kind);
+      return { kind:b.kind, state:b.state, scare:Math.round(b.scare*100)/100,
+               fc:Math.round(b.fc*100)/100, fr:Math.round(b.fr*100)/100,
+               c:b.c, r:b.r, surface:(b.r == null), t:Math.round(b.t*10)/10,
+               name:def.name, line:def.call };
+    },
+    sendBug: function(kind){ var b = sendBug(kind); return b ? this.bug() : null; },
+    bugsSeen: function(){ return C.bugsSeen|0; },
+    bugsScared: function(){ return C.bugsScared|0; },
+    bugMark: function(){ return bugMark ? { x:Math.round(bugMark.x), y:Math.round(bugMark.y), r:Math.round(bugMark.r) } : null; },
+    looking: function(){ return (camLook != null && C.t < camLookT) ? camLook : null; },
+    guards: function(){ return countTask(function(t){ return t && t.kind === "scare"; }); },
     dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
                               jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
                               dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
@@ -2789,7 +3327,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     _art: function(){ var o = {}; for(var s in ART_IDS) o[s] = artUrl(ART_IDS[s]); return o; },
     _draw: function(){ try{ draw(); return "ok"; }catch(e){ return "ERR: " + (e && e.message || e); } },
     _save: saveNow,
-    _openAll: function(){ C.freeBuild = true; return true; },   // robot only: skip to free build
+    // robot only: skip to free build. It also closes the lesson, because a colony in
+    // free build is one that has been played, and a lesson running is one of the two
+    // things that hold a bad bug back.
+    _openAll: function(){ C.freeBuild = true; C.guided = true; if(how.on) endHow(); return true; },
     _reset: function(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} newColony(3); }
   };
   try{ window.BUILDABLE_GAME = window.ANTCITY_GAME; }catch(e){}

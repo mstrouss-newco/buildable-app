@@ -260,6 +260,56 @@
       "coins": 20,
       "aphids": true,
       "fact": "Ants really do keep aphids like tiny cows, and drink the sweet honeydew they make."
+    },
+    {
+      "id": "soldiers-15",
+      "type": "ants",
+      "n": 15,
+      "coins": 20,
+      "soldiers": true,
+      "fact": "Soldier ants really do have bigger jaws than the other ants, and they stand guard at the door of the nest."
+    },
+    {
+      "id": "bugs-5",
+      "type": "bugs",
+      "n": 5,
+      "coins": 25
     }
-  ]
+  ],
+  "bugs": {
+    "everySec": 750,
+    "coins": 8,
+    "kinds": {
+      "beetle": {
+        "name": "Beetle",
+        "art": "antcity/bug/beetle-v1",
+        "where": "store",
+        "call": "A beetle is nosing at your food store. Put an ant on Soldiers.",
+        "busy": "Your soldiers are marching over to see it off.",
+        "nap": "The beetle has settled in for a nap. One soldier would move it along.",
+        "cheer": "The beetle ran off!",
+        "gone": "The beetle scuttled off and dropped a crumb."
+      },
+      "caterpillar": {
+        "name": "Caterpillar",
+        "art": "antcity/bug/caterpillar-v1",
+        "where": "leaf",
+        "call": "A caterpillar is munching your leaf bush. Put an ant on Soldiers.",
+        "busy": "Your soldiers are marching over to see it off.",
+        "nap": "The caterpillar has curled up for a nap. One soldier would move it along.",
+        "cheer": "The caterpillar left!",
+        "gone": "The caterpillar wriggled off and dropped a crumb."
+      },
+      "grasshopper": {
+        "name": "Grasshopper",
+        "art": "antcity/bug/grasshopper-v1",
+        "where": "door",
+        "call": "A grasshopper is by the door and your foragers are hiding. Put an ant on Soldiers.",
+        "busy": "Your soldiers are marching over to see it off.",
+        "nap": "The grasshopper has dozed off by the door. One soldier would move it along.",
+        "cheer": "The grasshopper hopped off!",
+        "gone": "The grasshopper sprang away and dropped a crumb."
+      }
+    }
+  }
 }

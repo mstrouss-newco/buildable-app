@@ -53,6 +53,15 @@ Preview: `public/antcity/art/_preview.svg`. Files and the manifest IDs they fill
 | `soil-tile.svg` | `antcity/soil/sandy-v1` (tiles cleanly for the huge colony) |
 | `badge.svg` | `antcity/badge/v1` |
 
+**Done in card AC9** (the Bugs Life layer): `bug-beetle.svg`, `bug-caterpillar.svg` and
+`bug-grasshopper.svg`, filling `antcity/bug/{beetle,caterpillar,grasshopper}-v1`. Original
+generic cartoon bugs drawn in the same Style A: round bodies, big white eyes, a small
+smile, silly and never scary, and no lookalike of anything in a film. Each one has a
+hand-drawn canvas fallback in the engine (`drawBugShape`), so a missing file can never
+leave a bug invisible while the game is asking the kid to deal with it. The **soldier ant**
+is deliberately NOT a new file: it is the drawn worker a size up with a helmet and bigger
+jaws, so the ant art slot and its manifest id are untouched.
+
 **Done in card AC4** (the follow-ups above): `surface-meadow.svg`, `surface-meadow-rain.svg`,
 `surface-meadow-berry.svg`, `soil-deep.svg`, `soil-loam.svg`, `flood.svg`, `colony.svg` and
 `loading.svg`, filling the last placeholder ids. `antcity/prop/dig-marker-v1` stays DRAWN on

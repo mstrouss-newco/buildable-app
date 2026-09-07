@@ -1,3 +1,42 @@
+## 2026-09-07 — AC9: soldiers, and the bad bugs they see off (the Bugs Life layer)
+
+**Phase AC, card AC9.** Touched `public/antcity-engine.html`, `public/antcity/manifest.json`,
+three new drawn bugs in `public/antcity/art/`, `qa-antcity.mjs`, `antcity-README.md`.
+
+**Shipped.**
+
+- **A fifth job, Soldier,** in red, joining the jobs strip and the colour bar. It is hidden
+  entirely until a milestone at fifteen ants hands it over, so the early game stays calm.
+  The milestone pays coins and the queen shares the real fact about soldier ants' jaws.
+- **Rare bad bug visits.** Roughly every ten to fifteen minutes of active play, divided by
+  the difficulty dial, and never during the tutorial: free build AND the first-minute
+  lesson finished are both required. Three original cartoon bugs, drawn SVG with a drawn
+  canvas fallback: beetle (noses at the store), caterpillar (the leaf bush), grasshopper
+  (the front door).
+- **A visit pauses exactly one visible thing and takes nothing.** Storage's quick trips,
+  the bush's new leaves, or the foragers staying in. No ant, tunnel, room or crumb is ever
+  lost, and there is no timer.
+- **The answer is always on screen.** A bouncing red marker at the edge (drawn geometry,
+  never a glyph) says where, and a tap on it takes the camera there. With no soldier the
+  bug naps on the spot it is blocking and waits. One soldier always ends it in about twelve
+  seconds; the bug hops off, drops a bonus crumb and pays coins. Five seen off earns a badge.
+
+**Calls I made.** (1) The scare is deliberately NOT multiplied by the colony's pace. A
+hungry, sleepy, flooded colony still shoos a bug off in the same twelve seconds, which is
+what makes "one soldier always clears it" provable rather than probable. (2) A visit slows
+nothing globally — one visible thing pauses per visitor — because a general slowdown would
+have been a punishment wearing a costume, and it would also have quietly changed every
+existing free-build assertion. (3) Milestones are now checked every step instead of inside
+`checkMission`, which returned early in free build; without that the fifty-ant and
+five-bug rewards could never have fired at all. (4) A marching soldier holds no parked
+spot, so two idle ants standing on the only ledge can never turn it back.
+
+**QA.** `qa-antcity.mjs` grew an AC9 section: no bug ever appears during the ten missions
+or in an hour of tutorial at the liveliest difficulty; the difficulty dial really changes
+how often one calls; every kind of visit naps when unattended, never leaves on its own,
+never shrinks the colony, and is cleared by exactly ONE soldier; the marker appears and a
+tap on it moves the camera; five scares really earn the badge. `node qa-all.mjs` green.
+
 ## 2026-09-07 (FM5): the farm remembers her, grows while she is away, and always has a next thing
 
 **Phase FM, card FM5.** Mike's kids love Township, and the reason is that Township

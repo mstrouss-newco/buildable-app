@@ -212,6 +212,45 @@ Everything AC7 built is untouched underneath: one hint line, food that only arri
 an ant carries it in, ants that walk to marked targets and stand still when idle, straight
 into the colony with no picker.
 
+## Soldiers and bad bugs, the Bugs Life layer (AC9)
+
+Ant City is worker ants **and soldiers**. The soldiers exist because, every so often, a
+bad bug wanders in.
+
+**A fifth job: Soldier.** It joins the jobs strip and the colour bar wearing red, the same
+red the low meters already use for "this needs you". It is **not there at all** until the
+colony reaches about fifteen ants, so the early game stays four-job calm; the milestone
+that hands it over pops a reward and the queen shares the real science — soldier ants
+really do have bigger jaws than the other ants, and they stand guard at the door of the
+nest. A soldier is drawn as the same ant a size up, with a helmet and those bigger jaws.
+
+**A bad bug visit is a rare treat.** Roughly every ten to fifteen minutes of play, scaled
+by the difficulty dial, and **never during the tutorial** — the ten missions and the
+first-minute lesson are finished before anything comes calling. There are three original
+cartoon bugs, silly and never scary: a **beetle** that ambles down to nose at the food
+store, a **caterpillar** that munches on the leaf bush, and a **grasshopper** that plants
+itself by the front door so the foragers stay in.
+
+**A visit only ever pauses one thing you can see.** The beetle pauses the quick trips the
+storage room earns, the caterpillar stops the bush putting out new leaves, and the
+grasshopper keeps the foragers indoors. Nothing is destroyed, nothing is taken, no ant is
+lost, no store goes down and there is no timer to beat. Everything starts again the moment
+the bug goes.
+
+**The kid always knows where, and always has the answer.** A bouncing red marker at the
+edge of the screen says where it is, drawn geometry rather than a word, and tapping it
+takes the camera there. The one hint line says what to do. With **no soldier assigned** the
+bug simply settles in and **naps on the spot it is blocking**, and waits — clear cause,
+clear effect. Move one ant to Soldiers and they march over, through the tunnels if it is
+down in the colony, out of the front door if it is up top. **ONE soldier always ends it**,
+in about twelve seconds, and the robot proves that for every bug on every difficulty.
+The bug does a comic hop away, drops a bonus crumb on the meadow and pays coins through
+the shared wallet. See five off and a badge lands.
+
+The numbers (how often, what it pays, every word each bug says) live in
+`GAME_CONFIG.bug` and in `public/antcity/manifest.json`, so the recipe can retune the
+visits, or add a fourth visitor, without touching the engine.
+
 ## The colony builder loop (grow it huge)
 
 Ant City is a kid-simple colony builder. The feel is a friendly ant version of a

@@ -305,6 +305,42 @@ check('the job mix line is on screen in kid words', chain.mix.length > 8 && !/\d
 check('the panel says what the mix is doing', (await page.textContent('#barMix')).length > 8, await page.textContent('#barMix'));
 await page.screenshot({ path: path.join(OUT, 'antcity-7-chains.png') });
 
+// --- AC9: a bad bug calls, and one soldier sees it off ------------------------
+// The rules are proved headlessly in qa-antcity.mjs. What can only be checked here is
+// whether the visitor reads as silly rather than scary, whether the red marker is
+// findable, and whether a soldier looks like a soldier next to a worker.
+console.log('');
+for (const kind of ['beetle', 'caterpillar', 'grasshopper']) {
+  const sent = await page.evaluate((k) => {
+    ANTCITY_GAME._openAll();
+    ANTCITY_GAME.assign('soldier', 0);
+    const b = ANTCITY_GAME.sendBug(k);
+    ANTCITY_GAME.seconds(200);                 // long enough that it has settled and napped
+    return { bug: ANTCITY_GAME.bug(), sent: b };
+  }, kind);
+  await page.waitForTimeout(500);
+  check(`a ${kind} turns up and naps with nobody on Soldiers`,
+    !!sent.bug && sent.bug.state === 'nap', JSON.stringify(sent.bug));
+  const mark = await page.evaluate(() => ANTCITY_GAME.bugMark());
+  check(`the red marker says where the ${kind} is`, !!mark && mark.r > 0, JSON.stringify(mark));
+  await page.screenshot({ path: path.join(OUT, `antcity-10-bug-${kind}.png`) });
+  const done = await page.evaluate(() => {
+    ANTCITY_GAME.assign('soldier', 1);
+    let t = 0, marched = false;
+    while (ANTCITY_GAME.bug() && t < 90) { ANTCITY_GAME.seconds(1); t++; if (ANTCITY_GAME.guards() > 0) marched = true; }
+    return { t, marched, left: ANTCITY_GAME.bug(), scared: ANTCITY_GAME.bugsScared() };
+  });
+  check(`one soldier marches over and sees the ${kind} off`,
+    done.marched && !done.left && done.t < 90, `${done.t}s`);
+}
+// the soldiers themselves, standing guard with nothing to see off
+await page.evaluate(() => { ANTCITY_GAME.assign('soldier', 4); ANTCITY_GAME.seconds(10); });
+await page.waitForTimeout(500);
+check('the fifth job is on the strip', (await page.evaluate(() => ANTCITY_GAME.jobsList())).length === 5);
+await page.evaluate(() => { const t = document.getElementById('jobsToggle'); if (t) t.click(); });
+await page.waitForTimeout(400);
+await page.screenshot({ path: path.join(OUT, 'antcity-11-soldiers.png') });
+
 // the ? button replays the guide, and it does not block play
 await page.evaluate(() => ANTCITY_GAME.showHow());
 await page.waitForTimeout(400);

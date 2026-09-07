@@ -6,6 +6,44 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AC9 — Ant City: soldiers, and the bad bugs they see off (September 7 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/bug-*.svg`
+(new), `qa-antcity.mjs`, `antcity-README.md`. Phase **AC**, card **AC9**, branch
+`claude/soldiers-bad-bugs-layer-auaxjj`.
+
+Ant City is worker ants **and soldiers** now, and the soldiers exist because a bad bug
+occasionally wanders in. The whole layer is additive: the AC8 smart bar, the one hint line,
+carried food and ants that walk to marked targets are all untouched underneath.
+
+**A fifth job.** Soldier, in red — the same red the low meters use for "this needs you".
+It is not on the strip at all until the colony reaches about fifteen ants, so the early
+game stays four-job calm, and the milestone that hands it over pays coins and lets the
+queen share the real science: soldier ants really do have bigger jaws, and they guard the
+door. A soldier is the same drawn ant a size up, with a helmet and those jaws.
+
+**A visit is a rare treat.** Roughly every ten to fifteen minutes of play, scaled by the
+difficulty dial, and never in the tutorial: the ten missions AND the first-minute lesson
+have to be finished first. Three original cartoon bugs, silly and never scary, each drawn
+as an SVG with a hand-drawn canvas fallback behind it: a beetle that noses at the food
+store, a caterpillar on the leaf bush, a grasshopper by the front door.
+
+**It pauses one thing you can see, and takes nothing.** The beetle pauses the storage
+room's quick trips, the caterpillar stops the bush growing new leaves, the grasshopper
+keeps the foragers in. No ant, tunnel, room or crumb is ever lost and there is no timer.
+A bouncing red marker at the screen edge (drawn geometry, no glyph) says where, and tapping
+it takes the camera there. With nobody on Soldiers the bug settles in and **naps on the
+spot it is blocking** until the kid moves an ant across — and **one soldier always ends
+it**, in about twelve seconds, because the scare is deliberately not scaled by the colony's
+pace. The bug hops away, drops a bonus crumb and pays coins; five seen off earns a badge.
+
+Two engine notes worth keeping: milestones are now checked every step rather than inside
+the mission check, which used to return early in free build and so could never fire the
+grown-colony rewards; and a marching soldier does not take a parked spot, so two idle ants
+standing where it needs to be can never turn it back. `qa-antcity.mjs` grew a section that
+proves every kind of visit is resolvable by exactly one soldier at both ends of the
+difficulty dial, that nothing shrinks the colony, and that no bug ever reaches the ten
+missions. `node qa-all.mjs` green. Ref: SESSION-LOG.md same date.
+
 ## PB-FIX — Paper Route: a bar that fits the phone, and a game that points (September 7 2026)
 
 Mike played the shipped game on his phone and hit two things that made it unclear. Both

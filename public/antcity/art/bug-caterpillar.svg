@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 48">
+  <!-- Ant City: a silly, original cartoon caterpillar. A wobbly line of green blobs, munching. -->
+  <g stroke="#4f7a2b" stroke-width="2.2" stroke-linecap="round">
+    <path d="M20 34 L17 43" fill="none"/><path d="M32 36 L30 45" fill="none"/><path d="M44 34 L46 43" fill="none"/><path d="M56 32 L59 41" fill="none"/>
+  </g>
+  <circle cx="20" cy="28" r="9" fill="#8fc44f" stroke="#4f7a2b" stroke-width="2.2"/>
+  <circle cx="33" cy="30" r="9.5" fill="#9fce5c" stroke="#4f7a2b" stroke-width="2.2"/>
+  <circle cx="46" cy="28" r="9" fill="#8fc44f" stroke="#4f7a2b" stroke-width="2.2"/>
+  <circle cx="58" cy="24" r="10.5" fill="#a8d768" stroke="#4f7a2b" stroke-width="2.4"/>
+  <g stroke="#4f7a2b" stroke-width="2" stroke-linecap="round">
+    <path d="M55 15 L52 7" fill="none"/><path d="M63 15 L67 8" fill="none"/>
+  </g>
+  <circle cx="52" cy="7" r="2.2" fill="#4f7a2b"/><circle cx="67" cy="8" r="2.2" fill="#4f7a2b"/>
+  <circle cx="55" cy="22" r="3.4" fill="#fff8ec"/><circle cx="63" cy="22" r="3.4" fill="#fff8ec"/>
+  <circle cx="56" cy="23" r="1.7" fill="#241505"/><circle cx="64" cy="23" r="1.7" fill="#241505"/>
+  <path d="M56 29 q4 3 8 -1" stroke="#4f7a2b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</svg>
