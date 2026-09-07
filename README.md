@@ -6,6 +6,7 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+<<<<<<< HEAD
 ## The tile shots go live (September 7 2026)
 `src/BuildableKids.jsx`, `scripts/tile-shot.mjs`, `public/tile-shots/`
 
@@ -25,6 +26,86 @@ Tennis and Riley's Garden deliberately keep their paintings — their photos are
 See the comment above `TILE_SHOTS` for why and how to switch them on.
 
 ---
+=======
+## AC9 — Ant City: soldiers, and the bad bugs they see off (September 7 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/bug-*.svg`
+(new), `qa-antcity.mjs`, `antcity-README.md`. Phase **AC**, card **AC9**, branch
+`claude/soldiers-bad-bugs-layer-auaxjj`.
+
+Ant City is worker ants **and soldiers** now, and the soldiers exist because a bad bug
+occasionally wanders in. The whole layer is additive: the AC8 smart bar, the one hint line,
+carried food and ants that walk to marked targets are all untouched underneath.
+
+**A fifth job.** Soldier, in red — the same red the low meters use for "this needs you".
+It is not on the strip at all until the colony reaches about fifteen ants, so the early
+game stays four-job calm, and the milestone that hands it over pays coins and lets the
+queen share the real science: soldier ants really do have bigger jaws, and they guard the
+door. A soldier is the same drawn ant a size up, with a helmet and those jaws.
+
+**A visit is a rare treat.** Roughly every ten to fifteen minutes of play, scaled by the
+difficulty dial, and never in the tutorial: the ten missions AND the first-minute lesson
+have to be finished first. Three original cartoon bugs, silly and never scary, each drawn
+as an SVG with a hand-drawn canvas fallback behind it: a beetle that noses at the food
+store, a caterpillar on the leaf bush, a grasshopper by the front door.
+
+**It pauses one thing you can see, and takes nothing.** The beetle pauses the storage
+room's quick trips, the caterpillar stops the bush growing new leaves, the grasshopper
+keeps the foragers in. No ant, tunnel, room or crumb is ever lost and there is no timer.
+A bouncing red marker at the screen edge (drawn geometry, no glyph) says where, and tapping
+it takes the camera there. With nobody on Soldiers the bug settles in and **naps on the
+spot it is blocking** until the kid moves an ant across — and **one soldier always ends
+it**, in about twelve seconds, because the scare is deliberately not scaled by the colony's
+pace. The bug hops away, drops a bonus crumb and pays coins; five seen off earns a badge.
+
+Two engine notes worth keeping: milestones are now checked every step rather than inside
+the mission check, which used to return early in free build and so could never fire the
+grown-colony rewards; and a marching soldier does not take a parked spot, so two idle ants
+standing where it needs to be can never turn it back. `qa-antcity.mjs` grew a section that
+proves every kind of visit is resolvable by exactly one soldier at both ends of the
+difficulty dial, that nothing shrinks the colony, and that no bug ever reaches the ten
+missions. `node qa-all.mjs` green. Ref: SESSION-LOG.md same date.
+
+## PB-FIX — Paper Route: a bar that fits the phone, and a game that points (September 7 2026)
+
+Mike played the shipped game on his phone and hit two things that made it unclear. Both
+are fixed, and neither touched the look.
+
+**The top bar overflowed the phone.** The four chips (Maple Street, Papers, Delivered,
+Coins) did not fit 390px once the app shell had taken a column off each end for Home and
+Sound, so the coin count was cut off the right edge and the street name was clipped on the
+left. This is the shared `buildable-hud.js`, so the fix is shared too: the numbers group
+now never shrinks and never clips, it wins the space fight and stays right-aligned so the
+last chip is always whole, and the title is the thing that gets trimmed instead. There is
+a new small-phone tier below 430px, and the shared HUD learned an icon-plus-number chip
+(drawn geometry, no emoji), so on a phone Paper Route shows a paper icon and 12, a mailbox
+icon and 0/6, and the gold coin and the balance. Measured, not guessed: at 320, 390 and
+430 CSS pixels, standalone and inside the shell's iframe, everything sits on one row and
+the whole coin count is on screen.
+
+**Nothing told a four-year-old what to do.** The game now points. A big bouncing yellow
+arrow floats above the next undelivered subscriber mailbox, clear of the flag rather than
+over it, and retargets as each paper lands. A pulsing gold ring wraps that mailbox once it
+is inside throw range, so the tap timing teaches itself. A short "Tap to throw!" sits above
+the rider until two papers have landed, then never appears again on that device. And the
+red flags, which read small and far, are drawn deliberately out of scale: the target flag
+is biggest, every raised flag gets a dark edge and a pale halo, so it never disappears into
+the house behind it. These are overlays only. No timers, no fail states, the no-fail law
+is untouched.
+
+**QA.** `qa-paper-route.mjs` now rides the whole street frame by frame and proves the arrow
+exists on every frame a red flag is still owed, never points behind the rider, never leaves
+the screen, and that the gold ring appears exactly when a tap would reach the box. It also
+proves the nudge retires at the second landed paper and stays retired. The bar itself needs
+real CSS layout at a real phone width, so it gets its own browser harness,
+`qa-paper-route-hud.mjs`, modelled on `qa-skyflyer-hud.mjs`: it serves `public/` itself,
+opens the engine in Chromium at 320/390/430 both standalone and in an iframe, and measures
+every chip against the canvas. It is kept separate on purpose, because a harness containing
+the word "playwright" is skipped by `qa-all.mjs` unless `--with-browser` is passed, and
+folding it into `qa-paper-route.mjs` would have dropped the whole game out of the default
+gate.
+
+The `soon: true` gate on the tile is untouched.
+>>>>>>> origin/main
 
 ## TS1-TS3 — the whole catalogue gets a real tile shot (September 7 2026)
 `scripts/tile-shot.mjs`, `public/tile-shots.html`, `public/tile-shots/`
@@ -221,6 +302,41 @@ Paper Route is now in the editor catalog and in `qa/qa-map.mjs`, so editing its 
 through the editor and a save is gated by its own robot. QA: 113 checks green, `node
 qa-all.mjs` green, both streets played in real Chromium. Not flagged deployed: the live
 phone check could not run from this session. Ref: SESSION-LOG.md same date.
+
+## AC8 — Ant City: one smart bar, and a Build menu made of pictures (September 7 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`.
+Phase **AC**, card **AC8**, branch `claude/ac7-clarity-rework-antcity-bqkazl`.
+
+Mike picked Option C from the HUD mock. The rule for every element: **assume the player
+cannot read.** Information is bars, icons, pictures and countable things; words are tiny
+labels on top of pictures, never the message.
+
+**One slim bar** replaces the row of need words over the row of word buttons. On the left,
+four little vertical meters with a picture each — a green apple, a blue drop, a pink moon,
+a gold egg — and the one running out wiggles and wears a small red tag, so the thing that
+needs you is the thing that moves. In the middle, one big button carrying the tool in your
+hand: its picture, its name, and two or three words saying where to use it. On the right, a
+round button that opens a sheet of four picture cards and hides again the moment one is
+picked.
+
+**The tool really decides now.** The oldest confusion in this game was that a tap could
+mean four things and nothing said which. The big button states it at all times, and a tap
+in the wrong place is never silent: it says which picture to swap to. The guide teaches the
+swap, because it is the one genuinely new thing to learn — tap the round button, then pick
+the apple — so the intro is four steps instead of three.
+
+**The Build menu is pictures.** Four cards in a 2x2 grid, each a little scene of what the
+room does: eggs in a pink room, a pile of berries, an ant asleep under a Zz, mushrooms
+growing. What a room costs is a row of apples to count, not a number to read; a room you
+cannot afford greys out and flashes its apples; closing is a big orange X. Picking a room
+still lights up every spot it could go, exactly as AC7 left it.
+
+Presentation only: one hint line, food that only arrives when an ant carries it in, ants
+that walk to marked targets and park when idle, and straight into the colony are all
+untouched. QA drives the new controls the way a kid does — press the round button, press a
+picture card, then tap the world — in both a mouse and a touch profile, and asserts the old
+text row is gone, that the cost is countable apples, and that nothing spills off a 360px
+phone. `node qa-all.mjs` green. Ref: SESSION-LOG.md same date.
 
 ## AC7 — Ant City clarity rework: see what you do, know what to do (September 7 2026)
 `public/antcity-engine.html`, `public/antcity/manifest.json`, `qa-antcity.mjs`,
@@ -3384,6 +3500,12 @@ with the owner before large changes, commit to `main`, and log every change in t
 session log below. **Never click "Create a New Game" / "Publish my game" in the live UI,
 and never handle API keys / billing Ã¢ÂÂ surface those to the owner.**
 
+
+## The Farm: a pumpkin, a farm dog and a field that grows (September 7 2026)
+**NOT a card, and NOT on main.** Built as "FM6" against a scope chosen from options, because at the time no FM6 card and no FM6 plan doc were reachable from the sandbox. The planner has since gained the real FM6 (the Quaternius island), FM7 (crops, pig, bees, mill, dairy, watering can, decorating) and FM8 (helpers, customers, sticker book), and this is none of them end to end. It sits on branch `claude/farm-pumpkin-dog-fieldrow`; the pumpkin belongs to FM7, the dog to FM8, and the growable-field plumbing to FM6, and all three cards now carry a note saying where it is. FM5 shipped the unlock ladder with hollow boxes; these three are things now. They had to be built IN ORDER, because the shop only ever shows the next present. (1) THE PUMPKIN SEED, 130 — a fourth crop and the best thing in the field: dearest seed at 10, slowest at 46s (still under a minute), and worth 10, so it is the biggest single thing an order can name. It only appears in the seed pop-up once the present is opened, and `producibleNow()` now gates a crop on whether she may actually PLANT it, so an order can never name a pumpkin while there is no seed for one. The pop-up is built from what she owns rather than a fixed three, and four buttons go two by two on a phone. (2) THE FARM DOG, 180 — a companion who tidies up after her and is deliberately NOT an autoplayer: he only goes for something that has sat ready ten seconds AND is over seven units from her, he carries one thing at a time, and he trots at 4.6 against her 6.4 so she can always beat him to it. He ignores fences, because a dog goes under a rail. What is in his mouth rides home in the saved stack. (3) THE SECOND FIELD ROW, 240 — three more patches added to the SOUTH so nothing she planted moves; the fence comes down and goes back up around the bigger field, and a blocker now remembers its owner so the coop's and the pen's are never disturbed. `applyUnlock()` is the one door and it is idempotent; a save applies every opened present BEFORE the field is filled in. Opening a present now changes the farm WITH the confetti, and one with a real thing in it hands over the thing instead of FM5's coins back. THE MODEL STAND EARNED ITS KEEP AGAIN: the pumpkin's first turn was a round orange with its ribs hidden inside the skin, and the dog's was a bear cub with no muzzle; both were rebuilt before anything went into the world, and the basket, present, pumpkin and dog all joined `?zoo=1`. `qa-farm.mjs` 195 checks green (run twice), `qa-skyflyer.mjs` 757 green (+17 FM6 static), `node qa-all.mjs` green. Cache-bust `?v=fm5` -> `?v=fm6`. Note for the next session: do NOT run `qa-farm.mjs` and `qa-all.mjs` at the same time — two chromium instances on the software rasteriser starve each other and both go flaky. Also this session: FM5 merged to main (`ae4fffd`), and Row Level Security turned ON for `farm_saves` (Mike's call, verified — the service key still writes, the public key no longer can).
+
+## The Farm remembers her — save, away-time growth, never idle, one present at a time (September 7 2026)
+**Phase FM, card FM5 — the Township lessons.** The farm forgot everything on reload, so nothing else in the plan could stick. Four things: (1) THE WHOLE FARM SAVES PER KID — patches, animals, the carried stack, the pantry, the live order, orders done, the duck and the presents she has opened, as one JSON blob in a new `farm_saves` table through a new `/api/farm-save` (migration `db/create-farm-save.sql` written AND applied this session). Best-effort and silent: local first, cloud after, debounced off a state signature, flushed on `pagehide` with `sendBeacon`, and it never writes before it has read. NO RESET a child can reach. Growth is stored as seconds-left, never a wall clock. (2) IT GROWS WHILE SHE IS AWAY — a deterministic catch-up capped by its own shape (a field cannot be more than fully ready; a fed animal gives one thing), and after ten minutes away a WELCOME-BACK BASKET sits by the door holding what finished, its contents turning over the rim in colour. Walk to it and the lot whooshes onto the stack on the FM3 unload treatment. Nothing else on the farm moves until she reaches it. (3) NEVER IDLE — `whatCanSheDoNow()` counts what she could do this second and the farm quietly finishes whatever is closest to done if that would ever hit zero; an order may now only name a kind the farm can actually make today. No timers on screen, still. (4) THE NEXT THING IS ALWAYS VISIBLE — a fixed ladder of eight presents shown one at a time as a wrapped box with its price under it: pumpkin seed 130, farm dog 180, second field row 240, pig 300, mill 380, bees 460, strawberry seed 560, tractor 700. Six are built in FM6 to FM8; until then opening one marks the unlock hers and hops a third of the coins back out (Mike's call). The reveal is the biggest celebration in the game: confetti, the plane over the top, the thing hopping out of the box. Plus a celebration pass — soil puff on planting, a chime the moment a crop is takeable, hearts over a fed animal, a sparkle when an egg lands, all under half a second and all through the shared Feel Kit. `qa-farm.mjs` 159 checks green (it reloads the page for real, and the whole block ran with the cloud unreachable), `qa-skyflyer.mjs` +27 static (738 green), new `qa-farm-shot.mjs` picture gate, `node qa-all.mjs` green. Cache-bust `?v=fm4` -> `?v=fm5`. FLAGGED: Row Level Security is off on `farm_saves` — enabling it without policies would lock the farm out of its own data, so it is Mike's call.
 
 ## Demo hand: keep it visible + roll out to Bubble (July 3 2026)
 Owner noticed the wordless pointing-hand tutorial felt missing in Breaker and absent from several games. Audit: the shared 3D hand (BR.hand, /tutorial-hand.png via buildable-renders.js) was live in 8 games (breaker, croc, maze, mahjong, castle-guard, survival, tennis, string-match) but the Breaker hint only showed before the first tap, so it flashed by in real play. Two changes: (1) Breaker now keeps the hand on the paddle for ~3.2s after the first launch (follows padX, fades out, no dark overlay) — drawn at 0.9 scale so it fits above the bottom edge; the pre-launch tutorial is unchanged. (2) Added the hand to Bubble Buddies (bubble-engine.html): it swings in the open play area with a "Drag to aim, let go to pop!" line until the first shot, then fades ~2.6s after. Both verified on the live deploy (bot-launched Breaker shows the paddle finger; Bubble shows the swinging finger + text). Scoped to public/breaker-engine.html, public/bubble-engine.html. Remaining games without the hand: runner (has arrow hints), sling, tanks, tetris, and the board/turn games.

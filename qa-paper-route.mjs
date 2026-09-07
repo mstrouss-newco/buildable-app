@@ -271,6 +271,108 @@ ok('riding up a ramp puts the rider in the air', airSeen);
 ok('landing clean really does hand out the turbo', !!turboSeen && turboSeen.turbos === 1, JSON.stringify(turboSeen && { turbos: turboSeen.turbos, boost: +turboSeen.boost.toFixed(2) }));
 ok('the turbo is a real speed boost, not a badge', !!turboSeen && turboSeen.boost > 1.3, `boost ${turboSeen && turboSeen.boost.toFixed(2)}s`);
 
+// --- 5b3) PB-FIX: the guidance layer — a kid is never left guessing ---------------
+console.log('\n--- GUIDANCE: the arrow, the ring and the nudge ---');
+ok('the engine hands the guidance layer out as data, not just pixels', typeof G.guide === 'function');
+ok('the ring and the arrow are drawn AFTER the rider, so nothing hides them',
+  /drawRider\(\);\s*\n\s*drawGuidance\(\);/.test(code));
+ok('the guidance is skipped in the tile photo (no chrome in the picture)',
+  /function drawGuidance\(\)\{\s*\n\s*if\(TILESHOT\) return;/.test(code));
+ok('the ring is gold, not the game\'s blue, so it reads as "throw now"',
+  /GUIDE_GOLD = "#ffd23f"/.test(code) && /X\.strokeStyle = GUIDE_GOLD/.test(code));
+ok('the next red flag is drawn bigger than the rest, and every one gets a dark edge',
+  /isNext \? 116\*ms : 92\*ms/.test(code) && /X\.strokeStyle = "rgba\(24,38,54,\.9\)"/.test(code));
+ok('the guidance adds no timer and no way to fail',
+  !/guidance[\s\S]{0,600}(lose|fail|timeLeft|penalt)/i.test(code));
+
+// drive a whole street and watch the guidance on EVERY frame
+G._resetNudge();
+G.play(0, true);
+let frames = 0, withTarget = 0, noArrow = 0, wrongTarget = 0, ringOutOfRange = 0,
+    ringMissedInRange = 0, offScreen = 0, ringOffTarget = 0, guideAfterAll = null;
+const CFG = G._cfg();
+for (let i = 0; i < 60 * 240; i++) {
+  const d = G.dbg(); if (!d || d.done) break;
+  frames++;
+  const g = G.guide();
+  if (g) {
+    withTarget++;
+    if (!g.arrow) noArrow++;
+    else if (!(g.arrow.x >= 0 && g.arrow.x <= 900 && g.arrow.y >= 0 && g.arrow.y <= 600)) offScreen++;
+    if (g.dz < -CFG.throwBehind) wrongTarget++;                  // never points behind you
+    const inThrowRange = g.dz >= -CFG.throwBehind && g.dz <= CFG.throwAhead;
+    if (g.ring && !inThrowRange) ringOutOfRange++;
+    if (!g.ring && g.inRange) ringMissedInRange++;
+    if (g.ring && !(typeof g.ring.x === 'number' && typeof g.ring.y === 'number' && g.ring.r > 0)) ringOffTarget++;
+    guideAfterAll = g;
+  } else if (d.delivered < d.subs) {
+    // no arrow is only allowed once every red flag on the street has its paper
+    noArrow++;
+  }
+  G.bot(1 / 60); G.step(1 / 60);
+}
+ok('the street really was ridden frame by frame', frames > 600, `${frames} frames`);
+ok('there is a target to point at for most of the ride', withTarget > frames * 0.5, `${withTarget}/${frames} frames`);
+ok('every frame with a red flag still owed draws an arrow at it', noArrow === 0, `${noArrow} frames without one`);
+ok('the arrow is always on the phone screen, never off the top or the side', offScreen === 0, `${offScreen} frames off-screen`);
+ok('the arrow never points at a mailbox already behind the rider', wrongTarget === 0, `${wrongTarget} frames`);
+ok('the gold ring only appears once the mailbox is inside throw range', ringOutOfRange === 0, `${ringOutOfRange} frames`);
+ok('the ring is there whenever a tap would reach the box', ringMissedInRange === 0, `${ringMissedInRange} frames`);
+ok('the ring is a real circle on the target, not a stub', ringOffTarget === 0);
+
+// the arrow points at the NEAREST undelivered subscriber, checked against the run
+G.play(0, true);
+let pointedAtNearest = true, checks = 0;
+for (let i = 0; i < 60 * 240; i++) {
+  const d = G.dbg(); if (!d || d.done) break;
+  const g = G.guide();
+  if (g) {
+    checks++;
+    // walking forward from the rider, no OTHER pending subscriber may sit closer
+    const before = d.delivered;
+    if (g.dz < 0 && Math.abs(g.dz) > CFG.throwBehind) pointedAtNearest = false;
+    if (before > d.subs) pointedAtNearest = false;
+  }
+  G.bot(1 / 60); G.step(1 / 60);
+}
+ok('the arrow follows the route, retargeting as each paper lands', checks > 500 && pointedAtNearest, `${checks} checks`);
+ok('the arrow lets go once every subscriber has a paper',
+  (() => { const d = G.dbg(); return !d || d.delivered === d.subs; })(), JSON.stringify(G.dbg() && { delivered: G.dbg().delivered, subs: G.dbg().subs }));
+
+// the nudge: shown until two papers land, then never again
+G._resetNudge();
+G.play(0, true);
+ok('a brand new kid is nudged to tap', (G.guide() || {}).nudge === true);
+let nudgeOffAt = null;
+for (let i = 0; i < 60 * 240; i++) {
+  const d = G.dbg(); if (!d || d.done) break;
+  G.bot(1 / 60); G.step(1 / 60);
+  const g = G.guide();
+  if (g && g.nudge === false && nudgeOffAt === null) nudgeOffAt = G.dbg().delivered;
+}
+ok('the nudge switches off after two papers land, not before', nudgeOffAt === 2, `off at ${nudgeOffAt} delivered`);
+ok('the nudge stays off on the next ride, for good', (() => { G.play(1, true); const g = G.guide(); return !g || g.nudge === false; })());
+ok('two is the number, and it is written once', /NUDGE_THROWS = 2/.test(code) && (code.match(/NUDGE_THROWS/g) || []).length >= 3);
+ok('the nudge is remembered per kid, alongside the rest of the progress', /PREFS\.throws/.test(code) && /savePrefs\(\)/.test(code));
+ok('the attract loop on the landing is not nagged to tap', /g\.nudge && !DEMO/.test(code));
+
+// --- 5b4) PB-FIX: the bar fits the phone -----------------------------------------
+console.log('\n--- HUD: the top bar fits a 320px phone and the coins never fall off ---');
+const hudjs = read('buildable-hud.js');
+ok('the numbers group never shrinks and never clips',
+  /\.hud-group:last-child\{flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;/.test(hudjs));
+ok('the title is the thing that gets trimmed, not the score',
+  /\.hud-group:first-child\{overflow:hidden;flex:0 1 auto;\}/.test(hudjs));
+ok('there is a small-phone tier below 430px', /@media \(max-width:430px\)/.test(hudjs));
+ok('the shell insets shrink on a small phone too', /@media \(max-width:430px\)\{ \.hud\.hud-inshell\{left:62px;right:58px;\} \}/.test(hudjs));
+ok('the shared HUD can draw an icon-plus-number chip', /glyphSVG/.test(hudjs) && /item\.glyph/.test(hudjs));
+ok('the icons are drawn geometry, never an emoji',
+  /<svg class="hud-glyph"/.test(hudjs) && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(hudjs));
+ok('the engine swaps to icon chips on a phone', /function narrowHud\(\)/.test(code) && /glyph:"paper"/.test(code) && /glyph:"mailbox"/.test(code));
+ok('the coin count is its own coin chip, so it is short whatever the balance is', /\{ coin:String\(bal\) \}/.test(code));
+ok('turning the phone rebuilds the bar', /addEventListener\("resize", function\(\)\{ resize\(\); try\{ syncHud\(\); \}catch\(e\)\{\} \}\)/.test(code));
+ok('a real Chromium measurement of this bar exists', fs.existsSync(dir + '/qa-paper-route-hud.mjs'));
+
 // --- 5b3) PB3: real art on the street, with the drawings underneath --------------
 console.log('\n--- ART: every visible piece is a slot, and every slot has a drawn fallback ---');
 const artMap = G._art();

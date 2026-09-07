@@ -31,6 +31,352 @@ tile size. Caught before it shipped, not after.
 
 **QA.** `node qa-all.mjs`: ALL CHECKS PASS. The app also builds clean, and the built bundle
 carries the new paths.
+## 2026-09-07: the pumpkin, the farm dog and a growable field
+
+**NOT a card. Read this first.** This work was built as "FM6" against a scope Mike
+picked from options I offered, because at the time **no FM6 card existed and no FM6
+plan doc was reachable** from this sandbox. While it was being built, the planner
+gained real FM6, FM7 and FM8 cards, and they are different: FM6 is the Quaternius
+island, FM7 is crops and buildings and the watering can, FM8 is helpers and the
+sticker book. So **nothing here is ticked off**, and it sits on its own branch,
+`claude/farm-pumpkin-dog-fieldrow`, off `main`. What it built maps onto the real
+cards like this, and each of those cards now carries a note saying so:
+
+| built here | belongs to |
+|---|---|
+| the pumpkin, end to end | FM7 (one of its four new crops) |
+| the farm dog | FM8 (its first helper) |
+| a growable field and the plumbing for it | FM6 (its buyable land, 3x3 to 5x5) |
+
+Touched `public/skyflyer-farm.html`, `db/create-farm-save.sql`,
+`src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-farm-shot.mjs`, `qa-skyflyer.mjs`.
+
+### The pumpkin seed, 130
+A fourth crop, and the best thing in the field: the dearest seed at 10, the slowest at
+46 seconds (still comfortably under a minute), and worth 10 when the crate asks for one,
+which makes it the biggest single thing an order can name. A seed still costs exactly
+what its crop is worth, which is the rule FM4 set.
+
+It appears in the seed pop-up only once the present is opened, and `producibleNow()`
+now gates a crop on whether she may actually PLANT it — so an order can never name a
+pumpkin while there is no seed for one. The robot force-feeds a pumpkin into the pantry
+and then rolls sixty orders to prove it, which is the harshest version of that check.
+
+The pop-up itself is built from what she owns rather than from a fixed list of three,
+so FM8's strawberry needs no new code. Four buttons go across on a tablet and two by two
+on a phone rather than shrinking into pictures too small to tell apart.
+
+### The farm dog, 180
+A companion who tidies up after her, and **deliberately not an autoplayer**. A dog that
+fetched everything the moment it arrived would leave a child with nothing to walk to,
+which is the exact opposite of what FM5's never-idle rule protects. So he only goes for
+something that has sat ready for ten seconds AND is more than seven units from where she
+is; he carries one thing at a time; and he trots at 4.6 against her 6.4, so she can
+always beat him to it. He ignores the fences, because a dog goes under a rail and giving
+him a pathfinder to solve a problem a dog does not have would be silly.
+
+Whatever is in his mouth rides home inside the saved stack, so a save can never lose it.
+
+One real bug the robot caught: his easing had no floor under it, so the last hand-width
+took forever and he crept toward a ready crop 0.9 units away without ever reaching it.
+The step now has a floor and never overshoots.
+
+### The second field row, 240
+Three more patches, added to the SOUTH so that not one crop she already planted moves an
+inch. The fence comes down and goes back up around the bigger field. To make that safe,
+a blocker now remembers who put it there, so the field's fence can be replaced without
+disturbing the coop's or the cow pen's. Growing the field is idempotent, because it runs
+both when the present is opened and on every load of a save that already has it.
+
+### The order these three land in
+`applyUnlock()` is the one door, and a save applies every opened present BEFORE the field
+is filled in — the second row has to exist before the patches in it can be restored into
+it. Opening a present now changes the farm WITH the confetti rather than after it, and a
+present with a real thing in it hands over the thing instead of FM5's coins back.
+
+### The picture gate caught both new models
+The pumpkin and the dog each failed their first turn on the model stand (`?zoo=1`), which
+is exactly what that stand is for and the same rule that caught FM2's cow reading as a
+pig. The pumpkin was a round ORANGE: near enough spherical, with its ribs tucked entirely
+inside the skin where nobody could see them, and a cone on top that read as a party hat.
+It is now flat and wide with eight ribs standing proud of the body, a short fat stalk and
+a flat leaf. The dog was a BEAR CUB: head too big and sitting straight on the body, muzzle
+the same colour as everything else so it vanished, ears that did not read, and a tail
+standing up like an aerial. It is now a long low body, a smaller head on a neck, a pale
+muzzle sticking out in front, big ears down the sides and a short thick tail curled over
+its back. The basket, the present, the pumpkin and the dog all joined the stand so a later
+session judges them instead of guessing, and the wish-list card is hidden while the stand
+is up — it was sitting on top of the two models the stand existed to judge.
+
+### QA
+`qa-farm.mjs` is **195 checks, all green**, run twice. New FM6 block on its own page:
+the pumpkin bought through the shop for real coins (because "the box gives you the thing"
+is the whole point of the ladder and a test that called applyUnlock directly would never
+have checked it), the field going nine to twelve with the old nine unmoved and the fence
+regrown around them, the dog leaving a fresh crop alone and fetching a forgotten one, and
+all three surviving a reload. `qa-skyflyer.mjs` is **757 green** with 17 new FM6 static
+assertions. `node qa-all.mjs` green.
+
+**One honest note on the harness:** running `qa-farm.mjs` and `qa-all.mjs` at the same
+time makes both flaky — two chromium instances on the software rasteriser starve each
+other and a twenty-second wait blows. Run them one after the other.
+
+### Also this session
+- **FM5 was merged to `main`** (commit `ae4fffd`) on Mike's say-so after he saw the four
+  renders, and Vercel picked it up. Nothing in this sandbox can reach the live site, so
+  the deploy is unverified from here.
+- **Row Level Security is now ON for `farm_saves`**, Mike's call, applied and verified:
+  the service key still reads and writes past it and the public anon key no longer can.
+  `db/create-farm-save.sql` records it.
+- **One probe row is left in `farm_saves`** with `kid_profile_id = 'rls-probe-fm6'`, from
+  proving the service key still writes with RLS on. It can never match a real kid. The
+  guardrails forbid a DELETE, so it is left for Mike:
+  `delete from public.farm_saves where kid_profile_id = 'rls-probe-fm6';`
+
+## 2026-09-07 — AC9: soldiers, and the bad bugs they see off (the Bugs Life layer)
+
+**Phase AC, card AC9.** Touched `public/antcity-engine.html`, `public/antcity/manifest.json`,
+three new drawn bugs in `public/antcity/art/`, `qa-antcity.mjs`, `antcity-README.md`.
+
+**Shipped.**
+
+- **A fifth job, Soldier,** in red, joining the jobs strip and the colour bar. It is hidden
+  entirely until a milestone at fifteen ants hands it over, so the early game stays calm.
+  The milestone pays coins and the queen shares the real fact about soldier ants' jaws.
+- **Rare bad bug visits.** Roughly every ten to fifteen minutes of active play, divided by
+  the difficulty dial, and never during the tutorial: free build AND the first-minute
+  lesson finished are both required. Three original cartoon bugs, drawn SVG with a drawn
+  canvas fallback: beetle (noses at the store), caterpillar (the leaf bush), grasshopper
+  (the front door).
+- **A visit pauses exactly one visible thing and takes nothing.** Storage's quick trips,
+  the bush's new leaves, or the foragers staying in. No ant, tunnel, room or crumb is ever
+  lost, and there is no timer.
+- **The answer is always on screen.** A bouncing red marker at the edge (drawn geometry,
+  never a glyph) says where, and a tap on it takes the camera there. With no soldier the
+  bug naps on the spot it is blocking and waits. One soldier always ends it in about twelve
+  seconds; the bug hops off, drops a bonus crumb and pays coins. Five seen off earns a badge.
+
+**Calls I made.** (1) The scare is deliberately NOT multiplied by the colony's pace. A
+hungry, sleepy, flooded colony still shoos a bug off in the same twelve seconds, which is
+what makes "one soldier always clears it" provable rather than probable. (2) A visit slows
+nothing globally — one visible thing pauses per visitor — because a general slowdown would
+have been a punishment wearing a costume, and it would also have quietly changed every
+existing free-build assertion. (3) Milestones are now checked every step instead of inside
+`checkMission`, which returned early in free build; without that the fifty-ant and
+five-bug rewards could never have fired at all. (4) A marching soldier holds no parked
+spot, so two idle ants standing on the only ledge can never turn it back.
+
+**QA.** `qa-antcity.mjs` grew an AC9 section: no bug ever appears during the ten missions
+or in an hour of tutorial at the liveliest difficulty; the difficulty dial really changes
+how often one calls; every kind of visit naps when unattended, never leaves on its own,
+never shrinks the colony, and is cleared by exactly ONE soldier; the marker appears and a
+tap on it moves the camera; five scares really earn the badge. `node qa-all.mjs` green.
+
+
+## 2026-09-07 (FM5): the farm remembers her, grows while she is away, and always has a next thing
+
+**Phase FM, card FM5.** Mike's kids love Township, and the reason is that Township
+is a place they own that keeps changing and is waiting for them when they come back.
+The farm forgot everything on reload, so nothing else in the plan could stick. Four
+things landed, and they are all one idea. Touched `public/skyflyer-farm.html`,
+`api/farm-save.js` (new), `db/create-farm-save.sql` (new), `src/BuildableKids.jsx`,
+`qa-farm.mjs`, `qa-farm-shot.mjs` (new), `qa-skyflyer.mjs`.
+
+### Step 1 — it remembers her
+Every patch, every animal, the tower on her head, the pantry (`COLLECTED`), the live
+order and its progress, orders done, the duck, and the presents she has opened all go
+into one JSON blob, one row per kid, in a new `farm_saves` table through a new
+`/api/farm-save`. **The migration was written AND applied** in this session
+(`apply_migration create_farm_save`, verified with `list_tables`), so the table exists
+before the feature ships.
+
+Timers are stored as **seconds left**, never as a wall-clock stamp, so a device with a
+wrong clock or a tab left open overnight cannot poison a save. The one wall-clock
+number is `savedAt`, and it is only ever read to work out how long she has been gone.
+
+Best-effort and never blocking: local first, cloud after, and every failure path is
+silent to the kid. A signature of everything worth saving is checked once a second and
+a change schedules a debounced write, which beats sprinkling a save call through twenty
+places and forgetting the twenty-first. `pagehide` and a hidden tab flush through
+`navigator.sendBeacon`, the only thing a browser promises to finish on the way out.
+One real bug found by the robot and fixed: the watcher must not write **before** the
+save has been read, or a slow model load can save an empty farm over a good one.
+
+**There is no reset a child can reach.** The scene wipe exists only so a newer cloud
+save can replace a just-loaded local one in the first second, before anything has been
+touched, and nothing on screen calls it. No grown-up reset was added: there was no
+existing grown-up gate inside the farm to hang one on, and the card said only if one
+already exists.
+
+### Step 2 — it grew while she was away, and something is waiting
+On load a deterministic catch-up finishes what was started. It is capped by its own
+shape rather than by an arbitrary limit: a field cannot be more than fully ready, and a
+fed animal gives one thing and then waits to be fed again.
+
+If she has been gone more than **ten minutes** and anything finished while she was out,
+none of it is scattered round the farm — it is in a **basket by the door**, with what
+is in it turning over the rim in colour, one model per kind, the same language the
+order card and the crate already speak. Walk to it and the lot whooshes onto the stack
+on the FM3 unload treatment: one at a time, rapid fire, each note a shade higher.
+**Nothing else on the farm moves until she reaches it** — the crate holds its unload —
+so the first ten seconds of every visit are a reward for coming back.
+
+Two things the picture gate caught. The basket first sat 2.98 units from the crate,
+inside its own 3.0 reach, so a kid walking to the crate emptied it on the way past
+without ever seeing it; it moved south. And the basket itself first rendered as a stack
+of pancakes and then as a plant pot before it became a basket: straight sides, a proper
+weave, and a handle stretched tall on purpose because at its natural height it vanished
+into the lip from the game's overhead camera.
+
+Waits are unchanged and still under a minute. Away-time only finishes what was started.
+
+### Step 3 — never idle
+`whatCanSheDoNow()` counts ready crops, loose produce, hungry animals she has the feed
+for, empty patches (planting is never gated — the free-seed floor is still there), the
+basket, and an order she can move along this second. If that would ever be zero the
+farm fixes it before she notices, and it never invents anything: it finishes whatever
+is already closest to done. The robot proves the zero really is reachable (every patch
+growing, every animal still making, nothing on her head) and that it never stays there.
+
+A second bug the robot found: the first fixer rewound a clock and let the main loop
+notice next frame, which left the count at zero for exactly the gap the rule exists to
+close. It now does the work itself, through one shared `makeReady()` so the loop and
+the fixer can never disagree about what ready looks like.
+
+The order picker got one more gate on top of FM4's: carried once is necessary but no
+longer sufficient. A kind must ALSO be something the farm can put in her hands today.
+Eighty rolled orders are checked against that every run.
+
+**No timers on screen, still.** QA greps the code with its comments stripped out, so a
+comment saying there is no countdown cannot make the countdown check go green.
+
+### Step 4 — the next thing is always visible
+A fixed ladder of eight presents, one shown at a time in the shop as a wrapped box with
+its price under it, and nothing at all shown about what comes after. **Mike's prices,
+chosen 2026-09-07:**
+
+| # | present | price | roughly |
+|---|---------|-------|---------|
+| 1 | pumpkin seed | 130 | about four early deliveries |
+| 2 | farm dog | 180 | three |
+| 3 | second field row | 240 | four |
+| 4 | pig | 300 | five |
+| 5 | mill | 380 | six |
+| 6 | bees | 460 | seven |
+| 7 | strawberry seed | 560 | eight |
+| 8 | tractor | 700 | ten |
+
+Under the FM4 economy an early order pays about 25 coins and a later one about 55.
+
+**Six of the eight are not built yet** (FM6 to FM8 build them). Mike chose, over a full
+refund and over hiding them: she pays the price, the whole reveal plays, the unlock is
+marked hers so a later phase honours it, and **a third of the coins hop back out** of
+the box. A full refund would let all eight be opened in one sitting; hiding them would
+leave no ladder at all.
+
+The reveal is the biggest celebration in the game and the only thing allowed to take
+three seconds: the box lands, shakes, the lid flips away spinning, confetti covers the
+screen, the plane crosses the sky over the top, and the thing hops out. The duck FM3
+built stays in the shop underneath the present until she has it — a thing that already
+works is never taken away to make room for a new idea.
+
+### Step 5 — small celebrations, constantly
+A puff of soil on planting, a chime the instant a crop becomes takeable (once, never
+again), a puff of hearts over a fed animal, a sparkle and a bounce when an egg lands.
+All through the shared Feel Kit, all silent under `bk_muted`, and every one of them
+under half a second — QA reads each puff's life off the call that makes it.
+
+### The picture gate (LOOK RULE 19)
+Four shots rendered in the real engine and sent to Mike before the push: the basket with
+its contents floating over it, the wrapped present in the shop, the reveal mid-confetti
+with 64 pieces in the air, and the shop at phone width. `qa-farm-shot.mjs` is a new
+harness so a later session takes the same four without inventing a rig.
+
+### QA
+`qa-farm.mjs` is **159 checks, all green**, with a whole new FM5 block that plays on its
+own page in its own storage and **reloads it for real** — a save that only round-trips
+through a variable in the same frame has not been tested. The whole FM5 block also IS
+the Supabase-down case: the harness serves `public/` and nothing else, so every
+`/api/farm-save` call 404s and every check went green with the cloud unreachable.
+`qa-skyflyer.mjs` carries 27 new static FM5 assertions and is 738 green. `node qa-all.mjs` green.
+
+### What Mike should know
+- **Row Level Security is off on `farm_saves`**, like several other tables in this
+  project. Turning it on without policies would lock the farm out of its own data, so
+  nothing was changed. The statement is `ALTER TABLE public.farm_saves ENABLE ROW LEVEL
+  SECURITY;` and it needs policies written with it. Mike's call.
+- A guest with no kid signed in saves to that browser only. That is by design and it is
+  what the shell's other games do.
+
+## 2026-09-07 — PB-FIX: the bar fits the phone, and the game points
+
+**Shipped.** The two faults Mike hit playing on a phone.
+
+**The HUD.** `public/buildable-hud.js` (shared, so every game gets it): the right-hand
+group of chips never shrinks and never clips, it wraps rather than overflows, and it stays
+right-aligned so the last chip is whole; the left-hand title is what gets trimmed. New
+small-phone tier under 430px, and new icon-plus-number chips (`{glyph:"paper", text:"12"}`),
+drawn SVG, no emoji. Paper Route switches to them below 620px and drops the "carrying" chip
+there, since the banner already says it. Turning the phone rebuilds the bar.
+
+**The guidance layer.** `guidance()` in `public/paper-route-engine.html` is one function the
+renderer draws from and the robot reads: a bouncing yellow arrow over the next undelivered
+subscriber (clear above the flag), a pulsing gold ring on that mailbox once it is in throw
+range, and "Tap to throw!" until `PREFS.throws` reaches 2. Raised flags are drawn out of
+scale with a dark edge and a pale halo, the target flag biggest. Overlays only: no timers,
+no fail states.
+
+**QA.** `qa-paper-route.mjs` extended: frame-by-frame guidance checks, nudge retirement, and
+static checks on the HUD wiring. New `qa-paper-route-hud.mjs` — real Chromium, serves
+`public/` itself, 320/390/430 standalone and in-shell, measures every chip. Both green.
+`node qa-all.mjs` green.
+
+**A call I made.** The browser measurement is a SEPARATE harness rather than folded into
+`qa-paper-route.mjs`, because `qa-all.mjs` skips any file containing the word "playwright"
+unless `--with-browser` is passed. Folding it in would have quietly dropped Paper Route out
+of the default release gate. This matches the `qa-skyflyer-hud.mjs` precedent.
+
+**Remains.** PB4 (the watercolour look pass) is untouched, as instructed. `soon: true` on
+the Paper Route tile is untouched. The look mock the brief names,
+`mocks/paper-route-look-mock.html`, does not exist in the repo, so the guidance layer was
+built from the written description.
+
+## 2026-09-07 — AC8: one smart bar, and a Build menu made of pictures
+
+**Shipped.** Mike picked Option C from the HUD mock. Every element now assumes the player
+cannot read.
+
+- **One slim bar.** Left: four little vertical meters with a picture each (green apple,
+  blue drop, pink moon, gold egg); a low one wiggles and wears a small red tag. Middle: one
+  big button carrying the tool in your hand, its name and two or three words saying where to
+  use it. Right: a round button that opens a sheet of four picture cards and hides again the
+  moment one is picked. The jobs strip is unchanged, collapsed at the bottom, opens on a tap.
+- **The tool really decides.** A tap can only do what the big button says is in your hand,
+  and a tap in the wrong place says which picture to swap to instead of doing nothing.
+- **The guide teaches the swap** — tap the round button, then pick the apple — so the intro
+  lesson is four steps now. Picking the hammer opens the room cards by itself.
+- **The Build menu is pictures**: eggs in a pink room, a pile of berries, an ant asleep
+  under a Zz, mushrooms. Cost is a row of apples you count. Unaffordable rooms grey out and
+  flash their apples. Close is a big orange X.
+
+**Calls I made.** The tool is now exclusive, which AC7's Dig button was not: dragging in the
+dirt with the apple out no longer digs. That is the whole point of showing what is in your
+hand, and the wrong-tool tap answers with the picture to swap to, so nothing is silent. The
+toolbox sheet lives INSIDE the bottom stack rather than floating over the screen, because a
+floating sheet covered the one hint line that AC7 exists to protect. And tapping a tunnel
+opens the room cards for that spot only while the hammer is out, which keeps the AC6
+good-spot line reachable without making a tunnel tap mean two different things.
+
+**Could not do.** The mock at the Buildable MVP folder root is not in this sandbox and
+there is no way to reach it from here, so I built to the card's written spec rather than to
+the picture. If the mock differs in layout, the parts are all there to rearrange.
+
+**QA.** `qa-antcity.mjs` drives the new controls as a kid would (press the round button,
+press a picture card, then tap the world) in both a mouse and a touch profile, and asserts
+the old text row is gone, the meters are bars with icons, the big button carries a picture
+of every tool, the room cards are pictures, and the cost is countable apples.
+`qa-antcity-shot.mjs` proves the same in real Chromium, counts six apples on a six-food
+room, and checks nothing spills off a 360px phone. `node qa-all.mjs` green.
 
 ## 2026-09-07 — TS1-TS3: tile shots for the rest of the catalogue
 

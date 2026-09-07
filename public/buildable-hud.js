@@ -17,6 +17,9 @@
 //     { hearts:3 }                        -> a row of 3 hearts (drawn art, no emoji)
 //     { coin:"6 / 98" }                   -> a gold coin followed by the count
 //     { stars:{ got:1, of:3 } }           -> a row of stars, the earned ones filled
+//     { glyph:"paper", text:"12" }        -> a small drawn icon + a number, for narrow
+//                                            phones where a word label will not fit.
+//                                            glyphs: "paper" | "mailbox" (drawn, no emoji)
 //
 //  mount() sticks an invisible overlay onto the canvas and keeps it lined up as
 //  the window resizes, so the chips always sit on the play area — never drift.
@@ -34,10 +37,17 @@
 '  --hud-accent-soft: rgba(255,255,255,0.18);/* accent tint for the chip outline; default = neutral */',
 '}',
 '.hud{position:absolute;top:18px;left:20px;right:20px;display:flex;',
-'  justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}',
+'  justify-content:space-between;align-items:flex-start;gap:var(--hud-gap);z-index:5;pointer-events:none;}',
+/* The RIGHT group carries the numbers a kid is playing for (papers, delivered, coins).
+   It never shrinks and never clips: it wins the space fight, wraps onto a second row
+   if a narrow phone leaves it no choice, and stays right-aligned so the LAST chip
+   (the coin count) is always whole and always on screen. The LEFT group carries the
+   title, which is the thing that may safely be trimmed. */
 '.hud-group{display:flex;align-items:center;gap:var(--hud-gap);min-width:0;}',
-'.hud-group:first-child{overflow:hidden;}',
-'.hud-chip{display:inline-flex;align-items:center;gap:12px;color:var(--hud-text);',
+'.hud-group:first-child{overflow:hidden;flex:0 1 auto;}',
+'.hud-group:last-child{flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;',
+'  row-gap:6px;max-width:100%;}',
+'.hud-chip{display:inline-flex;align-items:center;gap:12px;color:var(--hud-text);max-width:100%;',
 '  font-family:var(--hud-font);white-space:nowrap;',   /* keep each chip on ONE line so it never grows tall onto the play area */
 '  font-weight:700;font-size:15px;line-height:1;padding:9px 16px;border-radius:var(--hud-radius);',
 '  background:rgba(8,10,20,var(--hud-dark));border:1px solid var(--hud-accent-soft);',
@@ -47,6 +57,7 @@
 '.hud-hearts{display:inline-flex;gap:5px;}',
 '.hud-heart{width:15px;height:15px;display:inline-block;}',
 '.hud-coin{width:16px;height:16px;display:inline-block;margin-right:-4px;}',
+'.hud-glyph{width:16px;height:16px;display:inline-block;margin-right:-4px;}',
 '.hud-stars{display:inline-flex;gap:4px;}',
 '.hud-star{width:15px;height:15px;display:inline-block;}',
 '/* phones: shrink the bar so both groups fit on one line and stay in the top strip */',
@@ -55,11 +66,22 @@
 '  .hud-chip{font-size:12.5px;gap:8px;padding:7px 11px;}',
 '  .hud-group:first-child .hud-chip{max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
 '  .hud-heart{width:13px;height:13px;}',
-'  .hud-coin{width:14px;height:14px;}  .hud-star{width:13px;height:13px;}',
+'  .hud-coin{width:14px;height:14px;}  .hud-glyph{width:14px;height:14px;}  .hud-star{width:13px;height:13px;}',
+'}',
+/* small phones (a 320px iPhone SE, and any 390/430 phone once the shell has taken
+   its Home and Sound columns out of the width): squeeze the chips hard rather than
+   let a number fall off the edge. */
+'@media (max-width:430px){',
+'  .hud{top:8px;left:8px;right:8px;--hud-gap:5px;}',
+'  .hud-chip{font-size:11.5px;gap:6px;padding:6px 9px;}',
+'  .hud-group:first-child .hud-chip{max-width:28vw;}',
+'  .hud-heart{width:12px;height:12px;}',
+'  .hud-coin{width:13px;height:13px;}  .hud-glyph{width:13px;height:13px;}  .hud-star{width:12px;height:12px;}',
 '}',
 '/* inside the app shell: leave room for the shell Home (left) + Sound/Menu/Help (right) */',
 '.hud.hud-inshell{left:96px;right:64px;}',
-'@media (max-width:560px){ .hud.hud-inshell{left:90px;right:62px;} }'
+'@media (max-width:560px){ .hud.hud-inshell{left:90px;right:62px;} }',
+'@media (max-width:430px){ .hud.hud-inshell{left:62px;right:58px;} }'
   ].join('\n');
 
   function injectFont() {
@@ -93,6 +115,24 @@
       '<ellipse cx="9" cy="8.5" rx="2.6" ry="1.7" fill="#fff6c8" opacity="0.85" transform="rotate(-30 9 8.5)"/>' +
       '</svg>';
   }
+  // Little drawn icons that stand in for a word on a narrow phone, so a chip can be
+  // an icon plus a number instead of "Papers 12". Drawn geometry, never an emoji.
+  function glyphSVG(name) {
+    var body = '';
+    if (name === 'paper') {
+      body = '<path fill="#fbf7ec" d="M4 5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4z"/>' +
+             '<path fill="#c9c1ad" d="M6 8h9v2H6zm0 4h9v1.6H6zm0 3.4h6V17H6z"/>' +
+             '<path fill="#d9d2c0" d="M17 5a2 2 0 0 1 2 2v11h2V7a2 2 0 0 0-2-2z"/>';
+    } else if (name === 'mailbox') {
+      body = '<path fill="#8d99a6" d="M11 12h2v9h-2z"/>' +
+             '<path fill="#ffffff" d="M4 7h9a5 5 0 0 1 0 10H4z"/>' +
+             '<path fill="#7fbf6a" d="M14.5 6.6h1.4v5h-1.4z"/>' +
+             '<path fill="#7fbf6a" d="M15.6 6.6h4.4v3h-4.4z"/>';
+    } else {
+      body = '<circle cx="12" cy="12" r="8" fill="#ffffff"/>';
+    }
+    return '<svg class="hud-glyph" viewBox="0 0 24 24" aria-hidden="true">' + body + '</svg>';
+  }
   function starSVG(filled) {
     var pts = '12,2.6 14.6,9.2 21.6,9.6 16.2,14.1 18,20.9 12,17.1 6,20.9 7.8,14.1 2.4,9.6 9.4,9.2';
     return '<svg class="hud-star" viewBox="0 0 24 24" aria-hidden="true"><polygon points="' + pts + '" fill="' +
@@ -111,7 +151,8 @@
       return '<div class="hud-chip"><span class="hud-hearts">' + hs + '</span></div>';
     }
     var inner = '';
-    if (item.coin != null) inner += coinSVG() + ' ' + esc(item.coin);
+    if (item.glyph != null && item.glyph !== '') inner += glyphSVG(String(item.glyph));
+    if (item.coin != null) inner += (inner ? ' ' : '') + coinSVG() + ' ' + esc(item.coin);
     if (item.text != null && item.text !== '') inner += (inner ? ' ' : '') + esc(item.text);
     if (item.soft != null && item.soft !== '') {
       inner += ' <span class="hud-soft">' + esc(item.soft) + '</span>';
@@ -143,7 +184,7 @@
   }
 
   var BuildableHUD = {
-    version: '1.2.0',
+    version: '1.3.0',
     // Tint the whole HUD with the game's signature color (from its manifest `color`).
     // ONE call restyles every chip's outline; falls back to neutral if never called.
     setAccent: function (color) {

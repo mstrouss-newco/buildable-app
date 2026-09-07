@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 56">
+  <!-- Ant City: a silly, original cartoon grasshopper. Big springy back leg, goofy grin, no menace. -->
+  <path d="M26 30 q10 16 2 22" stroke="#3f7a2f" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M30 28 q16 4 22 -8 q4 12 -8 18" fill="#7ec44a" stroke="#3f7a2f" stroke-width="2.4" stroke-linejoin="round"/>
+  <g stroke="#3f7a2f" stroke-width="2.2" stroke-linecap="round">
+    <path d="M38 34 L36 46" fill="none"/><path d="M46 32 L48 44" fill="none"/>
+  </g>
+  <ellipse cx="42" cy="26" rx="22" ry="10" fill="#8ed05a" stroke="#3f7a2f" stroke-width="2.4" transform="rotate(-8 42 26)"/>
+  <path d="M28 20 q18 -2 30 4" stroke="#3f7a2f" stroke-width="1.8" fill="none"/>
+  <circle cx="20" cy="21" r="9.5" fill="#9fdc68" stroke="#3f7a2f" stroke-width="2.4"/>
+  <g stroke="#3f7a2f" stroke-width="2" stroke-linecap="round">
+    <path d="M15 13 L8 5" fill="none"/><path d="M23 12 L20 3" fill="none"/>
+  </g>
+  <circle cx="16" cy="19" r="3.6" fill="#fff8ec"/><circle cx="24" cy="19" r="3.6" fill="#fff8ec"/>
+  <circle cx="15" cy="20" r="1.8" fill="#241505"/><circle cx="23" cy="20" r="1.8" fill="#241505"/>
+  <path d="M15 26 q5 3 9 -1" stroke="#3f7a2f" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</svg>

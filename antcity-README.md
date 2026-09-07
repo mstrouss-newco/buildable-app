@@ -178,6 +178,79 @@ not SHOW what it was doing, and it did not say clearly what to do next.
   the carried item in its mandibles. The art ids still come from the manifest and still
   pick the body colour, and the fallback path is untouched.
 
+## One smart bar, and a Build menu made of pictures (AC8)
+
+AC7 made the game honest. AC8 makes it readable by somebody who cannot read. The rule
+for every element on screen: **information is bars, icons, pictures and countable things;
+words are tiny labels only.**
+
+The bottom stack was a row of words (FOOD WATER REST EGGS) over a row of word buttons.
+It is now **one slim bar** with three parts:
+
+- **Left, the meters.** Four little vertical bars with a picture on each: a green apple
+  for food, a blue drop for water, a pink moon for rest, a gold egg for eggs. The one
+  that is running out **wiggles and wears a small red tag**, so the thing that needs the
+  player is the thing that moves.
+- **Middle, what is in your hand.** One big button carrying the tool itself — a shovel, an
+  apple, a drop, a hammer — its name, and two or three words saying where to use it
+  ("drag in the dirt", "tap the grass"). This is the fix for the oldest confusion in the
+  game: what a tap will do is now stated on screen at all times, and the tool really
+  decides. A tap in the wrong place is never silent; it says which picture to swap to.
+- **Right, the toolbox.** A round button that opens a sheet of four picture cards and
+  hides again the moment one is picked. The guide teaches this, because it is the one new
+  thing to learn: tap the round button, then pick the apple.
+
+The **jobs strip** stays collapsed at the very bottom and opens on a tap, exactly as AC7
+left it.
+
+**The Build menu is pictures.** Four cards in a 2x2 grid, each a little scene of what the
+room does: eggs in a pink room, a pile of berries, an ant asleep under a Zz, mushrooms
+growing. What a room costs is **a row of apples you count**, not a number to read. A room
+you cannot afford yet goes grey and its apples flash. Closing is a big orange X.
+
+Everything AC7 built is untouched underneath: one hint line, food that only arrives when
+an ant carries it in, ants that walk to marked targets and stand still when idle, straight
+into the colony with no picker.
+
+## Soldiers and bad bugs, the Bugs Life layer (AC9)
+
+Ant City is worker ants **and soldiers**. The soldiers exist because, every so often, a
+bad bug wanders in.
+
+**A fifth job: Soldier.** It joins the jobs strip and the colour bar wearing red, the same
+red the low meters already use for "this needs you". It is **not there at all** until the
+colony reaches about fifteen ants, so the early game stays four-job calm; the milestone
+that hands it over pops a reward and the queen shares the real science — soldier ants
+really do have bigger jaws than the other ants, and they stand guard at the door of the
+nest. A soldier is drawn as the same ant a size up, with a helmet and those bigger jaws.
+
+**A bad bug visit is a rare treat.** Roughly every ten to fifteen minutes of play, scaled
+by the difficulty dial, and **never during the tutorial** — the ten missions and the
+first-minute lesson are finished before anything comes calling. There are three original
+cartoon bugs, silly and never scary: a **beetle** that ambles down to nose at the food
+store, a **caterpillar** that munches on the leaf bush, and a **grasshopper** that plants
+itself by the front door so the foragers stay in.
+
+**A visit only ever pauses one thing you can see.** The beetle pauses the quick trips the
+storage room earns, the caterpillar stops the bush putting out new leaves, and the
+grasshopper keeps the foragers indoors. Nothing is destroyed, nothing is taken, no ant is
+lost, no store goes down and there is no timer to beat. Everything starts again the moment
+the bug goes.
+
+**The kid always knows where, and always has the answer.** A bouncing red marker at the
+edge of the screen says where it is, drawn geometry rather than a word, and tapping it
+takes the camera there. The one hint line says what to do. With **no soldier assigned** the
+bug simply settles in and **naps on the spot it is blocking**, and waits — clear cause,
+clear effect. Move one ant to Soldiers and they march over, through the tunnels if it is
+down in the colony, out of the front door if it is up top. **ONE soldier always ends it**,
+in about twelve seconds, and the robot proves that for every bug on every difficulty.
+The bug does a comic hop away, drops a bonus crumb on the meadow and pays coins through
+the shared wallet. See five off and a badge lands.
+
+The numbers (how often, what it pays, every word each bug says) live in
+`GAME_CONFIG.bug` and in `public/antcity/manifest.json`, so the recipe can retune the
+visits, or add a fourth visitor, without touching the engine.
+
 ## The colony builder loop (grow it huge)
 
 Ant City is a kid-simple colony builder. The feel is a friendly ant version of a

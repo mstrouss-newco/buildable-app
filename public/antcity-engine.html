@@ -42,26 +42,61 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   #coach.teach{color:#fff6e0;}
   #coachText{flex:1 1 auto;}
 
-  /* ---- the needs panel: what the colony has, at a glance, always ---- */
-  #needs{display:flex;gap:6px;margin:0 2px 5px;}
-  .need{flex:1 1 0;display:flex;flex-direction:column;gap:2px;}
-  .need .nl{font-size:9px;font-weight:800;letter-spacing:.4px;color:#ffe9c2;opacity:.85;text-transform:uppercase;}
-  .need .mtr{display:block;height:7px;border-radius:4px;background:rgba(0,0,0,.38);overflow:hidden;}
-  .need .mtr i{display:block;height:100%;width:0%;border-radius:4px;background:#e9c46a;transition:width .3s;}
-  .need.low .nl{color:#ffd166;}
-  .need.low .mtr{box-shadow:0 0 0 2px rgba(255,209,102,.55);}
+  /* ---- AC8: ONE smart bar. Meters, what is in your hand, the toolbox. ----
+         Every part of it is a picture: the meters are bars with icons, the middle
+         button IS the tool you are holding, and the round button opens a sheet of
+         picture cards. Words are tiny labels on top of pictures, never the message. */
+  #smart{display:flex;align-items:stretch;gap:8px;margin:0 2px 6px;}
 
-  /* ---- the three things a tap can do. The lit one is what the meadow tap drops. ---- */
-  #acts{display:flex;gap:6px;margin:0 2px 5px;}
-  /* AC7b: the three actions are PICTURES first. A five year old should know what a
-     tap will leave on the meadow without reading the word under it, and the picture
-     is the same thing the game really draws there: a crumb, a drop, a room. */
-  .tool{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;
-        border:none;border-radius:12px;padding:7px 4px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
-  .tool .ic{flex:0 0 24px;width:24px;height:24px;display:block;}
-  .tool.on{background:#ffd166;box-shadow:0 0 0 3px rgba(255,209,102,.35);}
-  .tool.pulse{animation:tpulse 1s ease-in-out infinite;}
-  @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.8);}}
+  /* the meter cluster: four little vertical bars. A low one wiggles and flags itself. */
+  #meters{flex:0 0 auto;display:flex;gap:5px;align-items:flex-end;}
+  .mt{position:relative;width:16px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .mt .bar{position:relative;display:block;width:11px;height:28px;border-radius:6px;background:rgba(0,0,0,.42);
+           box-shadow:inset 0 1px 2px rgba(0,0,0,.5);overflow:hidden;}
+  .mt .bar i{position:absolute;left:0;right:0;bottom:0;height:0%;border-radius:6px;transition:height .3s;}
+  #mtr_food .bar i{background:#63b34a;}
+  #mtr_water .bar i{background:#62b6f2;}
+  #mtr_rest .bar i{background:#f2a2c0;}
+  #mtr_eggs .bar i{background:#e9c46a;}
+  .mt .mic{width:15px;height:15px;display:block;}
+  .mt .tag{display:none;position:absolute;top:-6px;right:-4px;min-width:13px;height:13px;line-height:13px;
+           border-radius:7px;background:#e24b4b;color:#fff;font-size:10px;font-weight:800;text-align:center;
+           box-shadow:0 1px 3px rgba(0,0,0,.45);}
+  .mt.low .tag{display:block;}
+  .mt.low{animation:wig .9s ease-in-out infinite;}
+  @keyframes wig{0%,100%{transform:translateX(0);}25%{transform:translateX(-2px);}75%{transform:translateX(2px);}}
+
+  /* the middle: what is in your hand right now, and in two or three words what to do with it */
+  #actMain{flex:1 1 auto;display:flex;align-items:center;gap:9px;border:none;border-radius:14px;
+           padding:7px 10px;background:#ffd166;box-shadow:0 2px 0 rgba(0,0,0,.18);
+           font-family:inherit;color:#4a2f10;cursor:pointer;text-align:left;min-width:0;}
+  #actMain .ic{display:none;flex:0 0 30px;width:30px;height:30px;}
+  #actMain.t-dig .ic-dig,#actMain.t-food .ic-food,#actMain.t-water .ic-water,#actMain.t-build .ic-build{display:block;}
+  #actMain .at{min-width:0;display:flex;flex-direction:column;line-height:1.15;}
+  #actName{font-size:15px;font-weight:800;}
+  #actHint{font-size:11px;font-weight:700;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #actMain.pulse{animation:tpulse 1s ease-in-out infinite;}
+
+  /* the toolbox button, and the sheet of picture cards it opens */
+  #actSwap{flex:0 0 46px;width:46px;height:46px;align-self:center;border:none;border-radius:50%;
+           background:#f3d9a8;box-shadow:0 2px 0 rgba(0,0,0,.18);cursor:pointer;padding:0;
+           display:flex;align-items:center;justify-content:center;}
+  #actSwap svg{width:26px;height:26px;display:block;}
+  #actSwap.pulse{animation:tpulse 1s ease-in-out infinite;}
+  /* the toolbox sits in the bottom stack, above the bar it changes, so the one hint
+     line is never covered and the measured panel height still keeps the dirt clear */
+  #sheet{display:none;margin:0 2px 6px;}
+  #sheet.open{display:block;}
+  #sheetCard{padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+             background:#fff8ec;border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  .toolcard{border:none;border-radius:16px;background:#f0e0c6;padding:9px 4px 7px;cursor:pointer;font-family:inherit;
+            display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .toolcard .tic{width:34px;height:34px;display:block;}
+  .toolcard span{font-size:12px;font-weight:800;color:#4a2f10;}
+  .toolcard.on{background:#ffd166;box-shadow:0 0 0 3px rgba(233,162,59,.5);}
+  .toolcard.pulse{animation:tpulse 1s ease-in-out infinite;}
+
+  @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.9);}}
 
   /* ---- the jobs strip: slim by default, opens on a tap ---- */
   #stripRow{display:flex;align-items:center;gap:8px;margin:0 2px;}
@@ -85,21 +120,39 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   .job button{width:28px;height:26px;border:none;border-radius:8px;background:rgba(255,255,255,.20);color:#fff;font-size:15px;font-weight:800;line-height:1;cursor:pointer;}
   .job button:active{background:rgba(255,255,255,.34);}
   .job button.pulse{animation:tpulse 1s ease-in-out infinite;}
+  /* AC9: the fifth job. Until the colony has met soldiers the card is simply not
+     there, and when it arrives the row tightens so five still fit a phone. */
+  .job.locked{display:none;}
+  #jobs.five{gap:4px;}
+  #jobs.five .job{padding:4px 2px 5px;}
+  #jobs.five .nm{font-size:10px;letter-spacing:0;}
+  #jobs.five .ct{font-size:16px;}
+  #jobs.five .job button{width:25px;height:25px;font-size:14px;}
 
-  .room .sp{display:block;font-size:11px;font-weight:800;margin-top:2px;color:#3f7a3a;}
-  .room .sp.meh{color:#8a7350;font-weight:700;}
 
   /* ---- build a room popup ---- */
+  /* ---- AC8: the build menu is PICTURES. Each card shows what the room does, and
+         what it costs is a row of apples you can count, not a number to read. ---- */
   #build{position:absolute;inset:0;z-index:12;display:none;align-items:center;justify-content:center;background:rgba(20,12,4,.5);}
-  #buildCard{background:#fff8ec;border-radius:20px;padding:16px 18px;width:min(340px,86vw);box-shadow:0 14px 40px rgba(0,0,0,.4);}
-  #buildCard h2{margin:0 0 10px;font-size:19px;color:#4a2f10;}
-  .room{display:flex;align-items:center;gap:10px;width:100%;border:none;background:#f0e0c6;border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;text-align:left;}
-  .room:disabled{opacity:.45;}
-  .room .sw{flex:0 0 32px;height:32px;border-radius:9px;background:#e9c46a;}
-  .room .rt{flex:1 1 auto;}
-  .room .rn{display:block;font-size:15px;font-weight:800;color:#4a2f10;}
-  .room .rd{display:block;font-size:12px;color:#7a5a30;}
-  #buildCancel{width:100%;border:none;background:#e9a23b;color:#3a2600;font-weight:800;font-size:15px;padding:10px;border-radius:12px;cursor:pointer;font-family:inherit;}
+  #buildCard{background:#fff8ec;border-radius:22px;padding:12px;width:min(360px,92vw);box-shadow:0 14px 40px rgba(0,0,0,.4);}
+  #buildTop{display:flex;align-items:center;gap:10px;margin:0 2px 10px;}
+  #buildCard h2{margin:0;flex:1 1 auto;font-size:19px;color:#4a2f10;}
+  #buildCancel{flex:0 0 44px;width:44px;height:44px;border:none;border-radius:50%;background:#e9a23b;cursor:pointer;
+               padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 rgba(0,0,0,.18);}
+  #buildCancel svg{width:26px;height:26px;display:block;}
+  #roomList{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .room{display:flex;flex-direction:column;align-items:center;gap:5px;border:none;background:#f0e0c6;border-radius:16px;
+        padding:9px 6px 8px;cursor:pointer;font-family:inherit;text-align:center;}
+  .room .pic{display:block;width:100%;}
+  .room .pic svg{width:76px;height:60px;display:block;margin:0 auto;}
+  .room .rn{display:block;font-size:13px;font-weight:800;color:#4a2f10;line-height:1.1;}
+  .room .cost{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:104px;}
+  .room .cost svg{width:11px;height:11px;display:block;}
+  .room .sp{display:block;font-size:10px;font-weight:800;line-height:1.15;color:#3f7a3a;}
+  .room .sp.meh{color:#8a7350;font-weight:700;}
+  .room.cant{opacity:.55;}
+  .room.cant .cost{animation:apflash 1s ease-in-out infinite;}
+  @keyframes apflash{0%,100%{opacity:1;}50%{opacity:.25;}}
 
   /* the engine's own standalone buttons — the shared nav bridge hides these in-app */
   .selfbtn{position:absolute;z-index:9;border:none;border-radius:999px;background:rgba(20,12,4,.55);color:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:8px 14px;cursor:pointer;}
@@ -117,16 +170,26 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   <button id="helpBtn" class="selfbtn">?</button>
   <div id="panel" class="hidden">
     <div id="coach" data-hint="1"><span class="qd"></span><span id="coachText">Grow your colony</span></div>
-    <div id="needs">
-      <div class="need" id="need_food"><span class="nl">Food</span><span class="mtr"><i id="mt_food"></i></span></div>
-      <div class="need" id="need_water"><span class="nl">Water</span><span class="mtr"><i id="mt_water"></i></span></div>
-      <div class="need" id="need_rest"><span class="nl">Rest</span><span class="mtr"><i id="mt_rest"></i></span></div>
-      <div class="need" id="need_eggs"><span class="nl">Eggs</span><span class="mtr"><i id="mt_eggs"></i></span></div>
-    </div>
-    <div id="acts">
-      <button class="tool" id="toolBuild" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="15" rx="4.5" fill="#e9c46a" stroke="#8a5a2b" stroke-width="2"/><path d="M9 20.5v-4a3 3 0 0 1 6 0v4z" fill="#6b431c"/></svg><span>Build</span></button>
-      <button class="tool on" id="toolFood" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="12.5" r="7" fill="#d9a05b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="17" cy="15.5" r="4.2" fill="#c98b4b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="8" cy="10" r="1.7" fill="#f0c48f"/></svg><span>Food</span></button>
-      <button class="tool" id="toolWater" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><span>Water</span></button>
+    <!-- the toolbox: four picture cards, and it hides the moment one is picked.
+         It lives INSIDE the bottom stack, so it can never cover the one hint line. -->
+    <div id="sheet"><div id="sheetCard">
+      <button class="toolcard" id="tool_dig" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v9h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/><path d="M8.5 2h7v2.6h-7z" fill="#8a5a2b"/><path d="M7.6 11h8.8v4.4a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span>Dig</span></button>
+      <button class="toolcard" id="tool_food" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4S5.4 16 5.4 11c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/><path d="M12 7.4V4" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 5.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg><span>Food</span></button>
+      <button class="toolcard" id="tool_water" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><span>Water</span></button>
+      <button class="toolcard" id="tool_build" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 9.6l3.8 3.8-6.1 6.1a2.7 2.7 0 0 1-3.8-3.8z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.5"/><path d="M12.4 3.2l8.4 4.2-2.6 4.2-8.4-4.2z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span>Build</span></button>
+    </div></div>
+    <!-- AC8: ONE smart bar. Meters on the left, what is in your hand in the middle,
+         the toolbox on the right. Everything here is a picture first: a player who
+         cannot read a word still knows what the colony has and what a tap will do. -->
+    <div id="smart">
+      <div id="meters">
+        <div class="mt" id="mtr_food"><span class="bar"><i id="fill_food"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5c1.3-1.4 4.4-1.1 4.4 2.4 0 3.3-2.1 6.3-4.4 6.3S3.6 10.7 3.6 7.4C3.6 3.9 6.7 3.6 8 5z" fill="#63b34a"/><path d="M8 5V2.6" stroke="#3f7a2f" stroke-width="1.3" stroke-linecap="round"/></svg><span class="tag">!</span></div>
+        <div class="mt" id="mtr_water"><span class="bar"><i id="fill_water"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6c2.8 4 4.4 6.1 4.4 8.1a4.4 4.4 0 0 1-8.8 0c0-2 1.6-4.1 4.4-8.1z" fill="#62b6f2"/></svg><span class="tag">!</span></div>
+        <div class="mt" id="mtr_rest"><span class="bar"><i id="fill_rest"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M12.6 9.8A5.4 5.4 0 0 1 6.2 3.4a5.4 5.4 0 1 0 6.4 6.4z" fill="#f2a2c0"/></svg><span class="tag">!</span></div>
+        <div class="mt" id="mtr_eggs"><span class="bar"><i id="fill_eggs"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="9" rx="4.2" ry="5.4" fill="#e9c46a"/></svg><span class="tag">!</span></div>
+      </div>
+      <button id="actMain" class="t-dig" type="button"><svg class="ic ic-dig" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v9h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/><path d="M8.5 2h7v2.6h-7z" fill="#8a5a2b"/><path d="M7.6 11h8.8v4.4a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><svg class="ic ic-food" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4S5.4 16 5.4 11c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/><path d="M12 7.4V4" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 5.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg><svg class="ic ic-water" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><svg class="ic ic-build" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 9.6l3.8 3.8-6.1 6.1a2.7 2.7 0 0 1-3.8-3.8z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.5"/><path d="M12.4 3.2l8.4 4.2-2.6 4.2-8.4-4.2z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span class="at"><span id="actName">Dig</span><span id="actHint">drag in the dirt</span></span></button>
+      <button id="actSwap" type="button" aria-label="Change tool"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2.5" fill="#8a5a2b"/><rect x="13" y="3" width="8" height="8" rx="2.5" fill="#63b34a"/><rect x="3" y="13" width="8" height="8" rx="2.5" fill="#62b6f2"/><rect x="13" y="13" width="8" height="8" rx="2.5" fill="#cfd6dc"/></svg></button>
     </div>
     <div id="jobsStrip">
       <div id="stripRow">
@@ -139,7 +202,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       </div>
     </div>
   </div>
-  <div id="build"><div id="buildCard"><h2 id="buildHead">Build a room</h2><div id="roomList"></div><button id="buildCancel" type="button">Not now</button></div></div>
+  <div id="build"><div id="buildCard"><div id="buildTop"><h2 id="buildHead">Build a room</h2><button id="buildCancel" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="#3a2600" stroke-width="4" stroke-linecap="round"/></svg></button></div><div id="roomList"></div></div></div>
   <div id="start"></div>
 </div>
 
@@ -184,7 +247,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     rain:    "antcity_rain",     // a tunnel floods
     win:     "antcity_hatch",    // Feel.celebrate
     levelup: "antcity_hatch",
-    hurt:    "antcity_rain"      // Feel.miss — a setback, never a buzzer
+    hurt:    "antcity_rain",     // Feel.miss — a setback, never a buzzer
+    // AC9: a bad bug turning up is a setback cue, and shooing it off is a march.
+    // Both reuse clips Ant City already owns, so nothing goes silently missing.
+    bug:     "antcity_rain",
+    scare:   "antcity_march"
   };
   var MUSIC_URL = "/api/library-music?name=meadow_busy_bright";
   function sfx(name){ try{ if(BA && BA.sfx && !DEMO) BA.sfx(name); }catch(e){} }
@@ -296,7 +363,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         fact:"Leafcutter ants do not eat the leaves. They feed them to a mushroom garden and eat the mushrooms." },
       { id:"aphids",  type:"ants", n:20, coins:20, aphids:true,
         fact:"Ants really do keep aphids like tiny cows, and drink the sweet honeydew they make." },
-      { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" }
+      { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" },
+      // AC9: the fifth job arrives on its own, once the colony is big enough that a
+      // guard makes sense. Before that the early game stays calm and four-job simple.
+      { id:"soldiers-15", type:"ants", n:15, coins:20, soldiers:true,
+        fact:"Soldier ants really do have bigger jaws than the other ants, and they stand guard at the door of the nest." },
+      { id:"bugs-5", type:"bugs", n:5, coins:25 }
     ],
     // gentle setbacks: they pause work, they never take anything away
     setback: {
@@ -309,6 +381,43 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       // straight through it; an empty one just goes slower until it is cleared.
       stockedFood: 12,
       floodRate: 0.7
+    },
+    // ---- AC9: soldiers, and the bad bugs they shoo off ----------------------
+    //  A visit is a RARE TREAT, never a punishment: nothing is destroyed, nothing
+    //  is taken, and ONE soldier always ends it. The numbers live here so the
+    //  recipe can retune how often a bug calls without touching the engine.
+    soldier: { unlockAnts: 15 },
+    bug: {
+      everySec: 750,             // the middle of "every ten to fifteen minutes", then the dial
+      jitter: 0.18,              // one visit waits about ten minutes, the next about fifteen
+      napAfter: 12,              // with nobody on Soldiers it settles down and naps
+      // ONE soldier always clears a visit, in about twelve seconds. Deliberately NOT
+      // multiplied by the colony's pace: a hungry, sleepy, flooded colony must still
+      // be able to shoo a bug away, or a visit could sit there for ever.
+      scarePerAntPerSec: 0.085,
+      fleeSecs: 1.6,             // the comic yikes on the way out
+      coins: 8,                  // the thank-you, paid through the shared wallet
+      crumb: true,               // and a bonus crumb dropped on the meadow
+      kinds: {
+        beetle: { name:"Beetle", art:"antcity/bug/beetle-v1", color:"#7d8f45", where:"store",
+          call:"A beetle is at your food store. Put an ant on Soldiers.",
+          busy:"Your soldiers are marching over to see it off.",
+          nap:"The beetle is napping there. One soldier would move it along.",
+          cheer:"The beetle ran off!",
+          gone:"The beetle scuttled off and left a crumb." },
+        caterpillar: { name:"Caterpillar", art:"antcity/bug/caterpillar-v1", color:"#8fc44f", where:"leaf",
+          call:"A caterpillar is on your leaf bush. Put an ant on Soldiers.",
+          busy:"Your soldiers are marching over to see it off.",
+          nap:"The caterpillar is napping there. One soldier would move it along.",
+          cheer:"The caterpillar left!",
+          gone:"The caterpillar wriggled off and left a crumb." },
+        grasshopper: { name:"Grasshopper", art:"antcity/bug/grasshopper-v1", color:"#8ed05a", where:"door",
+          call:"A grasshopper is by the door. Put an ant on Soldiers.",
+          busy:"Your soldiers are marching over to see it off.",
+          nap:"The grasshopper is napping there. One soldier would move it along.",
+          cheer:"The grasshopper hopped off!",
+          gone:"The grasshopper sprang away and left a crumb." }
+      }
     },
     findRow: 11,                 // how deep the buried find is buried
 
@@ -326,8 +435,18 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     { id:"digger",  name:"Diggers",  color:"#c98b4b" },
     { id:"forager", name:"Foragers", color:"#7ec46a" },
     { id:"nursery", name:"Nursery",  color:"#f2a2c0" },
-    { id:"builder", name:"Builders", color:"#6fc7e8" }
+    { id:"builder", name:"Builders", color:"#6fc7e8" },
+    // AC9: the fifth job. Red, because it is the colour the attention marker and the
+    // low-meter tag already use for "this needs you". It is hidden until it unlocks.
+    { id:"soldier",  name:"Soldiers", color:"#e2685f", locked:true }
   ];
+  // which jobs are on screen right now. The soldier card and its slice of the bar
+  // simply are not there until the colony has met them.
+  function activeJobs(){
+    var out = [], i;
+    for(i=0;i<JOBS.length;i++){ if(!JOBS[i].locked || soldiersUnlocked()) out.push(JOBS[i]); }
+    return out;
+  }
 
   // ======================================================================
   //  Art. Cartridge rule: every picture is fetched at load time from the URL
@@ -353,6 +472,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     "antcity/prop/aphid-plant-v1":"/antcity/art/aphid-plant.svg",
     "antcity/prop/honeydew-v1":   "/antcity/art/honeydew.svg",
     "antcity/prop/buried-find-v1":"/antcity/art/buried-find.svg",
+    // AC9: the bad bugs. Original generic cartoon bugs, silly and never scary, and
+    // every one of them has a drawn fallback in the engine if the file misses.
+    "antcity/bug/beetle-v1":      "/antcity/art/bug-beetle.svg",
+    "antcity/bug/caterpillar-v1": "/antcity/art/bug-caterpillar.svg",
+    "antcity/bug/grasshopper-v1": "/antcity/art/bug-grasshopper.svg",
     "antcity/soil/sandy-v1":      "/antcity/art/soil-tile.svg",
     "antcity/soil/deep-v1":       "/antcity/art/soil-deep.svg",
     "antcity/soil/loam-v1":       "/antcity/art/soil-loam.svg",
@@ -431,7 +555,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function freshColony(diff){
     var g = GAME_CONFIG, col = {
       cells:{}, plan:[], ants:g.startAnts, eggs:0, food:g.startFood, water:g.startWater,
-      jobs:{ digger:2, forager:2, nursery:1, builder:1 },
+      jobs:{ digger:2, forager:2, nursery:1, builder:1, soldier:0 },
       surface:[], sample:[],
       layProg:0, hatchProg:0, deepest:g.startRow, difficulty:diff||3,
       queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0,
@@ -441,7 +565,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       // --- AC6: the production chains ---
       leaves:0, leavesCut:0, leafReady:3, aphids:false, dew:0, dewGot:0, mush:0,
       // --- AC7: what the meadow is growing, and whether the kid has met Build ---
-      berryReady:2, taught:{}, tapped:0
+      berryReady:2, taught:{}, tapped:0,
+      // --- AC9: the fifth job and the bad bug visits ---
+      soldiers:false, bug:null, bugT:0, bugsSeen:0, bugsScared:0
     };
     // the buried find for the last mission, waiting under the deep soil
     col.find = { c:Math.floor(g.cols/2) + 2, r:g.findRow };
@@ -501,6 +627,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // what is slowing the colony right now, in the kid's words. Never a failure,
   // always a thing they can go and fix.
   function setbackNow(){
+    // AC9: a bad bug is the thing that wants the kid right now, so it takes the line.
+    // It is still only ever a pause: whatever it is sitting on starts again the moment
+    // a soldier moves it along, and nothing was lost while it sat there.
+    var bug = bugHere();
+    if(bug){
+      var bd = bugDef(bug.kind);
+      if(jobCount("soldier") > 0) return bd.busy;
+      return bug.state === "nap" ? bd.nap : bd.call;
+    }
     if(C.food <= 0)  return "Your ants are hungry. Drop food up on the meadow.";
     if(C.rest <= 0)  return "Your ants are sleepy. Build a resting den.";
     if(floodCount())  return C.food >= GAME_CONFIG.setback.stockedFood
@@ -510,6 +645,36 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   function floodCount(){ var n=0; for(var k in C.cells){ if(C.cells[k].flooded) n++; } return n; }
   function jobCount(id){ return C.jobs[id]|0; }
+
+  // ======================================================================
+  //  AC9: soldiers, and the bad bugs they see off.
+  //
+  //  A visit is a RARE TREAT, not a punishment. Every rule below follows the
+  //  same law the rest of Ant City follows: a setback PAUSES one thing you can
+  //  see, and never takes anything away. Nothing is destroyed, no ant is lost,
+  //  no store goes down, and there is no timer to beat. With nobody on Soldiers
+  //  the bug simply settles in and naps on the spot it is blocking, until the
+  //  kid moves one ant across — and ONE soldier always ends it, provably.
+  // ======================================================================
+  function soldiersUnlocked(){
+    // the milestone is what really unlocks it; free-build and a big colony are
+    // there so a colony saved before AC9 existed is never left without its guards
+    return !!(C && (C.soldiers || C.freeBuild || C.ants >= (GAME_CONFIG.soldier.unlockAnts||15)));
+  }
+  function bugDef(kind){ return GAME_CONFIG.bug.kinds[kind] || GAME_CONFIG.bug.kinds.beetle; }
+  // a bug that is really here: on its way out does not block anything any more
+  function bugHere(kind){
+    var b = C && C.bug;
+    if(!b || b.state === "flee") return null;
+    return (!kind || b.kind === kind) ? b : null;
+  }
+  //  ONE thing pauses per visitor, and it is the thing the bug is sitting on:
+  //  the beetle stops the food store's quick trips, the caterpillar stops the
+  //  leaf bush growing, and the grasshopper keeps the foragers indoors. All
+  //  three come straight back the moment the bug goes.
+  function bugStopsStore(){ return !!bugHere("beetle"); }
+  function bugStopsLeaves(){ return !!bugHere("caterpillar"); }
+  function bugStopsForaging(){ return !!bugHere("grasshopper"); }
 
   // ======================================================================
   //  AC7: the things on the meadow. A crumb the kid taps out, a berry the bush
@@ -559,7 +724,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var ch = GAME_CONFIG.chain, md = GAME_CONFIG.meadow;
     C.berryReady = Math.min(md.berryMax, (C.berryReady||0) + md.berryGrowPerSec * dt);
     if(C.berryReady >= 1 && countItems("berry") < md.berryMax){ C.berryReady -= 1; spawnItem("berry"); }
-    C.leafReady = Math.min(ch.leafMax, C.leafReady + ch.leafGrowPerSec * dt);
+    // AC9: a caterpillar on the bush stops it putting out new leaves while it is
+    // there. Every leaf already cut or waiting stays exactly where it is.
+    if(!bugStopsLeaves()) C.leafReady = Math.min(ch.leafMax, C.leafReady + ch.leafGrowPerSec * dt);
     if(C.leafReady >= 1 && countItems("leaf") < md.leafOut && C.leaves < ch.leafStore){ C.leafReady -= 1; spawnItem("leaf"); }
     if(C.aphids){
       C.dew = Math.min(ch.aphidMax, C.dew + ch.aphidPerSec * dt);
@@ -590,6 +757,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // what a free forager goes for: the kid's own crumbs first, then the meadow's own
   function pickItem(){
     var best = null, i;
+    if(bugStopsForaging()) return null;      // AC9: a grasshopper by the door, so nobody goes out
     for(i=0;i<C.surface.length;i++){
       var it = C.surface[i];
       if(it.claim || it.gone || it.held) continue;
@@ -710,9 +878,17 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     C.floodT += dt * tune().setbacks;
     if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
 
+    // AC9: a bad bug may call in. Free-build only, one at a time, and it can never
+    // change a number the colony owns.
+    bugTick(dt);
+
     normalizeJobs();
     foodTrend(dt);
     checkMission();
+    // milestones used to be checked inside checkMission, which returns early once the
+    // colony is in free build — so the rewards a grown colony is meant to reach (fifty
+    // ants, five bugs seen off) could never fire. They are their own thing now.
+    checkMilestones();
     walkSample(dt);
     tickHow(dt); tickIdle(dt);
     // the one hint line and the needs meters are kept true by the simulation itself,
@@ -742,6 +918,120 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       ? "Rain flooded a tunnel. Your food store keeps them going."
       : "Rain flooded a tunnel. Builders will clear it.");
     return pick;
+  }
+  // ======================================================================
+  //  A bad bug calls in (AC9). Rare, gentle, and always endable.
+  // ======================================================================
+  //  where each visitor makes for. A beetle wants the food store, a caterpillar
+  //  wants the leaf bush, a grasshopper plants itself by the front door.
+  function bugTarget(kind){
+    var where = bugDef(kind).where;
+    if(where === "store"){
+      var k, x;
+      for(k in C.cells){ x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "storage") return { c:x.c, r:x.r }; }
+      // no store dug yet: the first plain tunnel that is not the queen's own seat
+      for(k in C.cells){ x = C.cells[k];
+        if(x.kind === "tunnel" && !x.flooded && !(x.c === C.queen.c && x.r <= C.queen.r)) return { c:x.c, r:x.r }; }
+      return null;                       // nowhere to go underground: it stays up top
+    }
+    if(where === "leaf") return { surface:true, fc:xToFc(plantX("leaf")) };
+    return { surface:true, fc:Math.max(0.6, entranceCell().c - 1.6) };
+  }
+  // ONE bug at a time, and never in the tutorial: the colony has to have finished
+  // the ten missions AND the first-minute lesson before anything comes calling.
+  function bugsAllowed(){
+    return !!(C.freeBuild && C.guided && !(guide.on && guide.lesson === "intro"));
+  }
+  function sendBug(kind){
+    if(C.bug || !bugsAllowed()) return null;
+    var ks = Object.keys(GAME_CONFIG.bug.kinds);
+    if(!kind || !GAME_CONFIG.bug.kinds[kind]) kind = ks[Math.floor(srand()*ks.length) % ks.length];
+    var t = bugTarget(kind);
+    if(!t) t = { surface:true, fc:Math.max(0.6, entranceCell().c - 1.6) };
+    var en = entranceCell();
+    var b = { kind:kind, state:"come", t:0, scare:0, nap:0, flip:false, hop:srand()*6,
+              fc:-1.2, fr:SURF_R, wp:[], c:null, r:null };
+    if(t.surface){
+      b.wp = [{ fc:t.fc, fr:SURF_R }];
+    } else {
+      var route = routeTo(en.c, en.r, t.c, t.r) || [];
+      b.wp = [{ fc:en.c, fr:SURF_R }, { fc:en.c, fr:en.r }].concat(route);
+      b.c = t.c; b.r = t.r;
+    }
+    C.bug = b; C.bugsSeen = (C.bugsSeen|0) + 1;
+    sfx("bug");
+    hint(bugDef(kind).call, 6);
+    lookAt(b);                                // the camera shows the kid where, once
+    saveSoon();
+    return b;
+  }
+  // the visit itself: it walks in, it settles, soldiers see it off. Nothing here
+  // ever changes a store, a cell, an ant or an egg — that is the whole point.
+  function bugTick(dt){
+    var g = GAME_CONFIG.bug;
+    if(!C.bug){
+      if(!bugsAllowed()) return;                           // never during the tutorial
+      C.bugT = (C.bugT||0) + dt * tune().setbacks;
+      var wait = g.everySec * (1 + (((C.bugsSeen|0) % 2) ? -g.jitter : g.jitter));
+      if(C.bugT >= wait){ C.bugT = 0; sendBug(null); }
+      return;
+    }
+    var b = C.bug, def = bugDef(b.kind);
+    b.t += dt;
+    // walking in, or hopping out: the same little mover either way
+    if(b.wp && b.wp.length){
+      var tgt = b.wp[0], dx = tgt.fc - b.fc, dy = tgt.fr - b.fr, d = Math.sqrt(dx*dx + dy*dy), sp = 1.6 * dt;
+      if(d <= sp || d < 0.0005){ b.fc = tgt.fc; b.fr = tgt.fr; b.wp.shift(); }
+      else { b.fc += dx/d*sp; b.fr += dy/d*sp; if(Math.abs(dx) > 0.02) b.flip = dx < 0; }
+    } else if(b.state === "come"){ b.state = "here"; b.t = 0; }
+    if(b.state === "flee"){
+      b.fr -= dt * 2.2;                                    // the comic hop away
+      if(b.t >= g.fleeSecs){ C.bug = null; saveSoon(); }
+      return;
+    }
+    // soldiers do the work. NOT scaled by the colony's pace: a tired, hungry,
+    // flooded colony must still be able to shoo a bug off, or it could sit for ever.
+    var guards = jobCount("soldier");
+    if(guards > 0){
+      if(b.state === "nap"){ b.state = "here"; b.nap = 0; }
+      b.scare += guards * g.scarePerAntPerSec * dt;
+      if(b.scare >= 1) scareBugOff();
+      return;
+    }
+    // nobody on Soldiers: it settles in and naps on the spot it is blocking, and
+    // waits. It never gets worse, it never spreads, and it never takes anything.
+    b.scare = 0;
+    if(b.state === "here" && b.t >= g.napAfter){
+      b.state = "nap"; b.nap = 0; hint(def.nap, 5);
+    }
+    if(b.state === "nap") b.nap += dt;
+  }
+  // the pay-off: a comic yikes, a bonus crumb and coins through the shared wallet
+  function scareBugOff(){
+    var b = C.bug; if(!b || b.state === "flee") return;
+    var g = GAME_CONFIG.bug, def = bugDef(b.kind);
+    b.state = "flee"; b.t = 0; b.wp = [];
+    C.bugsScared = (C.bugsScared|0) + 1;
+    if(g.crumb) dropSurface("crumb", (b.fr > -0.2 ? fcToX(C.queen.c) : fcToX(b.fc)));
+    award("antcity:bug:" + C.bugsScared, g.coins);
+    celebrate(def.cheer || def.name, g.coins);
+    hint(def.gone, 5);
+    sfx("scare");
+    if(!C.taught) C.taught = {};
+    if(!C.taught.scare){
+      C.taught.scare = true;
+      say("A soldier ant hardly ever has to fight. Puffing up and waving its antennae is usually enough to send a bug away.");
+    }
+    signal("cheer", { game:"antcity", bug:b.kind, scared:C.bugsScared });
+    saveSoon();
+  }
+  // point the camera at something for a few seconds, so a kid who taps the
+  // attention marker really is taken to the thing that wants them
+  var camLook = null, camLookT = 0;
+  function lookAt(b){
+    if(!b) return;
+    camLook = (b.fr > -0.2) ? Math.round(b.fr) : 0;
+    camLookT = (C ? C.t : 0) + 6;
   }
   function hasOpenNeighbour(c,r){
     return isOpen(c-1,r) || isOpen(c+1,r) || isOpen(c,r-1) || isOpen(c,r+1) || r === 0;
@@ -851,6 +1141,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var total = Math.max(1, C.ants), want = {}, have = {}, made = 0, i, j;
     for(i=0;i<JOBS.length;i++){ var id0 = JOBS[i].id; want[id0] = Math.round(((C.jobs[id0]|0)/total) * n); have[id0] = 0; made += want[id0]; }
     want.forager = Math.max(0, want.forager + (n - made));
+    // AC9: one ant on Soldiers has to be one soldier you can SEE marching. In a colony
+    // of hundreds its share of the drawn crowd rounds down to nothing, which would have
+    // left the kid moving an ant across and watching nobody go.
+    if((C.jobs.soldier|0) > 0 && bugHere() && !(want.soldier|0)){
+      want.soldier = 1; want.forager = Math.max(0, (want.forager|0) - 1);
+    }
     for(i=0;i<n;i++){ if(C.sample[i].task) have[C.sample[i].job] = (have[C.sample[i].job]|0) + 1; }
     for(i=0;i<n;i++){
       var a = C.sample[i]; if(a.task) continue;
@@ -1003,6 +1299,38 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return true;
   }
 
+  // AC9: soldier duty. A soldier with no bug to see off stands guard at its post
+  // like any other idle ant; the moment one calls in, it marches over — through the
+  // tunnels if the bug is down in the colony, out of the front door if it is up top.
+  function scareTask(a, here){
+    var b = bugHere(); if(!b) return false;
+    if(b.r != null){                                        // down in the colony
+      var mk = occKey(b.c, b.r);
+      var on = workersOn(mk);
+      if(on >= 2) return false;                             // two see a bug off; a third is a crowd
+      // it goes to the bug itself, and it does NOT take a parked spot on the way:
+      // a soldier answering a bug must never be turned back because two idle ants
+      // happened to be standing where it needed to be.
+      var t0 = isOpen(b.c, b.r) ? { c:b.c, r:b.r } : openNeighbour(b.c, b.r);
+      if(!t0) return false;
+      var route = routeTo(here.c, here.r, t0.c, t0.r); if(!route) return false;
+      dropPost(a);
+      a.task = { kind:"scare", k:mk, c:t0.c, r:t0.r, mark:mk, surface:false };
+      a.ox = on ? 0.26 : -0.26; a.oy = 0.06;
+      a.wp = route; a.state = "walk";
+      return true;
+    }
+    // up on the meadow: march out of the anthill and stand between it and the door
+    if(countTask(function(t){ return t && t.kind === "scare"; }) >= 3) return false;
+    var en = entranceCell(), route2 = routeTo(here.c, here.r, en.c, en.r); if(!route2) return false;
+    dropPost(a);
+    a.task = { kind:"scare", surface:true };
+    a.ox = 0; a.oy = 0;
+    a.wp = route2.concat([{ fc:en.c, fr:SURF_R }, { fc:b.fc + (b.fc > en.c ? -0.8 : 0.8), fr:SURF_R }]);
+    a.state = "walk";
+    return true;
+  }
+
   // give one idle ant something real to do. If there is nothing, it parks and stands.
   function giveTask(a){
     var here = antCell(a);
@@ -1011,6 +1339,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(a.job === "forager") return haulTask(a, here);
     if(a.job === "nursery") return tendTask(a, here);
     if(a.job === "builder") return buildTask(a, here);
+    if(a.job === "soldier")  return scareTask(a, here);
     return false;
   }
 
@@ -1047,6 +1376,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       }
       return;
     }
+    if(a.task.kind === "scare"){
+      // it stands its ground until the visitor gives up. The moment the bug is on
+      // its way out, the soldier hops and goes back to guarding.
+      var bg = bugHere();
+      if(!bg){ dropTask(a); a.state = "hop"; a.t = 0.45; return; }
+      if(!a.task.surface) a.flip = a.task.c < a.fc;
+      else a.flip = bg.fc < a.fc;
+      return;
+    }
     if(a.task.kind === "tend" || a.task.kind === "build"){
       if(a.task.kind === "build"){
         var c2 = C.cells[a.task.k];
@@ -1080,10 +1418,19 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     rebuildOcc();
     if(qReact > 0) qReact = Math.max(0, qReact - dt);
     var pace = tune().pace, grants = 0, moves = 0, i;
-    var haulBoost = Math.min(GAME_CONFIG.forage.storageSpeedMax, roomMul("storage"));
+    // AC9: a beetle nosing at the store pauses the quick trips it earns. The store
+    // itself, and everything in it, is untouched — the trips just go back to normal.
+    var haulBoost = bugStopsStore() ? 1 : Math.min(GAME_CONFIG.forage.storageSpeedMax, roomMul("storage"));
     for(i=0;i<C.sample.length;i++){
       var a = C.sample[i];
       if(a.cool > 0) a.cool -= dt;                        // the look-for-work timer runs all the time
+      // AC9: a soldier answering a bug does not wait its turn in the look-for-work
+      // budget. The one promise this layer makes is that moving an ant to Soldiers
+      // sends somebody, now.
+      if(a.job === "soldier" && !a.task && a.state !== "hop" && bugHere()){
+        var hs = antCell(a);
+        if(isOpen(hs.c, hs.r)) scareTask(a, hs);
+      }
       // an idle ant well outside the view is swapped for one inside it. They are a
       // sample of a colony of hundreds, not named individuals, so nothing is lost.
       if(!a.task && moves < 2 && bandPool.length && (a.fr < b.lo - 2 || a.fr > b.hi + 2)){
@@ -1237,7 +1584,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var m = currentMission(), g = goalFor(m);
     if(!m || !g) { C.freeBuild = true; return; }
     if(haveFor(g) >= g.n) completeMission();
-    checkMilestones();
   }
   function completeMission(){
     var m = currentMission(); if(!m) return;
@@ -1256,10 +1602,19 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var ms = GAME_CONFIG.milestones || [], i;
     for(i=0;i<ms.length;i++){
       var ml = ms[i]; if(C.hit[ml.id]) continue;
-      var have = ml.type === "ants" ? C.ants : (ml.type === "leaves" ? C.leavesCut : C.deepest);
+      var have = ml.type === "ants" ? C.ants
+               : ml.type === "leaves" ? C.leavesCut
+               : ml.type === "bugs"   ? (C.bugsScared|0)
+               : C.deepest;
       if(have < ml.n) continue;
       C.hit[ml.id] = true;
       if(ml.aphids) C.aphids = true;                 // the herd arrives on the meadow
+      if(ml.soldiers){                                // AC9: the fifth job appears
+        C.soldiers = true;
+        if(!C.taught) C.taught = {};
+        C.taught.soldier = true;                      // the milestone itself carries the fact
+        syncJobsUI();
+      }
       award("antcity:milestone:" + ml.id, ml.coins);
       celebrate(milestoneTitle(ml), ml.coins, ml.type === "ants");
       signal("cheer", { game:"antcity", milestone:ml.id });
@@ -1268,6 +1623,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
   }
   function milestoneTitle(ml){
+    if(ml.soldiers)          return "Soldier ants!";
+    if(ml.type === "bugs")   return "You saw off " + ml.n + " bugs!";
     if(ml.aphids)            return "You found aphids!";
     if(ml.type === "leaves") return "Cut " + ml.n + " leaves!";
     if(ml.type === "ants")   return ml.n + " ants!";
@@ -1311,6 +1668,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     // camera follows the colony down as it deepens
     var bottomLimit = H - PANEL - CS*1.2;
     camTarget = Math.max(0, SKY + (C.deepest+2)*CS - bottomLimit);
+    // AC9: while the kid is being shown where a bug is, the camera holds there
+    // instead of riding the dig face. It lets go on its own a few seconds later.
+    if(camLook != null && C.t < camLookT) camTarget = Math.max(0, SKY + (camLook+2)*CS - bottomLimit);
+    else if(camLook != null && C.t >= camLookT) camLook = null;
     camY += (camTarget - camY) * 0.06;
 
     drawSky();
@@ -1322,7 +1683,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     drawPlants();
     drawSurfaceItems();
     drawAnts();
+    drawBug();
     drawPuffs();
+    drawBugMark();
   }
   // AC7: every job in progress wears a marker in its own job colour, on the exact
   // cell the ants walked to. Nothing is ever "being worked on" invisibly.
@@ -1600,12 +1963,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         else if(a.task.kind === "build") bob += Math.sin(C.t*14) * CS*0.035;
         else if(a.task.kind === "tend")  bob += Math.sin(C.t*5 + a.bob) * CS*0.018;
       }
-      var star = (a === starAnt), scale = base * (star ? 1.75 : 1);
+      // AC9: a soldier is the same ant, a size up, with a helmet and bigger jaws.
+      // Its marker is red, the same red the low meters use for "this needs you".
+      var sold = (a.job === "soldier");
+      var star = (a === starAnt), scale = base * (star ? 1.75 : (sold ? 1.18 : 1));
       if(star){                                           // a soft halo, no words, no emoji
         X.globalAlpha = 0.30 + 0.18*Math.sin(C.t*5); X.fillStyle = "#fff3d6";
         X.beginPath(); X.arc(px, py+bob, CS*0.34, 0, 7); X.fill(); X.globalAlpha = 1;
       }
-      drawAntShape(px, py+bob, CS*scale*0.42, body, a.flip, idle);
+      drawAntShape(px, py+bob, CS*scale*0.42, body, a.flip, idle, sold);
       // what it is hauling, in its mandibles, drawn as the very same item
       if(a.carry) drawItem(a.carry.kind, px + (a.flip ? CS*0.15 : -CS*0.15), py + bob - CS*0.12, CS*0.30);
       jobMark(px, py + bob - CS*scale*0.85, CS*0.070, jobColor(a.job));
@@ -1622,7 +1988,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function jobColor(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i].color; return "#fff"; }
   // one ant: three segments, six legs, two antennae, a dark outline so the shape
   // holds up small. An idle ant has its legs planted and does not move.
-  function drawAntShape(x, y, r, col, flip, idle){
+  function drawAntShape(x, y, r, col, flip, idle, soldier){
     var line = "rgba(28,16,6,.85)";
     X.save(); X.translate(x,y); if(flip) X.scale(-1,1);
     X.fillStyle = "rgba(0,0,0,.18)"; X.beginPath(); X.ellipse(0, r*0.95, r*1.15, r*0.32, 0, 0, 7); X.fill();
@@ -1638,6 +2004,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.beginPath(); X.ellipse(-r*0.88, -r*0.05, r*0.62, r*0.48, 0.15, 0, 7); X.fill(); X.stroke();
     X.beginPath(); X.ellipse(-r*0.12, 0, r*0.34, r*0.30, 0, 0, 7); X.fill(); X.stroke();
     X.beginPath(); X.arc(r*0.62, -r*0.08, r*0.42, 0, 7); X.fill(); X.stroke();
+    // AC9: a soldier wears a helmet and carries the bigger jaws real soldier ants have
+    if(soldier){
+      X.lineWidth = Math.max(1, r*0.18);
+      X.beginPath(); X.moveTo(r*0.98, -r*0.02); X.quadraticCurveTo(r*1.50, -r*0.16, r*1.30, -r*0.44); X.stroke();
+      X.beginPath(); X.moveTo(r*0.98, r*0.16); X.quadraticCurveTo(r*1.46, r*0.20, r*1.24, r*0.46); X.stroke();
+      X.fillStyle = "#e2685f"; X.lineWidth = Math.max(1, r*0.14);
+      X.beginPath(); X.arc(r*0.62, -r*0.18, r*0.46, Math.PI, 0); X.closePath(); X.fill(); X.stroke();
+      X.fillStyle = col;
+    }
     // antennae
     X.lineWidth = Math.max(1, r*0.13);
     X.beginPath(); X.moveTo(r*0.80, -r*0.36); X.lineTo(r*1.20, -r*0.92); X.stroke();
@@ -1646,6 +2021,144 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.fillStyle = "#fff8ec"; X.beginPath(); X.arc(r*0.78, -r*0.14, r*0.15, 0, 7); X.fill();
     X.fillStyle = "#241505"; X.beginPath(); X.arc(r*0.83, -r*0.14, r*0.08, 0, 7); X.fill();
     X.restore();
+  }
+  // ======================================================================
+  //  AC9: the visitor. Drawn art first, and a hand-drawn fallback behind every
+  //  one of them, so a missing file can never leave a bug invisible while the
+  //  colony is telling the kid to go and deal with it. Silly, never scary: round
+  //  bodies, big white eyes and a small smile, and it only ever ambles.
+  // ======================================================================
+  function drawBugShape(kind, x, y, r){
+    var line = "rgba(28,40,10,.85)", i;
+    X.save(); X.translate(x, y);
+    X.lineCap = "round"; X.lineJoin = "round";
+    X.fillStyle = "rgba(0,0,0,.18)"; X.beginPath(); X.ellipse(0, r*0.92, r*1.05, r*0.26, 0, 0, 7); X.fill();
+    X.strokeStyle = line;
+    if(kind === "caterpillar"){
+      X.lineWidth = Math.max(1, r*0.13);
+      for(i=0;i<3;i++){ X.beginPath(); X.moveTo(-r*0.55 + i*r*0.5, r*0.35); X.lineTo(-r*0.62 + i*r*0.5, r*0.80); X.stroke(); }
+      X.lineWidth = Math.max(1, r*0.15);
+      for(i=0;i<3;i++){
+        X.fillStyle = i%2 ? "#9fce5c" : "#8fc44f";
+        X.beginPath(); X.arc(-r*0.75 + i*r*0.5, r*0.05, r*0.34, 0, 7); X.fill(); X.stroke();
+      }
+      X.fillStyle = "#a8d768"; X.beginPath(); X.arc(r*0.60, -r*0.06, r*0.42, 0, 7); X.fill(); X.stroke();
+      X.lineWidth = Math.max(1, r*0.12);
+      X.beginPath(); X.moveTo(r*0.45, -r*0.42); X.lineTo(r*0.30, -r*0.86); X.stroke();
+      X.beginPath(); X.moveTo(r*0.78, -r*0.40); X.lineTo(r*0.96, -r*0.84); X.stroke();
+      bugFace(r*0.60, -r*0.06, r*0.42, line);
+      X.restore(); return;
+    }
+    if(kind === "grasshopper"){
+      X.lineWidth = Math.max(1, r*0.16);
+      X.beginPath(); X.moveTo(-r*0.10, r*0.10); X.quadraticCurveTo(r*0.55, -r*0.55, r*0.30, r*0.20);
+      X.quadraticCurveTo(r*0.20, r*0.70, -r*0.20, r*0.86); X.stroke();
+      X.lineWidth = Math.max(1, r*0.12);
+      X.beginPath(); X.moveTo(-r*0.20, r*0.20); X.lineTo(-r*0.34, r*0.82); X.stroke();
+      X.fillStyle = "#8ed05a";
+      X.beginPath(); X.ellipse(-r*0.10, 0, r*0.86, r*0.36, -0.12, 0, 7); X.fill();
+      X.lineWidth = Math.max(1, r*0.15); X.stroke();
+      X.fillStyle = "#9fdc68"; X.beginPath(); X.arc(-r*0.86, -r*0.14, r*0.40, 0, 7); X.fill(); X.stroke();
+      X.lineWidth = Math.max(1, r*0.12);
+      X.beginPath(); X.moveTo(-r*1.02, -r*0.46); X.lineTo(-r*1.36, -r*0.96); X.stroke();
+      X.beginPath(); X.moveTo(-r*0.72, -r*0.48); X.lineTo(-r*0.60, -r*1.00); X.stroke();
+      bugFace(-r*0.86, -r*0.14, r*0.40, line);
+      X.restore(); return;
+    }
+    // the beetle
+    X.lineWidth = Math.max(1, r*0.13);
+    for(i=-1;i<=1;i++){
+      X.beginPath(); X.moveTo(i*r*0.34, r*0.20); X.lineTo(i*r*0.42 - r*0.16, r*0.86); X.stroke();
+      X.beginPath(); X.moveTo(i*r*0.34, -r*0.10); X.lineTo(i*r*0.50 + r*0.10, -r*0.62); X.stroke();
+    }
+    X.fillStyle = "#7d8f45"; X.lineWidth = Math.max(1, r*0.16);
+    X.beginPath(); X.ellipse(0, r*0.10, r*0.86, r*0.62, 0, 0, 7); X.fill(); X.stroke();
+    X.lineWidth = Math.max(1, r*0.12);
+    X.beginPath(); X.moveTo(0, -r*0.50); X.lineTo(0, r*0.70); X.stroke();
+    X.fillStyle = "#6a7a3a"; X.lineWidth = Math.max(1, r*0.15);
+    X.beginPath(); X.arc(0, -r*0.70, r*0.38, 0, 7); X.fill(); X.stroke();
+    X.lineWidth = Math.max(1, r*0.12);
+    X.beginPath(); X.moveTo(-r*0.22, -r*1.00); X.lineTo(-r*0.50, -r*1.42); X.stroke();
+    X.beginPath(); X.moveTo(r*0.22, -r*1.00); X.lineTo(r*0.50, -r*1.42); X.stroke();
+    bugFace(0, -r*0.70, r*0.38, line);
+    X.restore();
+  }
+  // two big friendly eyes and a small smile: the whole reason it reads as silly
+  function bugFace(cx, cy, r, line){
+    X.fillStyle = "#fff8ec";
+    X.beginPath(); X.arc(cx - r*0.38, cy - r*0.08, r*0.34, 0, 7); X.fill();
+    X.beginPath(); X.arc(cx + r*0.38, cy - r*0.08, r*0.34, 0, 7); X.fill();
+    X.fillStyle = "#241505";
+    X.beginPath(); X.arc(cx - r*0.30, cy, r*0.17, 0, 7); X.fill();
+    X.beginPath(); X.arc(cx + r*0.46, cy, r*0.17, 0, 7); X.fill();
+    X.strokeStyle = line; X.lineWidth = Math.max(1, r*0.16);
+    X.beginPath(); X.arc(cx, cy + r*0.34, r*0.34, 0.35, Math.PI - 0.35); X.stroke();
+  }
+  function drawBug(){
+    var b = C && C.bug; if(!b) return;
+    var x = fcToX(b.fc), y = frToY(b.fr);
+    if(!isFinite(x) || !isFinite(y)) return;
+    var amble = Math.sin(C.t*4 + b.hop) * CS*0.05;
+    if(b.state === "flee"){
+      var f = Math.max(0, Math.min(1, b.t / Math.max(0.01, GAME_CONFIG.bug.fleeSecs)));
+      X.globalAlpha = 1 - f;
+      y -= Math.sin(f * Math.PI) * CS*1.1;                 // the comic hop away
+      amble = 0;
+    }
+    // the red ring: the same "this needs you" language the low meters speak
+    if(b.state !== "flee"){
+      X.globalAlpha = 0.35 + 0.25*Math.sin(C.t*4);
+      X.strokeStyle = "#e24b4b"; X.lineWidth = 3;
+      X.beginPath(); X.arc(x, y + amble, CS*0.62, 0, 7); X.stroke();
+      X.globalAlpha = 1;
+    }
+    var img = IMG["bug_" + b.kind];
+    X.save(); X.translate(x, y + amble); if(b.flip) X.scale(-1, 1);
+    var size = (b.r == null) ? CS*1.3 : CS*1.05;      // a bug up on the grass has room to be seen
+    if(img) drawImg(img, 0, 0, size);
+    else drawBugShape(b.kind, 0, 0, size*0.38);
+    X.restore();
+    // napping: it is not gone, it is just having a lie down on the spot it is blocking
+    if(b.state === "nap"){
+      X.strokeStyle = "#fff8ec"; X.lineWidth = 2.4; X.lineCap = "round";
+      for(var z=0; z<2; z++){
+        var zs = CS*(0.16 + z*0.10), zx = x + CS*0.48 + z*CS*0.26;
+        var zy = y - CS*0.55 - z*CS*0.30 - Math.sin(C.t*1.6 + z)*CS*0.06;
+        X.globalAlpha = 0.85 - z*0.25;
+        X.beginPath(); X.moveTo(zx, zy); X.lineTo(zx + zs, zy);
+        X.lineTo(zx, zy + zs); X.lineTo(zx + zs, zy + zs); X.stroke();
+      }
+      X.globalAlpha = 1;
+    }
+  }
+  // the attention marker: a bouncing red badge at the edge of the screen that says
+  // WHERE, without a word, and takes the kid there when it is tapped.
+  var bugMark = null;
+  function drawBugMark(){
+    bugMark = null;
+    var b = C && C.bug; if(!b || b.state === "flee") return;
+    var bx = fcToX(b.fc), by = frToY(b.fr);
+    if(!isFinite(bx) || !isFinite(by)) return;
+    var bottom = H - PANEL - 22, top = 30;
+    var x = Math.max(28, Math.min(W - 28, bx));
+    var y = by < top ? top : (by > bottom ? bottom : by - CS*1.1);
+    y = Math.max(top, Math.min(bottom, y));
+    var r = 17, bounce = Math.sin(C.t*5) * 4;
+    y += bounce;
+    X.fillStyle = "rgba(0,0,0,.28)"; X.beginPath(); X.arc(x, y + 3, r, 0, 7); X.fill();
+    X.fillStyle = "#e24b4b"; X.beginPath(); X.arc(x, y, r, 0, 7); X.fill();
+    X.strokeStyle = "#fff8ec"; X.lineWidth = 2.4; X.beginPath(); X.arc(x, y, r, 0, 7); X.stroke();
+    // the mark itself is drawn geometry, never a glyph: a bar and a dot
+    X.fillStyle = "#fff8ec";
+    if(BR) BR.rrect(X, x - 2.4, y - 8.5, 4.8, 10, 2.4); else X.fillRect(x - 2.4, y - 8.5, 4.8, 10);
+    X.fill();
+    X.beginPath(); X.arc(x, y + 6.4, 2.6, 0, 7); X.fill();
+    bugMark = { x:x, y:y, r:r + 10 };
+  }
+  function bugMarkHit(px, py){
+    if(!bugMark || !C || !C.bug) return false;
+    var dx = px - bugMark.x, dy = py - bugMark.y;
+    return (dx*dx + dy*dy) <= bugMark.r * bugMark.r;
   }
   function drawImg(img, cx, cy, size, flip){
     var iw = img.naturalWidth||img.width, ih = img.naturalHeight||img.height; if(!iw||!ih) return;
@@ -1664,13 +2177,21 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(BR){ BR.rrect(X, cx, cy, cw, ch, 20); X.fill(); } else X.fillRect(cx, cy, cw, ch);
     if(party.icon && IMG.colony) drawImg(IMG.colony, W/2, cy - 6, 54);
     X.fillStyle = "#4a2f10"; X.textAlign = "center";
-    X.font = "800 22px 'Baloo 2','Nunito',system-ui,sans-serif";
+    // the title shrinks to fit rather than running off both edges of the card
+    var fs = 22, maxw = cw - 26;
+    X.font = "800 " + fs + "px 'Baloo 2','Nunito',system-ui,sans-serif";
+    while(fs > 13 && textW(party.title) > maxw){
+      fs -= 1; X.font = "800 " + fs + "px 'Baloo 2','Nunito',system-ui,sans-serif";
+    }
     X.fillText(party.title, W/2, cy + 46);
     if(party.coins){
       X.fillStyle = "#c9862b"; X.font = "800 17px 'Baloo 2','Nunito',system-ui,sans-serif";
       X.fillText("+" + party.coins + " coins", W/2, cy + 78);
     }
     X.textAlign = "left"; X.globalAlpha = 1;
+  }
+  function textW(t){
+    try{ var m = X.measureText ? X.measureText(t) : null; return (m && m.width) || 0; }catch(e){ return 0; }
   }
   function drawPuffs(){
     for(var i=puffs.length-1;i>=0;i--){
@@ -1705,6 +2226,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return _foodTrend;
   }
   function mixLine(){
+    if(bugHere() && !jobCount("soldier")) return "A bug is visiting and nobody is shooing it";
     var t = Math.max(1, C.ants), dig = (C.jobs.digger|0)/t, fo = (C.jobs.forager|0)/t,
         nu = (C.jobs.nursery|0)/t, bu = (C.jobs.builder|0)/t;
     var falling = _foodTrend === " down";
@@ -1788,9 +2310,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(i=0;i<NEEDS.length;i++){ v[i] = Math.max(0, Math.min(1, NEEDS[i].val() || 0)); k += Math.round(v[i]*20) + "|"; }
     if(k === _needKey) return;
     _needKey = k;
+    // AC8: four little vertical bars. The one that is running out wiggles and wears a
+    // red tag, so a player who cannot read a word still sees which one needs them.
     for(i=0;i<NEEDS.length;i++){
-      var n = NEEDS[i], bar = $("mt_"+n.id), box = $("need_"+n.id);
-      if(bar && bar.style) bar.style.width = Math.round(v[i]*100) + "%";
+      var n = NEEDS[i], fill = $("fill_"+n.id), box = $("mtr_"+n.id);
+      if(fill && fill.style) fill.style.height = Math.round(v[i]*100) + "%";
       if(box && box.classList) box.classList[(n.low >= 0 && v[i] < n.low) ? "add" : "remove"]("low");
     }
   }
@@ -1800,13 +2324,16 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function bumpIdle(){ idleT = 0; idleNext = 15; }
   function idleNudge(){
     if(guide.on){ var st = stepNow(); if(st) return st.text; }
+    if(bugHere() && !jobCount("soldier")) return "Tap plus on Soldiers to shoo the bug away";
     var sb = setbackNow() || lowNeedLine(); if(sb) return sb;
     var g = goalFor(currentMission());
     if(!g) return "Drag in the dirt to dig deeper";
     switch(g.type){
       case "dug": case "found": return "Drag down in the brown dirt to dig";
-      case "food":  return "Tap the green grass to drop food";
-      case "room":  return "Tap Build to make a room for your ants";
+      case "food":  return TOOL === "food" ? "Tap the green grass to drop food"
+                                          : "Tap the round button and pick the apple";
+      case "room":  return TOOL === "build" ? "Tap a room, then a glowing spot"
+                                           : "Pick the hammer to build a room";
       case "born": case "ants": return "Tap plus on Nursery so more eggs hatch";
       case "flood": return "Tap plus on Builders to clear the water";
       default:      return "Drag in the dirt to dig deeper";
@@ -1831,7 +2358,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(var i=pulses.length-1;i>=0;i--){
       pulses[i].t -= dt; if(pulses[i].t > 0) continue;
       var el = $(pulses[i].id), st = stepNow();
-      if(el && el.classList && !(guide.on && st && st.hi === pulses[i].id)) el.classList.remove("pulse");
+      var lit = st && (typeof st.hi === "function" ? st.hi() : st.hi);
+      if(el && el.classList && !(guide.on && lit === pulses[i].id)) el.classList.remove("pulse");
       pulses.splice(i,1);
     }
   }
@@ -1856,7 +2384,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       (function(j){
         // built as real elements, not an innerHTML blob, so every button is a thing
         // the game (and the QA robot) can reach and press
-        var card = document.createElement("div"); card.className = "job";
+        var card = document.createElement("div");
+        card.className = "job" + (j.locked ? " locked" : "");
+        card.id = "jobcard_" + j.id;
         var nm = document.createElement("div"); nm.className = "nm";
         nm.textContent = j.name; if(nm.style) nm.style.color = j.color;
         var ct = document.createElement("div"); ct.className = "ct"; ct.id = "ct_"+j.id; ct.textContent = "0";
@@ -1877,6 +2407,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // move one ant into (+1) or out of (-1) a job; the foragers are the pool it comes from
   function moveAnt(job, d){
     if(DEMO) return;
+    if(job === "soldier" && !soldiersUnlocked()) return;    // not met yet: the card is not even there
     if(d > 0){
       var from = null, i;
       for(i=JOBS.length-1;i>=0;i--){ var o=JOBS[i].id; if(o!==job && (C.jobs[o]|0) > 0){ if(o==="forager"){ from=o; break; } if(!from) from=o; } }
@@ -1890,27 +2421,39 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       C.jobs[job]--; C.jobs[to] = (C.jobs[to]|0) + 1;
     }
     if(Feel){ try{ Feel.tap(); }catch(e){} }
+    // the queen shares the real science the first time a kid posts a guard
+    if(!C.taught) C.taught = {};
+    if(job === "soldier" && d > 0 && !C.taught.soldier){
+      C.taught.soldier = true;
+      say("Soldier ants really do have bigger jaws than the other ants, and they stand guard at the door of the nest.");
+    }
     guide.moved = true; bumpIdle();
     syncJobsUI(); saveSoon();
   }
   var _jobsKey = "";
   function syncJobsUI(){
     var mx = $("barMix"); if(mx){ var ml = mixLine(); if(mx.textContent !== ml) mx.textContent = ml; }
-    var k = C.ants + "|" + JOBS.map(function(j){ return C.jobs[j.id]|0; }).join(",");
+    var k = C.ants + "|" + JOBS.map(function(j){ return C.jobs[j.id]|0; }).join(",") + "|" + (soldiersUnlocked() ? "5" : "4");
     if(k === _jobsKey) return;                 // called every frame: only redraw on a real change
     _jobsKey = k;
     for(var i=0;i<JOBS.length;i++){ var el = $("ct_"+JOBS[i].id); if(el) el.textContent = C.jobs[JOBS[i].id]|0; }
+    // AC9: the fifth card appears the moment soldiers unlock, and the row tightens
+    // up to hold five without any of them getting too small to tap.
+    var on = soldiersUnlocked();
+    var sc = $("jobcard_soldier"); if(sc && sc.classList) sc.classList[on ? "remove" : "add"]("locked");
+    var jh = $("jobs"); if(jh && jh.classList) jh.classList[on ? "add" : "remove"]("five");
     var ct = $("barAnts"); if(ct) ct.textContent = C.ants + (C.ants === 1 ? " ant" : " ants");
     drawBar();
   }
   // the colour bar: it SHOWS the mix, and dragging it moves ants between two jobs
   function drawBar(){
     var bar = $("bar"); if(!bar) return;
+    var AJ = activeJobs();
     var total = Math.max(1, C.ants), acc = 0, html = "", cum = [];
-    for(var i=0;i<JOBS.length;i++){
-      var n = C.jobs[JOBS[i].id]|0, w = (n/total)*100;
-      html += '<div class="seg" style="left:'+acc+'%;width:'+w+'%;background:'+JOBS[i].color+'"></div>';
-      acc += w; if(i < JOBS.length-1) cum.push(acc);
+    for(var i=0;i<AJ.length;i++){
+      var n = C.jobs[AJ[i].id]|0, w = (n/total)*100;
+      html += '<div class="seg" style="left:'+acc+'%;width:'+w+'%;background:'+AJ[i].color+'"></div>';
+      acc += w; if(i < AJ.length-1) cum.push(acc);
     }
     for(var d=0;d<cum.length;d++) html += '<div class="gr" style="left:'+cum[d]+'%"></div>';
     bar.innerHTML = html;
@@ -1927,12 +2470,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var cx = (ev.clientX != null) ? ev.clientX : ((ev.touches && ev.touches[0]) ? ev.touches[0].clientX : 0);
       return Math.max(0, Math.min(1, (cx - (r.left||0)) / Math.max(1, r.width||1)));
     }
-    function cumFor(i){ var t = Math.max(1, C.ants), s2 = 0; for(var j=0;j<=i;j++) s2 += C.jobs[JOBS[j].id]|0; return s2/t; }
+    function cumFor(i){ var A = activeJobs(), t = Math.max(1, C.ants), s2 = 0; for(var j=0;j<=i && j<A.length;j++) s2 += C.jobs[A[j].id]|0; return s2/t; }
     function grab(ev){
       if(DEMO) return;
       BA.unlock(); bumpIdle();
-      var p = pct(ev), best = 0, bd = 9;
-      for(var i=0;i<JOBS.length-1;i++){ var d = Math.abs(cumFor(i) - p); if(d < bd){ bd = d; best = i; } }
+      var p = pct(ev), best = 0, bd = 9, AJ = activeJobs();
+      for(var i=0;i<AJ.length-1;i++){ var d = Math.abs(cumFor(i) - p); if(d < bd){ bd = d; best = i; } }
       dragging = best;
       try{ if(bar.setPointerCapture && ev.pointerId != null) bar.setPointerCapture(ev.pointerId); }catch(e){}
       move(ev);
@@ -1940,8 +2483,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     function move(ev){
       if(dragging < 0) return;
       if(ev.preventDefault) ev.preventDefault();
-      var a2 = JOBS[dragging].id, b2 = JOBS[dragging+1].id, before = 0, i;
-      for(i=0;i<dragging;i++) before += C.jobs[JOBS[i].id]|0;
+      var AJ = activeJobs();
+      if(!AJ[dragging] || !AJ[dragging+1]) return;
+      var a2 = AJ[dragging].id, b2 = AJ[dragging+1].id, before = 0, i;
+      for(i=0;i<dragging;i++) before += C.jobs[AJ[i].id]|0;
       var pair = (C.jobs[a2]|0) + (C.jobs[b2]|0);
       var want = Math.round(pct(ev) * C.ants) - before;
       want = Math.max(0, Math.min(pair, want));
@@ -1959,22 +2504,69 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   })();
 
   // ======================================================================
-  //  The three things a tap can do (AC7). The old Dig/Food/Water/Jobs tabs were
-  //  modes that did not look like modes: Food stayed lit while digging worked
-  //  anyway. Dig and Jobs are not modes at all — you dig by dragging in the dirt
-  //  and you set jobs on the strip — so they are gone. What is left is Build, and
-  //  the choice of what a tap on the meadow leaves behind. The lit one is it.
+  //  What is in your hand (AC8). AC7 had three word buttons and a fourth verb
+  //  (digging) that no button owned, so what a tap would do was never actually
+  //  stated. There is one big button now and it IS the tool: its picture is the
+  //  tool, its two words say what to do with it, and the round button beside it
+  //  opens a sheet of picture cards to swap. Nothing is a hidden mode any more.
   // ======================================================================
-  var TOOL = "food";
-  function setTool(t){
+  var TOOLS = {
+    dig:   { name:"Dig",   hint:"drag in the dirt" },
+    food:  { name:"Food",  hint:"tap the grass" },
+    water: { name:"Water", hint:"tap the grass" },
+    build: { name:"Build", hint:"tap to choose" }
+  };
+  var TOOL_ORDER = ["dig","food","water","build"];
+  var TOOL = "dig";                       // a new colony starts with the shovel out
+  function setTool(t, quiet){
+    if(!TOOLS[t]) t = "dig";
+    if(t !== "build") cancelPlacing(true);
     TOOL = t;
-    var f = $("toolFood"), w = $("toolWater");
-    if(f && f.classList) f.classList[t === "food"  ? "add" : "remove"]("on");
-    if(w && w.classList) w.classList[t === "water" ? "add" : "remove"]("on");
+    var main = $("actMain");
+    if(main){
+      if(main.classList){ TOOL_ORDER.forEach(function(k){ main.classList.remove("t-"+k); }); main.classList.add("t-"+t); }
+      var nm = $("actName"), hn = $("actHint");
+      if(nm) nm.textContent = TOOLS[t].name;
+      if(hn) hn.textContent = TOOLS[t].hint;
+    }
+    TOOL_ORDER.forEach(function(k){
+      var c = $("tool_"+k); if(c && c.classList) c.classList[k === t ? "add" : "remove"]("on");
+    });
+    closeSheet();
+    guide.swapped = true;
+    if(t === "build" && !quiet) openRoomPicker(null);     // the hammer's job IS choosing a room
+    saveSoon();
   }
-  $("toolFood").addEventListener("click", function(){ BA.unlock(); bumpIdle(); cancelPlacing(); setTool("food"); hint("Tap the green grass to leave a crumb"); });
-  $("toolWater").addEventListener("click", function(){ BA.unlock(); bumpIdle(); cancelPlacing(); setTool("water"); hint("Tap the green grass to leave a drop of water"); });
-  $("toolBuild").addEventListener("click", function(){ BA.unlock(); bumpIdle(); if(placing) cancelPlacing(); else openRoomPicker(null); });
+  var sheetOpen = false;
+  function openSheet(){
+    if(DEMO) return;
+    sheetOpen = true;
+    var el = $("sheet"); if(el && el.classList) el.classList.add("open");
+    setGuideHi();
+  }
+  function closeSheet(){
+    sheetOpen = false;
+    var el = $("sheet"); if(el && el.classList) el.classList.remove("open");
+  }
+  $("actSwap").addEventListener("click", function(){
+    BA.unlock(); bumpIdle();
+    if(sheetOpen) closeSheet(); else openSheet();
+  });
+  // the big button is the tool itself: with the hammer out it opens the rooms, and
+  // with anything else it says again, in its own words, where to use it
+  $("actMain").addEventListener("click", function(){
+    BA.unlock(); bumpIdle();
+    if(TOOL === "build"){ openRoomPicker(null); return; }
+    hint(TOOL === "dig" ? "Drag down in the brown dirt" : "Tap the green grass up top");
+  });
+  TOOL_ORDER.forEach(function(k){
+    var c = $("tool_"+k); if(!c) return;
+    c.addEventListener("click", function(){ BA.unlock(); bumpIdle(); setTool(k); });
+  });
+  // tapping the dark behind the sheet puts it away without changing anything
+  $("sheet").addEventListener("click", function(ev){
+    if(ev && ev.target && ev.target.id === "sheet") closeSheet();
+  });
   $("jobsToggle").addEventListener("click", function(){ BA.unlock(); bumpIdle(); setJobsOpen(!jobsOpen); });
 
   // ======================================================================
@@ -2001,9 +2593,26 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     C.plan.push(key(c,r));
     return true;
   }
+  // AC8: the tool in your hand decides what a tap means, and the big button has been
+  // saying which tool that is the whole time. A tap in the wrong place is never
+  // silent: it says, in a few words, which picture to swap to.
+  function eventPoint(ev){
+    var r = CV.getBoundingClientRect ? CV.getBoundingClientRect() : { left:0, top:0 };
+    return { x:evX(ev) - (r.left||0), y:evY(ev) - (r.top||0) };
+  }
   function onDown(ev){
     if(state !== "play" || DEMO || paused) return;
     BA.unlock(); bumpIdle();
+    if(sheetOpen) closeSheet();
+    // AC9: the bouncing red marker is the one thing that means the same wherever it
+    // is on screen — it takes you to the bug, whatever is in your hand.
+    var pt = eventPoint(ev);
+    if(bugMarkHit(pt.x, pt.y)){
+      lookAt(C.bug);
+      hint(setbackNow() || "", 5);
+      if(Feel){ try{ Feel.tap(); }catch(e){} }
+      return;
+    }
     var g = cellFromEvent(ev); if(!g) return;
     // placing a room: the glowing spots are the only thing a tap means right now
     if(placing){
@@ -2013,13 +2622,16 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       return;
     }
     if(g.surface){
+      if(TOOL !== "food" && TOOL !== "water"){ hint("Hold the apple or the drop first"); return; }
       var it = dropSurface(TOOL, g.x, true);          // a crumb you can SEE, worth nothing until it is carried in
       if(Feel){ try{ Feel.tap(); }catch(e){} }
       if(it && !jobCount("forager")) hint("Put an ant on Foragers so somebody fetches it");
       saveSoon(); return;
     }
+    if(TOOL === "build"){ openRoomPicker(cellAt(g.c, g.r) && cellAt(g.c, g.r).kind === "tunnel" ? { c:g.c, r:g.r } : null); return; }
+    if(TOOL !== "dig"){ hint("Hold the shovel to dig here"); return; }
     var here = cellAt(g.c, g.r);
-    if(here && (here.kind === "tunnel")){ drag = { mode:"tap", c:g.c, r:g.r }; return; }
+    if(here && (here.kind === "tunnel")){ hint("Hold the hammer to build here"); return; }
     if(here) return;                                    // a planned or built cell: nothing to do
     if(planCell(g.c, g.r)){ drag = { mode:"dig" }; if(Feel){ try{ Feel.tap(); }catch(e){} } }
     else { hint("Start your tunnel next to one you already have"); }
@@ -2031,7 +2643,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     planCell(g.c, g.r);
   }
   function onUp(){
-    if(drag && drag.mode === "tap") openRoomPicker({ c:drag.c, r:drag.r });
     if(drag) saveSoon();
     drag = null;
   }
@@ -2064,9 +2675,34 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(i=0;i<ks.length;i++) if(roomUnlocked(ks[i])) return true;
     return false;
   }
+  // ======================================================================
+  //  AC8: the build menu is PICTURES. Each card is a little scene of what the room
+  //  does — eggs in a pink room, a pile of berries, an ant asleep, mushrooms — and
+  //  what it costs is a row of apples you count, not a number you read. A room you
+  //  cannot afford yet goes grey and its apples flash. Closing is a big orange X.
+  // ======================================================================
+  var ROOM_ART = {
+    nursery: '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#f2a2c0"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#f7c2d6"/>' +
+      '<ellipse cx="27" cy="35" rx="7" ry="9" fill="#fff8ec" stroke="#c9748f" stroke-width="2"/><ellipse cx="41" cy="33" rx="7" ry="9" fill="#fff8ec" stroke="#c9748f" stroke-width="2"/><ellipse cx="54" cy="36" rx="6" ry="8" fill="#fff8ec" stroke="#c9748f" stroke-width="2"/></svg>',
+    storage: '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#e9c46a"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#f2d998"/>' +
+      '<circle cx="30" cy="40" r="8" fill="#d2405a"/><circle cx="46" cy="40" r="8" fill="#d2405a"/><circle cx="38" cy="28" r="8" fill="#d2405a"/><circle cx="35" cy="25" r="2.4" fill="#e8697f"/><circle cx="27" cy="37" r="2.4" fill="#e8697f"/></svg>',
+    den:     '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#9ad2f2"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#c4e6fa"/>' +
+      '<ellipse cx="30" cy="40" rx="13" ry="8" fill="#c9853c" stroke="#6b431c" stroke-width="2"/><circle cx="44" cy="37" r="7" fill="#c9853c" stroke="#6b431c" stroke-width="2"/><circle cx="46" cy="36" r="1.6" fill="#3a2600"/>' +
+      '<text x="52" y="26" font-family="Baloo 2,Nunito,sans-serif" font-size="15" font-weight="800" fill="#3a6b8a">Zz</text></svg>',
+    fungus:  '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#cbbd85"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#ded3ab"/>' +
+      '<rect x="24" y="34" width="6" height="12" rx="3" fill="#f6f1e2"/><path d="M16 35a11 8 0 0 1 22 0z" fill="#e2685f"/><circle cx="22" cy="31" r="2.2" fill="#fff4ea"/><circle cx="31" cy="30" r="1.8" fill="#fff4ea"/>' +
+      '<rect x="47" y="38" width="5" height="9" rx="2.5" fill="#f6f1e2"/><path d="M41 39a9 6 0 0 1 17 0z" fill="#e2685f"/><circle cx="50" cy="35" r="1.7" fill="#fff4ea"/></svg>'
+  };
+  var APPLE_SVG = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 3.4c1-1 3.3-.8 3.3 1.8 0 2.5-1.6 4.7-3.3 4.7S2.7 7.7 2.7 5.2C2.7 2.6 5 2.4 6 3.4z" fill="#63b34a"/><path d="M6 3.4V1.6" stroke="#3f7a2f" stroke-width="1" stroke-linecap="round"/></svg>';
+  function costApples(n){
+    var out = "", i, show = Math.min(12, Math.max(1, n|0));
+    for(i=0;i<show;i++) out += APPLE_SVG;
+    return out;
+  }
   function openRoomPicker(cell){
     if(DEMO) return;
     cancelPlacing(true);
+    closeSheet();
     pickCell = cell || null;
     var list = $("roomList"); if(!list) return;
     list.innerHTML = "";
@@ -2077,27 +2713,27 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var def = GAME_CONFIG.rooms[id], can = C.food >= def.food;
       made++;
       var b = document.createElement("button");
-      b.className = "room"; b.type = "button"; b.id = "room_" + id;
-      if(!can) b.disabled = true;
-      var sw = document.createElement("span");
-      sw.className = "sw"; if(sw.style) sw.style.background = def.color;
-      var txt = document.createElement("span"); txt.className = "rt";
+      b.className = "room" + (can ? "" : " cant"); b.type = "button"; b.id = "room_" + id;
+      var pic = document.createElement("span");
+      pic.className = "pic"; pic.innerHTML = ROOM_ART[id] || ROOM_ART.storage;
       var rn = document.createElement("span"); rn.className = "rn"; rn.textContent = def.name;
-      var rd = document.createElement("span"); rd.className = "rd";
-      rd.textContent = def.desc + " · " + def.food + " food" + (can ? "" : " · not enough food yet");
-      txt.appendChild(rn); txt.appendChild(rd);
+      var cost = document.createElement("span");
+      cost.className = "cost"; cost.innerHTML = costApples(def.food);
+      b.appendChild(pic); b.appendChild(rn); b.appendChild(cost);
       if(pickCell){                                  // AC6: where you dig it matters, in kid words
         var good = goodSpot(id, pickCell.c, pickCell.r), sp = document.createElement("span");
         sp.className = "sp" + (good ? "" : " meh"); sp.textContent = spotLine(id, pickCell.c, pickCell.r);
-        txt.appendChild(sp);
+        b.appendChild(sp);
       }
-      b.appendChild(sw); b.appendChild(txt);
-      b.addEventListener("click", function(){ if(can) chooseRoom(id); });
+      b.addEventListener("click", function(){
+        if(!can){ hint("Bring home more food first"); return; }
+        chooseRoom(id);
+      });
       list.appendChild(b);
     });
     if(!made){
       var none = document.createElement("div");
-      none.className = "rd"; none.textContent = "Your ants have not learned a room yet. Keep growing.";
+      none.className = "rn"; none.textContent = "Your ants have not learned a room yet. Keep growing.";
       list.appendChild(none);
     }
     var host = $("build"); if(host && host.style) host.style.display = "flex";
@@ -2113,10 +2749,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     closeBuild();
     if(pickCell){ startRoom(id, pickCell.c, pickCell.r); pickCell = null; return; }
     placing = { room:id };
-    // only ONE action is lit at a time: while a room is looking for its spot, a tap
-    // means "put it here", not "leave a crumb"
-    var tb = $("toolBuild"); if(tb && tb.classList) tb.classList.add("on");
-    ["toolFood","toolWater"].forEach(function(k){ var e = $(k); if(e && e.classList) e.classList.remove("on"); });
+    // the hammer is what is in your hand while the room looks for its spot, and the
+    // big button says so, so a tap can only mean "put it here"
+    if(TOOL !== "build") setTool("build", true);
+    var hn = $("actHint"); if(hn) hn.textContent = "tap a glowing spot";
     var nm = (GAME_CONFIG.rooms[id] || {}).name || "room";
     hint(buildSpots().length
       ? ("Tap a glowing spot to put your " + nm.toLowerCase() + " there")
@@ -2125,8 +2761,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function cancelPlacing(quiet){
     if(!placing) return;
     placing = null;
-    var tb = $("toolBuild"); if(tb && tb.classList) tb.classList.remove("on");
-    setTool(TOOL);                                   // the drop button lights up again
+    var hn = $("actHint"); if(hn && TOOLS[TOOL]) hn.textContent = TOOLS[TOOL].hint;
     if(!quiet) hint("No room this time");
   }
   $("buildCancel").addEventListener("click", function(){ BA.unlock(); pickCell = null; closeBuild(); });
@@ -2165,6 +2800,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
         leaves:C.leaves, leavesCut:C.leavesCut, leafReady:C.leafReady, aphids:C.aphids, dew:C.dew, dewGot:C.dewGot, mush:C.mush,
         berryReady:C.berryReady, tapped:C.tapped, taught:C.taught,
+        soldiers:!!C.soldiers, bug:C.bug, bugT:C.bugT||0, bugsSeen:C.bugsSeen|0, bugsScared:C.bugsScared|0,
         seen:C.seen, guided:C.guided, savedAt:Date.now()
       }));
     }catch(e){}
@@ -2202,6 +2838,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       col.aphids = !!s.aphids; col.dew = s.dew||0; col.dewGot = s.dewGot||0; col.mush = s.mush||0;
       col.berryReady = s.berryReady == null ? 2 : s.berryReady;
       col.tapped = s.tapped||0; col.taught = s.taught || {};
+      // AC9: the fifth job, and any visitor that was still here when the app closed
+      col.soldiers = !!s.soldiers; col.bug = s.bug || null;
+      col.bugT = s.bugT||0; col.bugsSeen = s.bugsSeen|0; col.bugsScared = s.bugsScared|0;
+      if(col.jobs && col.jobs.soldier == null) col.jobs.soldier = 0;
       return col;
     }catch(e){ return null; }
   }
@@ -2232,6 +2872,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
     if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
     setJobsOpen(false);
+    setTool("dig", true);                // every colony opens with the shovel in hand
     syncNeeds();
     if(DEMO) return;
     ensureMusic();
@@ -2285,17 +2926,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       { text:"Drag down in the brown dirt to dig a tunnel", hi:null,
         spot:function(){ return digSpot(); },
         done:function(){ return C.plan.length > 0 || (C.dug - guide.base.dug) > 0; } },
-      { text:"Now tap the green grass to drop some food", hi:"toolFood",
+      // AC8: swapping what is in your hand is the one thing the new bar asks a kid
+      // to learn, so the guide teaches it, and the glow follows them into the sheet.
+      { text:"Tap the round button, then pick the apple",
+        hi:function(){ return sheetOpen ? "tool_food" : "actSwap"; }, spot:null,
+        done:function(){ return TOOL === "food"; } },
+      { text:"Now tap the green grass to drop some food", hi:"actMain",
         spot:function(){ return { fc:GAME_CONFIG.cols*0.26, fr:SURF_R }; },
         done:function(){ return (C.tapped|0) > (guide.base.tapped|0); } },
-      // AC7: the old step three taught sliding the colour bar, which did nothing on
+      // AC7: the old last step taught sliding the colour bar, which did nothing on
       // a mouse. A tap on the plus button cannot miss, on any device.
       { text:"Tap the plus on Foragers to give an ant that job", hi:"job_forager_up", open:true,
         spot:null,
         done:function(){ return guide.moved; } }
     ],
     build: [
-      { text:"Your ants can have rooms now. Tap Build.", hi:"toolBuild", spot:null,
+      { text:"Your ants can have rooms now. Pick the hammer.",
+        hi:function(){ return sheetOpen ? "tool_build" : "actSwap"; }, spot:null,
         done:function(){ return guide.opened; } },
       { text:"Pick a room, then tap a glowing spot to put it there", hi:null, spot:null,
         done:function(){ return guide.built; } }
@@ -2323,7 +2970,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return down;
   }
   var guide = { on:false, lesson:"intro", step:0, t:0, base:{ dug:0, tapped:0 },
-                moved:false, opened:false, built:false };
+                moved:false, opened:false, built:false, swapped:false };
   var openedForLesson = false;      // the job cards were opened BY a lesson, not by the kid
   var how = { on:false };            // the shell and the QA robot still ask for it by this name
   function stepNow(){ var L = LESSONS[guide.lesson]; return L ? L[guide.step] : null; }
@@ -2332,7 +2979,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function startLesson(name){
     if(!LESSONS[name]) return;
     guide.on = true; guide.lesson = name; guide.step = 0; guide.t = 0;
-    guide.moved = false; guide.opened = false; guide.built = false;
+    guide.moved = false; guide.opened = false; guide.built = false; guide.swapped = false;
     guide.base = { dug:C.dug, tapped:C.tapped|0 };
     how.on = true;
     clearMsg();                       // one surface: the lesson owns it while it runs
@@ -2356,10 +3003,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(teachCool > 0) teachCool = Math.max(0, teachCool - dt);
     if(!guide.on){ maybeTeachBuild(); return; }
     guide.t += dt;
+    var st0 = stepNow();
+    if(st0 && typeof st0.hi === "function") setGuideHi();     // the glow follows the sheet
     var st = stepNow();
     if(!st){ endHow(); return; }
     if(guide.t < 0.5 || !st.done()) return;
-    guide.step++; guide.t = 0; guide.moved = false; guide.opened = false; guide.built = false;
+    guide.step++; guide.t = 0; guide.moved = false; guide.opened = false; guide.built = false; guide.swapped = false;
     guide.base = { dug:C.dug, tapped:C.tapped|0 };
     if(Feel){ try{ Feel.tap(); }catch(e){} }
     if(guide.step >= lessonLen()){
@@ -2374,12 +3023,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   // the one control this step is about gets a soft pulse; everything else is left alone
   function setGuideHi(){
-    var ids = ["toolBuild","toolFood","toolWater","bar","jobsToggle","job_forager_up","job_digger_up","job_nursery_up","job_builder_up"], i;
+    var ids = ["actMain","actSwap","tool_dig","tool_food","tool_water","tool_build","bar","jobsToggle",
+               "job_forager_up","job_digger_up","job_nursery_up","job_builder_up"], i;
     for(i=0;i<ids.length;i++){ var e = $(ids[i]); if(e && e.classList) e.classList.remove("pulse"); }
     if(!guide.on) return;
     var st = stepNow(); if(!st) return;
     if(st.open && !jobsOpen){ setJobsOpen(true); openedForLesson = true; }   // a step about the job cards opens them
-    if(st.hi){ var e2 = $(st.hi); if(e2 && e2.classList) e2.classList.add("pulse"); }
+    // the glow can move mid-step: tap the round button and it follows you into the sheet
+    var want = typeof st.hi === "function" ? st.hi() : st.hi;
+    if(want){ var e2 = $(want); if(e2 && e2.classList) e2.classList.add("pulse"); }
   }
   function drawHow(){
     if(!guide.on) return;
@@ -2447,7 +3099,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     flood:"antcity/prop/flood-v1", colony:"antcity/prop/colony-v1", loading:"antcity/loading/v1",
     room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1",
     room_fungus:"antcity/prop/fungus-v1", leaf:"antcity/prop/leaf-v1",
-    aphid:"antcity/prop/aphid-plant-v1", honeydew:"antcity/prop/honeydew-v1"
+    aphid:"antcity/prop/aphid-plant-v1", honeydew:"antcity/prop/honeydew-v1",
+    bug_beetle:"antcity/bug/beetle-v1", bug_caterpillar:"antcity/bug/caterpillar-v1",
+    bug_grasshopper:"antcity/bug/grasshopper-v1"
   };
   // The shell owns the kid's picks and hands the engine the option INDEX per slot
   // (?ant=1&meadow=0&dirt=1), the same tiny-param handoff Breaker and Sky Flyer use.
@@ -2492,6 +3146,21 @@ input,textarea{-webkit-user-select:text;user-select:text;}
             for(var f in ml) cur[f] = ml[f];
           } else GAME_CONFIG.milestones.push(ml);
         });
+      }
+      // AC9: the bad bugs are recipe too. The manifest may retune how often one calls,
+      // what it pays and every word it says; anything it leaves out keeps the engine's.
+      if(m.bugs && typeof m.bugs === "object"){
+        var bg = GAME_CONFIG.bug;
+        if(typeof m.bugs.everySec === "number") bg.everySec = m.bugs.everySec;
+        if(typeof m.bugs.coins === "number") bg.coins = m.bugs.coins;
+        if(m.bugs.kinds && typeof m.bugs.kinds === "object"){
+          for(var bk in m.bugs.kinds){
+            var bd0 = m.bugs.kinds[bk] || {};
+            bg.kinds[bk] = bg.kinds[bk] || { name:bk, color:"#7d8f45", where:"door" };
+            for(var bf in bd0) bg.kinds[bk][bf] = bd0[bf];
+            if(bd0.art) ART_IDS["bug_"+bk] = bd0.art;
+          }
+        }
       }
       if(m.levels && m.levels.length){
         MISSIONS = m.levels.map(function(l){ return { id:l.id, name:l.name, layout:l.layout, coins:l.coins || 10, difficulty:l.difficulty }; });
@@ -2600,6 +3269,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     items: function(){ return C.surface.map(function(it){
       return { kind:it.kind, x:Math.round(itemX(it)), n:it.n, give:it.give, held:!!it.held, claimed:!!it.claim }; }); },
     spots: function(){ return buildSpots(); },
+    tool: function(){ return TOOL; },
+    sheetOpen: function(){ return sheetOpen; },
+    tools: function(){ return TOOL_ORDER.slice(); },
+    setToolByName: function(t){ setTool(t, true); return TOOL; },
     queen: function(){ return { c:C.queen.c, r:C.queen.r }; },
     geom: function(){ layout(); return { cs:CS, ox:OX, sky:SKY, panel:PANEL, w:W, h:H, camY:Math.round(camY) }; },
     placing: function(){ return placing ? placing.room : null; },
@@ -2623,6 +3296,24 @@ input,textarea{-webkit-user-select:text;user-select:text;}
                hauling:countTask(function(t){ return t && t.kind === "haul" && t.it && (t.it.kind === "leaf" || t.it.kind === "dew"); }) };
     },
     setAphids: function(on){ C.aphids = !!on; return C.aphids; },
+    // --- AC9: soldiers and the bad bug visits ---
+    soldiersOn: function(){ return soldiersUnlocked(); },
+    jobsList: function(){ return activeJobs().map(function(j){ return j.id; }); },
+    jobColor: function(id){ return jobColor(id); },
+    bug: function(){
+      var b = C.bug; if(!b) return null;
+      var def = bugDef(b.kind);
+      return { kind:b.kind, state:b.state, scare:Math.round(b.scare*100)/100,
+               fc:Math.round(b.fc*100)/100, fr:Math.round(b.fr*100)/100,
+               c:b.c, r:b.r, surface:(b.r == null), t:Math.round(b.t*10)/10,
+               name:def.name, line:def.call };
+    },
+    sendBug: function(kind){ var b = sendBug(kind); return b ? this.bug() : null; },
+    bugsSeen: function(){ return C.bugsSeen|0; },
+    bugsScared: function(){ return C.bugsScared|0; },
+    bugMark: function(){ return bugMark ? { x:Math.round(bugMark.x), y:Math.round(bugMark.y), r:Math.round(bugMark.r) } : null; },
+    looking: function(){ return (camLook != null && C.t < camLookT) ? camLook : null; },
+    guards: function(){ return countTask(function(t){ return t && t.kind === "scare"; }); },
     dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
                               jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
                               dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
@@ -2636,7 +3327,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     _art: function(){ var o = {}; for(var s in ART_IDS) o[s] = artUrl(ART_IDS[s]); return o; },
     _draw: function(){ try{ draw(); return "ok"; }catch(e){ return "ERR: " + (e && e.message || e); } },
     _save: saveNow,
-    _openAll: function(){ C.freeBuild = true; return true; },   // robot only: skip to free build
+    // robot only: skip to free build. It also closes the lesson, because a colony in
+    // free build is one that has been played, and a lesson running is one of the two
+    // things that hold a bad bug back.
+    _openAll: function(){ C.freeBuild = true; C.guided = true; if(how.on) endHow(); return true; },
     _reset: function(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} newColony(3); }
   };
   try{ window.BUILDABLE_GAME = window.ANTCITY_GAME; }catch(e){}

@@ -189,10 +189,16 @@ function work(m) {
 }
 
 const results = [];
+// AC9: the bad bugs must never touch the tutorial. Every step of every mission is
+// watched for one, and the count has to come out at zero.
+let tutorialBugs = 0;
 for (let i = 0; i < 10; i++) {
   const listed = G.missions()[i];            // name the mission by its place in the list
   let secs = 0;
-  while (!G.missions()[i].done && !G.freeBuild() && secs < CAP_SECONDS) { work(G.mission()); G.seconds(2); secs += 2; }
+  while (!G.missions()[i].done && !G.freeBuild() && secs < CAP_SECONDS) {
+    work(G.mission()); G.seconds(2); secs += 2;
+    if (G.bug()) tutorialBugs++;
+  }
   const done = G.missions()[i].done;
   results.push({ n: i + 1, id: listed.id, name: listed.name, done, secs });
   ok(`mission ${i + 1} — ${listed.name}`, done, `${secs}s of colony time`);
@@ -203,7 +209,9 @@ ok('the tenth hands off to free-build', G.freeBuild() === true);
 
 const coins = G.dbg().coins;
 const missionCoins = manifest.levels.reduce((a, l) => a + l.coins, 0);
-const paid = coins.filter((c) => c.key.indexOf('antcity:milestone:') !== 0).reduce((a, c) => a + c.n, 0);
+// what the MISSIONS paid: the milestones and the AC9 bug scares have their own keys
+const paid = coins.filter((c) => c.key.indexOf('antcity:milestone:') !== 0 && c.key.indexOf('antcity:bug:') !== 0)
+  .reduce((a, c) => a + c.n, 0);
 ok('every mission paid its manifest coins to the wallet', paid === missionCoins, `paid=${paid} manifest=${missionCoins}`);
 ok('every coin went through the shared wallet, none banked in the game',
   walletCalls.length === coins.length && walletCalls.length >= 10, `${walletCalls.length} wallet calls`);
@@ -286,10 +294,15 @@ const pressBtn = (el) => el && el.dispatchEvent({ type: 'click', preventDefault(
 // the middle of a cell, in page pixels, exactly as a finger would find it
 const cellPt = (c, r) => { const g = G.geom(); return [g.ox + c * g.cs + g.cs / 2, g.sky + r * g.cs + g.cs / 2 - g.camY]; };
 const grassPt = () => { const g = G.geom(); return [Math.round(g.w * 0.33), Math.round(g.sky - 45)]; };
-// the three taught gestures, done in order — what every kid does in their first minute
+// the taught gestures, done in order — what every kid does in their first minute.
+// AC8 added one: you swap what is in your hand on the round button before the grass
+// tap does anything, and the guide teaches exactly that.
+function swapTo(tool) { pressBtn(byId.actSwap); pressBtn(byId['tool_' + tool]); }
 function playTutorial(profile) {
   const q = G.queen();
   dragOn(CV, [cellPt(q.c, q.r + 1), cellPt(q.c, q.r + 2)], profile);
+  G.seconds(1);
+  swapTo('food');
   G.seconds(1);
   tapOn(CV, grassPt()[0], grassPt()[1], profile);
   G.seconds(1);
@@ -317,16 +330,30 @@ for (const profile of ['mouse', 'touch']) {
   ok(`${profile}: and the finished step's words are gone from the screen`,
     G.hints().length === 1 && G.hints()[0] === G.guide().text, G.hints().join(' | '));
 
-  // STEP TWO, as taught: "Now tap the green grass to drop some food"
+  // STEP TWO, as taught: "Tap the round button, then pick the apple"
+  ok(`${profile}: the colony opens with the shovel in hand`, G.tool() === 'dig', G.tool());
+  pressBtn(byId.actSwap);
+  ok(`${profile}: the round button opens the toolbox`, G.sheetOpen() === true);
+  watch('toolbox open');
+  pressBtn(byId.tool_food);
+  ok(`${profile}: picking the apple puts it in your hand and puts the toolbox away`,
+    G.tool() === 'food' && G.sheetOpen() === false, `${G.tool()} sheet=${G.sheetOpen()}`);
+  ok(`${profile}: the big button says what is in your hand and what to do with it`,
+    byId.actName.textContent === 'Food' && /grass/i.test(byId.actHint.textContent),
+    `${byId.actName.textContent} / ${byId.actHint.textContent}`);
+  G.seconds(1); watch('after the swap');
+  ok(`${profile}: swapping advances the guide`, G.lesson().step === 2, JSON.stringify(G.lesson()));
+
+  // STEP THREE, as taught: "Now tap the green grass to drop some food"
   const foodBefore = G.dbg().food;
   tapOn(CV, grassPt()[0], grassPt()[1], profile);
   ok(`${profile}: the taught tap really leaves a crumb on the meadow`,
     G.items().filter((i) => i.kind === 'crumb').length === 1, JSON.stringify(G.items()));
   ok(`${profile}: the tap itself does NOT move the food counter`, G.dbg().food === foodBefore, `${foodBefore} -> ${G.dbg().food}`);
   G.seconds(1); watch('after the tap');
-  ok(`${profile}: dropping food advances the guide to step three`, G.lesson().step === 2, JSON.stringify(G.lesson()));
+  ok(`${profile}: dropping food advances the guide to the last step`, G.lesson().step === 3, JSON.stringify(G.lesson()));
 
-  // STEP THREE, as taught: "Tap the plus on Foragers to give an ant that job".
+  // STEP FOUR, as taught: "Tap the plus on Foragers to give an ant that job".
   // The old step three taught dragging the colour bar, which did nothing on a mouse.
   ok(`${profile}: the step that teaches the job cards opens them first`, G.jobsOpen() === true);
   const wasForagers = G.dbg().jobs.forager;
@@ -354,17 +381,19 @@ for (const profile of ['mouse', 'touch']) {
   for (let i = 0; i < 200 && G.mission().index < 2; i++) {
     G.drop('food', 120); G.assign('forager', 4); G.seconds(2); watch('growing to the room mission');
   }
+  G.setToolByName('dig');                    // put the shovel back before the build lesson
   ok(`${profile}: the colony reaches the mission that unlocks rooms`, G.mission().index >= 2, JSON.stringify(G.mission().id));
   for (let i = 0; i < 40 && !G.lesson().on; i++) { G.seconds(1); watch('waiting for the build lesson'); }
   ok(`${profile}: the guide teaches Build the moment rooms unlock`,
     G.lesson().on && G.lesson().name === 'build', JSON.stringify(G.lesson()));
   ok(`${profile}: and it is still one hint, not two`, G.hints().length === 1, G.hints().join(' | '));
-  pressBtn(byId.toolBuild);
-  ok(`${profile}: the taught tap on Build opens the room cards`, G.buildOpen() === true);
+  swapTo('build');
+  ok(`${profile}: picking the hammer opens the room cards by itself`,
+    G.tool() === 'build' && G.buildOpen() === true, `${G.tool()} open=${G.buildOpen()}`);
   G.seconds(1); watch('build card open');
   ok(`${profile}: that advances the build lesson`, G.lesson().step === 1, JSON.stringify(G.lesson()));
   for (let i = 0; i < 60 && G.dbg().food < 8; i++) { G.drop('food', 140); G.seconds(2); }
-  pressBtn(byId.toolBuild); pressBtn(byId.room_nursery);
+  pressBtn(byId.actMain); pressBtn(byId.room_nursery);
   ok(`${profile}: picking a room lights up every spot it could go`,
     G.placing() === 'nursery' && G.spots().length > 0, `${G.spots().length} spots`);
   const spot = G.spots()[0], costBefore = G.dbg().food;
@@ -395,6 +424,7 @@ console.log('\n  .. food is carried, never counted');
 G._reset(); G.play();
 G.assign('forager', 0);
 const noFetch = G.dbg().food;                        // nobody to go and get it
+swapTo('food');
 tapOn(CV, grassPt()[0], grassPt()[1], 'mouse');
 G.seconds(4);
 ok('with nobody on foraging, a dropped crumb is still lying there',
@@ -545,16 +575,20 @@ G._reset(); G.play();
 G.showHow();
 const gStart = G.guide();
 ok('the guide runs on a brand new colony', gStart.on && gStart.step === 0, JSON.stringify(gStart));
-ok('it teaches three things, one at a time', gStart.steps === 3);
+ok('it teaches four things, one at a time', gStart.steps === 4);
 ok('step one asks in kid words, with no wall of text', /dig/i.test(gStart.text) && gStart.text.length < 60, gStart.text);
 G.seconds(20);
 ok('a step WAITS: doing nothing never advances it', G.guide().step === 0, JSON.stringify(G.guide()));
 G.digDown(2); G.seconds(1);
 ok('digging really advances it to step two', G.guide().step === 1, JSON.stringify(G.guide()));
 G.seconds(20);
-ok('step two waits for food to be dropped', G.guide().step === 1);
+ok('step two waits for the tool to really be swapped', G.guide().step === 1);
+G.setToolByName('food'); G.seconds(1);
+ok('taking the apple advances it to step three', G.guide().step === 2, JSON.stringify(G.guide()));
+G.seconds(20);
+ok('step three waits for food to be dropped', G.guide().step === 2);
 G.drop('food', 150); G.seconds(1);
-ok('dropping food advances it to step three', G.guide().step === 2, JSON.stringify(G.guide()));
+ok('dropping food advances it to the last step', G.guide().step === 3, JSON.stringify(G.guide()));
 G.assign('nursery', 3); G.seconds(1);
 ok('moving an ant to a new job finishes the guide', G.guide().on === false, JSON.stringify(G.guide()));
 
@@ -564,12 +598,30 @@ ok('the goal line is always saying something', typeof goalLine === 'string' && g
 ok('the goal line has no jargon or raw numbers dumped in it', !/undefined|NaN|null/.test(goalLine), goalLine);
 ok('the guide replays from the ? button', (G.showHow(), G.guide().on === true && G.guide().step === 0));
 
-// the controls say what they are with a PICTURE and a word, and there is no
-// unexplained mode tab left. The picture is drawn SVG geometry, never a glyph.
-[['toolBuild', 'Build'], ['toolFood', 'Food'], ['toolWater', 'Water']].forEach(([id, word]) =>
-  ok(`the ${word.toLowerCase()} control is a picture button with its word on it`,
-    new RegExp(`id="${id}"[^>]*>\\s*<svg class="ic"[\\s\\S]{40,900}?</svg><span>${word}</span>`).test(html)));
+// AC8: the old bottom stack is GONE — no text needs row, no row of word buttons.
+ok('the old text needs row is gone', !/id="needs"/.test(html) && !/id="need_food"/.test(html));
+ok('the old row of word buttons is gone',
+  !/id="acts"/.test(html) && !/id="toolFood"/.test(html) && !/id="toolWater"/.test(html) && !/id="toolBuild"/.test(html));
 ok('the old unexplained mode tabs are gone', !/id="toolDig"/.test(html) && !/id="toolJobs"/.test(html));
+// what replaced it: one bar of pictures. Four meters with icons, the tool in hand,
+// and a round button that opens a sheet of picture cards.
+['food', 'water', 'rest', 'eggs'].forEach((k) =>
+  ok(`the ${k} meter is a bar with a picture on it`,
+    new RegExp(`id="mtr_${k}"[^>]*>\\s*<span class="bar"><i id="fill_${k}"></i></span><svg class="mic"`).test(html)));
+ok('a meter that runs low wears a tag and wiggles', /\.mt\.low \.tag\{display:block/.test(html) && /@keyframes wig/.test(html));
+ok('the big button carries a picture of every tool it can hold',
+  ['dig', 'food', 'water', 'build'].every((k) => new RegExp(`class="ic ic-${k}"`).test(html)));
+ok('and only the one in hand is showing', /#actMain\.t-dig \.ic-dig/.test(html) && /#actMain \.ic\{display:none/.test(html));
+ok('the round swap button opens a sheet of picture cards',
+  /id="actSwap"/.test(html) && ['dig', 'food', 'water', 'build'].every((k) => new RegExp(`id="tool_${k}"[^>]*>\\s*<svg class="tic"`).test(html)));
+ok('the build menu rooms are pictures, not a list of words',
+  /var ROOM_ART = \{/.test(html) && ['nursery', 'storage', 'den', 'fungus'].every((k) => new RegExp(`${k}: *'<svg`).test(html)));
+ok('a room costs apples you can count, not a number you have to read',
+  /function costApples/.test(html) && /APPLE_SVG/.test(html));
+ok('a room you cannot afford greys out and flashes its apples',
+  /\.room\.cant\{/.test(html) && /@keyframes apflash/.test(html));
+ok('the build menu closes with a big drawn X, not a word',
+  /id="buildCancel"[^>]*>\s*<svg/.test(html) && !/>Not now</.test(html));
 ok('the one hint line is in the markup', /id="coachText"/.test(html) && /data-hint/.test(html));
 
 // --- 5c) AC6: layout, felt job trade-offs, and the production chains ----------
@@ -683,6 +735,159 @@ ok('the manifest carries the chain milestones', Array.isArray(manifest.milestone
 ok('every chain art id has a real file behind it',
   ['leaf.svg', 'room-fungus.svg', 'aphid-plant.svg', 'honeydew.svg'].every((f) => fs.existsSync(dir + '/public/antcity/art/' + f)));
 ok('nothing in the strategy layer can make a colony smaller', G.dbg().ants > 0 && G.state() === 'play');
+
+// --- 5d) AC9: soldiers, and the bad bugs they see off ------------------------
+// The card's promise is a rare, gentle treat that a kid can always end: a bug turns
+// up, it pauses ONE thing you can see, and one soldier always sends it away. So this
+// section proves three things and nothing less — no bug ever reaches the tutorial,
+// every kind of visit is resolvable by a single soldier, and a visit can never make
+// the colony smaller.
+console.log('\n--- AC9: SOLDIERS AND BAD BUGS ---');
+
+ok('no bad bug ever gate-crashed the ten missions', tutorialBugs === 0, `${tutorialBugs} sightings`);
+
+// -- the fifth job: it is not there until the colony has met it --
+G._reset(); G.play();
+ok('a young colony is still the four calm jobs',
+  G.jobsList().join(',') === 'digger,forager,nursery,builder', G.jobsList().join(','));
+ok('the soldier card is not even on the jobs strip yet',
+  byId.jobcard_soldier.className.indexOf('locked') >= 0, byId.jobcard_soldier.className);
+G.assign('soldier', 2);
+ok('and no ant can be put on Soldiers before they unlock', (G.dbg().jobs.soldier | 0) === 0, JSON.stringify(G.dbg().jobs));
+ok('a soldier wears the red the low meters already use for "this needs you"',
+  /^#e2685f$/i.test(String(G.jobColor('soldier'))), String(G.jobColor('soldier')));
+
+const soldierMs = G._cfg().milestones.filter((m) => m.soldiers);
+ok('one milestone brings the soldiers in, at about fifteen ants',
+  soldierMs.length === 1 && soldierMs[0].n >= 10 && soldierMs[0].n <= 20, JSON.stringify(soldierMs[0]));
+ok('and it teaches a true fact about real soldier ants',
+  /jaw/i.test(soldierMs[0].fact) && soldierMs[0].fact.length > 40, soldierMs[0].fact);
+
+// grow one to fifteen and watch the job arrive on its own
+for (let i = 0; i < 300 && G.dbg().ants < 15; i++) {
+  G.drop('food', 110); G.drop('water', 230);
+  G.assign('nursery', Math.max(2, Math.floor(G.dbg().ants * 0.4)));
+  G.assign('forager', Math.max(2, Math.floor(G.dbg().ants * 0.4)));
+  G.seconds(4);
+}
+ok('growing the colony unlocks the soldiers by itself', G.soldiersOn() === true, `${G.dbg().ants} ants`);
+ok('the fifth card joins the jobs strip and the colour bar',
+  G.jobsList().length === 5 && byId.jobcard_soldier.className.indexOf('locked') < 0, G.jobsList().join(','));
+pressBtn(byId.job_soldier_up);
+ok('and now the plus really does put an ant on Soldiers', (G.dbg().jobs.soldier | 0) === 1, JSON.stringify(G.dbg().jobs));
+
+// -- a visit is rare, and it never lands in the tutorial --
+const bugCfg = G._cfg().bug;
+ok('a visit is a rare treat, roughly every ten to fifteen minutes',
+  bugCfg.everySec >= 600 && bugCfg.everySec <= 900, `${bugCfg.everySec}s at the middle difficulty`);
+G._reset(); G.play(); G.setDifficulty(5);
+for (let i = 0; i < 120; i++) G.seconds(30);           // an hour of play, at the liveliest dial
+ok('an hour of the tutorial, at the liveliest setting, and still no bug',
+  G.bugsSeen() === 0 && G.bug() === null, `${G.bugsSeen()} seen`);
+
+// the difficulty dial really does change how often one calls
+function visitsIn(diff, secs) {
+  G._reset(); G.play(); G._openAll();
+  G.setDifficulty(diff); G.assign('soldier', 2);
+  for (let i = 0; i < secs / 10; i++) G.seconds(10);
+  return G.bugsSeen();
+}
+const calmVisits = visitsIn(1, 3600), livelyVisits = visitsIn(5, 3600);
+ok('the difficulty dial scales how often a bug calls',
+  livelyVisits > calmVisits, `calm=${calmVisits} lively=${livelyVisits} in an hour`);
+
+// -- EVERY visit is resolvable, and one soldier always does it ------------------
+for (const kind of Object.keys(bugCfg.kinds)) {
+  G._reset(); G.play(); G._openAll();
+  G.assign('soldier', 0);
+  const sent = G.sendBug(kind);
+  ok(`a ${kind} really turns up when its visit comes round`,
+    !!sent && G.bug() && G.bug().kind === kind, JSON.stringify(sent));
+  const before = G.dbg();
+  G.seconds(200);
+  const napping = G.bug();
+  ok(`with nobody on Soldiers the ${kind} settles in and naps on the spot`,
+    !!napping && napping.state === 'nap', JSON.stringify(napping));
+  ok(`the ${kind} never leaves on its own, so the cause and the effect stay clear`, !!G.bug());
+  const during = G.dbg();
+  ok(`the ${kind} never took an ant, a tunnel or a room`,
+    during.ants >= before.ants && during.dug >= before.dug && during.rooms.storage >= before.rooms.storage,
+    `${before.ants}->${during.ants} ants, ${before.dug}->${during.dug} dug`);
+  ok(`and it never took a crumb out of the store`, during.carried >= before.carried, `${before.carried} -> ${during.carried}`);
+  // the one hint line says what to do about it, and there is still only one of them
+  ok(`the hint line asks for a soldier, in kid words`,
+    G.hints().length === 1 && /soldier/i.test(G.hints()[0]), G.hints().join(' | '));
+  // the marker, and the tap that takes you there
+  G._draw();
+  const mk = G.bugMark();
+  ok(`a bouncing marker shows where the ${kind} is`, !!mk && mk.r > 0, JSON.stringify(mk));
+  tapOn(CV, mk.x, mk.y, 'mouse');
+  ok(`and tapping the marker takes the camera to it`, G.looking() !== null, String(G.looking()));
+  // ONE soldier. Always. This is the whole promise of the card.
+  const scaredBefore = G.bugsScared(), crumbsBefore = G.items().filter((i) => i.kind === 'crumb').length;
+  G.assign('soldier', 1);                       // ONE. Never two, never a lucky crowd.
+  let t = 0, marched = false, sawCrumb = false;
+  while (G.bug() && t < 90) {
+    G.seconds(1); t++;
+    if (G.guards() > 0) marched = true;
+    if (G.items().filter((i) => i.kind === 'crumb').length > crumbsBefore) sawCrumb = true;
+  }
+  // a forager can be on the bonus crumb within a second or two of it landing, which
+  // is the point of it, so the crumb is watched for rather than counted at the end
+  if (G.items().filter((i) => i.kind === 'crumb').length > crumbsBefore) sawCrumb = true;
+  ok(`a drawn soldier really marches over to the ${kind}`, marched, `${t}s watched`);
+  ok(`ONE soldier always sees the ${kind} off`, !G.bug() && t < 90, `${t}s of colony time`);
+  ok(`the ${kind} left a thank-you crumb on the meadow`, sawCrumb, JSON.stringify(G.items().map((i) => i.kind)));
+  ok(`the scare was counted and paid in coins`,
+    G.bugsScared() === scaredBefore + 1 && G.dbg().coins.some((c) => c.key.indexOf('antcity:bug:') === 0),
+    `${G.bugsScared()} scared`);
+  const after = G.dbg();
+  ok(`the colony is every bit as big once the ${kind} has gone`,
+    after.ants >= before.ants && after.dug >= before.dug, `${before.ants} -> ${after.ants} ants`);
+}
+
+// -- soldiers off duty behave like every other ant: they stand still --
+G._reset(); G.play(); G._openAll();
+G.assign('soldier', 3); G.seconds(10);
+const guardCrowd = G.crowd().filter((a) => a.job === 'soldier');
+ok('soldiers are really drawn on the colony', guardCrowd.length > 0, `${guardCrowd.length} of ${G.crowd().length}`);
+ok('a soldier with no bug to see off stands at its post, it never wanders',
+  guardCrowd.some((a) => a.idle) && guardCrowd.every((a) => a.task === null || a.task === 'scare'),
+  JSON.stringify(guardCrowd.map((a) => a.state)));
+
+// -- the badge for seeing five bugs off is really reachable --
+G._reset(); G.play(); G._openAll();
+G.assign('soldier', 2);
+const kindCycle = Object.keys(bugCfg.kinds);
+for (let n = 0; n < 5; n++) {
+  G.sendBug(kindCycle[n % kindCycle.length]);
+  let t = 0; while (G.bug() && t < 90) { G.seconds(1); t++; }
+}
+ok('five bugs really can be seen off in one colony', G.bugsScared() >= 5, `${G.bugsScared()} scared`);
+ok('and that earns the badge the card promises',
+  G.dbg().coins.some((c) => c.key === 'antcity:milestone:bugs-5'), G.dbg().coins.slice(-3).map((c) => c.key).join(' '));
+const bugMs = G._cfg().milestones.filter((m) => m.type === 'bugs');
+ok('the badge is one milestone, at five bugs', bugMs.length === 1 && bugMs[0].n === 5 && bugMs[0].coins > 0, JSON.stringify(bugMs[0]));
+
+// -- the art: original drawn bugs, a drawn fallback, and the recipe carries them --
+ok('three original drawn bad bugs, each a real file',
+  ['bug-beetle.svg', 'bug-caterpillar.svg', 'bug-grasshopper.svg'].every((f) => fs.existsSync(dir + '/public/antcity/art/' + f)));
+ok('and a hand-drawn fallback stands behind every one of them',
+  /function drawBugShape/.test(html) && /drawBugShape\(b\.kind/.test(html));
+ok('the soldier is a drawn worker variant, not a whole new sprite',
+  /drawAntShape\([^)]*sold\)/.test(html) && /function drawAntShape\(x, y, r, col, flip, idle, soldier\)/.test(html));
+ok('the manifest carries the bugs, so the recipe stays the recipe',
+  !!(manifest.bugs && manifest.bugs.kinds && Object.keys(manifest.bugs.kinds).length === 3),
+  Object.keys((manifest.bugs || {}).kinds || {}).join(','));
+ok('the manifest carries the soldier and badge milestones',
+  manifest.milestones.some((m) => m.soldiers) && manifest.milestones.some((m) => m.type === 'bugs'));
+ok('every bad bug art id resolves to a real file',
+  ['beetle', 'caterpillar', 'grasshopper'].every((k) => {
+    const u = G._art()['bug_' + k];
+    return typeof u === 'string' && fs.existsSync(dir + '/public' + u);
+  }), JSON.stringify(['beetle', 'caterpillar', 'grasshopper'].map((k) => G._art()['bug_' + k])));
+ok('the attention marker is drawn geometry, never a glyph',
+  /function drawBugMark/.test(html) && !/textAlign[\s\S]{0,80}bugMark/.test(html));
 
 // --- 6) AC4: the sounds, the music and the art leftovers ----------------------
 console.log('\n--- SOUND, MUSIC AND ART (AC4) ---');
