@@ -94,6 +94,38 @@ rather than a handful of big ones. The drawn crowd is a *sample* taken from the 
 colony the camera is looking at, and it wears the same job mix the panel says. The one ant
 the guide is pointing at is drawn bigger with a soft halo, so it stays easy to follow.
 
+## The strategy layer (AC6)
+
+Ant City is a township for ants. Three things make it a game you think about rather
+than a game you watch:
+
+**Where you dig a room changes how well it works.** Storage near the top means quicker
+forager trips. A nursery beside the queen hatches eggs sooner. A den dug deep gives a
+better rest. A fungus garden close to home grows faster. When you tap a tunnel to build,
+each room tells you in kid words whether that spot is a good one, before you commit. The
+rules are **bonuses only** and live in `GAME_CONFIG.placement` as data: a plain spot earns
+nothing and costs nothing, so a colony built before any of this existed carries on exactly
+as it did.
+
+**The job slider is the main lever, and the colony answers back.** Push it all the way to
+diggers and the tunnels fly while the pantry drains. Push it to foragers and the food piles
+up while nothing gets built. The food readout says which way it is going, and the line over
+the bar says what your current mix is doing, in kid words. Rain now rewards a stocked
+pantry: with food put by the colony works straight through a flood, and with an empty one it
+only goes slower until a builder clears it. It still never takes anything away.
+
+**Production chains, which are real ant science.** Leaves grow on the meadow and a forager
+with no crumb to fetch goes and cuts one, then hauls it to the **Fungus Garden**, a room
+tended by your nursery ants that turns leaves into mushroom food. That makes nursery duty a
+real choice between eggs and mushrooms. Later a milestone brings an **aphid plant** to the
+meadow and the ants herd it for honeydew. The queen shares the true fact behind each one the
+first time it appears: leafcutter ants really do farm a mushroom garden rather than eat the
+leaves, and ants really do keep aphids like tiny cows. The chains are gentle. Nothing rots,
+nothing dies, and an unstaffed garden simply waits.
+
+The new room and both chain milestones live in `public/antcity/manifest.json`, so the recipe
+can add or retune them without touching the engine.
+
 ## The colony builder loop (grow it huge)
 
 Ant City is a kid-simple colony builder. The feel is a friendly ant version of a

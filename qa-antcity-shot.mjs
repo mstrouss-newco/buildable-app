@@ -133,6 +133,49 @@ check('a big colony shows a crowd, not a handful', big.crowd > 26, `${big.crowd}
 check('the goal strip still says something useful', big.goal.length > 8, big.goal);
 await page.screenshot({ path: path.join(OUT, 'antcity-4-swarm.png') });
 
+console.log('\n--- AC6: the strategy layer, on screen ---');
+// the build popup has to SAY whether this is a good spot, before the kid commits
+await page.evaluate(() => {
+  ANTCITY_GAME._reset(); ANTCITY_GAME.play(); ANTCITY_GAME._openAll();
+  ANTCITY_GAME.assign('digger', 4); ANTCITY_GAME.digDown(8); ANTCITY_GAME.seconds(40);
+  for (let i = 0; i < 30; i++) { ANTCITY_GAME.drop('food', 120); ANTCITY_GAME.assign('forager', 4); ANTCITY_GAME.seconds(6); }
+});
+// the camera eases back up from the deep swarm colony above, so give it time to
+// settle before clicking a row, or the tap lands on solid dirt
+await page.waitForTimeout(2200);
+// tap a shallow tunnel: storage there is the good spot
+const geo2 = await page.evaluate(() => ANTCITY_GAME._cfg());
+const cw2 = box.width / geo2.cols;
+await page.mouse.click(box.x + box.width / 2, box.y + sky + 1.5 * cw2);
+await page.waitForTimeout(400);
+const spotText = await page.textContent('#roomList').catch(() => '');
+check('the build popup says whether this spot is a good one', /trip|queen|deep|works here/i.test(spotText), spotText.slice(0, 120));
+await page.screenshot({ path: path.join(OUT, 'antcity-6-build-spot.png') });
+await page.locator('#buildCancel').click();
+
+// the meadow grows the leaves the chain runs on, and the herd shows up on it
+const built = await page.evaluate(() => {
+  ANTCITY_GAME.assign('forager', 5); ANTCITY_GAME.seconds(90);
+  ANTCITY_GAME.setAphids(true); ANTCITY_GAME.seconds(60);
+  for (let i = 0; i < 40 && ANTCITY_GAME.dbg().food < 24; i++) {
+    ANTCITY_GAME.drop('food', 120); ANTCITY_GAME.assign('forager', 5); ANTCITY_GAME.seconds(6);
+  }
+  const t = ANTCITY_GAME.openTunnel();
+  const made = t ? ANTCITY_GAME.build(t.c, t.r, 'fungus') : false;
+  ANTCITY_GAME.assign('builder', 5); ANTCITY_GAME.seconds(120);
+  ANTCITY_GAME.assign('nursery', 5); ANTCITY_GAME.seconds(90);
+  return made;
+});
+check('a garden can be built once the pantry can pay for it', built === true);
+await page.waitForTimeout(600);
+const chain = await page.evaluate(() => ({ c: ANTCITY_GAME.chain(), mix: ANTCITY_GAME.mix(), trend: ANTCITY_GAME.trend() }));
+check('foragers really cut leaves', chain.c.cut > 0, JSON.stringify(chain.c));
+check('a staffed garden really makes mushroom food', chain.c.gardens === 1 && chain.c.mush > 0, JSON.stringify(chain.c));
+check('the herd is out on the meadow', chain.c.aphids === true && chain.c.dewGot > 0, `drunk ${chain.c.dewGot}`);
+check('the job mix line is on screen in kid words', chain.mix.length > 8 && !/\d/.test(chain.mix), chain.mix);
+check('the panel says what the mix is doing', (await page.textContent('#barMix')).length > 8, await page.textContent('#barMix'));
+await page.screenshot({ path: path.join(OUT, 'antcity-7-chains.png') });
+
 // the ? button replays the guide, and it does not block play
 await page.evaluate(() => ANTCITY_GAME.showHow());
 await page.waitForTimeout(400);
