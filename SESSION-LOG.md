@@ -1,3 +1,46 @@
+## 2026-09-07 — PB2: the gigs, the alive street, and Sunset Beach
+
+**Shipped.** Paper Route is finished. Four things landed.
+
+**Side jobs (gigs) are pure recipes**, the same five-question shape the aircraft jobs
+use: what you carry, where you pick it up, where it goes, the word that flashes, what it
+pays. Maple Street ships a taco order (taco stand to the house with the balloon) and a
+passenger on the back of the bike (waving neighbour to the bus stop). Sunset Beach ships
+a cooler run and a lift to the pier. The rule that came with the shape came too: the
+loader REJECTS a gig carrying a timer, an expiry, a penalty or a life count, and rejects
+one that drops off before it picks up. Riding straight past a gig costs nothing.
+
+**The street is alive**, from level data: lawn sprinklers, a car easing out of a driveway,
+an ice cream truck coming the other way with its own jingle, and birds that scatter off
+the road. Only the car and the truck can be bumped, and a bump is the same soft wobble a
+bin gives. The two streets mix and match a different set.
+
+**Sunset Beach** is the second street and it is a palette and layout swap with no new
+engine code, which is the whole point of the data rule. A perfect route on Maple Street
+opens it. The mercy, so nobody is ever stuck behind a perfect: riding the same street
+three times opens it too.
+
+**Photo mode.** The engine answers `?tileshot=1` and stages one frame of its own real
+game: the paper mid-flight, the porch already lit, the neighbour waving, coins bursting,
+the boost streaks on, the camera tilted, no HUD and no words. It holds still and signals
+`sceneReady`.
+
+**Checked.** `qa-paper-route.mjs` is now 113 checks and green, including the perfect
+player finishing BOTH streets with every paper delivered and both gigs done, a
+hand-driven gig picked up and dropped off at the kerb, and mutation checks that a gig with
+a timer or a backwards drop-off fails validation. `node qa-all.mjs` green. A real Chromium
+run plays both streets and shoots the tile frame with no console errors. Paper Route is
+now in the editor's catalog and in `qa/qa-map.mjs`, so the editor's save gate knows which
+robot play-tests it.
+
+**The two things I did not finish, and why.** The picker tile still has no staged photo
+in it: the TS0 rig (the camera script, the contact sheet, the approved recipe) is on
+branch `claude/ts0-startup-9jwhfx` and is not in main, and Mike has not approved the tile
+look yet. The engine's half is built and waiting. And the live phone check has not run,
+because this session cannot reach buildablekids.com at all, so PB1 and PB2 are not flagged
+deployed. The tile stays coming-soon behind the 1111 gate either way, exactly as the card
+asks.
+
 ## 2026-09-06 — PB1: Paper Route, the delivery ride
 
 **Shipped.** A whole new game as a cartridge. `public/paper-route-engine.html` is the

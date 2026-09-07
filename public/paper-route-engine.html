@@ -90,7 +90,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     coin:    "sky_deliver",
     hurt:    "pr_clunk",     // Feel.miss — a wobble, never a buzzer
     win:     "sky_mission",  // Feel.celebrate
-    levelup: "sky_mission"
+    levelup: "sky_mission",
+    gig:     "sky_mission",  // a side job finished
+    jingle:  "pr_jingle",    // the ice cream truck, heard before it is seen
+    splash:  "splash",       // a sprinkler you ride through
+    flutter: "rustle"        // birds lifting off the road
   };
 
   // ======================================================================
@@ -117,14 +121,29 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       ],
       ramps:[ { at:0.33, x:0.00 }, { at:0.72, x:-0.20 } ],
       boosts:[ { at:0.25, x:0.35 }, { at:0.58, x:-0.35 }, { at:0.82, x:0.10 } ],
-      bundles:[ { at:0.20, x:-0.25 }, { at:0.50, x:0.20 }, { at:0.76, x:0.30 } ] }
+      bundles:[ { at:0.20, x:-0.25 }, { at:0.50, x:0.20 }, { at:0.76, x:0.30 } ],
+      alive:[
+        { at:0.16, side:-1, kind:"sprinkler" }, { at:0.29, x:0.62, side:1, kind:"car" },
+        { at:0.45, x:-0.10, kind:"birds" }, { at:0.63, x:-0.55, side:-1, kind:"icecream" },
+        { at:0.81, side:1, kind:"sprinkler" }
+      ],
+      gigs:[
+        { id:"taco-order", name:"Taco Order", cargo:{ name:"taco order", color:"#F2A33C" },
+          pickup:{ at:0.28, side:1, label:"Taco Stand", style:"stand" },
+          dropoff:{ at:0.66, side:-1, label:"The house with the balloon", style:"balloon" },
+          verb:"Order up!", coins:12 },
+        { id:"bus-stop-ride", name:"A Ride to the Bus Stop", cargo:{ name:"passenger", color:"#7C5CFC" },
+          pickup:{ at:0.12, side:-1, label:"Waving neighbour", style:"person" },
+          dropoff:{ at:0.90, side:1, label:"Bus Stop", style:"busstop" },
+          verb:"Dropped off!", coins:14 }
+      ] }
   ];
   var STREETS = FALLBACK_STREETS.slice();
 
   // theme -> the street's own palette (drawn geometry; art slots stay in the manifest)
   var THEMES = {
     maple:  { sky:["#8fd0f7","#dff0fb"], road:"#5b6673", lawn:"#79c265", lawn2:"#68b256", house:"#f3e3cd", roof:"#b4573f", trim:"#ffffff", tree:"#3f8f4c" },
-    sunset: { sky:["#ffc48c","#ffe9d2"], road:"#6b6a72", lawn:"#e4d29a", lawn2:"#d6c08a", house:"#fff3e2", roof:"#e0806a", trim:"#ffffff", tree:"#5fa36a" }
+    sunset: { sky:["#ffb37a","#ffe6cf"], road:"#6b6a72", lawn:"#efdca6", lawn2:"#e0c98f", house:"#fff5e6", roof:"#e0806a", trim:"#ffffff", tree:"#5fa36a" }
   };
 
   // ---- the ride's fixed feel (platform law, not manifest knobs) ----
@@ -133,6 +152,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var LANE = 0.90;                 // how far off centre the rider may ride
   var AIR_TIME = 0.95, BOOST_TIME = 1.30, SLOW_TIME = 0.50, WOBBLE_TIME = 0.60;
   var MAILBOX_X = 1.12, HOUSE_X = 1.62;
+  var GIG_Z = 90, GIG_X = 0.34;      // ride near that kerb, in a window a kid can hit
+  var ALIVE_HIT_X = 0.32;
 
   // ---------- canvas ----------
   var CV = $("cv"), X = CV.getContext ? CV.getContext("2d") : null;
@@ -159,9 +180,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   if(PREFS.unlocked == null) PREFS.unlocked = 0;
 
   // ---------- state ----------
-  var DEMO = false, DEEP_LVL = null;
+  var DEMO = false, DEEP_LVL = null, TILESHOT = false;
   try{ var _q = new URLSearchParams(location.search); DEMO = _q.get("screen") === "demo";
+    TILESHOT = _q.get("tileshot") === "1";
     var _lv = _q.get("level"); if(_lv != null && _lv !== "" && !isNaN(+_lv)) DEEP_LVL = +_lv; }catch(e){}
+  if(TILESHOT) DEMO = false;
   if(DEMO){ BA = { unlock:function(){}, sfx:function(){}, toggleMute:function(){ return false; }, muted:true, configure:function(){} }; }
 
   var state = "menu";            // menu | playing | over
@@ -197,9 +220,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var r = {
       len: len, speed: s.speed || 170, papersMax: s.papers || 10, papers: s.papers || 10,
       z: 0, x: 0, targetX: 0, wobble: 0, slow: 0, air: 0, boost: 0,
-      houses: [], obstacles: [], ramps: [], boosts: [], bundles: [],
+      houses: [], obstacles: [], ramps: [], boosts: [], bundles: [], alive: [], gigs: [],
       flying: [], drops: [],
       delivered: 0, subs: 0, missed: 0, streak: 0, best: 0, coins: 0,
+      gigsDone: 0, gigsTotal: 0, carrying: null, banner: null,
       bumps: 0, airThrows: 0, done: false
     };
     (s.houses||[]).forEach(function(h, i){
@@ -212,6 +236,24 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     (s.ramps||[]).forEach(function(p){ r.ramps.push({ z:p.at*len, x:p.x||0, used:false }); });
     (s.boosts||[]).forEach(function(p){ r.boosts.push({ z:p.at*len, x:p.x||0, used:false }); });
     (s.bundles||[]).forEach(function(p){ r.bundles.push({ z:p.at*len, x:p.x||0, taken:false }); });
+    // the alive street: things that move but never punish. Only the car backing out
+    // and the ice cream truck can be bumped, and a bump is the same wobble as a bin.
+    (s.alive||[]).forEach(function(a, i){
+      var side = a.side || 0;
+      var x = (a.x == null) ? (side ? side*1.05 : 0) : a.x;
+      r.alive.push({ i:i, kind:a.kind||"sprinkler", z:a.at*len, x:x, homeX:x, side:(side||(x<0?-1:1)),
+        t:i*1.3, hit:false, rang:false, scatter:0 });
+    });
+    // the gigs: pure recipes, one carried at a time, nothing to fail
+    (s.gigs||[]).forEach(function(g, i){
+      if(!g || !g.pickup || !g.dropoff) return;
+      r.gigs.push({ i:i, id:g.id, name:g.name, verb:g.verb || "Delivered!", coins:g.coins || 10,
+        cargo:(g.cargo || { name:"parcel", color:"#f2a33c" }),
+        pickup:{ z:g.pickup.at*len, side:(g.pickup.side<0?-1:1), label:g.pickup.label||"", style:g.pickup.style||"stand" },
+        dropoff:{ z:g.dropoff.at*len, side:(g.dropoff.side<0?-1:1), label:g.dropoff.label||"", style:g.dropoff.style||"house" },
+        held:false, done:false, flash:0 });
+    });
+    r.gigsTotal = r.gigs.length;
     return r;
   }
 
@@ -264,6 +306,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // key, so a house pays once however many times the street is replayed.
   function award(key, n){ try{ if(BW && BW.awardOnce && !silent) BW.awardOnce("paper-route:"+key, n); }catch(e){} }
 
+  function banner(text){ if(run) run.banner = { text:text, t:1.8 }; }
   function bump(o){
     o.hit = true;
     run.bumps++;
@@ -308,6 +351,47 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         if(!o.hit && Math.abs(o.z-run.z) < HIT_Z && Math.abs(o.x-run.x) < HIT_X) bump(o);
       }
     }
+    // GIGS. A stop counts when you ride past it close to its kerb. There is no
+    // timer, nothing expires, and riding straight past a gig costs nothing at all.
+    for(i=0;i<run.gigs.length;i++){
+      var g = run.gigs[i];
+      if(g.flash > 0) g.flash -= dt;
+      if(g.done) continue;
+      var stop = g.held ? g.dropoff : g.pickup;
+      if(Math.abs(stop.z - run.z) < GIG_Z && run.x * stop.side > GIG_X){
+        if(g.held){
+          g.done = true; g.held = false; g.flash = 1.8; run.gigsDone++; run.carrying = null;
+          run.coins += g.coins; award(street.id + ":gig:" + g.id, g.coins);
+          banner(g.verb); sfx("gig");
+          try{ if(Feel && Feel.coinBurst && !silent){ var gp = proj(stop.z - run.z, stop.side*MAILBOX_X); Feel.coinBurst(gp.x, gp.y, 10); } }catch(e){}
+        } else {
+          g.held = true; g.flash = 1.2; run.carrying = g;
+          banner("Got the " + g.cargo.name + "!"); sfx("pickup");
+        }
+        syncHud();
+      }
+    }
+    // THE ALIVE STREET. Sprinklers and birds are there to be ridden through; the
+    // car backing out and the ice cream truck are soft-bounce, exactly like a bin.
+    for(i=0;i<run.alive.length;i++){
+      var a = run.alive[i]; a.t += dt;
+      if(a.kind === "car"){ a.x = a.homeX - a.side * 0.55 * (0.5 + 0.5*Math.sin(a.t*0.55)); }
+      else if(a.kind === "icecream"){
+        a.z -= 55 * dt;                                   // it is coming the other way
+        if(!a.rang && a.z - run.z < 900 && a.z > run.z){ a.rang = true; sfx("jingle"); }
+      }
+      else if(a.kind === "birds"){
+        if(!a.scatter && Math.abs(a.z - run.z) < 240){ a.scatter = 0.001; sfx("flutter"); }
+        if(a.scatter) a.scatter = Math.min(1, a.scatter + dt*1.3);
+      }
+      else if(a.kind === "sprinkler"){
+        if(!a.rang && Math.abs(a.z - run.z) < 70){ a.rang = true; sfx("splash"); }
+      }
+      if(run.air <= 0 && !a.hit && (a.kind === "car" || a.kind === "icecream")
+         && Math.abs(a.z - run.z) < HIT_Z && Math.abs(a.x - run.x) < ALIVE_HIT_X) bump(a);
+    }
+    if(run.banner && (run.banner.t -= dt) <= 0) run.banner = null;
+
     for(i=run.flying.length-1;i>=0;i--){
       var p = run.flying[i]; p.t += dt;
       if(p.t >= p.dur){ run.flying.splice(i,1); land(p); }
@@ -332,8 +416,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function syncHud(){
     if(silent || !run) return;
     var bal = 0; try{ bal = BW ? BW.balance() : 0; }catch(e){}
+    var left = [{ text: street.name }];
+    if(run.carrying) left.push({ text:"Carrying the "+run.carrying.cargo.name });
     HUD().set({
-      left:  [{ text: street.name }],
+      left:  left,
       right: [{ text:"Papers "+run.papers }, { text:"Delivered "+run.delivered+"/"+run.subs }, { text:"Coins "+bal }]
     });
   }
@@ -344,8 +430,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     award(street.id + ":finished", street.coins || 0);
     if(perfect) award(street.id + ":perfect", 10);
     PREFS.cleared[level] = true;
+    PREFS.rides = PREFS.rides || {};
+    PREFS.rides[level] = (PREFS.rides[level] || 0) + 1;
     if(perfect) PREFS.perfect[level] = true;
-    PREFS.unlocked = Math.max(PREFS.unlocked, Math.min(STREETS.length-1, level+1));
+    // PB2: a PERFECT route is what opens the next street. The mercy is that riding
+    // the same street three times opens it too, so nobody can be stuck behind it.
+    if(perfect || PREFS.rides[level] >= 3)
+      PREFS.unlocked = Math.max(PREFS.unlocked, Math.min(STREETS.length-1, level+1));
     savePrefs();
     if(silent) return;
     sfx(isLast ? "win" : "levelup");
@@ -353,10 +444,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(!isLast) signal("levelup");
     try{ if(Feel && Feel.celebrate && perfect) Feel.celebrate(W,H); }catch(e){}
     try{
+      var gigLine = run.gigsTotal ? (" Side jobs done: " + run.gigsDone + " of " + run.gigsTotal + ".") : "";
+      var nextLine = (!isLast && !perfect && PREFS.unlocked <= level)
+        ? (" A perfect route opens " + STREETS[level+1].name + ".") : "";
       $("overTitle").textContent = perfect ? "Perfect route!" : "Route finished!";
       $("overMsg").textContent = perfect
-        ? ("Every paper landed on Maple Street. " + run.delivered + " of " + run.subs + ", best streak " + run.best + ".")
-        : ("You delivered " + run.delivered + " of " + run.subs + ". Ride it again for a perfect route!");
+        ? ("Every paper landed on " + street.name + ". " + run.delivered + " of " + run.subs + ", best streak " + run.best + "." + gigLine)
+        : ("You delivered " + run.delivered + " of " + run.subs + "." + gigLine + nextLine);
       $("overBtn").textContent = isLast ? "Back to streets" : "Next street";
       $("over").style.display = "flex";
     }catch(e){}
@@ -416,7 +510,16 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         if(!b.taken && b.z > run.z && b.z - run.z < 520){ bundle = b; break; }
       }
     }
-    if(bundle){ want = bundle.x; }
+    // a gig stop is worth hugging the kerb for; it is the only thing that outranks
+    // a bundle, and only while the stop is close enough to matter
+    var gigStop = null;
+    for(i=0;i<run.gigs.length;i++){
+      var g = run.gigs[i]; if(g.done) continue;
+      var st = g.held ? g.dropoff : g.pickup;
+      if(st.z > run.z - GIG_Z*0.5 && st.z - run.z < 420){ gigStop = st; break; }
+    }
+    if(gigStop){ want = gigStop.side * (GIG_X + 0.30); }
+    else if(bundle){ want = bundle.x; }
     else {
       var lanes = [-0.6,-0.3,0,0.3,0.6], bestLane = 0, bestClear = -1;
       for(i=0;i<lanes.length;i++){
@@ -526,7 +629,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(ms > 0.04){
       // the soft ring says "now" — it lights up only while this mailbox is the one
       // a tap would throw at, so a kid learns the timing without being told
-      if(h.sub && !h.done && h === aimed){
+      if(h.sub && !h.done && h === aimed && !TILESHOT){
         var pulse = 0.55 + 0.45*Math.sin((performance.now?performance.now():0)/180);
         X.globalAlpha = 0.55*pulse; X.strokeStyle = ACCENT; X.lineWidth = Math.max(2, 5*ms);
         X.beginPath(); X.arc(m.x, m.y-30*ms, 40*ms, 0, 6.28); X.stroke(); X.globalAlpha = 1;
@@ -582,6 +685,94 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.strokeStyle = "#c8bfa8"; X.lineWidth = Math.max(1, 2*s);
     X.beginPath(); X.moveTo(p.x-18*s, p.y-12*s); X.lineTo(p.x+18*s, p.y-12*s); X.stroke();
     X.fillStyle = ACCENT; X.fillRect(p.x-18*s, p.y-16*s, 36*s, 4*s);
+  }
+  function drawAlive(a){
+    var p = proj(a.z - run.z, a.x), s = p.s;
+    if(s < 0.04) return;
+    if(a.kind === "sprinkler"){
+      X.fillStyle = "#8a97a4"; X.fillRect(p.x-3*s, p.y-22*s, 6*s, 22*s);
+      X.strokeStyle = "rgba(150,215,255,.75)"; X.lineWidth = Math.max(1, 3*s);
+      for(var i=0;i<5;i++){
+        var ang = -2.5 + i*0.45 + Math.sin(a.t*2)*0.35;
+        X.beginPath(); X.moveTo(p.x, p.y-24*s);
+        X.quadraticCurveTo(p.x + Math.cos(ang)*30*s, p.y-52*s, p.x + Math.cos(ang)*54*s, p.y-6*s);
+        X.stroke();
+      }
+      return;
+    }
+    if(a.kind === "birds"){
+      var lift = a.scatter * 90 * s;
+      for(var b=0;b<5;b++){
+        var bx = p.x + (b-2)*17*s + a.scatter*(b-2)*26*s;
+        var by = p.y - 8*s - lift - (b%2)*7*s;
+        var flap = Math.sin(a.t*9 + b) * 5 * s * (a.scatter ? 1 : 0.35);
+        X.strokeStyle = "#3d4a58"; X.lineWidth = Math.max(1, 2.4*s);
+        X.beginPath(); X.moveTo(bx-8*s, by+flap); X.lineTo(bx, by-3*s); X.lineTo(bx+8*s, by+flap); X.stroke();
+      }
+      return;
+    }
+    if(a.kind === "icecream"){
+      var w = 120*s, h = 92*s;
+      X.fillStyle = "#f6f9fb"; roundRect(X, p.x-w/2, p.y-h, w, h, 9*s); X.fill();
+      X.fillStyle = "#3FA9F5"; X.fillRect(p.x-w/2, p.y-h*0.62, w, h*0.16);
+      X.fillStyle = "#cfd9e2"; roundRect(X, p.x-w*0.32, p.y-h*0.42, w*0.64, h*0.26, 5*s); X.fill();
+      X.fillStyle = "#2b3440"; X.beginPath(); X.arc(p.x-w*0.30, p.y, 12*s, 0, 6.28); X.fill();
+      X.beginPath(); X.arc(p.x+w*0.30, p.y, 12*s, 0, 6.28); X.fill();
+      // the cone on the roof, drawn, never a glyph
+      X.fillStyle = "#e0b47a"; X.beginPath(); X.moveTo(p.x-11*s, p.y-h-6*s); X.lineTo(p.x+11*s, p.y-h-6*s); X.lineTo(p.x, p.y-h-30*s); X.closePath(); X.fill();
+      X.fillStyle = "#ffd7e4"; X.beginPath(); X.arc(p.x, p.y-h-32*s, 12*s, 0, 6.28); X.fill();
+      return;
+    }
+    // a car easing out of its driveway
+    var cw = 104*s, ch = 60*s;
+    X.fillStyle = "#5f8fd6"; roundRect(X, p.x-cw/2, p.y-ch, cw, ch, 12*s); X.fill();
+    X.fillStyle = "#bfe3f7"; roundRect(X, p.x-cw*0.32, p.y-ch*0.88, cw*0.64, ch*0.42, 6*s); X.fill();
+    X.fillStyle = "#f5f7f9"; X.fillRect(p.x-cw*0.44, p.y-ch*0.30, cw*0.14, ch*0.16);
+    X.fillRect(p.x+cw*0.30, p.y-ch*0.30, cw*0.14, ch*0.16);
+    X.fillStyle = "#2b3440"; X.beginPath(); X.arc(p.x-cw*0.30, p.y, 11*s, 0, 6.28); X.fill();
+    X.beginPath(); X.arc(p.x+cw*0.30, p.y, 11*s, 0, 6.28); X.fill();
+  }
+  function drawGigStop(g){
+    var stop = g.held ? g.dropoff : g.pickup;
+    if(g.done) return;
+    var p = proj(stop.z - run.z, stop.side*(HOUSE_X-0.18)), s = p.s;
+    if(s < 0.04) return;
+    var col = g.cargo.color || ACCENT;
+    if(stop.style === "person"){
+      X.fillStyle = "#f6cba6"; X.beginPath(); X.arc(p.x, p.y-52*s, 12*s, 0, 6.28); X.fill();
+      X.fillStyle = col; roundRect(X, p.x-11*s, p.y-40*s, 22*s, 38*s, 7*s); X.fill();
+      X.save(); X.translate(p.x+9*s, p.y-36*s); X.rotate(-1 + Math.sin((performance.now?performance.now():0)/160)*0.6);
+      X.fillStyle = "#f6cba6"; roundRect(X, 0, -4*s, 24*s, 8*s, 4*s); X.fill(); X.restore();
+    } else if(stop.style === "busstop"){
+      X.fillStyle = "#8a97a4"; X.fillRect(p.x-4*s, p.y-70*s, 8*s, 70*s);
+      X.fillStyle = col; roundRect(X, p.x-30*s, p.y-98*s, 60*s, 32*s, 8*s); X.fill();
+      X.fillStyle = "#ffffff"; roundRect(X, p.x-22*s, p.y-90*s, 44*s, 16*s, 4*s); X.fill();
+    } else if(stop.style === "balloon"){
+      X.strokeStyle = "rgba(0,0,0,.3)"; X.lineWidth = Math.max(1, 2*s);
+      X.beginPath(); X.moveTo(p.x, p.y-58*s); X.lineTo(p.x, p.y); X.stroke();
+      X.fillStyle = col; X.beginPath(); X.ellipse(p.x, p.y-78*s, 20*s, 25*s, 0, 0, 6.28); X.fill();
+      X.fillStyle = "rgba(255,255,255,.4)"; X.beginPath(); X.ellipse(p.x-6*s, p.y-86*s, 6*s, 8*s, -0.4, 0, 6.28); X.fill();
+    } else {
+      // a kerbside stand: an awning over a counter
+      X.fillStyle = "#e8dcc6"; roundRect(X, p.x-42*s, p.y-52*s, 84*s, 52*s, 6*s); X.fill();
+      X.fillStyle = col; X.beginPath(); X.moveTo(p.x-52*s, p.y-52*s); X.lineTo(p.x+52*s, p.y-52*s); X.lineTo(p.x+40*s, p.y-72*s); X.lineTo(p.x-40*s, p.y-72*s); X.closePath(); X.fill();
+      X.fillStyle = "#c9bda6"; X.fillRect(p.x-42*s, p.y-30*s, 84*s, 6*s);
+    }
+    // a soft marker so the stop reads at a distance (gameplay chrome, not photo)
+    if(TILESHOT) return;
+    var pulse = 0.5 + 0.5*Math.sin((performance.now?performance.now():0)/220);
+    X.globalAlpha = 0.45*pulse; X.strokeStyle = col; X.lineWidth = Math.max(2, 5*s);
+    X.beginPath(); X.arc(p.x, p.y-40*s, 52*s, 0, 6.28); X.stroke(); X.globalAlpha = 1;
+  }
+  function drawBanner(){
+    if(!run || !run.banner) return;
+    var a = Math.min(1, run.banner.t);
+    X.globalAlpha = a;
+    X.fillStyle = "rgba(255,255,255,.95)"; roundRect(X, W/2-130, H*0.20, 260, 40, 18); X.fill();
+    X.fillStyle = "#12314d"; X.font = "800 18px 'Baloo 2','Nunito',sans-serif";
+    X.textAlign = "center"; X.textBaseline = "middle";
+    X.fillText(run.banner.text, W/2, H*0.20 + 21);
+    X.globalAlpha = 1;
   }
   function drawFlying(p){
     var k = p.t/p.dur;
@@ -646,6 +837,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     aimed = (state === "playing" && run && !run.done) ? bestTarget() : null;
     var sh = (fx && fx.shake) ? fx.shake : 0;
     X.save();
+    if(TILESHOT){ X.translate(W*0.40, H*0.80); X.rotate(0.042); X.scale(1.20, 1.20); X.translate(-W*0.40, -H*0.80); }
     if(sh>0){ X.translate((Math.random()-0.5)*sh, (Math.random()-0.5)*sh); if(fx) fx.shake *= 0.85; }
     drawSky(); drawGround();
     if(run){
@@ -656,11 +848,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       run.ramps.forEach(function(o){ items.push({ z:o.z, f:drawRamp, o:o }); });
       run.boosts.forEach(function(o){ items.push({ z:o.z, f:drawBoost, o:o }); });
       run.bundles.forEach(function(o){ if(!o.taken) items.push({ z:o.z, f:drawBundle, o:o }); });
+      run.alive.forEach(function(o){ if(!o.hit) items.push({ z:o.z, f:drawAlive, o:o }); });
+      run.gigs.forEach(function(g){ if(!g.done) items.push({ z:(g.held?g.dropoff.z:g.pickup.z), f:drawGigStop, o:g }); });
       items.sort(function(a,b){ return b.z - a.z; });
       for(var i=0;i<items.length;i++){ if(items[i].z - run.z > -60 && items[i].z - run.z < 1900) items[i].f(items[i].o); }
       run.flying.forEach(drawFlying);
       drawRider();
-      drawStreak();
+      if(!TILESHOT){ drawStreak(); drawBanner(); }
+      else drawShotWash();
     }
     drawFx();
     X.restore();
@@ -668,8 +863,53 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
   // ---------- frame ----------
   var last = (typeof performance!=="undefined" && performance.now) ? performance.now() : 0;
+  // ======================================================================
+  //  PHOTO MODE (?tileshot=1, the TS rig). The engine stages ONE frame of its own
+  //  real game — no hand-drawn stand-ins — holds it still and says it is ready, so
+  //  the camera script can shoot the picker tile. It is the impact frame: the paper
+  //  is a hair from the mailbox, the porch is already lit, the neighbour is waving,
+  //  coins are bursting, the rider is close and cut off by the edge, and the boost
+  //  streaks are on. No HUD, no words, no buttons.
+  // ======================================================================
+  var shotFrozen = false;
+  function stageTileShot(){
+    startLevel(0, true); silent = false;
+    var h = null, i;
+    // the target enters from the RIGHT, with the rider just left of centre
+    for(i=0;i<run.houses.length;i++){ if(run.houses[i].sub && run.houses[i].side > 0){ h = run.houses[i]; break; } }
+    if(!h) for(i=0;i<run.houses.length;i++){ if(run.houses[i].sub){ h = run.houses[i]; break; } }
+    if(!h){ shotFrozen = true; return; }
+    run.z = h.z - 175;   // the house sits mid-frame, whole, with the rider big and cut off at the bottom                       // close: the house fills a third of the frame
+    run.x = -0.30; run.targetX = run.x;
+    run.boost = BOOST_TIME;                 // the speed streaks are on
+    run.papers = run.papersMax - 3;
+    h.light = 1; h.wave = 1.4;              // the porch is lit and the wave has started
+    run.delivered = 2; run.streak = 3; run.best = 3;
+    // the paper frozen three quarters of the way to the box
+    run.flying.push({ t: THROW_DUR*0.58, dur: THROW_DUR, house:h, air:false,
+      fromX: run.x, fromZ: run.z - 26, toX: h.side*MAILBOX_X, toZ: h.z });
+    try{
+      if(Feel && Feel.coinBurst){
+        var pr = proj(h.z - run.z, h.side*MAILBOX_X);
+        Feel.coinBurst(pr.x, pr.y, 16); Feel.explode(pr.x, pr.y, "#ffd23f");
+        Feel.update(fx, 0.22);
+      }
+    }catch(e){}
+    try{ if(_hud) _hud.hide(); }catch(e){}
+    shotFrozen = true;
+    try{ window.__tileshotReady = true; }catch(e){}
+    signal("sceneReady");
+  }
+  // the signature-colour wash up from the bottom (the D2 tile look)
+  function drawShotWash(){
+    var g = X.createLinearGradient(0, H, 0, H*0.42);
+    g.addColorStop(0, "rgba(63,169,245,.30)"); g.addColorStop(1, "rgba(63,169,245,0)");
+    X.fillStyle = g; X.fillRect(0, H*0.42, W, H*0.58);
+  }
+
   function frame(now){
     var dt = Math.min(0.05, (now-last)/1000); last = now;
+    if(TILESHOT && shotFrozen){ render(); requestAnimationFrame(frame); return; }
     if(!bkPaused){
       if(DEMO) botTick(dt);
       update(dt);
@@ -744,14 +984,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         length:s.length||4200, papers:s.papers||10, speed:s.speed||170,
         obstacleDensity:(s.obstacleDensity==null?1:s.obstacleDensity), coins:s.coins,
         houses:s.houses||[], obstacles:s.obstacles||[], ramps:s.ramps||[],
-        boosts:s.boosts||[], bundles:s.bundles||[] };
+        boosts:s.boosts||[], bundles:s.bundles||[], alive:s.alive||[], gigs:s.gigs||[] };
     });
     street = STREETS[Math.min(level, STREETS.length-1)];
   }
   var booted = false;
   function bootScreen(){
     if(booted) return; booted = true;
-    if(DEMO) startLevel(0);
+    if(TILESHOT) stageTileShot();
+    else if(DEMO) startLevel(0);
     else if(DEEP_LVL != null) startLevel(DEEP_LVL);
     else showMenu();
   }
@@ -762,7 +1003,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
           try{ applyStreets(cfg && (cfg.streets || cfg.levels)); }catch(e){}
           bootScreen();
         }, function(){ bootScreen(); });                       // a manifest miss -> the fallback
-        if(DEMO || DEEP_LVL != null) setTimeout(bootScreen, 1600);
+        if(DEMO || TILESHOT || DEEP_LVL != null) setTimeout(bootScreen, 1600);
       } else { bootScreen(); }
     }catch(e){ bootScreen(); }
   }
@@ -788,7 +1029,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(!run) return null;
       return { z:run.z, x:run.x, len:run.len, papers:run.papers, delivered:run.delivered,
         subs:run.subs, missed:run.missed, streak:run.streak, best:run.best, coins:run.coins,
-        bumps:run.bumps, airThrows:run.airThrows, air:run.air, boost:run.boost, done:run.done };
+        gigsDone:run.gigsDone, gigsTotal:run.gigsTotal, carrying:(run.carrying?run.carrying.id:null),
+        alive:run.alive.length, bumps:run.bumps, airThrows:run.airThrows,
+        air:run.air, boost:run.boost, done:run.done };
     },
     // a perfect player rides the whole street; returns what it managed
     sim: function(i, maxSeconds){

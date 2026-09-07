@@ -46,7 +46,14 @@ ok('type is game, coins on, journey on', manifest.type === 'game' && manifest.fe
 ok('single-player (multiplayer off)', manifest.features.multiplayer === 'off');
 ok('art is declared as SLOTS, never a baked file path',
   !!manifest.art && !!manifest.art.badge && !/\.(png|jpg|jpeg|webp|svg)\b/i.test(JSON.stringify(manifest.art)), JSON.stringify(manifest.art));
-ok('the street is Maple Street at difficulty 1', manifest.levels.length === 1 && manifest.levels[0].id === 'maple-street' && manifest.levels[0].difficulty === 1);
+ok('two streets: Maple Street, then Sunset Beach on the dial above it',
+  manifest.levels.length === 2 && manifest.levels[0].id === 'maple-street' && manifest.levels[0].difficulty === 1
+  && manifest.levels[1].id === 'sunset-beach' && manifest.levels[1].difficulty === 2);
+ok('only the first street starts unlocked', manifest.levels[0].unlocked === true && !manifest.levels[1].unlocked);
+ok('the second street is a palette and layout swap, not new code',
+  manifest.levels[1].parts.theme !== manifest.levels[0].parts.theme
+  && JSON.stringify(Object.keys(manifest.levels[1].parts).sort()) === JSON.stringify(Object.keys(manifest.levels[0].parts).sort()),
+  `${manifest.levels[0].parts.theme} vs ${manifest.levels[1].parts.theme}`);
 ok('no emoji in the manifest', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(manifestRaw));
 
 const p0 = manifest.levels[0].parts;
@@ -57,6 +64,40 @@ ok('every house is placed by a 0-1 position and a side',
 ok('the street has red-flag subscribers to deliver to', p0.houses.filter((h) => h.sub).length >= 4, `${p0.houses.filter((h) => h.sub).length} subscribers`);
 ok('no raw speed / length / paper count in the manifest (difficulty is the only dial)',
   !/"(speed|length|papers|obstacleDensity)"\s*:/.test(manifestRaw));
+
+// --- 1b) PB2: the gigs and the alive street are data too -------------------------
+console.log('\n--- GIGS: side jobs as pure recipes, with nothing to fail ---');
+manifest.levels.forEach((lv) => {
+  const gigs = lv.parts.gigs || [];
+  ok(`${lv.id}: ships two gigs`, gigs.length === 2, gigs.map((g) => g.id).join(','));
+  ok(`${lv.id}: every gig names what you carry, where it comes from and where it goes`,
+    gigs.every((g) => g.id && g.name && g.cargo && g.cargo.name && g.pickup && g.dropoff && g.verb && typeof g.coins === 'number'));
+  ok(`${lv.id}: every gig picks up before it drops off`, gigs.every((g) => g.dropoff.at > g.pickup.at));
+  ok(`${lv.id}: no gig carries a timer, an expiry or a penalty (the FL5 law)`,
+    gigs.every((g) => !['timer', 'timeLimit', 'expires', 'expiry', 'penalty', 'lives', 'deadline'].some((k) => k in g)));
+  ok(`${lv.id}: one gig is a food order and one is a passenger`,
+    gigs.some((g) => g.pickup.style === 'stand') && gigs.some((g) => g.pickup.style === 'person'),
+    gigs.map((g) => g.pickup.style).join(','));
+});
+console.log('\n--- THE ALIVE STREET: mixed and matched per street, from data ---');
+const KINDS = ['sprinkler', 'car', 'icecream', 'birds'];
+manifest.levels.forEach((lv) => {
+  const alive = lv.parts.alive || [];
+  ok(`${lv.id}: has an alive layer`, alive.length >= 4, `${alive.length} things`);
+  ok(`${lv.id}: every one is a kind the engine draws`, alive.every((a) => KINDS.includes(a.kind)), alive.map((a) => a.kind).join(','));
+});
+ok('the two streets mix and match a DIFFERENT set of alive things',
+  JSON.stringify((manifest.levels[0].parts.alive || []).map((a) => a.kind)) !== JSON.stringify((manifest.levels[1].parts.alive || []).map((a) => a.kind)));
+ok('a gig with a bad shape is rejected by the loader', (() => {
+  const bad = JSON.parse(manifestRaw);
+  bad.levels[0].parts.gigs[0].timer = 30;
+  return !BM.validate(bad).ok;
+})(), 'a timer on a gig fails validation');
+ok('a gig that drops off before it picks up is rejected', (() => {
+  const bad = JSON.parse(manifestRaw);
+  bad.levels[0].parts.gigs[0].dropoff.at = 0.01;
+  return !BM.validate(bad).ok;
+})());
 
 // --- 2) the difficulty band really moves ---------------------------------------
 console.log('\n--- DIFFICULTY: the 1-5 dial is the only tuning knob ---');
@@ -122,10 +163,14 @@ G._applyManifest(manifest);
 const streets = G.streets();
 ok('engine took its street from the manifest', streets.length === manifest.levels.length && streets[0].id === manifest.levels[0].id, streets.map((s) => s.id).join(','));
 ok('built-in FALLBACK_STREETS present (a manifest miss never breaks play)', /FALLBACK_STREETS\s*=/.test(html));
-const fbIds = ((html.match(/FALLBACK_STREETS\s*=\s*\[([\s\S]*?)\n  \];/) || [])[1] || '').match(/id:"([a-z0-9-]+)"/g) || [];
-ok('the fallback street ids match the manifest (no drift)',
-  JSON.stringify(fbIds.map((x) => x.replace(/id:"|"/g, ''))) === JSON.stringify(manifest.levels.map((l) => l.id)),
-  fbIds.join(','));
+// the fallback exists so a manifest miss still plays; it carries the FIRST street,
+// and that street must not drift from the manifest's
+const fbBlock = (html.match(/FALLBACK_STREETS\s*=\s*\[([\s\S]*?)\n  \];/) || [])[1] || '';
+const fbStreetIds = (fbBlock.match(/\{ id:"([a-z0-9-]+)", name:"[^"]+", difficulty:/g) || []).map((x) => (x.match(/id:"([a-z0-9-]+)"/) || [])[1]);
+ok('the fallback carries the first street and has not drifted from the manifest',
+  fbStreetIds[0] === manifest.levels[0].id && /difficulty:1/.test(fbBlock), fbStreetIds.join(','));
+ok('the fallback street carries its gigs and its alive layer too',
+  /gigs:\[/.test(fbBlock) && /alive:\[/.test(fbBlock) && /taco-order/.test(fbBlock));
 
 // --- 4) the perfect player rides the street ------------------------------------
 console.log('\n--- THE BOT RIDES MAPLE STREET ---');
@@ -137,6 +182,7 @@ runs.forEach((r, i) => {
   ok(`street ${i + 1} (${streets[i].name}) finishes`, !!r && r.done === true, JSON.stringify(r));
   ok(`street ${i + 1}: every subscriber gets a paper`, !!r && r.delivered === r.subs && r.subs > 0, `${r && r.delivered}/${r && r.subs}`);
   ok(`street ${i + 1}: never runs the bag dry`, !!r && r.papers >= 0 && r.delivered <= streets[i].papers + 20, `papers left ${r && r.papers}`);
+  ok(`street ${i + 1}: the bot also finishes both side jobs`, !!r && r.gigsDone === r.gigsTotal && r.gigsTotal === 2, `${r && r.gigsDone}/${r && r.gigsTotal}`);
   ok(`street ${i + 1}: the bot rides it in a kid-sized time`, !!r && r.seconds > 2 && r.seconds < 120, `${r && r.seconds && r.seconds.toFixed(1)}s`);
 });
 
@@ -170,6 +216,51 @@ ok('boost strips speed the ride up', /run\.boost\s*=\s*BOOST_TIME/.test(engineSr
 ok('a bundle refills the bag', /run\.papers = run\.papersMax/.test(engineSrc));
 ok('a delivery lights the porch and waves a neighbour', /h\.light = 1; h\.wave =/.test(engineSrc));
 ok('three in a row is a streak', /run\.streak % 3 === 0/.test(engineSrc));
+
+// --- 5b) PB2: the gigs, the alive street, and what opens the next street ----------
+console.log('\n--- PB2: gigs run, the street is alive, and a perfect route opens the next ---');
+G.play(0, true);
+let live = G.dbg();
+ok('the run carries the street\'s alive layer', live.alive === streets[0].alive.length && live.alive > 0, `${live.alive} things`);
+ok('the run carries the street\'s gigs', live.gigsTotal === 2);
+// ride the first gig by hand: hug its kerb at the pickup, then at the dropoff
+const gig0 = streets[0].gigs[0];
+let carried = false, dropped = false;
+for (let i = 0; i < 60 * 120; i++) {
+  const d = G.dbg(); if (!d || d.done) break;
+  const g = G.dbg();
+  const stop = g.carrying ? gig0.dropoff : gig0.pickup;
+  G.steer(stop.side * 0.7);
+  G.step(1 / 60);
+  if (G.dbg().carrying === gig0.id) carried = true;
+  if (carried && G.dbg().gigsDone > 0) { dropped = true; break; }
+}
+ok('riding the kerb at the stand picks the gig up', carried);
+ok('riding the kerb at the drop-off finishes it and pays', dropped, `gigsDone ${G.dbg().gigsDone}`);
+ok('skipping a gig costs nothing at all', /skipping a gig/i.test(engine) || !/gigPenalty|gigTimer/.test(engine));
+ok('a gig never expires: no timer in the gig CODE (comments explaining that are fine)',
+  !/gig[\s\S]{0,140}(timeLeft|expire|deadline|penalt)/i.test(code));
+ok('the sprinkler, car, ice cream truck and birds are all drawn', /a\.kind === "sprinkler"/.test(engine) && /a\.kind === "birds"/.test(engine) && /a\.kind === "icecream"/.test(engine) && /drawAlive/.test(engine));
+ok('only the car and the truck can be bumped, and it is the same soft bump',
+  /\(a\.kind === "car" \|\| a\.kind === "icecream"\)[\s\S]{0,120}bump\(a\)/.test(engine));
+ok('the ice cream truck comes the other way down the street', /a\.z -= 55 \* dt/.test(engine));
+ok('birds scatter rather than block', /a\.scatter = Math\.min\(1/.test(engine) && !/birds[\s\S]{0,80}bump/.test(engine));
+ok('a PERFECT route is what opens the next street', /perfect \|\| PREFS\.rides\[level\] >= 3/.test(engine));
+ok('nobody can be stuck behind it: three rides open it too', /rides\[level\] >= 3/.test(engine));
+
+// --- 5c) PB2: photo mode for the picker tile (the TS rig's game half) -------------
+console.log('\n--- TILE SHOT: the engine stages its own real frame ---');
+ok('the engine answers ?tileshot=1', /tileshot["\']\)\s*===\s*["\']1["\']/.test(engine) || /_q\.get\("tileshot"\) === "1"/.test(engine));
+ok('the photo is the IMPACT frame, not somebody standing around',
+  /run\.flying\.push\(\{ t: THROW_DUR\*0\.\d+/.test(code) && /h\.light = 1; h\.wave/.test(code)
+  && /Feel\.coinBurst\(pr\.x, pr\.y, 16\)/.test(code));
+ok('it stages the real game, never a hand-drawn stand-in',
+  /startLevel\(0, true\); silent = false;/.test(code) && !/tileshotArt|standIn/.test(code));
+ok('the rider is close and the speed streaks are on',
+  /run\.z = h\.z - \d+;/.test(code) && /run\.boost = BOOST_TIME;\s*\/\/ the speed streaks/.test(code));
+ok('the camera is tilted a couple of degrees', /X\.rotate\(0\.042\)/.test(engine));
+ok('no HUD, no words, no buttons in the photo', /if\(!TILESHOT\)\{ drawStreak\(\); drawBanner\(\); \}/.test(engine) && /_hud\.hide\(\)/.test(engine));
+ok('it holds still and says it is ready', /shotFrozen = true/.test(engine) && /__tileshotReady = true/.test(engine) && /signal\("sceneReady"\)/.test(engine));
 
 // --- 6) the cartridge contract ---------------------------------------------------
 console.log('\n--- CARTRIDGE CONTRACT ---');
@@ -212,7 +303,7 @@ ok('it mounts the shared start screen', /BS\.mount\(/.test(html));
 ok('it uses the ONE shared HUD', /BuildableHUD\.mount\(/.test(html) && /HUD\(\)\.set\(/.test(html));
 ok('it honours the shell pause/resume messages', /t === "pause"/.test(html) && /t === "resume"/.test(html));
 ok('it accepts a start message carrying a level', /t === "start"/.test(html));
-ok('sound comes from clips we created, routed through /api/sfx', /\/api\/sfx\?s=/.test(html) && /pr_throw/.test(html) && /pr_clunk/.test(html) && /pr_streak/.test(html));
+ok('sound comes from clips we created, routed through /api/sfx', /\/api\/sfx\?s=/.test(html) && /pr_throw/.test(html) && /pr_clunk/.test(html) && /pr_streak/.test(html) && /pr_jingle/.test(html));
 ok('the shared FL5 delivery sounds are reused, not re-made', /sky_pickup/.test(html) && /sky_deliver/.test(html));
 ok('no art is baked into the engine', !/<img/i.test(html) && !/\.(png|jpg|jpeg|webp)\b/i.test(engineSrc));
 ok('no emoji anywhere in the engine', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/u.test(html));
@@ -228,10 +319,14 @@ const vjson = JSON.parse(fs.readFileSync(dir + '/vercel.json', 'utf8'));
 const srcs = vjson.routes.map((r) => r.src);
 ok('vercel routes the engine + the manifest (not swallowed by the catch-all)',
   srcs.includes('/paper-route-engine.html') && srcs.includes('/paper-route/manifest.json'));
+ok('the editor can open it, so art and tuning go through the editor',
+  /\{id:"paper-route",label:"Paper Route"\}/.test(fs.readFileSync(dir + '/public/editor.html', 'utf8')));
+ok('the editor save gate knows which robot play-tests it',
+  /"paper-route": "qa-paper-route\.mjs"/.test(fs.readFileSync(dir + '/qa/qa-map.mjs', 'utf8')));
 const sfxSrc = fs.readFileSync(dir + '/api/sfx.js', 'utf8');
 ok('the three new sounds are registered with a prompt AND a duration',
-  ['pr_throw', 'pr_clunk', 'pr_streak'].every((k) => new RegExp(`${k}:\\s*"`).test(sfxSrc) && new RegExp(`${k}:\\s*[0-9.]+`).test(sfxSrc)));
-const durs = ['pr_throw', 'pr_clunk', 'pr_streak'].map((k) => parseFloat((sfxSrc.match(new RegExp(`${k}:\\s*([0-9.]+)`)) || [])[1]));
+  ['pr_throw', 'pr_clunk', 'pr_streak', 'pr_jingle'].every((k) => new RegExp(`${k}:\\s*"`).test(sfxSrc) && new RegExp(`${k}:\\s*[0-9.]+`).test(sfxSrc)));
+const durs = ['pr_throw', 'pr_clunk', 'pr_streak', 'pr_jingle'].map((k) => parseFloat((sfxSrc.match(new RegExp(`${k}:\\s*([0-9.]+)`)) || [])[1]));
 ok('every new sound clears the 0.5s ElevenLabs floor', durs.every((d) => d >= 0.5), durs.join(','));
 
 console.log('\n' + (fails ? `${fails} CHECK(S) FAILED` : 'ALL CHECKS PASSED'));

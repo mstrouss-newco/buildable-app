@@ -696,6 +696,13 @@
     5: { papers:9,  length:6600, speed:230, obstacleDensity:1.00 }
   };
   function streetProps(a){ return Array.isArray(a) ? a.filter(function(p){ return p && typeof p.at==="number"; }) : []; }
+  //  A GIG is a side job on the street, the same five-question recipe shape the
+  //  aircraft jobs use (FL5): what you carry, where you pick it up, where it goes,
+  //  the word that flashes, what it pays. The FL5 law rides with it — a gig may
+  //  carry no timer, no expiry and no penalty, so there is nothing in the shape to
+  //  fail with, and skipping one costs nothing.
+  var GIG_BANNED = ["timer","timeLimit","expires","expiry","penalty","lives","deadline"];
+  function gigList(a){ return Array.isArray(a) ? a.filter(function(g){ return g && g.pickup && g.dropoff; }) : []; }
   var paperProfile = {
     validateLevel: function(lv, at, errors){
       var parts = lv.parts;
@@ -709,9 +716,25 @@
       });
       if(bad) errors.push(at+" parts.houses has "+bad+" house(s) missing an 'at' of 0-1 or a 'side' of -1 or 1");
       if(!subs) errors.push(at+" parts.houses needs at least one subscriber (sub:true) to deliver to");
-      ["obstacles","ramps","boosts","bundles"].forEach(function(k){
+      ["obstacles","ramps","boosts","bundles","alive"].forEach(function(k){
         if(parts[k]!=null && !Array.isArray(parts[k])) errors.push(at+" parts."+k+" must be an array");
       });
+      if(parts.gigs!=null){
+        if(!Array.isArray(parts.gigs)){ errors.push(at+" parts.gigs must be an array"); return; }
+        parts.gigs.forEach(function(g, i){
+          var gat = at+" gigs["+i+"]";
+          if(!g || typeof g!=="object" || Array.isArray(g)){ errors.push(gat+" is not a gig"); return; }
+          if(!g.id || !g.name) errors.push(gat+" needs an 'id' and a 'name'");
+          ["pickup","dropoff"].forEach(function(k){
+            var stop = g[k];
+            if(!stop || typeof stop.at!=="number" || stop.at<0 || stop.at>1 || (stop.side!==-1 && stop.side!==1))
+              errors.push(gat+" "+k+" needs an 'at' of 0-1 and a 'side' of -1 or 1");
+          });
+          if(g.pickup && g.dropoff && typeof g.pickup.at==="number" && typeof g.dropoff.at==="number" && g.dropoff.at <= g.pickup.at)
+            errors.push(gat+" drops off before it picks up, and a street only runs one way");
+          GIG_BANNED.forEach(function(bad){ if(bad in g) errors.push(gat+" carries a '"+bad+"' — a gig never expires and never costs anything"); });
+        });
+      }
     },
     toLevel: function(lv){
       var d = clamp(lv.difficulty,1,5), parts = lv.parts || {}, band = STREET_BAND[d];
@@ -727,6 +750,8 @@
         ramps: streetProps(parts.ramps),
         boosts: streetProps(parts.boosts),
         bundles: streetProps(parts.bundles),
+        alive: streetProps(parts.alive),
+        gigs: gigList(parts.gigs),
         coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
         unlocked: !!lv.unlocked,
         parts: parts

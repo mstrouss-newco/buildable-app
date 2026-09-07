@@ -6,6 +6,36 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## PB2 — Paper Route: gigs, the alive street, and Sunset Beach (September 7 2026)
+`public/paper-route-engine.html`, `public/paper-route/manifest.json`,
+`public/buildable-manifest.js`, `api/sfx.js`, `public/editor.html`, `qa/qa-map.mjs`,
+`qa-paper-route.mjs`. Phase **PB**, card **PB2**.
+
+**Gigs are recipes, not code.** A gig names what you carry, where it comes from, where it
+goes, the word that flashes and what it pays, and nothing else. The loader enforces the
+FL5 law on the shape: a gig carrying a `timer`, `expiry`, `penalty` or `lives` fails
+validation, as does one whose drop-off comes before its pickup. Two ship per street. You
+take one by riding close to its kerb, and skipping it costs nothing.
+
+**The alive street** is level data too: sprinklers, a car easing out of a driveway, an ice
+cream truck coming the other way (new sound `pr_jingle`), and birds that scatter. Only the
+car and the truck are soft-bounce, and a bump is the same wobble a bin gives.
+
+**Sunset Beach** proves the data rule: a second street is a palette plus a layout, no
+engine change. A perfect route on Maple Street opens it; three rides open it too, so the
+perfect is a goal and never a wall.
+
+**Photo mode (`?tileshot=1`)** is the engine's half of the TS rig: it stages one frame of
+its own real game at the moment of impact, hides all chrome, tilts the camera, holds still
+and signals `sceneReady`. The tile art itself is NOT swapped: TS0 is still on
+`claude/ts0-startup-9jwhfx` rather than main, and the look is unapproved. The tile stays
+Coming Soon behind the 1111 gate.
+
+Paper Route is now in the editor catalog and in `qa/qa-map.mjs`, so editing its levels goes
+through the editor and a save is gated by its own robot. QA: 113 checks green, `node
+qa-all.mjs` green, both streets played in real Chromium. Not flagged deployed: the live
+phone check could not run from this session. Ref: SESSION-LOG.md same date.
+
 ## PB1 — Paper Route: the spec, the cartridge, and Maple Street (September 6 2026)
 `public/paper-route-engine.html`, `public/paper-route/manifest.json`,
 `public/buildable-manifest.js` (new `paper-route` profile), `api/sfx.js`,
