@@ -175,7 +175,9 @@ export default async function handler(req, res) {
     if (op === "load") {
       const id = str(get("id"));
       if (!validSlug(id)) return res.status(400).json({ ok: false, error: "id required" });
-      const r = await rows(`kid_games?id=eq.${enc(id)}&deleted_at=is.null&select=${PLAY_COLS}&limit=1`);
+      // family_id and kid_id come back for the ownership check below and are
+      // stripped before the row leaves: the answer is the same shape as before.
+      const r = await rows(`kid_games?id=eq.${enc(id)}&deleted_at=is.null&select=${PLAY_COLS},family_id,kid_id&limit=1`);
       if (!r || !r[0]) return res.status(404).json({ ok: false, error: "no game with that link" });
       const game = r[0];
       // CB-QA: a game nobody shared is readable only by the family that made it.
@@ -190,6 +192,7 @@ export default async function handler(req, res) {
         sb(`kid_games?id=eq.${enc(id)}`, { method: "PATCH", body: JSON.stringify({ plays: (game.plays || 0) + 1 }) }).catch(() => {});
         game.plays = (game.plays || 0) + 1;
       }
+      delete game.family_id; delete game.kid_id;
       return res.status(200).json({ ok: true, game });
     }
 

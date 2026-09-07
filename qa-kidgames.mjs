@@ -331,6 +331,8 @@ chk('delete is soft, so a kid never loses a game', /deleted_at/.test(sql) && /de
   const api = code('api/kid-game.js');
   chk('load: an unshared game opens only for the family that made it',
       /!game\.shared && !game\.public && !ownsRow\(game, str\(get\("familyId"\)\), str\(get\("kidId"\)\)\)/.test(api));
+  chk('load: the ownership check can actually see who owns the row',
+      /select=\$\{PLAY_COLS\},family_id,kid_id/.test(api) && /delete game\.family_id; delete game\.kid_id;/.test(api));
   chk('load: the shared loader says who is asking, so a kid still plays their own game',
       /familyId=/.test(code('public/buildable-manifest.js')) && /bk_active_kid_v1/.test(code('public/buildable-manifest.js')));
   chk('share: turning a link on or off needs the grown-up code',
