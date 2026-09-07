@@ -429,13 +429,42 @@ const TILE_ART = {
     </svg>
   ),
 };
+// Tile Shots (sessions TS0-TS3): the games that now show a real photograph of
+// themselves instead of an AI painting. Keyed by imgId; the value is the file in
+// public/tile-shots/, which scripts/tile-shot.mjs writes. Everything not listed
+// keeps its painting, so this list IS the rollout — add an id and that game
+// switches over, remove one and it goes straight back.
+//
+// Two games have a shot and are deliberately NOT listed, because their photo is
+// a worse tile than their painting, and a tile's job is to make a kid tap it:
+//   tennis  — a washed-out court, pale ball on pale lines. The court art itself
+//             is the bug (QA30). Fix the art, then switch it on.
+//   rileys  — the shot is honest and the game is thin: a fairy, a bee and a wide
+//             empty field. No crop fills it; the game needs more on screen.
+// Both are one line away from going live once their game is fixed.
+const TILE_SHOTS = {
+  survival: "survival", castleguard: "castleguard", skyflyer: "skyflyer",
+  breaker: "breaker", sling: "sling", bubble: "bubble", croctot: "croctot",
+  tetris: "tumble", stringmatch: "stringmatch", mathcannon: "mathcannon",
+  typing: "typing", mahjong: "mahjong", checkers: "checkers", memory: "memory",
+  tictactoe: "tictactoe", connectfour: "connectfour", dotsboxes: "dotsboxes",
+};
+
 // ONE place that decides what a catalog tile shows, so a new drawn badge never
 // has to be threaded through four render sites by hand again.
 function GameTileArt({ g }) {
   const drawn = g.tile && TILE_ART[g.tile];
   if (drawn) return drawn();
   if (!g.imgId) return null;
-  return <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+  const painted = `/api/images?kind=game&id=${g.imgId}`;
+  const shot = TILE_SHOTS[g.imgId] ? `/tile-shots/${TILE_SHOTS[g.imgId]}.jpg` : null;
+  // If the photo ever fails to load, fall back to the painting rather than to a
+  // blank tile — the old art is untouched and still cached behind /api/images.
+  return <img src={shot || painted} alt="" onError={(e) => {
+      const el = e.currentTarget;
+      if (shot && el.src.indexOf("/tile-shots/") >= 0) { el.src = painted; return; }
+      el.style.display = "none";
+    }}
     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />;
 }
 
@@ -3597,7 +3626,11 @@ function HomeScreen(props) {
             boxShadow: HOME_SHADOW, color: HOME_INK, fontFamily: NUN, padding: 0,
           }}>
             <div style={{ position: "relative", width: phone ? 110 : 140, flexShrink: 0, background: keepPlaying.grad, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-              {keepPlaying.imgId && <img src={"/api/images?kind=game&id=" + keepPlaying.imgId} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+              {keepPlaying.imgId && <img src={TILE_SHOTS[keepPlaying.imgId] ? "/tile-shots/" + TILE_SHOTS[keepPlaying.imgId] + ".jpg" : "/api/images?kind=game&id=" + keepPlaying.imgId} alt="" onError={(e) => {
+                  const el = e.currentTarget, painted = "/api/images?kind=game&id=" + keepPlaying.imgId;
+                  if (el.src.indexOf("/tile-shots/") >= 0) { el.src = painted; return; }
+                  el.style.display = "none";
+                }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
               {keepPlaying.thumb && <img src={keepPlaying.thumb} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
               {!keepPlaying.imgId && !keepPlaying.thumb && keepPlaying.glyph && (
                 <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.20)", color: "#fff" }}>{keepPlaying.glyph}</span>
