@@ -1,0 +1,164 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tile Shots — contact sheet</title>
+<!-- Sessions TS0-TS3. The approval page for the Tile Shots rollout: every new
+     tile picture at the size a kid really sees it, and again full size beside
+     the AI painting it would replace. Nothing on the live site changes until
+     Mike says yes here.
+
+     The page is DATA-DRIVEN: it reads /tile-shots/shots.json, which the camera
+     (scripts/tile-shot.mjs) rewrites on every run. Adding a game to the camera
+     puts it on this page automatically — there is nothing to edit here. -->
+<style>
+  :root{ --cream:#FDF6E9; --ink:#2C2A34; --soft:#6E6A7C; --line:#E7DFCE; --card:#fff; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cream);color:var(--ink);
+       font:16px/1.55 Fredoka,"Nunito",system-ui,-apple-system,sans-serif}
+  header,main,footer{max-width:1120px;margin:0 auto;padding-left:22px;padding-right:22px}
+  header{padding-top:38px;padding-bottom:6px}
+  h1{margin:0 0 6px;font-size:34px;letter-spacing:-.4px}
+  .lede{margin:0;color:var(--soft);max-width:64ch}
+  main{padding-bottom:70px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:22px;
+         padding:22px;margin:22px 0;box-shadow:0 2px 0 rgba(0,0,0,.03)}
+  .panel h2{margin:0 0 2px;font-size:22px}
+  .panel .sub{margin:0 0 18px;color:var(--soft);font-size:14px;max-width:70ch}
+
+  /* The real Play grid card, copied from PlayGridCard in src/BuildableKids.jsx:
+     same radius, border, shadow, 4:3 picture, colour dot, Fredoka name and
+     uppercase category. The Play page caps at 940px and lays out 4 columns with
+     a 12px gap, so a tile picture is 226 wide on a laptop and 175 on a phone —
+     the size every shot actually has to survive. */
+  .playbg{background:#FFF8EE;border:1px solid var(--line);border-radius:18px;padding:20px}
+  .grid{display:flex;flex-wrap:wrap;gap:12px}
+  .pgc{border-radius:18px;border:1px solid rgba(58,46,77,0.10);background:#fff;
+       overflow:hidden;box-shadow:0 8px 22px rgba(58,46,77,0.09);text-align:left;width:226px}
+  .pgc.phone{width:175px}
+  .pgc .art{position:relative;width:100%;aspect-ratio:4/3;display:block;background:#EDE6D8}
+  .pgc .art img{width:100%;height:100%;object-fit:cover;display:block}
+  .pgc .meta{padding:9px 11px 12px;color:#3A2E4D;font-family:"Nunito",system-ui,sans-serif}
+  .pgc .top{display:flex;align-items:center;gap:7px}
+  .pgc .sw{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .pgc .nm{font-family:Fredoka,"Nunito",system-ui,sans-serif;font-size:15px;font-weight:700;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pgc .cat{font-size:11px;font-weight:700;color:#8B84A0;margin-top:3px;
+            text-transform:uppercase;letter-spacing:.3px}
+
+  .pair{display:grid;gap:14px;grid-template-columns:1fr 1fr;margin:16px 0 0}
+  @media(max-width:760px){ .pair{grid-template-columns:1fr} }
+  .pair figure{margin:0}
+  .pair img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;
+            border:1px solid var(--line);background:#EDE6D8;display:block}
+  .pair figcaption{margin-top:8px;font-size:13px;color:var(--soft)}
+  .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;margin-right:6px}
+  .tag.new{background:#DFF3E4;color:#2E7D4F}
+  .tag.old{background:#F3E3E3;color:#8E5252}
+  .tag.mode{background:#EFE7D5;color:#6E6A7C}
+  .row2{border-top:1px dashed var(--line);margin-top:26px;padding-top:22px}
+  .row2 h3{margin:0 0 3px;font-size:19px}
+  .row2 p{margin:0;color:var(--soft);font-size:14px}
+  .note{background:#FFF7E2;border:1px solid #F0E2BC;border-radius:16px;padding:16px 18px;margin:26px 0 0}
+  .note h3{margin:0 0 6px;font-size:16px}
+  .note ul{margin:8px 0 0;padding-left:20px} .note li{margin:5px 0}
+  footer{padding-bottom:60px;color:var(--soft);font-size:13px}
+  code{font-size:.92em}
+</style>
+
+<header>
+  <h1>Tile Shots — contact sheet</h1>
+  <p class="lede">Every game tile could show a real picture of the game instead of an AI
+  painting. These are taken by the games themselves. Nothing on the live site has changed.
+  Say which look you want and they go live together.</p>
+</header>
+
+<main id="main">
+  <div class="panel"><p class="sub" id="loading">Loading the latest shots…</p></div>
+</main>
+
+<footer>Rebuild these with <code>node scripts/tile-shot.mjs --out public/tile-shots</code>.
+A game with an attract mode needs no code changes at all; the two with a hand-posed scene
+carry it behind <code>?tileshot=1</code>. Shared rig: <code>buildable-tileshot.js</code>.</footer>
+
+<script>
+// Everything below just renders /tile-shots/shots.json, which the camera writes.
+(async function () {
+  const main = document.getElementById('main');
+  let shots = [];
+  try { shots = await (await fetch('/tile-shots/shots.json?v=' + Date.now())).json(); }
+  catch (e) { main.innerHTML = '<div class="panel"><p class="sub">Could not load the shot list.</p></div>'; return; }
+
+  const base = shots.filter(s => !/-nowash$|-z[\d.]+$/.test(s.label));
+  const has = (label) => shots.some(s => s.label === label);
+  const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const card = (s, phone) =>
+    `<div class="pgc${phone ? ' phone' : ''}">
+       <span class="art"><img src="/tile-shots/${s.label}.png" alt=""></span>
+       <div class="meta"><div class="top"><span class="sw" style="background:${esc(s.color)}"></span>
+       <div class="nm">${esc(s.name)}</div></div><div class="cat">${esc(s.mode)} shot</div></div>
+     </div>`;
+
+  let html = `
+    <div class="panel">
+      <h2>At real size</h2>
+      <p class="sub">The real Play grid card, at the width a kid sees on a laptop: the picture is
+      226 by 170 pixels. This is the only size that matters — a shot that only works big is a
+      shot that does not work.</p>
+      <div class="playbg"><div class="grid">${base.map(s => card(s, false)).join('')}</div></div>
+      <div class="row2"><h3>On a phone</h3>
+      <p>Two across inside a 390px screen, so the picture is 175 by 131.</p>
+      <div class="playbg" style="margin-top:12px"><div class="grid">${base.map(s => card(s, true)).join('')}</div></div></div>
+    </div>`;
+
+  for (const s of base) {
+    const extras = [];
+    if (has(s.label + '-nowash')) extras.push([s.label + '-nowash', 'the same shot with no colour wash']);
+    const z = shots.find(x => x.label.startsWith(s.label + '-z'));
+    if (z) extras.push([z.label, 'a tighter crop, for comparison']);
+    html += `
+      <div class="panel">
+        <h2>${esc(s.name)}</h2>
+        <p class="sub"><span class="tag mode">${esc(s.mode)}</span>
+        ${s.mode === 'demo'
+          ? 'Photographed straight out of the game’s own attract mode, so it is a real moment of play and the game needed no code changes.'
+          : 'The game poses this scene itself behind a hidden launch flag, then holds still for the camera.'}</p>
+        <div class="pair">
+          <figure><img src="/tile-shots/${s.label}.png" alt="">
+            <figcaption><span class="tag new">new</span> the real game</figcaption></figure>
+          <figure><img src="/api/images?kind=game&id=${esc(s.imgId)}" alt="">
+            <figcaption><span class="tag old">live today</span> the AI painting</figcaption></figure>
+        </div>
+        ${extras.length ? `<div class="pair">${extras.map(([l, cap]) =>
+          `<figure><img src="/tile-shots/${l}.png" alt=""><figcaption>${cap}</figcaption></figure>`).join('')}</div>` : ''}
+      </div>`;
+  }
+
+  html += `
+    <div class="note">
+      <h3>What to decide</h3>
+      <ul>
+        <li><b>Real screenshot or the AI painting.</b> The photo is honest about what the game
+        looks like. The painting is prettier and less true.</li>
+        <li><b>Wash or no wash.</b> The colour rising from the bottom ties the picture to the
+        colour dot beside the name. It reads well on some games and vanishes on others whose
+        world is already that colour.</li>
+        <li><b>Any single game that does not work.</b> Every one of these is one line of settings
+        away from a different moment or a tighter crop, so name it and it changes.</li>
+      </ul>
+      <h3 style="margin-top:14px">Three that are not right yet, and why</h3>
+      <ul>
+        <li><b>Tennis</b> is washed out — pale ball, pale lines, almost no court. That is the
+        court art itself, already logged as a separate bug, not the camera. It needs the art
+        fixed before a photo of it is worth having.</li>
+        <li><b>Riley's Garden</b> is honestly what the game looks like: a fairy, a bee and a
+        wide empty field. Nothing the camera does will fill it. The game needs more on screen.</li>
+        <li><b>Chess</b> has no shot at all. It is the one game with no attract mode, no test
+        hook and no way to link straight into a board, so it needs a small piece of work
+        inside the game before it can be photographed.</li>
+      </ul>
+    </div>`;
+
+  main.innerHTML = html;
+})();
+</script>

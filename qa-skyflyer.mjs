@@ -2636,7 +2636,7 @@ chk('FM2: the stand keeps the lights on (hiding them would show silhouettes)',
 
 // ---- the handle a robot plays it through
 chk('FM2: the QA handle exposes the animals, the feed and the model stand',
-  /version:\s*"fm3"/.test(farm) &&
+  /version:\s*"fm4"/.test(farm) &&
   /animals:\s*function\(\)/.test(farm) &&
   /animalKinds:\s*function\(\)/.test(farm) &&
   /giveItem:\s*function\(kind, n\)/.test(farm) &&
@@ -2658,8 +2658,8 @@ chk('FM2: still no emojis, still no textures, after everything FM2 added',
 // ==========================================================================
 console.log('\n--- FM3: the crate, the plane, and the four gaps FM1 left open ---');
 
-chk('FM3: the farm reports itself as the FM3 build',
-  /version:\s*"fm3"/.test(farm));
+chk('FM4: the farm reports itself as the FM4 build',
+  /version:\s*"fm4"/.test(farm));
 
 // ---- GAP 1: the door on the Play page --------------------------------------
 const jsxF = read('src/BuildableKids.jsx');
@@ -2675,7 +2675,7 @@ chk('FM3 gap 1: it routes to a screen of its own that frames the page',
   /function FarmScreen/.test(jsxF) &&
   /screen === SCREEN_FARM/.test(jsxF));
 chk('FM3 gap 1: the link carries its OWN cache-bust, not the flying engine\'s',
-  /skyflyer-farm\.html\?v=fm3/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm4/.test(jsxF));
 chk('FM3 gap 1: the tile is DRAWN geometry, and there is not an emoji in it',
   (function(){
     const m = jsxF.match(/const TILE_ART = \{[\s\S]*?\n\};/);
@@ -2736,7 +2736,7 @@ chk('FM3 gap 4: audio only wakes on the first tap INSIDE the page',
 chk('FM3: the crate is a hand-built slatted box in the AR1P style, textures nowhere',
   /function buildCrate/.test(farm) && !/TextureLoader|ImageLoader/.test(farm));
 chk('FM3: the wish-list slots are drawn from the ITEM recipes, per the FL5b law',
-  /r\.svg\(46\)/.test(farm) && /function renderOrder/.test(farm));
+  /r\.svg\(58\)/.test(farm) && /function renderOrder/.test(farm));
 chk('FM3: a filled slot gets a TICK, and the wrong load gets the cross language',
   /TICK_SVG/.test(farm) && /function flashNope/.test(farm) && /\.nope/.test(farm));
 chk('FM3: the unload is RAPID FIRE — one item every tenth of a second or so',
@@ -2760,13 +2760,44 @@ chk('FM3: the whole flight is well under a minute',
     const total = (m[1].match(/[\d.]+/g)||[]).reduce((a,b)=>a+parseFloat(b),0);
     return total > 0 && total < 60;
   })());
-chk('FM3: an order may only ever ask for what the farm can actually make',
+chk('FM4: an order may only ever ask for what the kid has already CARRIED',
   /function orderableKinds/.test(farm) &&
-  /for\(i=0;i<ANIMALS\.length;i\+\+\)[\s\S]{0,140}gives/.test(farm));
+  /COLLECT_ORDER\[i\]/.test(farm) &&
+  /function markCollected/.test(farm) &&
+  /markCollected\(kind\);/.test(farm) &&
+  /localStorage\.setItem\(COLLECT_KEY/.test(farm) &&
+  !/for\(i=0;i<ANIMALS\.length;i\+\+\)[\s\S]{0,140}out\.push\(gives\)/.test(farm));
 chk('FM3: harvesting pays no coins at all — a crop is an ingredient, not money',
   /reward:\s*0/.test(farm) && !/addCoins\(rr\.reward\)/.test(farm));
-chk('FM3: one seed price for all three crops, so a kid never has to compare',
-  (farm.match(/price:\s*SEED_PRICE/g)||[]).length === 3 && /var SEED_PRICE = 3/.test(farm));
+chk('FM4: a seed costs what its crop is worth — corn 4, carrot 3, wheat 2',
+  /SEED_PRICES\s*=\s*\{\s*corn:4,\s*carrot:3,\s*wheat:2\s*\}/.test(farm) &&
+  (farm.match(/price:\s*SEED_PRICES\./g)||[]).length === 3);
+chk('FM4: an order pays three times the worth of what it asked for',
+  /ORDER_PAY_MULT\s*=\s*3/.test(farm) &&
+  /ITEM_VALUES\s*=\s*\{\s*corn:4,\s*carrot:3,\s*wheat:2,\s*egg:6,\s*duckegg:7,\s*milk:8\s*\}/.test(farm) &&
+  /function orderPay\(items\)/.test(farm) &&
+  !/ORDER_PAY_BASE/.test(farm) && !/ORDER_PAY_MAX/.test(farm));
+chk('FM4: the pickup forgives a near miss, and inside four units it comes to her',
+  /var PICKUP_R=3\.0/.test(farm) && /MAGNET_R=4\.0/.test(farm) &&
+  /kd < PICKUP_R/.test(farm));
+chk('FM4: fences, the coop, the crate and the parked plane are solid, crops are not',
+  /function slideClear/.test(farm) && /addBoxBlocker\(x,z,RAIL_T/.test(farm) &&
+  /"coop"\)/.test(farm) && /"crate"\)/.test(farm) && /"plane"\)/.test(farm) &&
+  !/addCircleBlocker\([^)]*"crop"/.test(farm));
+chk('FM4: every fenced area has ONE gate, with two taller gate posts on it',
+  /GATE_GAP=2\.2/.test(farm) && /function buildGatePost/.test(farm) &&
+  /function buildFenceRect/.test(farm));
+chk('FM4: tap-to-go is the main way to move, and the joystick still cancels it',
+  /function startWalkTo/.test(farm) && /function stepWalkTo/.test(farm) &&
+  /function planWalk/.test(farm) && /clearWalkTo\(\);[\s\S]{0,120}hideHint/.test(farm));
+chk('FM4: tap-to-go adds no HUD of its own — just a soft ring on the ground',
+  /function showTapRing/.test(farm) && !/id="walkBtn"/.test(farm));
+chk('FM4: the wish list is one slot per KIND, in full colour, with a count badge',
+  /function kindCounts/.test(farm) && /class="count"/.test(farm) &&
+  /svg\.pic\{width:58px/.test(farm) && !/filter:grayscale\(1\)/.test(farm));
+chk('FM4: a customer face is drawn in code, and what is wanted floats over the crate',
+  /var CUSTOMERS=\[/.test(farm) && /function swapCrateWant/.test(farm) &&
+  /function updateCrateWant/.test(farm));
 chk('FM3: a kid with no coins gets a FREE seed rather than a locked button',
   /function seedIsFree/.test(farm) && /el\.classList\.remove\("locked"\)/.test(farm));
 chk('FM3: there is still nothing here that can fail',
