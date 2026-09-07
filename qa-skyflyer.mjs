@@ -2585,7 +2585,7 @@ chk('FM2: the wait for an egg or milk is well under a minute',
   })(),
   (farm.match(/makeSec:\s*\d+/g)||[]).join(', '));
 chk('FM2: the produce appears BESIDE the animal and sparkles like a ready crop',
-  /function spawnProduce\(A\)/.test(farm) &&
+  /function spawnProduce\(A, quiet\)/.test(farm) &&   // FM5 added the silent catch-up path
   /K\.produceOut/.test(farm) &&
   /TorusGeometry\(0\.62,0\.05,6,20\),0xFFF6A8/.test(farm));
 chk('FM2: walking over it hops it onto the stack exactly like a harvested crop',
@@ -2636,7 +2636,7 @@ chk('FM2: the stand keeps the lights on (hiding them would show silhouettes)',
 
 // ---- the handle a robot plays it through
 chk('FM2: the QA handle exposes the animals, the feed and the model stand',
-  /version:\s*"fm4"/.test(farm) &&
+  /version:\s*"fm5"/.test(farm) &&
   /animals:\s*function\(\)/.test(farm) &&
   /animalKinds:\s*function\(\)/.test(farm) &&
   /giveItem:\s*function\(kind, n\)/.test(farm) &&
@@ -2888,10 +2888,13 @@ chk('FM5: the load order is cloud, then local, then the fresh FM1 farm',
   /if\(local\) BOOT_INFO=applySave\(local\)/.test(farm) &&
   /\/api\/farm-save\?kidProfileId=/.test(farm) &&
   /if\(saveSignature\(\)!==lastSig\) return;/.test(farm));
-chk('FM5: NO RESET a child can reach — nothing on screen calls the scene wipe',
+chk('FM5: NO RESET a child can reach — the scene wipe has exactly two callers',
   /function hardResetScene/.test(farm) &&
-  !/addEventListener\("click",\s*hardResetScene/.test(farm) &&
-  (farmCode.match(/hardResetScene\(\)/g) || []).length <= 2);
+  !/addEventListener\([^)]*hardResetScene/.test(farm) &&
+  !/onclick[^\n]*hardResetScene/i.test(farm) &&
+  // the definition plus its two callers: the newer-cloud-save swap on boot, and
+  // the QA lever. Neither is anything on the screen.
+  (farmCode.match(/hardResetScene\(\)/g) || []).length === 3);
 chk('FM5: the away catch-up is capped by its own shape — one produce, never two',
   /var madeWhileAway = away && sa\.left>0 && mleft<=0;/.test(farm) &&
   /var finishedWhileAway = away && sp\.left>0 && left<=0;/.test(farm));

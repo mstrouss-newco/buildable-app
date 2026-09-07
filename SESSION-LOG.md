@@ -118,12 +118,12 @@ with 64 pieces in the air, and the shop at phone width. `qa-farm-shot.mjs` is a 
 harness so a later session takes the same four without inventing a rig.
 
 ### QA
-`qa-farm.mjs` is **147 checks, all green**, with a whole new FM5 block that plays on its
+`qa-farm.mjs` is **159 checks, all green**, with a whole new FM5 block that plays on its
 own page in its own storage and **reloads it for real** — a save that only round-trips
 through a variable in the same frame has not been tested. The whole FM5 block also IS
 the Supabase-down case: the harness serves `public/` and nothing else, so every
 `/api/farm-save` call 404s and every check went green with the cloud unreachable.
-`qa-skyflyer.mjs` carries 25 new static FM5 assertions. `node qa-all.mjs` green.
+`qa-skyflyer.mjs` carries 27 new static FM5 assertions and is 738 green. `node qa-all.mjs` green.
 
 ### What Mike should know
 - **Row Level Security is off on `farm_saves`**, like several other tables in this

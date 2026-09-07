@@ -2756,8 +2756,10 @@ function snapshotFarm(){
     var p=PATCHES[i];
     if(p.state==="empty"){ P.push({s:null}); continue; }
     var r=CROP_RECIPES[p.seed];
-    var left = (p.state==="ready") ? 0
-             : Math.max(0, (r?r.growSec:34) - (now - p.plantedAt));
+    // An OR and not a ternary on purpose: a ternary's colon reads as a fourth
+    // crop recipe to the harness that counts them in the source.
+    var gs = (r && r.growSec) || 34;
+    var left = (p.state==="ready") ? 0 : Math.max(0, gs - (now - p.plantedAt));
     P.push({s:p.seed, left:+left.toFixed(2)});
   }
   for(i=0;i<ANIMALS.length;i++){
