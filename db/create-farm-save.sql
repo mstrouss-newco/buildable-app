@@ -21,6 +21,13 @@ create table if not exists public.farm_saves (
 create index if not exists farm_saves_updated_at_idx
   on public.farm_saves (updated_at desc);
 
+-- FM6 — LOCKED DOWN. Applied 2026-09-07 on Mike's say-so after the security
+-- advisor flagged it. /api/farm-save is the only thing that ever touches this
+-- table and it uses the service key, which is allowed past RLS, so turning RLS
+-- on with NO policies keeps the farm saving exactly as it did and stops the
+-- public anon key from reading or writing any child's saved farm.
+alter table public.farm_saves enable row level security;
+
 comment on table  public.farm_saves is
   'FM5: one saved farm per kid. Written by /api/farm-save (service key only).';
 comment on column public.farm_saves.data is

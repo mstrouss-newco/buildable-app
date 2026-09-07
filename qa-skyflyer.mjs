@@ -2372,15 +2372,20 @@ chk('FM1: hand-built models per the AR1P recipe (lathes + lofts + balls, one sha
   /MeshPhongMaterial\(\{vertexColors:true/.test(farm));
 chk('FM1: no textures (no ImageLoader / TextureLoader / .jpg / .png loaded in-page)',
   !/TextureLoader|ImageLoader|loadTexture/.test(farm));
-chk('FM1: three crop recipes — corn, carrot, wheat, no fourth crop',
+chk('FM1: three crop recipes to start with — corn, carrot, wheat, and no more',
   /CROP_RECIPES\s*=\s*\{[\s\S]*?corn:[\s\S]*?carrot:[\s\S]*?wheat:/.test(farm) &&
   (farm.match(/^\s{2}(corn|carrot|wheat|potato|tomato|apple|berry):\s*\{/gm)||[]).length === 3);
+chk('FM6: the pumpkin is a FOURTH recipe added outside that three, not a fourth starter',
+  /CROP_RECIPES\.pumpkin\s*=\s*\{/.test(farm) &&
+  /function availableSeeds/.test(farm) &&
+  /var kinds=availableSeeds\(\)/.test(farm));
 chk('FM1: each crop has a coin price and a harvest reward (FM3 set both by name)',
   /price:\s*SEED_PRICE/.test(farm) && /reward:\s*0/.test(farm) && /var SEED_PRICE = \d+/.test(farm));
 chk('FM1: growth is 30-60 seconds max per the card',
   (function(){
     var m = farm.match(/growSec:\s*(\d+)/g) || [];
-    if(m.length!==3) return false;
+    // three to start with, plus one per crop a present has added (FM6: pumpkin)
+    if(m.length<3 || m.length>4) return false;
     return m.every(function(s){
       var n = parseInt(s.replace(/[^0-9]/g,''),10);
       return n>=30 && n<=60;
@@ -2612,7 +2617,10 @@ chk('FM2: the only states an animal can be in are waiting, feeding, making and r
   (function(){
     // scoped to the FM2 section — FM1's dirt patches have their own states
     // (empty / growing / ready) and they are none of this check's business
-    const fm2 = farm.slice(farm.indexOf('FM2 — THE ANIMALS THEMSELVES'));
+    // BOUNDED at the end of FM2's own code. Unbounded, this ran to the end of
+    // the file and read FM6's dog states as if they were an animal's.
+    const fm2s = farm.indexOf('FM2 — THE ANIMALS THEMSELVES');
+    const fm2 = farm.slice(fm2s, farm.indexOf('building the corner', fm2s));
     const states = new Set((fm2.match(/(?:A\.state\s*=|state:)\s*"(\w+)"/g)||[])
       .map(s => s.match(/"(\w+)"/)[1]));
     const allowed = new Set(['hungry','feeding','making','ready']);
@@ -2636,7 +2644,7 @@ chk('FM2: the stand keeps the lights on (hiding them would show silhouettes)',
 
 // ---- the handle a robot plays it through
 chk('FM2: the QA handle exposes the animals, the feed and the model stand',
-  /version:\s*"fm5"/.test(farm) &&
+  /version:\s*"fm6"/.test(farm) &&
   /animals:\s*function\(\)/.test(farm) &&
   /animalKinds:\s*function\(\)/.test(farm) &&
   /giveItem:\s*function\(kind, n\)/.test(farm) &&
@@ -2659,7 +2667,7 @@ chk('FM2: still no emojis, still no textures, after everything FM2 added',
 console.log('\n--- FM3: the crate, the plane, and the four gaps FM1 left open ---');
 
 chk('FM5: the farm reports itself as the FM5 build',
-  /version:\s*"fm5"/.test(farm));
+  /version:\s*"fm6"/.test(farm));
 
 // ---- GAP 1: the door on the Play page --------------------------------------
 const jsxF = read('src/BuildableKids.jsx');
@@ -2675,7 +2683,7 @@ chk('FM3 gap 1: it routes to a screen of its own that frames the page',
   /function FarmScreen/.test(jsxF) &&
   /screen === SCREEN_FARM/.test(jsxF));
 chk('FM3 gap 1: the link carries its OWN cache-bust, not the flying engine\'s',
-  /skyflyer-farm\.html\?v=fm5/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm6/.test(jsxF));
 chk('FM3 gap 1: the tile is DRAWN geometry, and there is not an emoji in it',
   (function(){
     const m = jsxF.match(/const TILE_ART = \{[\s\S]*?\n\};/);
@@ -2770,11 +2778,11 @@ chk('FM4: an order may only ever ask for what the kid has already CARRIED',
 chk('FM3: harvesting pays no coins at all — a crop is an ingredient, not money',
   /reward:\s*0/.test(farm) && !/addCoins\(rr\.reward\)/.test(farm));
 chk('FM4: a seed costs what its crop is worth — corn 4, carrot 3, wheat 2',
-  /SEED_PRICES\s*=\s*\{\s*corn:4,\s*carrot:3,\s*wheat:2\s*\}/.test(farm) &&
-  (farm.match(/price:\s*SEED_PRICES\./g)||[]).length === 3);
+  /SEED_PRICES\s*=\s*\{\s*corn:4,\s*carrot:3,\s*wheat:2,\s*pumpkin:10\s*\}/.test(farm) &&
+  (farm.match(/price:\s*SEED_PRICES\./g)||[]).length === 4);   // FM6 added the pumpkin
 chk('FM4: an order pays three times the worth of what it asked for',
   /ORDER_PAY_MULT\s*=\s*3/.test(farm) &&
-  /ITEM_VALUES\s*=\s*\{\s*corn:4,\s*carrot:3,\s*wheat:2,\s*egg:6,\s*duckegg:7,\s*milk:8\s*\}/.test(farm) &&
+  /ITEM_VALUES\s*=\s*\{\s*corn:4,\s*carrot:3,\s*wheat:2,\s*egg:6,\s*duckegg:7,\s*milk:8,\s*pumpkin:10\s*\}/.test(farm) &&
   /function orderPay\(items\)/.test(farm) &&
   !/ORDER_PAY_BASE/.test(farm) && !/ORDER_PAY_MAX/.test(farm));
 chk('FM4: the pickup forgives a near miss, and inside four units it comes to her',
@@ -2932,8 +2940,8 @@ chk('FM5: the present path is fixed, eight long, and priced the way Mike set it'
 chk('FM5: only the NEXT present is ever shown — the ones after it are not drawn',
   /function nextUnlock/.test(farm) &&
   /var U=nextUnlock\(\);\s*\n\s*if\(buyPresentEl\)\{\s*\n\s*buyPresentEl\.style\.display = U \? "" : "none";/.test(farm));
-chk('FM5: an unbuilt present still marks the unlock hers, for FM6 to FM8',
-  /OWNED\[U\.id\]=1;/.test(farm) && /U\.built && U\.model/.test(farm) &&
+chk('FM5: a present whose thing is not built YET still marks the unlock hers',
+  /OWNED\[U\.id\]=1;/.test(farm) && /if\(U\.built\)\{/.test(farm) &&
   /var back=Math\.round\(U\.price\*UNBUILT_BACK\)/.test(farm));
 chk('FM5: the reveal is the biggest thing in the game — confetti, the plane, the box',
   /function revealUnlock/.test(farm) && /confettiBurst\(64\)/.test(farm) &&
@@ -2949,13 +2957,91 @@ chk('FM5: the small celebrations all go through the shared Feel Kit, so mute wor
   /heartPuff\(A\.x,/.test(farm) &&
   /if\(!quiet\)\{ sparklePuff/.test(farm));
 chk('FM5: the shell contract still holds — the door carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm5/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm6/.test(jsxF));
 chk('FM5: the save endpoint and its migration both exist in the repo',
   fs.existsSync('api/farm-save.js') && fs.existsSync('db/create-farm-save.sql') &&
   /farm_saves/.test(read('db/create-farm-save.sql')) &&
   /create table if not exists/i.test(read('db/create-farm-save.sql')));
 chk('FM5: the endpoint has no DELETE verb — a farm is never destroyed from outside',
   !/req\.method === "DELETE"|method:\s*"DELETE"/.test(read('api/farm-save.js')));
+
+// ==========================================================================
+//  FM6 — THE FIRST THREE PRESENTS, BUILT FOR REAL. The half that reads the
+//  file: the rules a later session could delete without any robot going red.
+// ==========================================================================
+console.log('\n--- FM6: the pumpkin, the farm dog and the second field row ---');
+
+chk('FM6: the pumpkin is the dearest seed and the biggest thing an order can name',
+  /pumpkin:10/.test(farm) &&
+  (farm.match(/pumpkin:10/g) || []).length === 2 &&      // the seed price and the value
+  /CROP_RECIPES\.pumpkin\s*=\s*\{/.test(farm));
+chk('FM6: it is the slowest crop on the farm and still well under a minute',
+  (function(){
+    const m = farm.match(/growSec:\s*46/);
+    const all = (farm.match(/growSec:\s*(\d+)/g) || []).map(x => +x.replace(/\D/g, ''));
+    return !!m && Math.max.apply(null, all) === 46 && Math.max.apply(null, all) < 60;
+  })());
+chk('FM6: a crop she has no seed for is NOT something the farm can make today',
+  /if\(CROP_RECIPES\[kind\]\) return availableSeeds\(\)\.indexOf\(kind\)>=0;/.test(farm));
+chk('FM6: the seed pop-up is built from what she owns, never from a fixed list',
+  /function availableSeeds/.test(farm) &&
+  /var kinds=availableSeeds\(\)/.test(farm) &&
+  /seedRowEl\.innerHTML="";/.test(farm) &&
+  !/var kinds=\["corn","carrot","wheat"\]/.test(farm));
+chk('FM6: and four seed buttons still fit — two by two on a phone, not shrunk',
+  /#seedCard \.row\.four\{grid-template-columns:1fr 1fr 1fr 1fr\}/.test(farm) &&
+  /@media \(max-width:430px\)/.test(farm));
+
+chk('FM6: the dog is drawn geometry in the farm\'s own style, not an emoji or a photo',
+  /function buildDog/.test(farm) && /var DOG_COLORS=/.test(farm) &&
+  !emoji.test(farm) && !/TextureLoader|ImageLoader/.test(farm));
+chk('FM6: THE DOG IS NOT AN AUTOPLAYER — he waits, he keeps his distance, he is slower',
+  /var DOG_SPEED=4\.6/.test(farm) &&        // she runs at 6.4
+  /var DOG_PATIENCE=10/.test(farm) &&
+  /var DOG_MIN_AWAY=7\.0/.test(farm) &&
+  /P\.sparkleT<DOG_PATIENCE/.test(farm) &&
+  /d<DOG_MIN_AWAY/.test(farm));
+chk('FM6: he carries ONE thing at a time and puts it on her stack',
+  /if\(DOG\.state==="follow" && !DOG\.carry\)/.test(farm) &&
+  /function dogDrop/.test(farm) && /pushOntoStack\(DOG\.carry,/.test(farm));
+chk('FM6: and he always gets where he is going — the easing has a floor under it',
+  /Math\.max\(0\.18, Math\.min\(1, \(d-stop\)\/0\.8\)\)/.test(farm) &&
+  /Math\.min\(DOG_SPEED\*k\*dt, d-stop\)/.test(farm));
+chk('FM6: whatever is in his mouth rides home in the save, so nothing is lost',
+  /if\(DOG\.carry\) S\.push\(DOG\.carry\);/.test(farm));
+
+chk('FM6: the second row goes SOUTH, so nothing she planted moves',
+  /function growFieldRow/.test(farm) &&
+  /addPatchRow\(fieldGroup, 2\)/.test(farm) &&
+  /var extra=\(rows-3\)\*PATCH_STEP;/.test(farm) &&
+  /FIELD_CZ\+extra\/2, FIELD_HALF_X, FIELD_HALF_Z0\+extra\/2, "W"/.test(farm));
+chk('FM6: a blocker remembers its owner, so one fence can be replaced alone',
+  /var BLOCKER_OWNER=/.test(farm) && /function dropBlockersOwnedBy/.test(farm) &&
+  /BLOCKER_OWNER="field";/.test(farm) &&
+  /own:BLOCKER_OWNER/.test(farm));
+chk('FM6: growing the field is idempotent — a save reloads it, it does not stack up',
+  /if\(FIELD_ROWS>=4 \|\| !fieldGroup\) return false;/.test(farm));
+
+chk('FM6: opening a present changes the farm WITH the confetti',
+  /applyUnlock\(U\.id\);/.test(farm) && /function applyUnlock/.test(farm) &&
+  /function unlockModel/.test(farm));
+chk('FM6: and a save puts every opened present back BEFORE the field is filled in',
+  (function(){
+    const i = farm.indexOf('applyAllUnlocks();');
+    const j = farm.indexOf('---- the field', i);
+    return i > 0 && j > i;
+  })());
+chk('FM6: the first three presents are marked built; the rest are still boxes',
+  (function(){
+    const m = farm.match(/var UNLOCKS=\[[\s\S]*?\n\];/);
+    if (!m) return false;
+    const built = (m[0].match(/built:(true|false)/g) || []).map(x => x.endsWith('true'));
+    return built.length === 8 && built.slice(0, 3).every(Boolean) && built.slice(3).every(b => !b);
+  })());
+chk('FM6: the door on the Play page carries the new cache-bust',
+  /skyflyer-farm\.html\?v=fm6/.test(jsxF));
+chk('FM6: still no timer, no countdown, no emoji, after all of that',
+  !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
 
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(ok?0:1);

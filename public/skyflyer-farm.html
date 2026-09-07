@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Sky Flyer — Farm corner (FM5)</title>
+<title>Sky Flyer — Farm corner (FM6)</title>
 <!--
   FM1 — the farm corner of Sunny Islands, built in the Sky Flyer engine style.
   Standalone scene: same three.min.js, same hand-built vertex-colored models
@@ -131,6 +131,26 @@
   NO TIMERS ON SCREEN, still. Nothing in FM5 draws a countdown and QA greps
   for it. Growth is a shape changing, exactly as it always was.
 
+  FM6 — THE FIRST THREE PRESENTS, BUILT FOR REAL. FM5 shipped the ladder with
+  hollow boxes. These three are things now:
+    - THE PUMPKIN SEED (130). A fourth crop: the dearest seed, the slowest to
+      grow at 46 seconds, and worth 10 — the biggest single thing an order can
+      ask for. It appears in the seed pop-up only once the present is opened,
+      and an order may not name it before then, because until she has the seed
+      there is no way for her to fill it.
+    - THE FARM DOG (180). A companion who TIDIES UP AFTER HER and is
+      deliberately not an autoplayer: he only goes for something that has sat
+      ready for ten seconds AND is more than seven units away from her, he
+      carries one thing at a time, and he trots at 4.6 against her 6.4 so she
+      can always beat him to it. He ignores the fences, because a dog goes
+      under a rail.
+    - THE SECOND FIELD ROW (240). Three more patches, added to the SOUTH so
+      that not one crop she already planted moves an inch. The fence comes
+      down and goes back up around the bigger field; blockers now remember who
+      owns them so the coop's and the pen's are never disturbed.
+  Opening a present now changes the farm with the confetti, and a save puts
+  every opened present back before the field it may have grown is filled in.
+
   FM3 also closed the four things FM1 left open: the farm now has a door on the
   Play page, the coins are the SHELL'S shared wallet (not a local variable), the
   shared nav bridge is loaded so Home works on iPhone, and the shared Feel Kit
@@ -184,6 +204,16 @@
   #seedCard .title{text-align:center;font-weight:900;font-size:17px;color:#5b4a1f;
     padding:2px 0 10px;letter-spacing:.3px}
   #seedCard .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  /* FM6 — a fourth seed arrives with the first present. Four across still
+     reads on a tablet; on a phone they go two by two rather than shrinking
+     into pictures too small to tell apart. */
+  #seedCard .row.four{grid-template-columns:1fr 1fr 1fr 1fr}
+  #seedCard .row.four .seed .art{height:66px}
+  #seedCard .row.four .seed .name{font-size:12px}
+  @media (max-width:430px){
+    #seedCard .row.four{grid-template-columns:1fr 1fr}
+    #seedCard .row.four .seed .art{height:76px}
+  }
   #seedCard .seed{background:#f6efd6;border:2px solid #e7d9a4;border-radius:18px;
     padding:8px 6px 10px;text-align:center;cursor:pointer;transition:transform .08s;
     user-select:none;-webkit-tap-highlight-color:transparent}
@@ -599,11 +629,21 @@ var AREAS=[];          // the fenced areas, each with its one gate
 var GATE_GAP=2.2;      // the doorway, in world units — about two kid-widths
 var RAIL_T=0.11;       // half the thickness of a rail, for blocking
 
+// FM6 — a blocker now remembers WHO PUT IT THERE. The second field row has to
+// take the field's fence down and build a bigger one, and it must not disturb
+// the coop's or the cow pen's while it does.
+var BLOCKER_OWNER="";
 function addCircleBlocker(x,z,r,tag){
-  var B={t:"circle",x:x,z:z,r:r,tag:tag||"",on:true}; BLOCKERS.push(B); return B;
+  var B={t:"circle",x:x,z:z,r:r,tag:tag||"",own:BLOCKER_OWNER,on:true}; BLOCKERS.push(B); return B;
 }
 function addBoxBlocker(x,z,hx,hz,tag){
-  var B={t:"box",x:x,z:z,hx:hx,hz:hz,tag:tag||"",on:true}; BLOCKERS.push(B); return B;
+  var B={t:"box",x:x,z:z,hx:hx,hz:hz,tag:tag||"",own:BLOCKER_OWNER,on:true}; BLOCKERS.push(B); return B;
+}
+// Everything one owner put down, gone in one line.
+function dropBlockersOwnedBy(own){
+  var i;
+  for(i=BLOCKERS.length-1;i>=0;i--) if(BLOCKERS[i].own===own) BLOCKERS.splice(i,1);
+  for(i=AREAS.length-1;i>=0;i--) if(AREAS[i].own===own) AREAS.splice(i,1);
 }
 
 // How far INTO a blocker a point at (x,z) is, given a body radius. Negative
@@ -732,12 +772,61 @@ function buildFenceRect(g,cx,cz,halfX,halfZ,gapSide){
   var gz = gapSide==="N" ? cz+halfZ : (gapSide==="S" ? cz-halfZ : cz);
   var ox = gapSide==="W" ? -1 : (gapSide==="E" ? 1 : 0);
   var oz = gapSide==="N" ? 1 : (gapSide==="S" ? -1 : 0);
-  AREAS.push({cx:cx,cz:cz,halfX:halfX,halfZ:halfZ,side:gapSide,
+  AREAS.push({cx:cx,cz:cz,halfX:halfX,halfZ:halfZ,side:gapSide,own:BLOCKER_OWNER,
               gate:{x:gx,z:gz}, out:{x:ox,z:oz}});
   return g;
 }
 
-function buildField(){
+// FM6 — THE SECOND FIELD ROW, the third present. The field is 3x3 to start
+// with and grows a fourth row SOUTHWARD, so not one crop she already planted
+// moves an inch when it arrives. The fence comes down and goes back up around
+// the bigger field; the three patches she has in the ground carry on growing.
+var FIELD_ROWS=3;
+var FIELD_HALF_X=(1*PATCH_STEP)+PATCH_R+0.8;
+var FIELD_HALF_Z0=(1*PATCH_STEP)+PATCH_R+0.8;
+var fieldGroup=null, fieldFence=null;
+
+// The fence for however many rows there are now. Rows past the third are added
+// to the south, so the middle of the fence drifts south with them.
+function fieldFenceFor(rows){
+  var extra=(rows-3)*PATCH_STEP;
+  var g=new THREE.Group();
+  BLOCKER_OWNER="field";
+  buildFenceRect(g, FIELD_CX, FIELD_CZ+extra/2, FIELD_HALF_X, FIELD_HALF_Z0+extra/2, "W");
+  BLOCKER_OWNER="";
+  return g;
+}
+
+function addPatchRow(group, j){
+  var i;
+  for(i=-1;i<=1;i++){
+    var x=FIELD_CX + i*PATCH_STEP;
+    var z=FIELD_CZ + j*PATCH_STEP;
+    var patch=buildDirtDisc();
+    patch.position.set(x,0.001,z);
+    group.add(patch);
+    var ring=buildDashRing();
+    ring.position.set(x,0.001,z);
+    group.add(ring);
+    PATCHES.push({ mesh:patch, ring:ring, x:x, z:z,
+      state:"empty", seed:null, plantedAt:0, crop:null, sparkleT:0, chimed:false });
+  }
+}
+
+// Idempotent, because it is called from a present being opened AND from every
+// load of a save that already has the present in it.
+function growFieldRow(){
+  if(FIELD_ROWS>=4 || !fieldGroup) return false;
+  FIELD_ROWS=4;
+  addPatchRow(fieldGroup, 2);
+  if(fieldFence){ fieldGroup.remove(fieldFence); }
+  dropBlockersOwnedBy("field");
+  fieldFence=fieldFenceFor(FIELD_ROWS);
+  fieldGroup.add(fieldFence);
+  return true;
+}
+
+function buildFieldLegacy(){
   var group=new THREE.Group();
   var i,j;
   // 3x3 patches
@@ -762,9 +851,15 @@ function buildField(){
       });
     }
   }
-  // fence around the whole field — one gate on the west side, facing the crate
-  buildFenceRect(group, FIELD_CX, FIELD_CZ, (1*PATCH_STEP)+PATCH_R+0.8, (1*PATCH_STEP)+PATCH_R+0.8, "W");
   return group;
+}
+// The field the scene actually gets: three rows of patches and the fence that
+// fits them, kept apart so the fence can be replaced when a row is added.
+function buildField(){
+  fieldGroup=buildFieldLegacy();
+  fieldFence=fieldFenceFor(FIELD_ROWS);
+  fieldGroup.add(fieldFence);
+  return fieldGroup;
 }
 scene.add(buildField());
 
@@ -796,8 +891,12 @@ scene.add(buildField());
 // FM4 — Mike's numbers, taken from section 7 of the growth plan. A seed costs
 // what its crop is worth, an order pays THREE TIMES what it asked for, so the
 // walk out to the crate is always worth more than the seeds that started it.
-var SEED_PRICES = { corn:4, carrot:3, wheat:2 };
-var ITEM_VALUES = { corn:4, carrot:3, wheat:2, egg:6, duckegg:7, milk:8 };
+// FM6 — the pumpkin is the first present, so it is the best thing in the
+// field: it costs the most, it takes the longest (still under a minute), and
+// it is worth the most when the crate asks for one. A seed still costs exactly
+// what its crop is worth, which is the rule FM4 set.
+var SEED_PRICES = { corn:4, carrot:3, wheat:2, pumpkin:10 };
+var ITEM_VALUES = { corn:4, carrot:3, wheat:2, egg:6, duckegg:7, milk:8, pumpkin:10 };
 var ORDER_PAY_MULT = 3;       // an order pays 3x the sum of what it wants
 var SEED_PRICE = 2;           // the CHEAPEST seed — what the free-seed floor reads
 var DUCK_PRICE = 120;         // about four deliveries
@@ -934,6 +1033,54 @@ var CROP_RECIPES = {
 };
 
 // Build the mesh for one crop at the given growth stage: 0=sprout, 1=mid, 2=ready.
+// =========================================================================
+//  FM6 — THE PUMPKIN. The first present on the ladder, so it is the best
+//  thing that can be in the field: the slowest to grow (still comfortably
+//  under a minute), the dearest seed, and the biggest single thing an order
+//  can ask for. It only appears in the seed pop-up once the present has been
+//  opened — before that a child is never shown a thing she cannot have.
+// =========================================================================
+CROP_RECIPES.pumpkin = {
+  price: SEED_PRICES.pumpkin,
+  reward: 0,
+  growSec: 46,
+  colors: {main:0xF08A38, rib:0xC85F17, stem:0x6B8F3A, leaf:0x74B04E},
+  parts:function(s){
+    var C=this.colors, p=[], i, a;
+    // FLAT AND WIDE, WITH RIBS THAT STAND PROUD. The first turn of this went on
+    // the model stand and came back an ORANGE: near enough spherical, and with
+    // the ribs tucked entirely inside the skin where nobody could see them. The
+    // ribs are now slightly WIDER than the body, so they break its outline,
+    // which is the whole silhouette of a pumpkin.
+    var body=[[0.001,-0.40],[0.34,-0.36],[0.60,-0.16],[0.66,0.02],[0.56,0.26],[0.28,0.38],[0.001,0.41]];
+    function prof(fx,fy){ return body.map(function(q){ return [q[0]*fx*s, q[1]*fy*s]; }); }
+    p.push(hbTurn(prof(1,1), C.main, {p:[0,0.44*s,0]}, 20));
+    for(i=0;i<8;i++){
+      a=(i/8)*Math.PI*2;
+      p.push(hbTurn(prof(1.05,1.02), C.rib, {s:[0.13,1,1], r:[0,a,0], p:[0,0.44*s,0]}, 16));
+    }
+    // a short fat stalk, unmistakably on top
+    p.push(hbTurn([[0.001,0],[0.14*s,0.03*s],[0.10*s,0.18*s],[0.14*s,0.25*s],[0.001,0.27*s]],
+      C.stem, {p:[0,0.82*s,0]}, 10));
+    // and one leaf lying over its shoulder. The first pass used a cone here and
+    // it read as a party hat.
+    p.push(hbBall(0.24*s, C.leaf, {s:[1.5,0.20,0.95], r:[0,0.5,0.42], p:[0.40*s,0.86*s,0.08*s]}, 10));
+    return p;
+  },
+  // Icon = the same shape family, drawn flat: a wide ribbed body and a stalk.
+  svg:function(size){
+    size = size || 82;
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+      '<ellipse cx="41" cy="50" rx="30" ry="23" fill="#EE8B3C" stroke="#A8501A" stroke-width="2.5"/>'+
+      '<path d="M41 27 V73" fill="none" stroke="#CB6B22" stroke-width="2.4"/>'+
+      '<path d="M27 29 Q20 50 27 71" fill="none" stroke="#CB6B22" stroke-width="2.4"/>'+
+      '<path d="M55 29 Q62 50 55 71" fill="none" stroke="#CB6B22" stroke-width="2.4"/>'+
+      '<path d="M38 28 q0 -10 -1 -13 q6 -1 7 3 q1 6 -1 10 Z" fill="#4E8B3A" stroke="#2E6327" stroke-width="2"/>'+
+      '<path d="M45 20 q9 -7 14 -1 q-7 6 -14 4 Z" fill="#63A94E" stroke="#2E6327" stroke-width="2"/>'+
+      '</svg>';
+  }
+};
+
 function buildCrop(kind, stage){
   var r=CROP_RECIPES[kind]; if(!r) return null;
   var s = (stage===0)?0.35 : (stage===1)?0.68 : 1.0;
@@ -1044,7 +1191,7 @@ function buildStackItem(kind){
 //  plant, so the FIRST order is always crops the kid can go and grow.
 // =========================================================================
 var COLLECT_KEY="bk_farm_collected";
-var COLLECT_ORDER=["corn","carrot","wheat","egg","duckegg","milk"];
+var COLLECT_ORDER=["corn","carrot","wheat","pumpkin","egg","duckegg","milk"];
 var COLLECTED={corn:1,carrot:1,wheat:1};
 (function loadCollected(){
   try{
@@ -1818,6 +1965,7 @@ function spawnProduce(A, quiet){
   mh.position.set(px,0.10,pz);
   scene.add(mh); A.halo=mh;
   A.magnet=null;
+  A.readyAt=performance.now()/1000;    // FM6: how long it has sat there, for the dog
   A.state="ready";
   // FM5 — it does not just appear: it lands. (Silent on a catch-up load, or a
   // farm restored after a long time away would go off like a fireworks box.)
@@ -2769,6 +2917,9 @@ function snapshotFarm(){
     A.push({k:a.kind, st:st, left:+left.toFixed(2)});
   }
   for(i=0;i<stack.length;i++) S.push(stack[i].userData.kind);
+  // whatever the dog has in his mouth was on its way to the stack anyway, so
+  // it rides home in the stack rather than needing a field of its own
+  if(DOG.carry) S.push(DOG.carry);
   return {
     v:SAVE_V, savedAt:Date.now(),
     patches:P, animals:A, stack:S,
@@ -2836,7 +2987,8 @@ function saveSignature(){
   for(i=0;i<ANIMALS.length;i++) s.push(ANIMALS[i].kind.charAt(0)+ANIMALS[i].state.charAt(0));
   for(i=0;i<stack.length;i++) s.push(stack[i].userData.kind);
   s.push("b"+BASKET.items.length, "o"+ORDERS_DONE, "u"+ownedList().length,
-         "c"+collectedList().length, "d"+(DUCK_BOUGHT?1:0));
+         "c"+collectedList().length, "d"+(DUCK_BOUGHT?1:0),
+         "r"+FIELD_ROWS, "g"+(DOG.carry||"-"));
   if(order) for(i=0;i<order.items.length;i++) s.push(order.items[i].kind+(order.items[i].filled?"1":"0"));
   return s.join("|");
 }
@@ -3004,6 +3156,10 @@ function applySave(blob){
   saveCollected();
   OWNED={};
   (blob.unlocks||[]).forEach(function(id){ OWNED[id]=1; });
+  // FM6 — the presents she has opened are real things, and they have to be
+  // BACK ON THE FARM before the field below is filled in: the second row must
+  // exist before the patches in it can be restored into it.
+  applyAllUnlocks();
   ORDERS_DONE=blob.ordersDone|0;
 
   // ---- the duck, if she bought one
@@ -3094,7 +3250,10 @@ function readyCropOf(kind){
 // crop (a patch is always plantable, and a seed is free when she is broke) or
 // a thing an animal that LIVES HERE gives.
 function producibleNow(kind){
-  if(CROP_RECIPES[kind]) return true;
+  // FM6: a crop counts only if she may actually PLANT it. The pumpkin exists
+  // in the recipes from the first frame, but until the present is opened there
+  // is no seed for it, so an order naming one could never be filled.
+  if(CROP_RECIPES[kind]) return availableSeeds().indexOf(kind)>=0;
   for(var i=0;i<ANIMALS.length;i++) if(ANIMALS[i].gives===kind) return true;
   return heldOnStack(kind);
 }
@@ -3188,9 +3347,9 @@ function watchIdle(dt){
 //  in one sitting) and over hiding them (which would leave no ladder at all).
 // =========================================================================
 var UNLOCKS=[
-  { id:"pumpkinseed", price:130, name:"Pumpkin seed",     built:false },
-  { id:"farmdog",     price:180, name:"A farm dog",       built:false },
-  { id:"fieldrow",    price:240, name:"Another row",      built:false },
+  { id:"pumpkinseed", price:130, name:"Pumpkin seed",     built:true  },
+  { id:"farmdog",     price:180, name:"A farm dog",       built:true  },
+  { id:"fieldrow",    price:240, name:"Another row",      built:true  },
   { id:"pig",         price:300, name:"A pig",            built:false },
   { id:"mill",        price:380, name:"The mill",         built:false },
   { id:"bees",        price:460, name:"Bees",             built:false },
@@ -3277,9 +3436,11 @@ function updateReveal(dt){
       confettiBurst(64);
       sparklePuff(REVEAL.x, 1.5, REVEAL.z, 22);
       var U=REVEAL.unlock;
-      if(U.built && U.model){
-        REVEAL.thing=U.model();
-      } else {
+      applyUnlock(U.id);               // the farm changes WITH the confetti
+      if(U.built){
+        REVEAL.thing=unlockModel(U.id);
+      }
+      if(!REVEAL.thing){
         // the empty box: a fistful of coins, and the unlock still becomes hers
         REVEAL.thing=buildCoinCluster();
         var back=Math.round(U.price*UNBUILT_BACK);
@@ -3333,6 +3494,247 @@ function planeFlyBy(){
   PL.phase="flyby"; PL.t=0;
   PL.fb={ x0:kid.position.x-30, x1:kid.position.x+30, z:kid.position.z-8 };
   return true;
+}
+
+// =========================================================================
+//  FM6 — THE FIRST THREE PRESENTS, BUILT FOR REAL
+//
+//  FM5 shipped the ladder with hollow boxes: opening one marked the unlock
+//  hers and hopped some coins back out. These three are now real things.
+//
+//    1. THE PUMPKIN SEED — a fourth crop, the dearest and the slowest, and
+//       the biggest single thing an order can ask for. It appears in the seed
+//       pop-up only once the present has been opened.
+//    2. THE FARM DOG — a companion who tidies up after her. Deliberately NOT
+//       an autoplayer: see the rule on DOG_PATIENCE below.
+//    3. THE SECOND FIELD ROW — three more patches, added to the south so
+//       nothing she already planted moves.
+//
+//  An unlock is applied by applyUnlock(), which is idempotent, because it is
+//  called both when a present is opened AND on every load of a save that
+//  already has that present in it.
+// =========================================================================
+
+// ------------------------------------------------------------- THE FARM DOG
+var DOG_COLORS={ coat:0xD9A05B, coatD:0xB47F3F, belly:0xF2DCBB, nose:0x3A2A1E, tongue:0xE0798C };
+function buildDog(){
+  var C=DOG_COLORS, p=[], g=new THREE.Group();
+  // THE FIRST CUT OF THIS WENT ON THE MODEL STAND AND CAME BACK A BEAR CUB:
+  // the head was too big and sat straight on the body, the muzzle was the same
+  // colour as everything else so it vanished, the ears did not read, and the
+  // tail stood up like an aerial. Four fixes, and all four are silhouette:
+  // a LONG LOW body, a smaller head set high on a neck, a PALE muzzle that
+  // sticks out in front of it, and big ears hanging down the sides.
+  p.push(hbTurn([[0.001,-0.72],[0.26,-0.62],[0.33,-0.20],[0.34,0.24],[0.28,0.56],[0.001,0.64]],
+    C.coat, {r:[Math.PI/2,0,0], p:[0,0.50,-0.04]}, 14));
+  p.push(hbTurn([[0.001,-0.46],[0.19,-0.36],[0.22,0.22],[0.001,0.36]],
+    C.belly, {r:[Math.PI/2,0,0], s:[1,0.45,1], p:[0,0.31,0.00]}, 12));
+  // a neck, so the head is ON something rather than merged into the shoulders
+  p.push(hbTube(0.17,0.19,0.34,C.coat,{r:[0.55,0,0],p:[0,0.76,0.48]},9));
+  p.push(hbBall(0.245, C.coat, {p:[0,0.94,0.62]}, 12));
+  // THE MUZZLE, pale and projecting — it is what makes it a dog
+  p.push(hbTurn([[0.001,-0.19],[0.135,-0.13],[0.125,0.11],[0.001,0.17]],
+    C.belly, {r:[Math.PI/2,0,0], p:[0,0.86,0.86]}, 10));
+  p.push(hbBall(0.075, C.nose, {p:[0,0.88,1.02]}, 8));
+  // ears hanging DOWN the sides of the head, flattened, big enough to read
+  p.push(hbBall(0.17, C.coatD, {s:[0.42,1.25,0.80], r:[0.15,0,0.30], p:[-0.235,0.86,0.56]}, 10));
+  p.push(hbBall(0.17, C.coatD, {s:[0.42,1.25,0.80], r:[0.15,0,-0.30], p:[0.235,0.86,0.56]}, 10));
+  // eyes and brows, or it has no face at all from the game's overhead camera
+  p.push(hbBall(0.050, C.nose, {p:[-0.115,1.02,0.79]}, 7));
+  p.push(hbBall(0.050, C.nose, {p:[0.115,1.02,0.79]}, 7));
+  g.add(hbMesh(hbBake(p)));
+  // the legs move, so they are their own meshes
+  function leg(x,z){
+    var l=hbMesh(hbBake([hbTube(0.090,0.080,0.38,DOG_COLORS.coatD,{p:[0,-0.19,0]},7),
+                         hbBall(0.105,DOG_COLORS.belly,{p:[0,-0.38,0.03]},7)]));
+    l.position.set(x,0.40,z); g.add(l); return l;
+  }
+  g.userData.legs=[leg(-0.21,0.36), leg(0.21,0.36), leg(-0.21,-0.36), leg(0.21,-0.36)];
+  // and the tail: SHORT, THICK and curled up over its back, which is the last
+  // bit of dog-shaped silhouette there is to have
+  var tail=hbMesh(hbBake([hbTube(0.085,0.055,0.40,DOG_COLORS.coat,{p:[0,0.20,0]},8),
+                          hbBall(0.085,DOG_COLORS.belly,{r:[0,0,0],p:[0.09,0.40,0]},8)]));
+  tail.position.set(0,0.66,-0.66); tail.rotation.x=-0.95; g.add(tail);
+  g.userData.tail=tail;
+  return g;
+}
+
+// THE RULE THAT KEEPS HER PLAYING. A dog that fetched everything the moment it
+// appeared would leave a child with nothing to walk to, which is the exact
+// opposite of what FM5's never-idle rule is protecting. So he only tidies up
+// what she has LEFT BEHIND: a thing has to have been sitting ready for a while
+// AND be a long way from where she is, and he carries one at a time, slower
+// than she walks. He is help, not an autoplayer.
+var DOG_SPEED=4.6;          // she runs at 6.4, so she can always beat him to it
+var DOG_PATIENCE=10;        // seconds a thing must have sat there, forgotten
+var DOG_MIN_AWAY=7.0;       // and how far from her it must be before he bothers
+var DOG_HEEL=2.3;           // how close behind her he settles
+var DOG_LOOK=0.8;           // how often he looks for a job
+var DOG = { obj:null, x:-9.5, z:1.6, yaw:0, state:"follow", target:null,
+            carry:null, carryObj:null, lookT:0, trot:0 };
+
+function spawnDog(){
+  if(DOG.obj) return false;
+  DOG.obj=buildDog();
+  DOG.x=kid.position.x-1.6; DOG.z=kid.position.z-1.6;
+  DOG.obj.position.set(DOG.x,0,DOG.z);
+  DOG.obj.scale.setScalar(0.15);        // he arrives with a pop, like the duck
+  DOG.popIn=0;
+  scene.add(DOG.obj);
+  return true;
+}
+function dogHasDog(){ return !!DOG.obj; }
+
+// Everything sitting out that she has walked away from. Returns the FURTHEST
+// forgotten thing, because the nearest one she is most likely to come back for.
+function dogFindJob(now){
+  var best=null, bestD=-1, i, d;
+  for(i=0;i<PATCHES.length;i++){
+    var P=PATCHES[i];
+    if(P.state!=="ready" || P.sparkleT<DOG_PATIENCE) continue;
+    d=Math.hypot(kid.position.x-P.x, kid.position.z-P.z);
+    if(d<DOG_MIN_AWAY || d<bestD) continue;
+    bestD=d; best={t:"patch", p:P, x:P.x, z:P.z};
+  }
+  for(i=0;i<ANIMALS.length;i++){
+    var A=ANIMALS[i];
+    if(A.state!=="ready" || !A.produce || A.magnet!=null) continue;
+    if(A.readyAt==null || (now-A.readyAt)<DOG_PATIENCE) continue;
+    d=Math.hypot(kid.position.x-A.produceX, kid.position.z-A.produceZ);
+    if(d<DOG_MIN_AWAY || d<bestD) continue;
+    bestD=d; best={t:"animal", a:A, x:A.produceX, z:A.produceZ};
+  }
+  return best;
+}
+// Is the job still there? She may well have got there first, and that is the
+// point of him being slower than her.
+function dogJobAlive(J){
+  if(!J) return false;
+  if(J.t==="patch") return J.p.state==="ready";
+  return J.a.state==="ready" && !!J.a.produce;
+}
+function dogTake(J){
+  var kind=null, wx=J.x, wz=J.z;
+  if(J.t==="patch"){
+    var P=J.p;
+    kind=P.seed;
+    scene.remove(P.crop); P.crop=null;
+    if(P.halo){ scene.remove(P.halo); P.halo=null; }
+    P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false; P.sparkleT=0;
+  } else {
+    var A=J.a;
+    kind=A.gives;
+    scene.remove(A.produce); A.produce=null;
+    if(A.halo){ scene.remove(A.halo); A.halo=null; }
+    A.produceSide=null; A.magnet=null; A.readyAt=null;
+    A.state="hungry"; A.happy=0.6;
+  }
+  if(!kind || !ITEM(kind)) return false;
+  DOG.carry=kind;
+  DOG.carryObj=new THREE.Group();
+  DOG.carryObj.add(hbMesh(hbBake(ITEM(kind).parts(0.62))));
+  scene.add(DOG.carryObj);
+  sparklePuff(wx, 0.6, wz, 6);
+  sfx("select");
+  return true;
+}
+function dogDrop(){
+  if(!DOG.carry) return;
+  pushOntoStack(DOG.carry, new THREE.Vector3(DOG.x, 1.0, DOG.z));
+  sfx("pickup"); haptic("light");
+  if(DOG.carryObj){ scene.remove(DOG.carryObj); DOG.carryObj=null; }
+  DOG.carry=null;
+}
+
+function updateDog(dt, now){
+  if(!DOG.obj) return;
+  if(DOG.popIn!=null && DOG.popIn<1){
+    DOG.popIn=Math.min(1, DOG.popIn+dt*1.6);
+    var e=1+Math.sin(DOG.popIn*Math.PI)*0.22;
+    DOG.obj.scale.setScalar((0.15+0.85*DOG.popIn)*e);
+    if(DOG.popIn>=1) DOG.obj.scale.setScalar(1);
+  }
+  // where he is trying to be
+  var tx, tz, stop;
+  if(DOG.state==="toItem" && dogJobAlive(DOG.target)){
+    tx=DOG.target.x; tz=DOG.target.z; stop=0.9;
+  } else {
+    if(DOG.state==="toItem") DOG.state="follow";        // she beat him to it
+    tx=kid.position.x; tz=kid.position.z; stop=DOG.HEEL||DOG_HEEL;
+  }
+  var dx=tx-DOG.x, dz=tz-DOG.z, d=Math.hypot(dx,dz), moving=false;
+  if(d-stop>0.02){
+    // He eases down as he gets there so he does not skate past — but with a
+    // FLOOR under the easing, and never overshooting. Without the floor the
+    // last hand-width takes forever: the first cut of this crept toward a
+    // ready crop 0.9 units away and never once reached it.
+    var k=Math.max(0.18, Math.min(1, (d-stop)/0.8));
+    var step=Math.min(DOG_SPEED*k*dt, d-stop);
+    DOG.x += (dx/d)*step;
+    DOG.z += (dz/d)*step;
+    DOG.yaw=Math.atan2(dx,dz);
+    moving=step>0.012;
+  } else if(DOG.state==="toItem"){
+    dogTake(DOG.target); DOG.target=null; DOG.state="back";
+  } else if(DOG.state==="back"){
+    dogDrop(); DOG.state="follow";
+  }
+  // HE IGNORES THE FENCES ON PURPOSE. A dog goes under a rail, and giving him
+  // a pathfinder to solve a problem a dog does not have would be silly.
+  DOG.obj.position.set(DOG.x, 0, DOG.z);
+  DOG.obj.rotation.y=DOG.yaw;
+  // trot, and a tail that never stops
+  DOG.trot += dt*(moving?11:2.2);
+  var legs=DOG.obj.userData.legs, sw=Math.sin(DOG.trot)*(moving?0.6:0.05);
+  legs[0].rotation.x= sw; legs[3].rotation.x= sw;
+  legs[1].rotation.x=-sw; legs[2].rotation.x=-sw;
+  DOG.obj.position.y = moving ? Math.abs(Math.sin(DOG.trot))*0.05 : 0;
+  DOG.obj.userData.tail.rotation.z=Math.sin(now*7.5)*0.5;
+  // the thing in his mouth rides in front of his nose
+  if(DOG.carryObj){
+    DOG.carryObj.position.set(DOG.x+Math.sin(DOG.yaw)*0.95, 0.80, DOG.z+Math.cos(DOG.yaw)*0.95);
+    DOG.carryObj.rotation.y+=dt*1.6;
+  }
+  // and every so often he looks for something she has forgotten
+  DOG.lookT-=dt;
+  if(DOG.lookT<=0){
+    DOG.lookT=DOG_LOOK;
+    if(DOG.state==="follow" && !DOG.carry){
+      var J=dogFindJob(now);
+      if(J){ DOG.target=J; DOG.state="toItem"; }
+    }
+  }
+}
+
+// ------------------------------------------------- WHAT A PRESENT ACTUALLY DOES
+// Idempotent, every one of them: this runs when a present is opened AND on
+// every load of a save that already has that present in it.
+function applyUnlock(id){
+  if(id==="pumpkinseed"){ buildSeedPicker(); return true; }
+  if(id==="farmdog"){ return spawnDog(); }
+  if(id==="fieldrow"){ return growFieldRow(); }
+  return false;                      // FM7 and FM8 fill the rest of the ladder in
+}
+function applyAllUnlocks(){
+  for(var i=0;i<UNLOCKS.length;i++) if(OWNED[UNLOCKS[i].id]) applyUnlock(UNLOCKS[i].id);
+}
+
+// The thing that hops out of the box. A present whose thing does not exist yet
+// still has no model, and FM5's fistful of coins stands in for it.
+function unlockModel(id){
+  if(id==="pumpkinseed"){
+    var g=new THREE.Group(); g.add(hbMesh(hbBake(CROP_RECIPES.pumpkin.parts(1.15)))); return g;
+  }
+  if(id==="farmdog") return buildDog();
+  if(id==="fieldrow"){
+    var f=new THREE.Group(), i;
+    for(i=0;i<3;i++){
+      var d=buildDirtDisc(); d.position.set((i-1)*1.05, 0, 0); d.scale.setScalar(0.62); f.add(d);
+      var r=buildDashRing(); r.position.set((i-1)*1.05, 0.02, 0); r.scale.setScalar(0.62); f.add(r);
+    }
+    return f;
+  }
+  return null;
 }
 
 // ----------------------------------------------------------- BUYING THE BOX
@@ -3457,6 +3859,8 @@ function hardResetScene(){
   }
   while(stack.length){ scene.remove(stack.pop()); }
   reindexStack();
+  if(DOG.carryObj){ scene.remove(DOG.carryObj); DOG.carryObj=null; }
+  DOG.carry=null; DOG.target=null; DOG.state="follow";
   closeBasket();
   order=null;
 }
@@ -3464,6 +3868,7 @@ function hardResetScene(){
 // The FM5 tick, hung off the main loop in one line.
 function fm5Tick(dt, now){
   updatePuffs(dt);
+  updateDog(dt, now);
   updateBasket(dt, now);
   updateReveal(dt);
   watchIdle(dt);
@@ -3509,7 +3914,14 @@ function zoo(){
     {name:"duck (model)", make:function(){ return ANM_ON?anmGet("PekinDuck",1.0):null; }},
     {name:"duck egg", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.duckegg.parts(1))); }},
     {name:"crate", make:buildCrate},
-    {name:"plane", make:buildPlaneModel}
+    {name:"plane", make:buildPlaneModel},
+    // FM5 and FM6 — judged on the stand before any of them went into the
+    // world, the same rule that caught the cow reading as a pig.
+    {name:"basket", make:buildBasket},
+    {name:"present", make:function(){ var g=new THREE.Group();
+      g.add(buildPresentBox()); var l=buildPresentLid(); l.position.y=1.3; g.add(l); return g; }},
+    {name:"pumpkin", make:function(){ return hbMesh(hbBake(CROP_RECIPES.pumpkin.parts(1))); }},
+    {name:"farm dog", make:buildDog}
   ];
   // EVERY EXHIBIT IS NORMALISED TO THE SAME LONGEST DIMENSION, which is the
   // whole point of a stand: a shape is judged against the others rather than
@@ -3549,6 +3961,10 @@ function zoo(){
   var back=Math.max(spanX*0.92, 12);
   camera.position.set(0, 8.5+spanZ*0.55, spanZ*0.5+back);
   camera.lookAt(0, 0.6, spanZ*0.55);
+  // FM6 — the wish-list card sat right on top of the last row of exhibits, so
+  // the two models the stand existed to judge were the two you could not see.
+  try{ orderCardEl.classList.remove("up"); }catch(e){}
+  try{ document.getElementById("hint").style.display="none"; }catch(e){}
   var strip=document.createElement("div");
   strip.id="zooNames";
   strip.style.cssText="position:absolute;left:0;right:0;bottom:8px;text-align:center;"+
@@ -3572,8 +3988,22 @@ var seedRowEl=document.getElementById("seedRow");
 var seedCloseEl=document.getElementById("seedClose");
 var openPatch=null;
 
+// FM6 — WHAT SHE MAY PLANT TODAY. The three starters, plus any seed a present
+// has already given her. A seed she has not unlocked is not shown at all: the
+// farm never dangles a picture of a thing a child cannot have.
+function availableSeeds(){
+  var out=["corn","carrot","wheat"], k;
+  for(k=0;k<UNLOCK_SEEDS.length;k++){
+    if(OWNED[UNLOCK_SEEDS[k][0]] && CROP_RECIPES[UNLOCK_SEEDS[k][1]]) out.push(UNLOCK_SEEDS[k][1]);
+  }
+  return out;
+}
+var UNLOCK_SEEDS=[["pumpkinseed","pumpkin"],["strawberry","strawberry"]];
+
 function buildSeedPicker(){
-  var kinds=["corn","carrot","wheat"];
+  seedRowEl.innerHTML="";
+  var kinds=availableSeeds();
+  seedRowEl.classList.toggle("four", kinds.length>3);
   seedRowEl.innerHTML="";
   kinds.forEach(function(k){
     var r=CROP_RECIPES[k];
@@ -3978,6 +4408,7 @@ function makeReady(P){
     scene.add(P.crop);
   }
   P.state="ready";
+  P.sparkleT=0;                        // FM6: how long it has sat there, for the dog
   if(!P.chimed){ P.chimed=true; sfx("sparkle"); sparklePuff(P.x,0.95,P.z,8); }
 }
 
@@ -4140,7 +4571,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm5",
+  version: "fm6",
   coins: function(){ return coins; },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
@@ -4383,6 +4814,43 @@ window.FARM = {
   // one FM5 frame by hand: the puffs, the basket, the reveal, the idle watch
   // and the save watch, without a wall clock
   tick5: function(dt){ var d=typeof dt==="number"?dt:1/30; fm5Tick(d, performance.now()/1000); },
+
+  // ---- FM6 ---------------------------------------------------------------
+  // The pumpkin, the dog and the second row, all drivable without waiting for
+  // a crop to grow or a coin to be earned.
+  seedsOffered: availableSeeds,
+  seedRow: function(){ return Array.prototype.slice.call(seedRowEl.querySelectorAll(".seed"))
+    .map(function(el){ return el.dataset.kind; }); },
+  fieldRows: function(){ return FIELD_ROWS; },
+  fieldArea: function(){ var A=null,i;
+    for(i=0;i<AREAS.length;i++) if(AREAS[i].own==="field") A=AREAS[i];
+    return A ? {cx:+A.cx.toFixed(2), cz:+A.cz.toFixed(2),
+                halfX:+A.halfX.toFixed(2), halfZ:+A.halfZ.toFixed(2),
+                side:A.side, gate:{x:+A.gate.x.toFixed(2), z:+A.gate.z.toFixed(2)}} : null; },
+  fieldBlockers: function(){ return BLOCKERS.filter(function(B){ return B.own==="field"; }).length; },
+  dog: function(){ return DOG.obj ? { there:true, state:DOG.state,
+    x:+DOG.x.toFixed(2), z:+DOG.z.toFixed(2), carry:DOG.carry,
+    target:DOG.target?{t:DOG.target.t, x:+DOG.target.x.toFixed(2), z:+DOG.target.z.toFixed(2)}:null,
+    speed:DOG_SPEED, patience:DOG_PATIENCE, minAway:DOG_MIN_AWAY } : { there:false }; },
+  // age a ready crop or a loose egg, so the dog's patience can be proved in a
+  // test without the test sitting there for ten seconds
+  ageReady: function(sec){
+    var n=0, i, d=sec||DOG_PATIENCE+1;
+    for(i=0;i<PATCHES.length;i++) if(PATCHES[i].state==="ready"){ PATCHES[i].sparkleT+=d; n++; }
+    for(i=0;i<ANIMALS.length;i++) if(ANIMALS[i].state==="ready" && ANIMALS[i].readyAt!=null){
+      ANIMALS[i].readyAt-=d; n++; }
+    return n;
+  },
+  applyUnlock: applyUnlock,
+  // Own a present and put its thing on the farm, exactly as buying one does,
+  // minus the coins and the three-second celebration.
+  givePresent: function(id){
+    var i, found=false;
+    for(i=0;i<UNLOCKS.length;i++) if(UNLOCKS[i].id===id) found=true;
+    if(!found) return false;
+    OWNED[id]=1; applyUnlock(id); updateShopButton(); return true;
+  },
+  unlockModel: function(id){ return !!unlockModel(id); },
 
   plane: function(){ return { phase:PL.phase, pay:PL.pay, busy:planeBusy(),
     x:plane?+plane.position.x.toFixed(2):null,

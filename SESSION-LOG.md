@@ -1,3 +1,96 @@
+## 2026-09-07 (FM6): the first three presents, built for real
+
+**Phase FM, card FM6.** FM5 shipped the unlock ladder with hollow boxes. These
+three are things now. Touched `public/skyflyer-farm.html`, `db/create-farm-save.sql`,
+`src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-farm-shot.mjs`, `qa-skyflyer.mjs`.
+
+Scope was Mike's call this session: the presents have to be built IN ORDER, because
+the shop only ever shows the next one and anything else leaves her opening a hollow
+box. So FM6 is presents one to three; FM7 is the pig and the mill, FM8 the bees, the
+strawberry and the tractor.
+
+### The pumpkin seed, 130
+A fourth crop, and the best thing in the field: the dearest seed at 10, the slowest at
+46 seconds (still comfortably under a minute), and worth 10 when the crate asks for one,
+which makes it the biggest single thing an order can name. A seed still costs exactly
+what its crop is worth, which is the rule FM4 set.
+
+It appears in the seed pop-up only once the present is opened, and `producibleNow()`
+now gates a crop on whether she may actually PLANT it — so an order can never name a
+pumpkin while there is no seed for one. The robot force-feeds a pumpkin into the pantry
+and then rolls sixty orders to prove it, which is the harshest version of that check.
+
+The pop-up itself is built from what she owns rather than from a fixed list of three,
+so FM8's strawberry needs no new code. Four buttons go across on a tablet and two by two
+on a phone rather than shrinking into pictures too small to tell apart.
+
+### The farm dog, 180
+A companion who tidies up after her, and **deliberately not an autoplayer**. A dog that
+fetched everything the moment it arrived would leave a child with nothing to walk to,
+which is the exact opposite of what FM5's never-idle rule protects. So he only goes for
+something that has sat ready for ten seconds AND is more than seven units from where she
+is; he carries one thing at a time; and he trots at 4.6 against her 6.4, so she can
+always beat him to it. He ignores the fences, because a dog goes under a rail and giving
+him a pathfinder to solve a problem a dog does not have would be silly.
+
+Whatever is in his mouth rides home inside the saved stack, so a save can never lose it.
+
+One real bug the robot caught: his easing had no floor under it, so the last hand-width
+took forever and he crept toward a ready crop 0.9 units away without ever reaching it.
+The step now has a floor and never overshoots.
+
+### The second field row, 240
+Three more patches, added to the SOUTH so that not one crop she already planted moves an
+inch. The fence comes down and goes back up around the bigger field. To make that safe,
+a blocker now remembers who put it there, so the field's fence can be replaced without
+disturbing the coop's or the cow pen's. Growing the field is idempotent, because it runs
+both when the present is opened and on every load of a save that already has it.
+
+### The order these three land in
+`applyUnlock()` is the one door, and a save applies every opened present BEFORE the field
+is filled in — the second row has to exist before the patches in it can be restored into
+it. Opening a present now changes the farm WITH the confetti rather than after it, and a
+present with a real thing in it hands over the thing instead of FM5's coins back.
+
+### The picture gate caught both new models
+The pumpkin and the dog each failed their first turn on the model stand (`?zoo=1`), which
+is exactly what that stand is for and the same rule that caught FM2's cow reading as a
+pig. The pumpkin was a round ORANGE: near enough spherical, with its ribs tucked entirely
+inside the skin where nobody could see them, and a cone on top that read as a party hat.
+It is now flat and wide with eight ribs standing proud of the body, a short fat stalk and
+a flat leaf. The dog was a BEAR CUB: head too big and sitting straight on the body, muzzle
+the same colour as everything else so it vanished, ears that did not read, and a tail
+standing up like an aerial. It is now a long low body, a smaller head on a neck, a pale
+muzzle sticking out in front, big ears down the sides and a short thick tail curled over
+its back. The basket, the present, the pumpkin and the dog all joined the stand so a later
+session judges them instead of guessing, and the wish-list card is hidden while the stand
+is up — it was sitting on top of the two models the stand existed to judge.
+
+### QA
+`qa-farm.mjs` is **195 checks, all green**, run twice. New FM6 block on its own page:
+the pumpkin bought through the shop for real coins (because "the box gives you the thing"
+is the whole point of the ladder and a test that called applyUnlock directly would never
+have checked it), the field going nine to twelve with the old nine unmoved and the fence
+regrown around them, the dog leaving a fresh crop alone and fetching a forgotten one, and
+all three surviving a reload. `qa-skyflyer.mjs` is **757 green** with 17 new FM6 static
+assertions. `node qa-all.mjs` green.
+
+**One honest note on the harness:** running `qa-farm.mjs` and `qa-all.mjs` at the same
+time makes both flaky — two chromium instances on the software rasteriser starve each
+other and a twenty-second wait blows. Run them one after the other.
+
+### Also this session
+- **FM5 was merged to `main`** (commit `ae4fffd`) on Mike's say-so after he saw the four
+  renders, and Vercel picked it up. Nothing in this sandbox can reach the live site, so
+  the deploy is unverified from here.
+- **Row Level Security is now ON for `farm_saves`**, Mike's call, applied and verified:
+  the service key still reads and writes past it and the public anon key no longer can.
+  `db/create-farm-save.sql` records it.
+- **One probe row is left in `farm_saves`** with `kid_profile_id = 'rls-probe-fm6'`, from
+  proving the service key still writes with RLS on. It can never match a real kid. The
+  guardrails forbid a DELETE, so it is left for Mike:
+  `delete from public.farm_saves where kid_profile_id = 'rls-probe-fm6';`
+
 ## 2026-09-07 (FM5): the farm remembers her, grows while she is away, and always has a next thing
 
 **Phase FM, card FM5.** Mike's kids love Township, and the reason is that Township
