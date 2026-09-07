@@ -1195,10 +1195,10 @@ function cgShotStart() {
   const n = GAME_CONFIG.levels.length;
   startLevel(Math.max(0, Math.min(n - 1, TS ? TS.level : 0)));
   S.coins = 999;                       // the photo is not a game: never blocked on economy
-  const a = pointAtRaw(S.W.segs, S.W.total, S.W.total * 0.56);
-  const b = pointAtRaw(S.W.segs, S.W.total, S.W.total * 0.70);
-  cgShotPlaceArcher(a.x / LW, a.y / LH);   // the "hero", guarding the road to the castle
-  cgShotPlaceArcher(b.x / LW, b.y / LH);   // a second one for depth
+  [0.54, 0.66, 0.78, 0.88].forEach((f) => {
+    const p = pointAtRaw(S.W.segs, S.W.total, S.W.total * f);
+    cgShotPlaceArcher(p.x / LW, p.y / LH);          // the road properly defended
+  });
 }
 function cgShotPlaceArcher(fx0, fy0) {
   const tx = LW * fx0, ty = LH * fy0;
@@ -1213,25 +1213,33 @@ function cgShotSpawnBaddie() {
 }
 function cgShotPose() {
   if (!S) return;
-  while (S.baddies.length < 3) cgShotSpawnBaddie();
-  S.baddies.length = 3;
-  const picks = [S.W.total * 0.66, S.W.total * 0.78, S.W.total * 0.89];
+  // a whole column of goblins on the road, not a token three
+  const picks = [0.50, 0.58, 0.65, 0.72, 0.80, 0.88, 0.95].map(f => S.W.total * f);
+  while (S.baddies.length < picks.length) cgShotSpawnBaddie();
+  S.baddies.length = picks.length;
   S.baddies.forEach((b, i) => { b.dist = picks[i]; b.hp = b.max; b.poof = 0; b.hit = 0; b.gone = false; });
-  // one arrow frozen mid-flight, archer to the nearest goblin
+  // every archer loosing an arrow at once: arrows in the air all down the road
   S.arrows.length = 0;
-  const g = S.defenders[0], b0 = S.baddies[0];
-  if (g && b0) {
-    const p = pointAtRaw(S.W.segs, S.W.total, b0.dist);
-    const ang = Math.atan2((p.y - 34) - (g.y - 30), p.x - (g.x + 8));
-    S.arrows.push({ x: g.x + 8 + (p.x - g.x) * 0.45, y: (g.y - 30) + ((p.y - 34) - (g.y - 30)) * 0.45,
-      vx: Math.cos(ang) * 560, vy: Math.sin(ang) * 560, target: b0, dmg: 1, life: 1.4 });
-    g.shootT = 0.12; g.face = 1;       // caught in the shooting pose
-  }
+  S.defenders.forEach((g, gi) => {
+    for (let k = 0; k < 2; k++) {
+      const b = S.baddies[(gi * 2 + k * 3) % S.baddies.length];
+      if (!b) continue;
+      const p = pointAtRaw(S.W.segs, S.W.total, b.dist);
+      const ax = g.x + 8, ay = g.y - 30, bx = p.x, by = p.y - 34;
+      const ang = Math.atan2(by - ay, bx - ax), f = 0.36 + k * 0.30;
+      S.arrows.push({ x: ax + (bx - ax) * f, y: ay + (by - ay) * f,
+        vx: Math.cos(ang) * 560, vy: Math.sin(ang) * 560, target: b, dmg: 1, life: 1.4 });
+    }
+    g.shootT = 0.12; g.face = 1;        // every one caught in the shooting pose
+  });
   S.bombs.length = 0;
   S.tutSlot = -1;                       // no tutorial hand, no glowing "tap here"
-  // a puff of the game's own sparkles fills the quiet corner (no pop word)
-  if (BM && b0) { const p = pointAtRaw(S.W.segs, S.W.total, S.baddies[2].dist);
-    BM.explode(fx, p.x, p.y - 20, "#ffe08a", { n: 14 }); }
+  // two goblins poofing right now, in the game's own sparkles (no pop word)
+  if (BM) {
+    [1, 4].forEach((i) => { const b = S.baddies[i]; if (!b) return;
+      const p = pointAtRaw(S.W.segs, S.W.total, b.dist);
+      BM.explode(fx, p.x, p.y - 18, "#ffe08a", { n: 16 }); });
+  }
   shotPosed = true;
 }
 function cgShotTick(dt) {

@@ -38,6 +38,17 @@ camera, which also makes every shot reproducible.
    device pixels, so shooting bigger only inflated the file (2.9 MB down to 547 KB)
    without adding detail. 1200x900 is what the card asked for.
 
+**Second pass: more action.** The first proof was correct and quiet — one hero, three
+foes, one thing in the air. Mike asked for more, so the poses now stage a real fight.
+Survival: six foes closing in at mixed depths, a ten-sparkle volley across the frame,
+a lightning zap connecting to the foe it is killing, impact sparks on four of them,
+three coins spilling. Castle Guard: seven goblins marching the road, four archers
+loosing at once, six arrows in the air, two goblins poofing. Both still use nothing
+but the game's own art and its own effects. Two things were tried and pulled back
+out: a second lightning arc and a nova shockwave ring read as white ropes and a
+geometric circle rather than as action, and a big particle explosion covered the foe
+it was meant to be killing.
+
 **Open for Mike, on `/tile-shots`.** Wash or no wash. Real screenshot or the AI
 painting. Both variants are on the page.
 

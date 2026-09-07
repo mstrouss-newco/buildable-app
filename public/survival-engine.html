@@ -833,30 +833,40 @@ function sxw(f){ return W/2 + (f-0.5)*W/SHOT_Z; }
 function syw(f){ return H/2 + (f-0.5)*H/SHOT_Z; }
 function survShotPose(){
   if(!hero||!L) return;
-  // hero: just left of centre, facing the trouble
-  hero.x=sxw(0.34); hero.y=syw(0.56); hero.vx=0; hero.vy=0; invuln=0;
-  // three foes entering from the right, staggered so none hides another
-  while(enemies.length<3){ spawnEnemy(); }
-  enemies.length=3;
-  var spots=[[0.71,0.28],[0.86,0.54],[0.66,0.79]];
+  // hero: just left of centre, mid-fight, facing the trouble
+  hero.x=sxw(0.30); hero.y=syw(0.55); hero.vx=3.4; hero.vy=-0.6; invuln=0;
+  // a swarm closing in from the right, at mixed depths so it reads as a crowd
+  var spots=[[0.62,0.24],[0.79,0.40],[0.93,0.62],[0.71,0.72],[0.55,0.86],[0.86,0.15]];
+  while(enemies.length<spots.length){ spawnEnemy(); }
+  enemies.length=spots.length;
   for(var i=0;i<enemies.length;i++){ var sp=spots[i]; var e=enemies[i];
     e.x=sxw(sp[0]); e.y=syw(sp[1]); e.slowT=0; e.hp=e.maxHp; }
   hero.aim=Math.atan2(enemies[1].y-hero.y, enemies[1].x-hero.x);
-  // one sparkle frozen mid-flight, hero to foe
+  // a whole volley in the air, not one dot: a fan of sparkles at three depths
   projs.length=0;
-  var t0=enemies[1];
-  projs.push({ x:hero.x+(t0.x-hero.x)*0.46, y:hero.y+(t0.y-hero.y)*0.46, vx:0, vy:0,
-               life:999, dmg:stats.projDmg, r:18+stats.projR, pierce:0, hit:new Set() });
-  // one coin treat, low and left, so the quiet corner has something in it
+  var vol=[[1,0.62],[2,0.34],[2,0.58],[2,0.80],[3,0.30],[3,0.55],[4,0.42],[0,0.46],[0,0.72],[5,0.50]];
+  for(var v=0;v<vol.length;v++){ var tg=enemies[vol[v][0]], f=vol[v][1];
+    projs.push({ x:hero.x+(tg.x-hero.x)*f, y:hero.y+(tg.y-hero.y)*f, vx:0, vy:0,
+                 life:999, dmg:stats.projDmg, r:15+stats.projR, pierce:0, hit:new Set() }); }
+  // one foe taking a hit right now: a single lightning arc, so it reads as a zap
+  // rather than a pair of white ropes across the picture
+  bolts.length=0; parts.length=0; rings.length=0;
+  bolts.push({ x1:hero.x, y1:hero.y, x2:enemies[1].x, y2:enemies[1].y, life:9 });
+  // coins spilling from the foes that just popped
   gems.length=0;
-  var gx=sxw(0.27);
-  gems.push({ x:gx, y:syw(0.74), tier:2, val:tierVal(2), vx:0, vy:0, got:false });
+  var gx=sxw(0.24);
+  gems.push({ x:gx,        y:syw(0.74), tier:2, val:tierVal(2), vx:0, vy:0, got:false });
+  gems.push({ x:sxw(0.45), y:syw(0.86), tier:1, val:tierVal(1), vx:0, vy:0, got:false });
+  gems.push({ x:sxw(0.63), y:syw(0.58), tier:1, val:tierVal(1), vx:0, vy:0, got:false });
   // BR.coin spins on the clock, so pick the instant where it faces us square on
   SHOT_T=(2*Math.PI*Math.ceil((gx+1)/(2*Math.PI)) - gx)/3;
-  // nothing else on screen: no drops, no rings, no boss bar, no tutorial
-  drops.length=0; rings.length=0; holes.length=0; bolts.length=0; parts.length=0;
-  boss=null; bossSpawned=false; helpOpen=false;
-  if(BM&&fx&&BM.reset) { try{ BM.reset(fx); }catch(e){} }
+  drops.length=0; holes.length=0; boss=null; bossSpawned=false; helpOpen=false;
+  // the impact sparks go in LAST, so nothing above clears them
+  if(BM&&fx&&BM.reset){ try{ BM.reset(fx); }catch(e){} }
+  burst(enemies[1].x, enemies[1].y, "#cfeaff", 22);
+  burst(enemies[3].x, enemies[3].y, P.spark, 22);
+  burst(enemies[4].x, enemies[4].y, P.spark, 16);
+  burst(enemies[2].x, enemies[2].y, P.spark, 12);
   shotPosed=true;
 }
 function survShotTick(){

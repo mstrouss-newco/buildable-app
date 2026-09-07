@@ -38,6 +38,14 @@ happens after approval.
 would replace, plus how it reads at real tile size. Nothing on the live site has
 changed.
 
+**How busy a tile should be.** The first proof followed the recipe literally (three
+foes, one thing mid-flight) and read as too quiet. The poses now stage a real fight:
+six foes and a sparkle volley on Survival, seven goblins and six arrows on Castle
+Guard. Worth knowing for TS1-TS3 — the recipe's counts are a floor, not a target.
+Effects that did not survive: a second lightning arc and a nova ring, which read as
+white ropes and a geometric circle, and a particle explosion big enough to hide the
+foe underneath it.
+
 **Two findings for the rollout.** The wash reads well on Space Survival (purple over
 a sunset sky) and all but disappears on Castle Guard (green over grass), so wash
 strength is a per-game question, not one setting. And tower defence has no coin on
