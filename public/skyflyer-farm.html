@@ -81,15 +81,10 @@
     -webkit-user-select:none;user-select:none;touch-action:none;color:#33566e}
   canvas{display:block}
   #hud{position:fixed;inset:0;pointer-events:none}
-  .pill{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;
-    background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px 8px 10px;
-    display:flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(30,60,90,.18);
-    font-weight:800;font-size:20px;color:#5b4a1f}
-  .pill svg{display:block}
-  #titlePill{position:absolute;top:calc(12px + env(safe-area-inset-top));
-    left:calc(96px + env(safe-area-inset-left));
-    background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px;
-    font-weight:800;font-size:14px;color:#33566e;box-shadow:0 3px 10px rgba(30,60,90,.18)}
+  /* HD1: the farm's own cream coin pill and "The Farm" title chip are GONE.
+     Both are chips now, drawn by the shared info bar (buildable-hud.js, `world`
+     layout) in the one dark glass, so they can never sit under the shell's
+     buttons and never vanish against a pale sky. */
   /* The order card owns the bottom of the screen now, so the hint is hung off
      the SAME variable rather than a percentage that happened to clear it before
      FM3 existed. The first render had the card sitting on top of the sentence
@@ -143,12 +138,10 @@
     border:none;background:transparent;cursor:pointer}
   #seedCard .close svg{display:block}
 
-  /* FL9/HUD-AND-NAV: in the shell the top strip belongs to Home / Sound, so the
-     coin pill and the title drop below whatever depth the nav bridge publishes.
-     The 96px fallback is the depth a two-button strip resolves to, so the very
-     first frame is already right and nothing jumps when the bridge answers. */
-  .bk-inshell .pill      {top:calc(var(--bk-nav-bottom,96px) + 10px)}
-  .bk-inshell #titlePill {top:calc(var(--bk-nav-bottom,96px) + 10px)}
+  /* HD1: nothing of the farm's own is drawn in the top band any more — the
+     shared info bar owns it and insets itself from --bk-nav-left/--bk-nav-right.
+     The shop button is the one control that still hangs off the band, so it
+     hangs off the band's own height. */
 
   /* FM3 — THE ORDER CARD. One silhouette slot per item the crate wants; a slot
      fills to full colour with a tick as that item lands. No emojis: every icon
@@ -158,27 +151,33 @@
      a strip too small to read. */
   #orderCard{position:absolute;left:50%;transform:translateX(-50%) scale(.96);
     bottom:var(--fm-card-b);
-    background:#fffef7;border-radius:22px;padding:9px 12px 11px;
-    box-shadow:0 10px 30px rgba(30,60,90,.3),0 2px 0 #d9c99a inset;
+    background:rgba(18,18,38,.55);border:1px solid rgba(255,255,255,.25);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    border-radius:22px;padding:9px 12px 11px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
     width:max-content;max-width:min(392px,calc(100vw - 190px));
     opacity:0;visibility:hidden;transition:opacity .2s,transform .2s,visibility .2s;
     pointer-events:none;z-index:8}
   #orderCard.up{opacity:1;visibility:visible;transform:translateX(-50%) scale(1)}
   #orderCard.done{box-shadow:0 10px 30px rgba(60,150,80,.45),0 0 0 3px #63C466 inset}
-  #orderCard .cap{text-align:center;font-weight:900;font-size:12px;color:#8a7a4a;
+  #orderCard .cap{text-align:center;font-weight:900;font-size:12px;color:rgba(255,255,255,.78);
     letter-spacing:.6px;text-transform:uppercase;padding:0 0 6px}
   #orderCard .slots{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
-  #orderCard .slot{width:58px;height:64px;border-radius:15px;background:#f1e7c8;
-    border:2px dashed #cbb887;display:flex;align-items:center;justify-content:center;
+  #orderCard .slot{width:58px;height:64px;border-radius:15px;background:rgba(0,0,0,.22);
+    border:2px dashed rgba(255,255,255,.34);display:flex;align-items:center;justify-content:center;
     position:relative;transition:transform .12s,background .18s,border-color .18s}
   /* The empty state has to stay READABLE. The first pass sat at 34% opacity on a
      cream card and the wheat and the egg both came out as pale smudges — the one
      thing a child who cannot read has to go on, and it was barely there. A dark
      grey silhouette on a warm ground reads; a pale one does not. */
+  /* The empty state has to stay READABLE. On the cream card it was a dark
+     silhouette; on dark glass the same trick reads only the other way round, so
+     the silhouette is a PALE one. */
   #orderCard .slot svg{width:46px;height:46px;display:block;
-    filter:grayscale(1) brightness(.55) contrast(1.15);opacity:.6;
+    filter:grayscale(1) brightness(1.9) contrast(1.1)
+      drop-shadow(0 1px 2px rgba(0,0,0,.55));opacity:.82;
     transition:filter .2s,opacity .2s}
-  #orderCard .slot.full{background:#eaf7e4;border-style:solid;border-color:#8ed08a}
+  #orderCard .slot.full{background:rgba(99,196,102,.22);border-style:solid;border-color:#8ed08a}
   #orderCard .slot.full svg{filter:none;opacity:1}
   /* A six-item order wrapped 5 + 1 with the last slot stranded on its own line,
      which reads as a mistake. The slots shrink instead, so an order is always
@@ -193,7 +192,7 @@
   @keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}
     60%{transform:translateX(5px)}}
   #orderCard .payline{display:flex;align-items:center;justify-content:center;gap:4px;
-    margin-top:7px;font-weight:800;font-size:13px;color:#8a6a12}
+    margin-top:7px;font-weight:800;font-size:13px;color:#ffd23f}
   @media (max-width:640px){
     :root{--fm-card-b:calc(174px + env(safe-area-inset-bottom))}
     #orderCard{max-width:min(392px,96vw)}
@@ -206,13 +205,17 @@
      the seed picker so the farm only ever teaches one card. */
   #shopBtn{position:absolute;right:14px;
     top:calc(58px + env(safe-area-inset-top));
-    background:rgba(255,252,240,.92);border:none;border-radius:999px;
+    background:rgba(18,18,38,.55);border:1px solid rgba(255,255,255,.25);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    border-radius:999px;
     padding:7px 13px 7px 9px;display:none;align-items:center;gap:6px;
-    box-shadow:0 3px 10px rgba(30,60,90,.18);font-weight:800;font-size:13px;
-    color:#5b4a1f;pointer-events:auto;cursor:pointer;
+    box-shadow:0 3px 12px rgba(0,0,0,.3);font-weight:800;font-size:13px;
+    color:#fff;pointer-events:auto;cursor:pointer;
     -webkit-tap-highlight-color:transparent}
   #shopBtn.on{display:flex}
-  .bk-inshell #shopBtn{top:calc(var(--bk-nav-bottom,96px) + 56px)}
+  /* HD1: below the band, and below the phone second row of counters. */
+  .bk-inshell #shopBtn{top:calc(var(--bk-band-h,52px) + 10px)}
+  html[data-bk-tier="phone"] #shopBtn{top:calc(var(--bk-band-h,52px) + 48px)}
   #shopCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
     background:#fffef7;border-radius:26px;padding:14px 14px 18px;
     box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
@@ -255,14 +258,8 @@
 </head>
 <body>
 <div id="hud">
-  <div class="pill" title="coins">
-    <svg width="26" height="26" viewBox="0 0 26 26">
-      <circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>
-      <circle cx="13" cy="13" r="6" fill="none" stroke="#D89B1C" stroke-width="2"/>
-    </svg>
-    <span id="coins">50</span>
-  </div>
-  <div id="titlePill">The Farm</div>
+  <!-- HD1: no coin pill and no title chip here. The shared info bar draws both,
+       plus the farm's counters, in the one dark glass. -->
   <div id="hint">
     Tap a dirt patch to plant a seed
     <div class="sub">Then walk through the crop when it is ready</div>
@@ -326,7 +323,11 @@
 <script src="/buildable-audio.js"></script>
 <script src="/buildable-feel.js"></script>
 <script src="/buildable-wallet.js"></script>
-<script src="/buildable-gamenav.js"></script>
+<script src="/buildable-gamenav.js?v=2"></script>
+<!-- HD1: the shared info bar. `world` layout — counters plus the coin wallet,
+     inside the shell's band on a tablet or a computer, and on a phone as a
+     second row directly under it. -->
+<script src="/buildable-hud.js?v=5"></script>
 <script>
 (function(){
 "use strict";
@@ -2089,10 +2090,17 @@ function payTheOrder(pay){
 var COIN_SVG='<svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#F7C948" '+
   'stroke="#D89B1C" stroke-width="2.5"/><circle cx="13" cy="13" r="6" fill="none" '+
   'stroke="#D89B1C" stroke-width="2"/></svg>';
+// HD1: the wallet is a chip in the shared bar now, so the burst is aimed at
+// that chip. If the bar is not up (headless QA), it is aimed at the top-right
+// corner of the band instead, so the animation never throws.
+function walletRect(){
+  var chip=document.querySelector(".hud-coin");
+  if(chip){ var b=chip.getBoundingClientRect(); if(b.width) return b; }
+  return { left: innerWidth-70, top: 18, width: 40, height: 24 };
+}
 function coinBurstToPill(pay){
   var hud=document.getElementById("hud"); if(!hud) return;
-  var pill=document.querySelector(".pill"); if(!pill) return;
-  var pr=pill.getBoundingClientRect();
+  var pr=walletRect();
   var n=Math.max(6, Math.min(14, Math.round(pay/3)));
   var sx=innerWidth*0.5, sy=innerHeight*0.42;
   if(plane && plane.visible && camera){
@@ -2403,6 +2411,71 @@ function tryPlant(kind){
 }
 
 // -------------------------------------------------------------------------
+// HD1 — THE SHARED INFO BAR (`world` layout).
+//
+// FM1..FM3 drew the farm's own cream coin pill and a cream "The Farm" chip, and
+// both of them went invisible against a pale sky and had to be hand-nudged below
+// whatever the nav bridge published. They are gone. The farm now hands the shared
+// bar a strip of counters and a coin balance and the bar does the rest: one dark
+// glass, three sizes, and on a phone the strip drops to a second row under the
+// shell's band instead of fighting it for the corner.
+//
+// The icons are the farm's OWN drawn art — the crop and produce recipes already
+// draw themselves as SVG for the seed picker (the FL5b law: one recipe, one look),
+// and the two that had no picture yet (a growing plant, the crate) are drawn here
+// the same way. No emojis.
+// -------------------------------------------------------------------------
+var PLANT_SVG =
+  '<svg viewBox="0 0 82 82" aria-hidden="true">' +
+  '<line x1="41" y1="30" x2="41" y2="72" stroke="#4FB05B" stroke-width="6" stroke-linecap="round"/>' +
+  '<path d="M41 46 Q20 44 16 26 Q38 24 41 46Z" fill="#63C466" stroke="#2F7A3A" stroke-width="2.5"/>' +
+  '<path d="M41 40 Q62 38 66 20 Q44 18 41 40Z" fill="#8ED08A" stroke="#2F7A3A" stroke-width="2.5"/>' +
+  '</svg>';
+var CRATE_SVG =
+  '<svg viewBox="0 0 82 82" aria-hidden="true">' +
+  '<rect x="12" y="26" width="58" height="42" rx="5" fill="#C58A55" stroke="#8A5A31" stroke-width="3"/>' +
+  '<path d="M12 40h58M12 54h58M41 26v42" stroke="#9C6939" stroke-width="3"/>' +
+  '</svg>';
+var STACK_SVG =
+  '<svg viewBox="0 0 82 82" aria-hidden="true">' +
+  '<rect x="20" y="50" width="42" height="16" rx="5" fill="#E0C25A" stroke="#8A6A1A" stroke-width="2.5"/>' +
+  '<rect x="24" y="34" width="34" height="14" rx="5" fill="#F6C64A" stroke="#8A6A1A" stroke-width="2.5"/>' +
+  '<rect x="28" y="19" width="26" height="13" rx="5" fill="#FDF6E3" stroke="#B9A87E" stroke-width="2.5"/>' +
+  '</svg>';
+// the picture for one carried thing, from the recipe that also builds it in 3D
+function farmItemSVG(kind){
+  var r = (CROP_RECIPES && CROP_RECIPES[kind]) || (PRODUCE_RECIPES && PRODUCE_RECIPES[kind]);
+  try { if (r && r.svg) return r.svg(24); } catch(e){}
+  return STACK_SVG;
+}
+var farmHud = null;
+try {
+  if (window.BuildableHUD && BuildableHUD.mount) {
+    farmHud = BuildableHUD.mount(renderer.domElement, { layout: "world" });
+    // the farm's signature green, so the chips are tinted like every other game
+    if (BuildableHUD.setAccent) BuildableHUD.setAccent("#63C466");
+  }
+} catch(e) { farmHud = null; }
+
+function readyCropCount(){
+  var n = 0;
+  for (var i = 0; i < PATCHES.length; i++) if (PATCHES[i].state === "ready") n++;
+  return n;
+}
+function paintHud(){
+  if (!farmHud) return;
+  var counters = [];
+  var ready = readyCropCount();
+  if (ready) counters.push({ icon: PLANT_SVG, text: String(ready) });
+  if (stack.length) {
+    var top = stack[stack.length - 1];
+    counters.push({ icon: farmItemSVG(top && top.userData && top.userData.kind), text: String(stack.length) });
+  }
+  counters.push({ icon: CRATE_SVG, text: String(ORDERS_DONE) });
+  farmHud.set({ counters: counters, coins: walletBalance() });
+}
+
+// -------------------------------------------------------------------------
 // Coins + toasts
 // -------------------------------------------------------------------------
 // FM3 — GAP 2 CLOSED. FM1 kept a plain local coins number and a pill of its
@@ -2413,7 +2486,6 @@ function tryPlant(kind){
 // is an announcer that posts deltas up and caches what comes back down; opened
 // on its own it owns the number itself — so this same code is right both ways.
 var BW = window.BuildableWallet || null;
-var coinsEl=document.getElementById("coins");
 var toastEl=document.getElementById("toast");
 var hintEl=document.getElementById("hint");
 var hintHidden=false;
@@ -2426,8 +2498,7 @@ function walletBalance(){
   return localCoins;
 }
 function paintCoins(){
-  var v=walletBalance();
-  if(coinsEl) coinsEl.textContent=v;
+  paintHud();
   updateSeedAffordability();
   updateShopButton();
 }
@@ -2606,6 +2677,7 @@ function handleTap(x,y){
 // -------------------------------------------------------------------------
 var last=performance.now()/1000;
 var speed=6.4;   // world units per second
+var hudT=0;      // HD1: seconds since the info bar was last repainted
 function step(){
   var now=performance.now()/1000, dt=Math.min(0.05, now-last); last=now;
 
@@ -2735,6 +2807,11 @@ function step(){
   // FM3 — the crate takes the stack, and the plane takes the order away
   updateCrate(dt);
   updatePlane(dt);
+
+  // HD1: repaint the info bar a few times a second, not every frame — the
+  // numbers on it change at the speed a child can read, not at 60Hz.
+  hudT += dt;
+  if(hudT > 0.2){ hudT = 0; paintHud(); }
 
   if(!NODRAW) renderer.render(scene,camera);
   requestAnimationFrame(step);

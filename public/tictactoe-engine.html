@@ -18,8 +18,12 @@
   #world-bg{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none}
   canvas{display:block;border-radius:18px;touch-action:none}
   #start{position:fixed;inset:0;z-index:10;display:none}
+  /* HD1: kept only for a cold load where buildable-hud.js did not arrive — the
+     shared info bar hides this and draws the turn chip itself. */
   #hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;font-weight:700;font-size:18px;
-       background:rgba(20,16,54,.66);padding:8px 18px;border-radius:999px;pointer-events:none;white-space:nowrap}
+       background:rgba(18,18,38,.55);border:1px solid rgba(255,255,255,.25);
+       -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+       padding:8px 18px;border-radius:999px;pointer-events:none;white-space:nowrap}
   .corner{position:fixed;top:12px;z-index:30;font-family:inherit;font-weight:800;font-size:14px;color:#cdd0ff;
           background:rgba(26,20,64,.72);border:1px solid #3a2c6e;border-radius:12px;padding:8px 14px;cursor:pointer}
   #home{left:12px} #mute{right:12px;top:12px;bottom:auto}
@@ -50,10 +54,14 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js?v=2"></script>
-<script src="buildable-gamenav.js"></script>
+<script src="buildable-gamenav.js?v=2"></script>
 <script src="buildable-manifest.js"></script>
 <script src="buildable-worlds.js"></script>
-<script src="buildable-boardgame.js?v=2"></script>
+<script src="buildable-boardgame.js?v=3"></script>
+<!-- HD1: the shared info bar. `board` layout — one centred turn chip in the
+     same dark glass as every other chip on the platform, with a dot in the
+     player's color. It replaces this page's own #hud pill. -->
+<script src="buildable-hud.js?v=5"></script>
 <script>
 /* Buildable: put a random painted world scene (ocean/jungle/space/...) behind the board */
 (function(){ if(typeof document==="undefined") return;
@@ -109,6 +117,8 @@ const AI_TUNE = {
 const spec = {
   id:"tictactoe", title:"Tic-Tac-Toe", subtitle:"Get three in a row to win!",
   modes:["solo","two"], online:true, aiName:"Robo", players:P, aspect:1,
+  hudLayout:"board",          // HD1: the shared bar draws the turn chip
+  accent:"#5B8CFF",
   sfx:{ place:"board_place", win:"board_win", draw:"board_draw" },
   sfxPlace:"place", sfxWin:"win", sfxDraw:"draw",
   // start-screen "levels" = opponent tiers (manifest overrides these when present)

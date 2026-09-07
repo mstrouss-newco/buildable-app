@@ -198,21 +198,32 @@ How to give a game rich, kid-chosen scenery without hand-painting it:
    (`customizeLabel` + `onCustomize`); each card shows the cached AI thumbnail over its
    gradient. Picking sets the world, preloads its backdrop, and re-seeds the particles.
 
-## Shared game HUD (`public/buildable-hud.js`)
+## Shared game HUD (`public/buildable-hud.js`) — v3, Session HD1
 
 One file owns the look of every game's info bar (title, lives, score, timer,
-"bricks left", etc). The panels are a dark tint over whatever art is behind them,
-so the same look works on any game regardless of its colors.
+counters, coin wallet, whose turn it is). The full contract is in
+[`HUD-AND-NAV-RULES.md`](./HUD-AND-NAV-RULES.md); the short version:
 
-- **Restyle everything at once** by editing the five `--hud-*` knobs at the top of
-  the file: `--hud-dark` (panel darkness), `--hud-radius` (corner roundness),
-  `--hud-text` (text color), `--hud-gap` (spacing), `--hud-font` (font — currently
-  **Baloo 2**, matching the game titles).
+- **One dark glass, everywhere.** A chip wears exactly what a shell button wears:
+  `rgba(18,18,38,0.55)`, a 1px `rgba(255,255,255,0.25)` outline, white text, blur.
+  The cream and white variants are retired — they vanished on pale games. A game
+  tints the outline with its manifest color through `BuildableHUD.setAccent(color)`.
+- **Three size tiers**, matching the shell exactly: phone under 600px, tablet 600
+  to 1024, computer over 1024. Text 12.5 / 15 / 17px with the padding to match.
+- **Four layouts**, picked at mount:
+  `action` (name left; score / hearts / timer right), `world` (up to 5 counters
+  plus a coin wallet), `board` (one centred turn chip with a dot in the player's
+  color), `practice` (progress left, timer or streak right).
 - **A game uses it in two lines:**
-  `const hud = BuildableHUD.mount(document.getElementById('c'));`
-  then each frame `hud.set({ left:[{text:"Sunny", soft:"Level 1/6"}], right:[{text:"Bricks left: 12"},{hearts:3}] });`
-- Chips: `{text}` · `{text, soft}` (lighter secondary) · `{hearts:n}` (drawn art, no emoji).
-- `mount()` overlays the canvas and keeps the bar aligned on resize, so info never
-  drifts onto the play area. Hearts are drawn as SVG art (no emoji, per house rule).
-- **Rollout status:** Breaker is the pilot (canvas-painted HUD → shared chips).
-  Other engines still paint their HUD on the canvas and are pending conversion.
+  `const hud = BuildableHUD.mount(canvas, { layout:'world' });`
+  then `hud.set({ counters:[{icon:'<svg…>', text:'3'}], coins:50 });`
+- Chips: `{text}` · `{text, soft}` · `{hearts:n}` · `{coin}` · `{icon, text}`.
+  Every icon is drawn art or an image the game already ships — never an emoji.
+- `mount()` overlays the canvas (or the window, passing `null`) and keeps the bar
+  aligned on resize, and it insets itself from `--bk-nav-left` / `--bk-nav-right`
+  so nothing it draws can enter a rectangle the shell reserved. On a phone the
+  `world` strip drops to a second row directly under the band.
+- **Rollout status:** Breaker (`action`), the Farm (`world`) and tic-tac-toe
+  (`board`) are the HD1 pilots. Ant City, Family Town, Sky Flyer and Riley's
+  Garden follow in HD2; the rest still paint their own and are pending.
+- **The gate:** `scripts/qa-hud-all.mjs`, which runs inside `node qa-all.mjs`.

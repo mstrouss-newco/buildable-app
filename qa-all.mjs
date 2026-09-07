@@ -141,7 +141,14 @@ if (LIVE) {
 // ===========================================================================
 section("harnesses");
 
-const all = fs.readdirSync(ROOT).filter((f) => /^qa-.*\.mjs$/.test(f) && f !== "qa-all.mjs").sort();
+// Harnesses that live in scripts/ rather than at the root. The glob below finds
+// every root-level qa-*.mjs on disk, which is why a new harness can never be
+// forgotten — but the HUD gate (Session HD1) belongs with the other build scripts,
+// so it is named here explicitly.
+const EXTRA_HARNESSES = ["scripts/qa-hud-all.mjs"].filter((f) => fs.existsSync(path.join(ROOT, f)));
+
+const all = fs.readdirSync(ROOT).filter((f) => /^qa-.*\.mjs$/.test(f) && f !== "qa-all.mjs").sort()
+  .concat(EXTRA_HARNESSES);
 const needsBrowser = (f) => /playwright/.test(fs.readFileSync(path.join(ROOT, f), "utf8"));
 
 const chosen = all.filter((f) => (ONLY ? f.includes(ONLY) : true));
@@ -153,7 +160,8 @@ const run = (f) => new Promise((res) => {
   let out = "";
   p.stdout.on("data", (d) => (out += d));
   p.stderr.on("data", (d) => (out += d));
-  const killer = setTimeout(() => { try { p.kill("SIGKILL"); } catch {} }, 5 * 60 * 1000);
+  const cap = /qa-hud-all/.test(f) ? 12 : 5;   // the HUD gate opens every game page, three times each
+  const killer = setTimeout(() => { try { p.kill("SIGKILL"); } catch {} }, cap * 60 * 1000);
   p.on("close", (code) => { clearTimeout(killer); res({ code, out, secs: Math.round((Date.now() - t0) / 1000) }); });
 });
 

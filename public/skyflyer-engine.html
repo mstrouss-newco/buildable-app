@@ -82,8 +82,12 @@
     background:rgba(255,252,240,.85);border-radius:999px;padding:5px 14px;
     font-weight:700;font-size:13px;color:#2b7a4b;box-shadow:0 2px 6px rgba(30,60,90,.15);
     opacity:0;transition:opacity .4s}
+  /* HD1: the goal column used to hardcode 104px, the width of the Home pill as it
+     was. The pill grows with the tier now (96 / 108 / 120), so hang the column off
+     the published number instead and it can never be clipped by it again. */
   #goals{position:absolute;top:calc(12px + env(safe-area-inset-top));left:104px;
     display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .bk-inshell #goals{left:calc(var(--bk-nav-left,104px) + 4px)}
   .chip{background:rgba(255,252,240,.9);border-radius:999px;padding:6px 14px;
     font-weight:800;font-size:14px;color:#33566e;box-shadow:0 2px 8px rgba(30,60,90,.16);
     display:flex;align-items:center;gap:7px;white-space:nowrap}
@@ -330,9 +334,9 @@
      position in the shell's coordinate space, which is the same space this
      iframe fills, so adding the inset again would push the column lower than
      it needs to go. Standalone none of this applies. */
-  .bk-inshell .pill   {top:calc(var(--bk-nav-bottom,96px) + 10px)}
-  .bk-inshell #minimap{top:calc(var(--bk-nav-bottom,96px) + 60px)}
-  .bk-inshell #banked {top:calc(var(--bk-nav-bottom,96px) + 172px)}
+  .bk-inshell .pill   {top:calc(var(--bk-nav-bottom,52px) + 10px)}
+  .bk-inshell #minimap{top:calc(var(--bk-nav-bottom,52px) + 60px)}
+  .bk-inshell #banked {top:calc(var(--bk-nav-bottom,52px) + 172px)}
 </style>
 <script>
   // FL9: tag the page in-shell HERE as well as in buildable-gamenav.js, because
@@ -478,7 +482,7 @@
 <script src="/buildable-feel.js"></script>
 <script src="/buildable-wallet.js"></script>
 <script src="/buildable-buddy.js"></script>
-<script src="/buildable-gamenav.js"></script>
+<script src="/buildable-gamenav.js?v=2"></script>
 <script src="/buildable-mechanics.js"></script>
 <script src="/buildable-manifest.js"></script>
 <script>

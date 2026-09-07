@@ -151,6 +151,32 @@
     } : {};
     const ctx = (D.cv && D.cv.getContext) ? D.cv.getContext("2d") : null;
 
+    // ----- HD1: the shared info bar, `board` layout ------------------------
+    // Opt-in per game (spec.hudLayout = "board"). A board game's status line used
+    // to be a chip each engine drew for itself at the top of the page, which is
+    // exactly where the shell's band now is. With the shared bar the status is one
+    // centred turn chip in the one dark glass, with a dot in the player's color,
+    // and it insets itself away from the shell's buttons. Games that do not opt in
+    // keep their own #hud text, unchanged.
+    let sharedHud = null;
+    if (hasDoc && S.hudLayout === "board" && g.BuildableHUD && g.BuildableHUD.mount) {
+      try {
+        if (D.hud) D.hud.style.display = "none";
+        sharedHud = g.BuildableHUD.mount(null, { layout: "board" });
+        const accent = S.accent || (S.players && S.players[0] && S.players[0].col);
+        if (accent && g.BuildableHUD.setAccent) g.BuildableHUD.setAccent(accent);
+      } catch (e) { sharedHud = null; }
+    }
+    function paintStatus() {
+      const text = S.hud ? S.hud(ctrl.G, ctrl) : "";
+      if (sharedHud) {
+        const pl = (S.players || [])[(ctrl.turn || 1) - 1];
+        sharedHud.set(text ? { turn: text, color: (pl && pl.col) || "#ffffff" } : {});
+        return;
+      }
+      if (D.hud) D.hud.textContent = text;
+    }
+
     // ----- responsive canvas -----
     function fit() {
       if (!D.cv || !ctx) return;
@@ -199,7 +225,7 @@
       // not over — next turn unless the move granted an extra turn
       if (!out.extra) ctrl.turn = (ctrl.turn === 1 ? 2 : 1);
       S.turn && (ctrl.turn = S.turn(ctrl.G));   // let the spec be source of truth
-      if (D.hud) D.hud.textContent = S.hud ? S.hud(ctrl.G, ctrl) : "";
+      paintStatus();
       // queue AI if it's now the computer's move (solo)
       if (ctrl.mode === "solo" && ctrl.turn === 2) ctrl.aiPending = 24;  // ~0.4s think
       saveGame();                                 // auto-save so the game can be continued later
@@ -247,7 +273,7 @@
       ctrl.fx = BM ? BM.makeFx() : null; ctrl.aiPending = 0;
       if (D.banner) D.banner.classList.remove("show");
       if (D.start) D.start.style.display = "none";
-      if (D.hud) D.hud.textContent = S.hud ? S.hud(ctrl.G, ctrl) : "";
+      paintStatus();
       if (BA && !ctrl.demo) BA.unlock();                     // 7I: the demo never unlocks audio
       if (ctrl.mode === "solo" && ctrl.turn === 2) ctrl.aiPending = 24;
       navUpdate();
@@ -295,7 +321,7 @@
       ctrl.mode = o.mode || ctrl.mode; ctrl.G = o.G; ctrl.turn = o.turn || 1; ctrl.winner = null; ctrl.line = null; ctrl.state = "play"; ctrl.paused = false;
       ctrl.fx = BM ? BM.makeFx() : null; ctrl.aiPending = 0; closePause();
       if (D.banner) D.banner.classList.remove("show"); if (D.start) D.start.style.display = "none";
-      if (D.hud) D.hud.textContent = S.hud ? S.hud(ctrl.G, ctrl) : ""; if (BA) BA.unlock();
+      paintStatus(); if (BA) BA.unlock();
       if (ctrl.mode === "solo" && ctrl.turn === 2) ctrl.aiPending = 24; } catch (e) {} }
 
     // ----- shared in-game menu (Pause button + pause overlay + Continue) -----

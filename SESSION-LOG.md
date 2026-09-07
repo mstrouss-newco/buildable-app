@@ -1,3 +1,80 @@
+## 2026-09-07 — HD1: one HUD band, the foundation and three pilots
+
+**The problem.** Every game drew its top strip differently. Only 5 of 33 game pages used
+the shared info bar. The Home pill had a white variant that vanished on pale games (the
+Farm, Ant City). The shell had no phone / tablet / computer sizing at all, and it stacked
+its buttons down the right edge in a column, so a world game with three to five counters
+had nowhere to put them and hand-rolled its own chips, which then collided with the Home
+pill and the Sound button.
+
+**The shell now owns the whole top band** (`src/BuildableKids.jsx`). Three size tiers read
+from the window width and updated on resize: phone under 600px, tablet 600 to 1024,
+computer over 1024. Band 52 / 60 / 68px, buttons 40 / 44 / 48px, centred in the band. The
+right-hand cluster is a ROW, not a column: Sound + Menu on a phone with Help inside the
+Menu, Sound + Menu + Help on a tablet or a computer. The shell draws nothing at the bottom
+of a game any more, so Survival's "Gear up" and Family Town's "Play a sibling" are Menu
+items. The Menu opens a sheet only when it has more than the game's own menu action in it,
+so nobody gained a tap.
+
+**One dark glass.** `rgba(18,18,38,0.55)`, a 1px `rgba(255,255,255,0.25)` outline, white
+text, blur — on every shell button and every info chip, on every game. The light Home
+variant is deleted.
+
+**The band is published into the game** through `buildable-gamenav.js` as `--bk-band-h`,
+`--bk-nav-left`, `--bk-nav-right`, `--bk-tier`, `--bk-bottom-safe`, and the existing
+`--bk-nav-bottom` still works (it is the band height now). The bridge computes the band
+from the window width so the first frame is already right, and the shell then posts the
+numbers it actually drew as `{type:"bk:band"}` — it knows things the bridge cannot, such
+as a screen that added its own Menu item. A partial band message can no longer poison the
+variables; every field falls back on its own.
+
+**The shared info bar, version 3** (`public/buildable-hud.js`). Four layouts picked at
+mount: `action` (name left; score / hearts / timer right), `world` (up to five counters
+plus a coin wallet), `board` (one centred turn chip with a dot in the player's color),
+`practice` (progress left, timer or streak right). Text 12.5 / 15 / 17px with the padding
+to match. Nothing it draws may enter the shell's rectangles, so every layout insets from
+`--bk-nav-left` and `--bk-nav-right`. On a phone the `world` strip drops to a second row
+directly under the band — never the bottom of the screen, which is where a joystick lives.
+Counter icons are the game's own art, an inline SVG or an image URL, never an emoji.
+
+**Three pilots, one per layout.**
+- **Breaker** (`action`) was already on the shared bar; it picks up the new sizes and the
+  glass Home pill, and its own "small screen" switch moved from 560px to the 600px tier
+  boundary so its chips change content where the bar changes size.
+- **The Farm** (`world`) lost its cream coin pill, its cream "The Farm" title chip and the
+  hand-nudging that kept them clear of the nav. It sends `hud.set({counters, coins})`:
+  crops ready, what the kid is carrying (the top item's own drawn picture), deliveries
+  done, and the wallet. The "Crate wants" card stays the farm's own and is restyled to the
+  same glass, with the empty slots' silhouettes flipped pale so they still read on dark.
+- **Tic-tac-toe** (`board`) drops its own status pill for the centred turn chip. The opt-in
+  is one line in its spec (`hudLayout:"board"`), so connect four and dots and boxes are
+  untouched until HD2.
+
+**The gate.** `scripts/qa-hud-all.mjs` opens all 25 pages in `public/` that load the nav
+bridge or the info bar, at 390x844, 820x1180 and 1440x900, inside a mock that IS
+`GameFrame` — it draws no right-hand button until the game says what it needs, exactly
+like the shell, then publishes the band it drew. It measures every shell button against
+every `.hud-chip` and prints one table. It runs inside `node qa-all.mjs`.
+
+Two things it found and one thing it forgave. It found a partial `bk:band` message
+publishing `undefinedpx` into a game, now impossible. It found that a mock which always
+draws the deepest cluster fails games that ask for less, which is a lie about the shell.
+And it waives exactly one row: **Ant City on a phone**, where a name plus three counters
+cannot fit the `action` bar at 390px. That is what the `world` layout is for and it is
+HD2's card. The waiver is per page AND per size, and a waived row that starts PASSING
+fails the gate, so the list cannot rot into an excuse.
+
+**Checked.** `scripts/qa-hud-all.mjs` green (74 of 75 rows clean, 1 waived).
+`qa-skyflyer-hud.mjs` rewritten for the band and green. `qa-farm.mjs` updated to read the
+wallet off the shared chip. `npx vite build` clean. No console errors on any page in the
+gate run.
+
+**Not done, on purpose.** Nothing is on `main`. Mike has not signed off on the look, and
+the block says the nine pilot screenshots go to him before anything else converts, so the
+work is on `claude/hud-band-foundation-pilots-8gwvdx` with the screenshots in
+`qa/hd1-shots/`. HD2 (Ant City, Family Town, Sky Flyer, Riley's Garden) waits on that
+approval.
+
 ## 2026-09-07 — PB3: real art on the street
 
 **Shipped.** Paper Route was drawn geometry from top to bottom. It now has an art set,

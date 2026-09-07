@@ -469,23 +469,103 @@ function PickerCard({ g, onOpen, onShare }) {
 // ---- ONE consistent game frame for every full-screen game/maker ----
 // Home is always top-left; games never draw their own back button (BS showBack:false).
 // Also returns to the hub on a nav:exit message (string, {type:"nav:exit"}, or legacy bk:home).
-// GEOMETRY IS MIRRORED IN public/buildable-gamenav.js (Session FL9): 38px round
-// buttons at right:14 stacked at top 14 / 58 / 102, Home pill at top:14 left:14.
-// The bridge publishes that strip into the game as --bk-nav-left/right/bottom so
-// an engine's HUD can lay itself out around chrome it does not draw. Move these
-// numbers and you must move the ones in that file too, or a HUD will drift back
-// under a button. qa-skyflyer-hud.mjs fails if the two ever disagree.
-function NavBtn({ kind, muted, top, onClick }) {
+//
+// SESSION HD1 — THE SHELL OWNS THE WHOLE TOP BAND.
+// Before HD1 every game drew its top strip differently and the shell stacked its
+// buttons down the right edge in a column, so a world game with three counters had
+// nowhere to put them. Now:
+//
+//   * ONE dark glass for every shell button and every HUD chip. The cream/white
+//     Home variant is gone — it vanished on pale games (the Farm, Ant City).
+//   * THREE SIZE TIERS, read from the window width: phone / tablet / computer.
+//   * The right-hand cluster is a ROW, not a stack. Phone: Sound + Menu (Help lives
+//     inside the Menu). Tablet + computer: Sound + Menu + Help.
+//   * The shell NEVER draws at the bottom of a game. Anything that used to
+//     (Survival's "Gear up", Family Town's "Play a sibling") is a Menu item now.
+//
+// GEOMETRY IS MIRRORED IN public/buildable-gamenav.js and public/buildable-hud.js.
+// BK_BAND below is the one table; the shell also posts it into the iframe as
+// {type:"bk:band"} so the bridge can publish the exact numbers the shell drew,
+// never a guess. Move a number here and you must move it in those two files too.
+// scripts/qa-hud-all.mjs and qa-skyflyer-hud.mjs fail the moment they disagree.
+const BK_BAND = {
+  phone:    { band: 52, btn: 40, pad: 12, gap: 8,  home: 76, font: 13 },
+  tablet:   { band: 60, btn: 44, pad: 14, gap: 10, home: 84, font: 14 },
+  computer: { band: 68, btn: 48, pad: 16, gap: 12, home: 92, font: 16 },
+};
+const bkTierFor = (w) => (w < 600 ? "phone" : w <= 1024 ? "tablet" : "computer");
+function useBkTier() {
+  const [tier, setTier] = useState(() =>
+    bkTierFor(typeof window === "undefined" ? 1440 : window.innerWidth));
+  useEffect(() => {
+    const on = () => setTier(bkTierFor(window.innerWidth));
+    on();
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    return () => { window.removeEventListener("resize", on); window.removeEventListener("orientationchange", on); };
+  }, []);
+  return tier;
+}
+// How far in from each edge the shell's own chrome reaches, for the tier and the
+// buttons this game asked for. The right-hand number reserves the DEEPEST cluster
+// the shell could draw (capabilities, ignoring inGame) so the strip never shifts
+// under a kid mid-play when a button appears or goes away.
+function bkBandMetrics(tier, nav, extraCount) {
+  const T = BK_BAND[tier] || BK_BAND.computer;
+  const phone = tier === "phone";
+  const hasSound = !!nav;
+  const hasMenu = (nav && (nav.hasMenu || (phone && nav.hasHelp))) || extraCount > 0;
+  const hasHelp = !phone && !!(nav && nav.hasHelp);
+  const n = (hasSound ? 1 : 0) + (hasMenu ? 1 : 0) + (hasHelp ? 1 : 0);
+  return {
+    tier, band: T.band, btn: T.btn, pad: T.pad, gap: T.gap,
+    navLeft: T.pad + T.home + T.gap,
+    navRight: T.pad + (n ? n * T.btn + (n - 1) * T.gap + T.gap : 0),
+  };
+}
+// The one dark glass. Every shell button and every HUD chip wears it.
+const BK_GLASS = {
+  background: "rgba(18,18,38,0.55)",
+  border: "1px solid rgba(255,255,255,0.25)",
+  color: "#fff",
+  WebkitBackdropFilter: "blur(6px)",
+  backdropFilter: "blur(6px)",
+};
+
+// One round shell button. `slot` counts from the RIGHT edge (0 = closest to it),
+// so the cluster reads Sound, Menu, Help left to right.
+function NavBtn({ kind, muted, tier, slot, onClick }) {
+  const T = BK_BAND[tier] || BK_BAND.computer;
   const sv = { stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", fill: "none" };
   let icon = null;
   if (kind === "sound") icon = muted
     ? <g {...sv}><path d="M5 9v6h4l5 4V5L9 9z" /><path d="M22 9l-6 6M16 9l6 6" /></g>
     : <g {...sv}><path d="M5 9v6h4l5 4V5L9 9z" /><path d="M17 8a5 5 0 0 1 0 8" /></g>;
   else if (kind === "menu") icon = <g {...sv}><path d="M4 7h16M4 12h16M4 17h16" /></g>;
+  const size = Math.round(T.btn * 0.5);
   return (
-    <button onClick={onClick} aria-label={kind} style={{ position: "absolute", top, right: 14, zIndex: 3, width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.25)", background: "rgba(18,18,38,0.55)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: NUN, fontWeight: 800, fontSize: 17, padding: 0 }}>
-      {kind === "help" ? "?" : <svg width="20" height="20" viewBox="0 0 24 24">{icon}</svg>}
+    <button onClick={onClick} aria-label={kind} style={{ ...BK_GLASS, position: "absolute", top: (T.band - T.btn) / 2, right: T.pad + slot * (T.btn + T.gap), zIndex: 3, width: T.btn, height: T.btn, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: NUN, fontWeight: 800, fontSize: T.font + 3, padding: 0 }}>
+      {kind === "help" ? "?" : <svg width={size} height={size} viewBox="0 0 24 24">{icon}</svg>}
     </button>
+  );
+}
+
+// The Menu sheet. On a phone it carries Help; on every tier it carries whatever the
+// screen used to draw for itself at the bottom or in the top-right corner.
+function NavSheet({ tier, items, onClose }) {
+  const T = BK_BAND[tier] || BK_BAND.computer;
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, zIndex: 4, background: "transparent" }} />
+      <div style={{ position: "absolute", top: T.band + 4, right: T.pad, zIndex: 5, minWidth: 168, borderRadius: 16, overflow: "hidden", ...BK_GLASS, boxShadow: "0 10px 30px rgba(0,0,0,0.35)" }}>
+        {items.map((it, i) => (
+          <button key={it.label} onClick={() => { onClose(); it.act(); }}
+            style={{ display: "block", width: "100%", textAlign: "left", padding: `${Math.round(T.btn * 0.28)}px 18px`, background: "transparent", border: "none", borderTop: i ? "1px solid rgba(255,255,255,0.14)" : "none", color: "#fff", fontFamily: NUN, fontWeight: 800, fontSize: T.font, cursor: "pointer" }}>
+            {it.label}
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -493,9 +573,13 @@ function NavBtn({ kind, muted, top, onClick }) {
 // shared nav bridge (buildable-gamenav.js -> posts "nav:state"), the shell also renders
 // its Sound/Menu/Help cluster top-right and the game draws NO nav buttons of its own
 // (nothing per-game to drift or overlap). Games that don't opt in render exactly as before.
-function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = null, iframeProps = {}, onChildMessage = null, overlay = null }) {
+// `menuExtras` is [{label, act}] — screen-specific actions that live in the Menu.
+function GameFrame({ title, src, onHome, bg = "#0F0E17", menuExtras = null, iframeProps = {}, onChildMessage = null, overlay = null }) {
   const ref = useRef(null);
   const [nav, setNav] = useState(null);
+  const [sheet, setSheet] = useState(false);
+  const tier = useBkTier();
+  const extras = menuExtras || [];
   useEffect(() => {
     const h = (e) => {
       const d = e && e.data;
@@ -526,32 +610,57 @@ function GameFrame({ title, src, onHome, bg = "#0F0E17", light = false, right = 
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", onHide); };
   }, []);
   const send = (type) => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type }, "*"); } catch (e) {} };
-  const homeStyle = light
-    ? { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#3B2C66", background: "rgba(255,255,255,0.9)", border: "2px solid #EBE3F5", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }
-    : { position: "absolute", top: 14, left: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" };
-  const showMenuBtn = nav && nav.hasMenu && nav.inGame;
+  // Publish the band the shell actually drew INTO the game, so the bridge never has
+  // to guess (it cannot see `menuExtras`, and a guess is how a HUD drifts back under
+  // a button). The bridge falls back to its own copy of BK_BAND until this arrives.
+  const metrics = bkBandMetrics(tier, nav, extras.length);
+  const postBand = () => { try { ref.current && ref.current.contentWindow && ref.current.contentWindow.postMessage({ type: "bk:band", ...metrics }, "*"); } catch (e) {} };
+  useEffect(() => {
+    postBand();
+    const t = setTimeout(postBand, 400);
+    return () => clearTimeout(t);
+  }, [metrics.tier, metrics.navLeft, metrics.navRight, metrics.band]);
+
+  const T = BK_BAND[tier] || BK_BAND.computer;
+  const phone = tier === "phone";
+  const showMenuAction = !!(nav && nav.hasMenu && nav.inGame);
+  const sheetItems = [];
+  if (showMenuAction) sheetItems.push({ label: "Game menu", act: () => send("nav:menu") });
+  if (phone && nav && nav.hasHelp) sheetItems.push({ label: "Help", act: () => send("nav:help") });
+  extras.forEach((x) => sheetItems.push(x));
+  const showMenuBtn = sheetItems.length > 0;
+  const showHelpBtn = !phone && !!(nav && nav.hasHelp);
+  // One item, and it IS the game's own menu: fire it straight away rather than
+  // making a kid tap twice for the thing the button already says.
+  const onMenuTap = () => {
+    if (sheetItems.length === 1 && showMenuAction) { send("nav:menu"); return; }
+    setSheet((s) => !s);
+  };
+  const cluster = [];
+  if (nav) cluster.push("sound");
+  if (showMenuBtn) cluster.push("menu");
+  if (showHelpBtn) cluster.push("help");
+  const slotOf = (k) => cluster.length - 1 - cluster.indexOf(k);
   return (
     <div style={{ position: "fixed", inset: 0, background: bg, zIndex: 50 }}>
-      <button onClick={onHome} style={homeStyle} aria-label="Home">Home</button>
-      {right}
-      {nav && <NavBtn kind="sound" muted={!nav.sound} top={14} onClick={() => send("nav:sound")} />}
-      {showMenuBtn && <NavBtn kind="menu" top={58} onClick={() => send("nav:menu")} />}
-      {nav && nav.hasHelp && <NavBtn kind="help" top={showMenuBtn ? 102 : 58} onClick={() => send("nav:help")} />}
-      <iframe ref={ref} title={title} src={src} {...iframeProps} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      <button onClick={onHome} aria-label="Home"
+        style={{ ...BK_GLASS, position: "absolute", top: (T.band - T.btn) / 2, left: T.pad, zIndex: 3, width: T.home, height: T.btn, borderRadius: 999, fontFamily: NUN, fontWeight: 800, fontSize: T.font, cursor: "pointer", padding: 0 }}>Home</button>
+      {nav && <NavBtn kind="sound" muted={!nav.sound} tier={tier} slot={slotOf("sound")} onClick={() => send("nav:sound")} />}
+      {showMenuBtn && <NavBtn kind="menu" tier={tier} slot={slotOf("menu")} onClick={onMenuTap} />}
+      {showHelpBtn && <NavBtn kind="help" tier={tier} slot={slotOf("help")} onClick={() => send("nav:help")} />}
+      <iframe ref={ref} title={title} src={src} onLoad={postBand} {...iframeProps} style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+      {sheet && showMenuBtn && <NavSheet tier={tier} items={sheetItems} onClose={() => setSheet(false)} />}
       {overlay}
     </div>
   );
 }
 
-function familyBtn(onFamily) {
-  return <button onClick={onFamily} style={{ position: "absolute", top: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Play a sibling</button>;
-}
-
 // Session 9B: hand the kid's equipped GAMEPLAY upgrades to the engine as tiny
 // launch params (the same handoff the loadout uses for looks) — the shell owns the
 // purchases, the engine just reads which power id is equipped and applies its effect.
-// The "Gear up" button opens the shell upgrade store (bottom-right so it clears the
-// engine's own Home / mute / help / hint controls).
+// "Gear up" opens the shell upgrade store. HD1: it used to be a pill the shell drew
+// at the BOTTOM-right of the game; the shell no longer draws at the bottom at all, so
+// it is a Menu item now, on every size.
 const SURV_TRACK_SLOT = { Weapon: "weapon", Armor: "armor", Boots: "boots", Hero: "hero" };
 function survivalUpParam() {
   const eq = readEquippedUpgrades("survival");
@@ -562,10 +671,8 @@ function survivalUpParam() {
 }
 function SurvivalScreen({ onHome, onUpgrades, level }) {
   const src = "/survival-engine.html?v=9c" + survivalUpParam() + (level != null ? "&level=" + level : "");
-  const right = onUpgrades ? (
-    <button onClick={onUpgrades} style={{ position: "absolute", bottom: 14, right: 14, zIndex: 3, fontFamily: NUN, fontWeight: 800, fontSize: 14, color: "#fff", background: "linear-gradient(135deg,#7C5CFC,#A78BFF)", border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Gear up</button>
-  ) : null;
-  return <GameFrame title="Buildable Survival" src={src} onHome={onHome} right={right} />;
+  const menuExtras = onUpgrades ? [{ label: "Gear up", act: onUpgrades }] : null;
+  return <GameFrame title="Buildable Survival" src={src} onHome={onHome} menuExtras={menuExtras} />;
 }
 
 // Kidspedia exhibit viewer (Session 8G). One shell wrapper for every orbit-explorer
@@ -589,17 +696,16 @@ function ExploreScreen({ onHome, exhibitId }) {
 
 // Session LS2 — the Lessons section. The page owns all three screens (pick a
 // subject, climb the unit path, play the lesson) exactly like the approved mock,
-// so the shell just frames it. Cream page, so the shared nav uses its light
-// treatment. Answers reach the 8B ledger through GameFrame's `skill` relay.
+// so the shell just frames it. Answers reach the 8B ledger through GameFrame's `skill` relay.
 function LessonsScreen({ onHome }) {
-  return <GameFrame title="Lessons" src="/lessons" onHome={onHome} bg="#FDFAF5" light />;
+  return <GameFrame title="Lessons" src="/lessons" onHome={onHome} bg="#FDFAF5" />;
 }
 // Session PT1 — Practice. The shared deck engine (public/buildable-practice.js),
 // carrying the five Dolch sight-word lists today and the four maths operations
 // from PT3. It reports one `skill` message per finished session, which GameFrame
 // already relays into the 8B learning ledger — no wiring of its own needed.
 function PracticeScreen({ onHome }) {
-  return <GameFrame title="Practice" src="/practice" onHome={onHome} bg="#FDFAF5" light />;
+  return <GameFrame title="Practice" src="/practice" onHome={onHome} bg="#FDFAF5" />;
 }
 // Session 7F: the shared landing hands Tennis its mode ("solo" | "local") and the
 // equipped court from the shared loadout, so the engine skips its own start screen
@@ -1519,7 +1625,7 @@ function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Gard
 // It gets its own cache-bust because it is its own page, on its own release
 // cycle from the flying engine next door.
 function FarmScreen({ onHome, level }) { return <GameFrame title="The Farm" src={"/skyflyer-farm.html?v=fm3" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#B3E58C" />; }
-function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
+function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" />; }
 // AC2 — Ant City. One colony the kid keeps, so there is no level param: the shell
 // hands over the equipped look (Ant / Meadow / Dirt indexes from Make it mine) and
 // the engine carries its own mission progress.
@@ -1564,18 +1670,18 @@ function SkyFlyerScreen({ onHome, level }) {
       <QuickGame goal={(quiz && quiz.goal) || getLearningSettings().goal} gameType="skyflyer" title="Quick game to unlock the next world!" onPass={finish} />
     </div>
   ) : null;
-  return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff" light
+  return <GameFrame title="Sky Flyer" src={src} onHome={onHome} bg="#7ecbff"
     onChildMessage={onChildMessage} overlay={overlay} />;
 }
 function SunnyTownScreen({ onHome }) { return <GameFrame title="Sunny Town Drive" src="/runner-engine.html?v=hud1" onHome={onHome} />; }
-function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" light />; }
+function SoundboardScreen({ onHome }) { return <GameFrame title="Buildable Sound Machine" src="/soundboard.html" onHome={onHome} bg="#FBF6EC" />; }
 function ArtStudioScreen({ onHome }) { return <GameFrame title="Buildable Art Studio" src="/art-studio.html?v=2" onHome={onHome} bg="#0b1030" />; }
 function MemoryScreen({ onHome, level }) { return <GameFrame title="Buildable Memory Match" src={"/memory-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#131229" />; }
 function MahjongScreen({ onHome, level }) { return <GameFrame title="Buildable Mahjong" src={"/mahjong-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#101a2e" />; }
 function BingoScreen({ onHome }) { return <GameFrame title="Buildable Bingo" src="/bingo-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
 function SnakesScreen({ onHome }) { return <GameFrame title="Buildable Snakes and Ladders" src="/snakes-engine.html?v=hud1" onHome={onHome} bg="#131229" />; }
 function PlatformerScreen({ onHome }) { return <GameFrame title="Buildable Platformer" src="/play.html?v=hud1" onHome={onHome} iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
-function TownScreen({ onHome, onFamily }) { return <GameFrame title="Family Town" src="/family-town.html?v=1" onHome={onHome} right={familyBtn(onFamily)} />; }
+function TownScreen({ onHome, onFamily }) { return <GameFrame title="Family Town" src="/family-town.html?v=1" onHome={onHome} menuExtras={onFamily ? [{ label: "Play a sibling", act: onFamily }] : null} />; }
 
 // Shared slim icon-button style for the home top-nav (My Stuff / Grown-ups /
 // Friends). Keeping one style object here is what makes the three controls look

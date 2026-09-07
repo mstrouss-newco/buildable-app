@@ -13,7 +13,7 @@ The shell treats every game as "a thing I embed at its entry URL." It never assu
 - **Embedded engine games** (Phaser, Godot, or anything mounted once at its `entry` URL with no per-level route of its own) MUST support a `start` message carrying the level id, sent by the shell after the game reports `ready`. This is how a game with only one URL still gets told which level to load.
 
 ## Messages: game to shell (shipped - these are the real, canonical names)
-- `nav:state` - reports sound/menu/help/in-game status so the shell can draw its nav chrome (`buildable-gamenav.js`)
+- `nav:state` - reports sound/menu/help/in-game status so the shell can draw its top band (`buildable-gamenav.js`). The shell owns that whole band: Home at the left, a row of Sound / Menu / Help at the right, at three size tiers. See `HUD-AND-NAV-RULES.md`.
 - `quizRequest` - kid hit a learning-gate moment (e.g. before a level unlocks); asks the shell to show the QuizGate
 - `win` / `lose` / `levelup` / `cheer` - buddy events (`buildable-buddy.js`, BB) that drive the kid's helper reactions.
   Buddy 2.0 (`src/lib/buddy.js` + `HelperReactions.jsx`) consumes these and speaks rarely +
@@ -25,7 +25,8 @@ The shell treats every game as "a thing I embed at its entry URL." It never assu
 - `skill` - the game practiced ONE academic skill and reports how it went, so native learning games and the shell's quiz gates feed the SAME per-kid record. Shape: `{ source: "buildable", kind: "skill", subject, skill?, correct, questionId?, quizType? }` where `subject` is math / reading / spelling / geometry, `skill` is an optional specific tag, and `correct` is true or false. The shell relays it to the learning ledger (`/api/log-learning-event` -> the `learning_events` table from Session 6B) and never blocks gameplay on it. See "The learning ledger" below.
 
 ## Messages: shell to game (shipped)
-- `nav:sound` / `nav:menu` / `nav:help` / `nav:exit` - shell-driven nav chrome actions (toggle sound, open menu, open help, exit to the hub)
+- `nav:sound` / `nav:menu` / `nav:help` / `nav:exit` - shell-driven nav chrome actions (toggle sound, open menu, open help, exit to the hub). On a phone the shell shows Sound + Menu only and `nav:help` is sent from inside that Menu.
+- `bk:band` - the top band the shell actually drew, as `{tier, band, btn, pad, gap, navLeft, navRight}`. `buildable-gamenav.js` applies it and republishes it into the page as `--bk-band-h`, `--bk-nav-left`, `--bk-nav-right`, `--bk-tier`, `--bk-bottom-safe` and `--bk-nav-bottom`, so a game lays its own pieces out around chrome it does not draw.
 - `bk:quizDone` - the quiz gate closed (or Learning Mode is off); the game may continue
 - `pause` - freeze everything NOW (used by the quiz gate, parent interruptions, tab switches). Every game MUST honor this.
 - `resume` - continue exactly where paused

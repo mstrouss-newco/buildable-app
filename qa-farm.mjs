@@ -238,8 +238,11 @@ try {
     w0.shared === true && (w0.role === 'owner' || w0.role === 'announcer'), 'role=' + w0.role);
   chk('the farm still opens with fifty coins, granted once through the wallet',
     w0.balance === 50, 'balance=' + w0.balance);
-  chk('the pill on screen shows that same number',
-    (await page.textContent('#coins')) === String(w0.balance));
+  // HD1: the farm's own cream coin pill is gone. The wallet is a chip in the
+  // shared info bar now, so read the number off that chip instead.
+  const walletChip = async () => ((await page.textContent('.hud-chip-coin')) || '').trim();
+  chk('the wallet chip on screen shows that same number',
+    (await walletChip()) === String(w0.balance), await walletChip());
 
   console.log('\n--- FM3: THE ORDER, AND WHAT IT IS ALLOWED TO ASK FOR ---');
   const ord0 = await ev(() => window.FARM.order());
@@ -302,7 +305,7 @@ try {
   const w1 = await ev(() => window.FARM.wallet());
   chk('it came back and the coins landed in the shared wallet',
     w1.balance === 50 + ordF.pay, 'balance=' + w1.balance);
-  chk('the pill shows the new balance', (await page.textContent('#coins')) === String(w1.balance));
+  chk('the wallet chip shows the new balance', (await walletChip()) === String(w1.balance), await walletChip());
   chk('one delivery is on the board', (await ev(() => window.FARM.ordersDone())) === 1);
   const ord2 = await ev(() => window.FARM.order());
   chk('a fresh order is already waiting, worth a little more than the last',

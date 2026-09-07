@@ -6,6 +6,36 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## HD1 — one HUD band: the foundation and three pilots (September 7 2026)
+`src/BuildableKids.jsx`, `public/buildable-gamenav.js`, `public/buildable-hud.js`,
+`public/buildable-boardgame.js`, `public/skyflyer-farm.html`,
+`public/tictactoe-engine.html`, `public/breaker-engine.html`,
+`scripts/qa-hud-all.mjs`, `scripts/hd1-shots.mjs`, `qa-skyflyer-hud.mjs`, `qa-farm.mjs`,
+`qa-all.mjs`, `HUD-AND-NAV-RULES.md`, `GAME-LOOK.md`, `CARTRIDGE-CONTRACT.md`.
+Phase **HD**, card **HD1**.
+
+The shell now owns the **whole top band** of every game, at three size tiers read from the
+window width: phone under 600px, tablet 600 to 1024, computer over 1024 (band 52 / 60 /
+68px, buttons 40 / 44 / 48px). The right-hand cluster is a **row**, not a column: Sound +
+Menu on a phone with Help inside the Menu, Sound + Menu + Help above it. The shell draws
+nothing at the bottom of a game any more, so Survival's "Gear up" and Family Town's "Play
+a sibling" became Menu items. **One dark glass** — `rgba(18,18,38,0.55)` with a 1px white
+outline — on every shell button and every info chip; the light Home pill that vanished on
+pale games is deleted.
+
+The band is published into each game as `--bk-band-h`, `--bk-nav-left`, `--bk-nav-right`,
+`--bk-tier` and `--bk-bottom-safe`, and the shell also posts the numbers it actually drew.
+The **shared info bar is version 3** with four layouts — `action`, `world`, `board`,
+`practice` — and on a phone the `world` strip drops to a second row directly under the
+band. Pilots: Breaker (`action`), the Farm (`world`, which lost its cream pills and title
+chip), tic-tac-toe (`board`).
+
+**New release gate:** `scripts/qa-hud-all.mjs` opens all 25 pages that load the nav bridge
+or the info bar, at three sizes, inside a mock of the real shell, and fails if any chip
+sits under a shell button or escapes its band. It runs inside `node qa-all.mjs` and waives
+exactly one row (Ant City on a phone, HD2's card) with a waiver that fails if it ever
+starts passing. Ref: SESSION-LOG.md same date.
+
 ## PB3 — Paper Route: real art on the street (September 7 2026)
 `public/paper-route/art/` (16 new files), `public/paper-route-engine.html`,
 `public/paper-route/manifest.json`, `public/buildable-manifest.js`,

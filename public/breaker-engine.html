@@ -150,8 +150,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <script src="buildable-mechanics.js"></script>
 <script src="buildable-startscreen.js"></script>
 <script src="buildable-levelthumb.js"></script>
-<script src="buildable-hud.js?v=4"></script>
-<script src="buildable-gamenav.js?v=1"></script>
+<script src="buildable-hud.js?v=5"></script>
+<script src="buildable-gamenav.js?v=2"></script>
 <script src="buildable-manifest.js?v=1"></script>
 <script src="buildable-wallet.js?v=1"></script>
 <script src="buildable-buddy.js?v=1"></script>
@@ -1051,7 +1051,9 @@ function drawSolo(){
   drawPaddleAt(G.padX, PAD_Y, PREFS.paddle);
   // HUD — shared tinted chips (see buildable-hud.js). No longer painted on canvas.
   { const leftN=G.bricks.filter(b=>b.alive).length;
-    const small=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<560:false;
+    // HD1: "small" is the shell's PHONE tier, not a number of Breaker's own — the
+    // info bar switches size at 600px and the chips have to switch content there too.
+    const small=(typeof window!=="undefined"&&window.innerWidth)?window.innerWidth<600:false;
     const left=[{ text:L.name, soft:(G.custom||small) ? undefined : ("Level "+(level+1)+"/"+GAME_CONFIG.levels.length) }];
     const tags=[]; if(G.fireT>0)tags.push("Fireball"); if(G.laserT>0)tags.push("Laser"); if(G.slowT>0)tags.push("Slow-Mo");
     if(tags.length && !small) left.push({ text:tags.join("  ") });
