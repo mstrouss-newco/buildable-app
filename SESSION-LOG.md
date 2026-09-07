@@ -142,9 +142,20 @@ real pointer and touch gestures on the real buttons, only the gestures the game 
 and at most one hint is asserted after every one of them. 187 checks pass.
 `qa-antcity-shot.mjs` does it in real Chromium and writes pictures. `node qa-all.mjs` green.
 
-**Not done.** The planner could not be reached from this session (`node scripts/planner.mjs
-list` answers HTTP 403 through the sandbox proxy), so card AC7 has not been ticked. It needs
-marking done with a note, and deployed once the live site is checked.
+**Landed.** Merged into `main` and pushed (`d0da478`), so Vercel's auto-deploy has it.
+
+**The planner.** `node scripts/planner.mjs list` answers HTTP 403 from this sandbox — the
+egress proxy will not reach `buildablekids.com` — so the card was ticked through the
+connected Supabase instead, doing exactly what the server's `op:'card'` and `op:'note'` do:
+a targeted `jsonb_set` on the single AC7 element, guarded by an id check. Verified after:
+228 cards and 34 phases still there, AC7 done with one note. The blob was not touched any
+other way.
+
+**Not done.** `deployed` is NOT set. Neither the live site nor the Vercel project is
+reachable from this session (the proxy denies `buildablekids.com`, and the connected Vercel
+account lists no projects), so nobody has actually looked at what the site is serving.
+Somebody with a browser needs to open Play, tap the Ant City tile, and then run
+`node scripts/planner.mjs deployed AC7`.
 
 ## 2026-09-06 — PB1: Paper Route, the delivery ride
 
