@@ -3911,6 +3911,22 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-06 (RB2: the cloud run lane, in dry-run mode)
+
+A saved run can now be claimed and worked by a session in the cloud with Mike's Mac shut.
+The site's own API is unreachable from up there (confirmed: no response at all, not a
+403), so the lane talks to Supabase directly — which means `db/create-planner-run-rpcs.sql`,
+seven functions that each change ONE card in ONE statement, count the cards before and
+after, and raise if the number moves. `planner_claim_run` locks and skips, so two sessions
+can never claim the same run. `scripts/run-lane.mjs` is the pure brain: what comes next,
+when to stop, what a session is told, what the report says. `RUN-ANYWHERE.md` is the
+runbook. Dry run is the default and the only mode until Mike approves a report — the
+planner's "For real" toggle stays locked and the server refuses it regardless of what the
+page sends. Proved end to end on the live planner: run 3 was claimed, reported and
+finished with nothing shipped, and its report is waiting for his approval. Needs him: the
+saved task cannot be given the Supabase connector from inside a session, so he attaches it
+in the Routines screen. New `qa-rb2.mjs`: 64 checks, all pass. See SESSION-LOG.md.
+
 ## Session log — 2026-09-06 (RB1: a Run builder in the planner)
 
 The Roadmap tab gains **Build a run**: tick the cards you want worked, drag or arrow them

@@ -21,6 +21,7 @@
 // GET ?scope=runs                  -> the newest few runs, ready one first
 // POST { op:'saveRun', sessions, settings, startAt } -> save ONE ready run
 // POST { op:'cancelRun', id }      -> cancel a run that has not started
+// POST { op:'approveRun', id, val } -> Mike signing off a dry-run report
 // Tester adds pass source:'tester' + author; tester edit/delete pass author so
 // PostgREST filters restrict them to their OWN feedback rows (edit-your-own).
 // Uses the service key server-side (like log-game-event / play-creation), so no
@@ -120,7 +121,11 @@ export default async function handler(req, res) {
         const r = await fetch(`${URL}/rest/v1/planner_runs?select=*&order=id.desc&limit=6`, { headers: H });
         if (!r.ok) { const d = await r.text().catch(() => ""); return res.status(200).json({ ok: false, hint: "run db/create-planner-runs.sql", detail: d.slice(0, 160) }); }
         const runs = await r.json();
-        return res.status(200).json({ ok: true, runs });
+        // A run is only allowed to go for real once Mike has approved a dry-run
+        // report. The page needs to know that to enable the toggle at all.
+        const ap = await fetch(`${URL}/rest/v1/planner_runs?select=id&settings->>approved=eq.true&limit=1`, { headers: H });
+        const realUnlocked = ap.ok ? (await ap.json()).length > 0 : false;
+        return res.status(200).json({ ok: true, runs, realUnlocked });
       }
       const scope = /(?:^|&)scope=tester(?:&|$)/.test(_qs) ? "tester" : "";
       const tFilter = scope === "tester" ? "select=*&source=eq.tester&order=created_at.asc" : "select=*&order=created_at.asc";
@@ -363,6 +368,27 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
       }
 
+      // op:'approveRun' — Mike reading a dry-run report and saying yes. This is
+      // the ONLY thing that unlocks running for real, so it is deliberately its
+      // own op rather than a field on saveRun: a page cannot grant itself the
+      // permission by posting a flag.
+      if (op === "approveRun") {
+        const id = parseInt(b.id, 10);
+        if (!id) return res.status(400).json({ ok: false, error: "id required" });
+        const val = b.val !== false;
+        const g = await fetch(`${URL}/rest/v1/planner_runs?id=eq.${id}&select=settings,status`, { headers: H });
+        if (!g.ok) { const t = await g.text().catch(() => ""); return res.status(200).json({ ok: false, detail: t.slice(0, 160) }); }
+        const rows = await g.json();
+        if (!rows.length) return res.status(200).json({ ok: false, error: "no run " + id });
+        if (!["done", "stopped"].includes(rows[0].status)) {
+          return res.status(200).json({ ok: false, error: "a run is approved after it has reported, not before" });
+        }
+        const settings = { ...(rows[0].settings || {}), approved: val };
+        const w = await fetch(`${URL}/rest/v1/planner_runs?id=eq.${id}`, { method: "PATCH", headers: H, body: JSON.stringify({ settings }) });
+        if (!w.ok) { const t = await w.text().catch(() => ""); return res.status(200).json({ ok: false, detail: t.slice(0, 160) }); }
+        return res.status(200).json({ ok: true, id, approved: val });
+      }
+
       // ---- runs (the Run builder, card RB1) ---------------------------------
       // A run is an ORDERED list of build sessions plus the settings that say how
       // they should be worked. The planner page only SAVES one; nothing executes
@@ -401,6 +427,9 @@ export default async function handler(req, res) {
         const hs = st.hardStop || {};
         const hsKind = ["none", "hours", "clock"].includes(hs.kind) ? hs.kind : "none";
         const settings = {
+          // Dry unless Mike says otherwise, and 'real' is checked against an
+          // approved dry-run report below before it is allowed to stick.
+          mode: st.mode === "real" ? "real" : "dry",
           ship: st.ship !== false,                       // false = park the whole run on one branch
           carryOn: st.carryOn !== false,                  // false = stop when a card needs Mike
           stopAfterFailures: Math.min(9, Math.max(1, parseInt(st.stopAfterFailures, 10) || 2)),
@@ -408,6 +437,16 @@ export default async function handler(req, res) {
                   : hsKind === "clock" ? { kind: "clock", clock: clip(hs.clock, 5) }
                   : { kind: "none" },
         };
+
+        // The dry-run gate. A run may only be worked for real after a dry-run
+        // report has been approved, and the approval is stamped onto the run so
+        // the runner can check it without a second database read.
+        if (settings.mode === "real") {
+          const ap = await fetch(`${URL}/rest/v1/planner_runs?select=id&settings->>approved=eq.true&limit=1`, { headers: H });
+          const rows = ap.ok ? await ap.json() : [];
+          if (!rows.length) return res.status(200).json({ ok: false, error: "a dry run has to be approved before a run can go for real" });
+          settings.dryApproved = true;
+        }
 
         let start_at = null;
         if (b.startAt) {

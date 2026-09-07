@@ -1,3 +1,61 @@
+## 2026-09-06 — RB2: the cloud run lane, in dry-run mode
+
+**What shipped.** Everything a cloud session needs to claim a saved run and work it,
+plus the gate that keeps it from working one for real until Mike has read a dry-run
+report and said yes. The first milestone the card asked for is done and proved on the
+live planner: a real run was claimed, reported and finished from this session, with
+nothing built, shipped or ticked.
+
+**Why it could not just reuse the Mac tools.** `scripts/planner.mjs` reaches the planner
+through `/api/planner`. From the cloud sandbox `buildablekids.com` does not answer at all
+— the request times out with no response, not a 403 to work around. Confirmed in session,
+not assumed. So a cloud run session talks to Supabase directly through the connected MCP.
+
+**The dangerous part, made safe.** Talking to Supabase directly means raw SQL against the
+one JSON blob that holds all 226 cards, and read-change-write on that blob is exactly how
+a roadmap gets wiped. `db/create-planner-run-rpcs.sql` removes the temptation: seven
+functions, each changing ONE card inside ONE statement, each counting the cards before and
+after and raising if the number moved, each returning that count so the caller checks it
+too. `planner_claim_run` uses `FOR UPDATE SKIP LOCKED`, so two sessions claiming at the
+same instant cannot get the same run — the second gets nothing. `planner_card_review`
+refuses a note that does not ask a question, the same rule `planner.mjs` enforces on the
+Mac, now enforced where the cloud cannot skip it. Applied to Buildable Kids in this
+session and exercised inside a transaction that was rolled back, so the probe left no
+trace: 226 cards before, 226 after, no test rows.
+
+**The runner's brain is a file, not a habit.** `scripts/run-lane.mjs` is pure — no
+network, no key, no writes. It answers which session comes next, when the run must stop,
+what a session is told to do, and what the report says. A session asks it between every
+step rather than carrying the rules in its head. That is what makes the failure limit, the
+hard stop and the stop-when-a-card-needs-Mike setting actually hold.
+
+**Dry run is the default and, for now, the only mode.** A run carries `mode` in its
+settings. `real` is refused unless the run also carries `dryApproved`, and only the planner
+stamps that, only after a dry-run report has been approved. The planner's "For real"
+toggle is greyed out until then, and the server refuses a real run even if the page is
+lying. Approval is its own operation, so a page cannot grant itself the permission.
+
+**On the planner now.** A finished dry run shows its report above the roadmap with two
+buttons, "Looks right — let it run for real" and "Not right". Run 3 is sitting there: two
+sessions, RB3 then RB4, with both warnings it should have raised (each depends on RB2).
+
+**Found by doing it for real.** The runbook first told the session to pull the whole
+roadmap into `run.json`. That is 210KB and the read simply fails. It now pulls the run's
+own cards in full and one line each for the rest, which is 33KB and all the checker needs.
+
+**Needs Mike.** The saved task "Buildable: work the waiting run" exists on his Claude
+account with no schedule, so nothing fires by itself. A Routine created from inside a
+session cannot be given connectors — the tool refuses the parameter for this organisation
+— so as it stands it would start a session with no Supabase and no way to claim anything.
+He attaches Supabase to the Routine in the claude.ai Routines screen, or at the environment
+level. One click, not a code change. Written down in `RUN-ANYWHERE.md`.
+
+**QA.** New `qa-rb2.mjs`, 64 checks, all pass: the dry-run gate from both ends, every
+pre-flight blocker and warning, the ordering, the failure limit, both kinds of hard stop,
+the stop-when-it-needs-Mike setting, the session prompts for ship and park and grouped
+steps, the report wording, and the server side of approval. `qa-runbuilder.mjs` still
+green at 50.
+
 ## 2026-09-06 — RB1: a Run builder in the planner
 
 **What it is.** The Roadmap tab has a **Build a run** button. It opens a sheet where Mike

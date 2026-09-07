@@ -221,6 +221,7 @@
   .rb-bar{background:#eef3ff;border:1px solid #c6d4f5;border-radius:12px;padding:11px 14px;font-size:14px;
     line-height:1.45;margin-bottom:12px}
   .rb-bar.ran{background:#eaf7ef;border-color:#bde5cb}
+  .rb-bar.bad{background:#fdeeee;border-color:#f3c9c9}
   .rb-bar b{display:block;margin-bottom:2px}
 </style>
 </head>
@@ -1364,7 +1365,10 @@ async function rmMarkDeployed(){
 
    Two or more cards in one row is the GROUPED law in AGENTS.md — one clone, one
    deploy, one QA pass, and every card in the group ticked as its part lands. */
-const RB_DEFAULTS={ship:true,carryOn:true,stopAfterFailures:2,hardStop:{kind:"none",hours:6,clock:"07:00"}};
+const RB_DEFAULTS={mode:"dry",ship:true,carryOn:true,stopAfterFailures:2,hardStop:{kind:"none",hours:6,clock:"07:00"}};
+/* A run may only be worked for real once a dry-run report has been approved.
+   The server decides this; the page just reflects it. */
+let rbRealUnlocked=false;
 let rbRun=null;          /* {sessions:[[id,...]], settings, startMode, startAt} */
 let rbRuns=[];           /* what the server has saved */
 let rbPhaseOpen={};      /* which phases are expanded in the picker */
@@ -1557,6 +1561,14 @@ function rbRender(){
     +'<button class="'+(on?"on":"")+'" onclick="'+fn+'(true)">'+onLabel+'</button>'
     +'<button class="'+(on?"":"on")+'" onclick="'+fn+'(false)">'+offLabel+'</button></div>';
   h+='<div class="rb-sec"><h4>3 &middot; How it should be worked</h4><div class="rb-set">'
+    +'<div class="rb-setrow"><span class="lbl">Dry run or for real'
+      +'<small>'+(rbRealUnlocked
+        ? "A dry run reports exactly what it would do and ships nothing."
+        : "For real unlocks once you have read a dry-run report and pressed Looks right.")+'</small></span>'
+      +'<div class="toggle">'
+        +'<button class="'+(st.mode!=="real"?"on":"")+'" onclick="rbSetMode(\'dry\')">Dry run</button>'
+        +'<button class="'+(st.mode==="real"?"on":"")+'" '+(rbRealUnlocked?"":"disabled style=\"opacity:.45;cursor:not-allowed\"")+' onclick="rbSetMode(\'real\')">For real</button>'
+      +'</div></div>'
     +'<div class="rb-setrow"><span class="lbl">When a card is finished<small>Ship it goes live. Park it puts the whole run on one branch for you to look at first.</small></span>'
       +seg(st.ship,"Ship it","Park it","rbSetShip")+'</div>'
     +'<div class="rb-setrow"><span class="lbl">If a card needs you<small>Carrying on leaves a one-line question on that card and moves to the next one.</small></span>'
@@ -1587,6 +1599,7 @@ function rbRender(){
   box.innerHTML=h;
   const sv=document.getElementById("rb-save"); if(sv) sv.disabled=!rbRun.sessions.length;
 }
+function rbSetMode(m){ if(m==="real"&&!rbRealUnlocked) return; rbRun.settings.mode=(m==="real"?"real":"dry"); rbRender(); }
 function rbSetShip(v){ rbSet("ship",!!v); }
 function rbSetCarry(v){ rbSet("carryOn",!!v); }
 function rbSetFails(v){ rbRun.settings.stopAfterFailures=Math.min(9,Math.max(1,parseInt(v,10)||2)); rbRender(); }
@@ -1621,8 +1634,30 @@ async function rbLoadRuns(){
   try{
     const r=await fetch("/api/planner?scope=runs",{cache:"no-store"}).then(x=>x.json());
     rbRuns=(r&&r.ok&&r.runs)?r.runs:[];
+    rbRealUnlocked=!!(r&&r.realUnlocked);
   }catch(e){ rbRuns=[]; }
   rbRenderBar();
+}
+function rbReportHtml(r){
+  if(!r||!r.summary) return "";
+  const st=r.settings||{};
+  const dry=st.mode!=="real";
+  const asked=st.approved===true;
+  return '<div class="rb-bar'+(r.status==="stopped"?" bad":" ran")+'">'
+    +'<b>'+(dry?"Dry run report":"Run report")+' &middot; '+esc(new Date(r.finished_at||r.created_at).toLocaleString())+'</b>'
+    +'<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.5;margin-top:4px">'+esc(r.summary)+'</div>'
+    +(dry&&!asked
+      ? '<div class="row" style="margin-top:10px">'
+        +'<button class="btn mini green" onclick="rbApprove('+r.id+',true)">Looks right &mdash; let it run for real</button>'
+        +'<button class="btn mini ghost" onclick="rbApprove('+r.id+',false)">Not right</button></div>'
+      : (asked?'<div style="margin-top:8px;font-size:13px;opacity:.75">You approved this. Running for real is unlocked.</div>':""))
+    +'</div>';
+}
+async function rbApprove(id,val){
+  const r=await apiPost({op:"approveRun",id:id,val:val});
+  if(!r||!r.ok){ alert((r&&r.error)||"Could not record that."); return; }
+  toast(val?"Approved — running for real is unlocked":"Noted");
+  rbLoadRuns();
 }
 /* The one way anything outside sets the saved-run list, so the bar can be drawn
    from a known list in the QA harness as well as from the server. */
@@ -1630,7 +1665,9 @@ function rbSetRuns(list){ rbRuns=Array.isArray(list)?list:[]; rbRenderBar(); }
 function rbRenderBar(){
   const el=document.getElementById("run-bar"); if(!el) return;
   const r=rbRuns.find(x=>x.status==="ready"||x.status==="running");
-  if(!r){ el.innerHTML=""; return; }
+  /* Nothing waiting? Then the thing worth showing is the last report, because a
+     dry run is not finished until Mike has said whether it looks right. */
+  if(!r){ el.innerHTML=rbReportHtml(rbRuns.find(x=>x.status==="done"||x.status==="stopped")); return; }
   const sess=Array.isArray(r.sessions)?r.sessions:[];
   const n=sess.reduce((a,g)=>a+g.length,0);
   const st=r.settings||{};
