@@ -48,11 +48,18 @@
   .hpCard{background:#1d1b36;border:1px solid rgba(255,255,255,.10);border-radius:24px;padding:22px;max-width:min(92vw,540px);box-shadow:0 24px 60px rgba(0,0,0,.5)}
   .hpTtl{color:#fff;font:700 22px Fredoka,sans-serif;text-align:center;margin-bottom:16px}
   .hpRow{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
-  .hpBtn{width:112px;background:#131229;border:3px solid rgba(255,255,255,.10);border-radius:20px;padding:10px 6px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .hpBtn{width:124px;background:#131229;border:3px solid rgba(255,255,255,.10);border-radius:20px;padding:10px 6px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
   .hpBtn.on{border-color:#7CF6B0;background:#1a2b28}
   .hpFace{width:74px;height:74px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
   .hpFace img{width:100%;height:100%;object-fit:contain;display:block}
   .hpName{color:#fff;font:700 15px Fredoka,sans-serif;text-align:center}
+  .hpPower{color:#7CF6B0;font:700 11px Fredoka,sans-serif;text-align:center;margin-top:3px;line-height:1.15}
+  .hpBlurb{color:#a9a3c4;font:11px Fredoka,sans-serif;text-align:center;margin-top:2px;line-height:1.25}
+  .hpBtn.locked{opacity:.55}
+  .hpBtn.locked .hpFace img{filter:grayscale(1) brightness(.75)}
+  .hpBtn.locked .hpPower{color:#ffd23f}
+  .hpBtn.shake{animation:hpShake .34s}
+  @keyframes hpShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 </style>
 <style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
 html,body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -127,6 +134,40 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
 const CAST = GAME_CONFIG.cast || [{ slug:"bunny", name:"Bramble", colour:"#b9b2a8" }];
+// ===========================================================================
+//  HERO POWERS — every one is UPSIDE ONLY, on purpose.
+//  Mike's call, and it matters more here than in a game for older kids: a four
+//  year old picks a hero by which one looks nicest, not by reading a stat line.
+//  If any hero were worse at something, that child would silently be playing a
+//  harder game than their sibling and would never know why. So each hero is a
+//  normal hero PLUS one good thing. They still feel different; none punishes you.
+//
+//  Two engine facts constrain what a power is allowed to be:
+//   1. Every level is GUARANTEED clearable, and the guarantee is computed from
+//      one exact speed (lv.speed * TOP_MULT) and one jump (JUMP/GRAV). A hero
+//      that moves differently voids it, so anything touching speed or jump must
+//      only ever make them BIGGER, and the sim has to win every level as every
+//      hero. qa-hopheroes.mjs now checks exactly that.
+//   2. Coin arcs are laid on the engine's own jump curve at the standard speed
+//      (see coinArc). A faster hero flies straight over them, which would make
+//      the "fast" hero collect FEWER coins — a downside smuggled in through the
+//      back door. Remy gets a permanent gentle magnet so his arcs still land.
+// ===========================================================================
+const POWERS = {
+  "hh-scout":   { name:"Finds secrets", blurb:"Hidden stars sparkle from far away",
+                  starSense:560 },
+  "hh-trekker": { name:"Sure-footed",   blurb:"More time to jump at the edge",
+                  coyote:7, buffer:5 },
+  "hh-caver":   { name:"Hard hat",      blurb:"The first bump each world is free",
+                  helmet:1 },
+  "hh-skater":  { name:"Goes fast",     blurb:"Runs faster and jumps further",
+                  speed:1.18, jump:1.05, reach:26, locked:"world1" },
+};
+function power(){ return POWERS[heroSlug] || {}; }
+function heroLocked(slug){
+  const p=POWERS[slug]; if(!p||!p.locked) return false;
+  return (SAVE && SAVE.cleared|0) < 1;              // Remy arrives when world one is done
+}
 const LIB_BASE = GAME_CONFIG.libBase || "https://www.buildablekids.com/api/story-library";
 // The base picture only. The old cast asked for "&emo=happy", which is a SECOND
 // generated image per character; these prompts already bake in a happy running pose.
@@ -145,6 +186,12 @@ const FRIC_GROUND= 0.86, FRIC_AIR = 0.965;    // momentum when you let go
 const SKID_DECEL = 0.90;                      // per-frame bite when you push against your own momentum
 const COYOTE_FRAMES = 6;                      // grace frames to jump after walking off a ledge
 const BUFFER_FRAMES = 8;                      // a jump pressed this early still fires on landing
+// Both windows are widened by Juno's power, never narrowed. Read through these two
+// helpers everywhere rather than the raw constants, or a hero's power silently stops
+// applying at whichever call site was missed.
+function coyoteF(){ return COYOTE_FRAMES + (power().coyote||0); }
+function bufferF(){ return BUFFER_FRAMES + (power().buffer||0); }
+let helmet = 0;                               // Finn's hard hat, counted down per world
 const SKID_MIN = 1.6;                         // speed you must be doing for a turn-around to count as a skid
 const AIR_FRAMES = 2*Math.abs(JUMP)/GRAV;  // frames a TAPPED jump stays airborne
 // Frames a HELD jump stays airborne. Holding the button softens gravity on the way up
@@ -560,13 +607,15 @@ function spawnSkidDust(wx,wy,dir){ for(let i=0;i<3;i++) dust.push({x:wx,y:wy,vx:
 function pop(wx,wy,txt,col){ pops.push({x:wx,y:wy,t:0,txt:txt,col:col||"#fff"}); if(pops.length>14) pops.shift(); }
 let shieldOn=false, magnetT=0, springT=0, starT=0;  // power-up effect timers
 let poleT=0;                                       // flag-pole finish: slide, fanfare, next level
+let unlockToast=0;                                 // frames left on the "Remy is awake" banner
 
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
   ART=artSet(L.world);                                  // the world's own trees, coins, critters and boss
   { const u=LIB_BASE+"?img=world:"+L.world+"&style="+ARTSTYLE; if(bg.dataset===undefined || bg.src!==u) bg.src=u; }
-  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed, dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null,
-          coyote:COYOTE_FRAMES, buf:0, skid:0, runPhase:0, idleT:0};
+  player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed*(power().speed||1), dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null,
+          coyote:coyoteF(), buf:0, skid:0, runPhase:0, idleT:0};
+  helmet = power().helmet||0;                       // Finn's hard hat, one free bump per world
   camX=0; camY=0; invuln=0; state="play"; coinsGot=0;
   // a ? block holding a coin counts toward the level's total, so the number on the HUD
   // is every coin there is to find, not just the loose ones
@@ -577,6 +626,10 @@ function startLevel(i){
   // only way back was a deliberate tap, obvious the moment the flag pole auto-advances.
   for(const k of L.coins) k.got=false;
   for(const st of L.stars) st.got=false;
+  // Put every coin back where the level builder put it. The magnet power-up drags
+  // coins bodily through the world and nothing ever restored them, so replaying a
+  // level served up arcs that had been pulled out of shape by the previous run.
+  for(const k of L.coins){ if(k.ox==null){ k.ox=k.x; k.oy=k.y; } else { k.x=k.ox; k.y=k.oy; } }
   if(L._puBase==null) L._puBase=L.powerups.length; else L.powerups.length=L._puBase;
   for(const u of L.powerups) u.got=false;
   for(const e of L.enemies){ e.dead=false; e.squash=0; e.x=e.base; e.dir=-1; }
@@ -601,7 +654,7 @@ function tryJump(){
     player.vy=JUMP*0.7 - Math.min(6,Math.abs(Math.sin(sw.ang)*tang)*0.5);
     player.swing=null; sw.grabbed=false; player.onGround=false; player.dj=true; player.swingCool=10; S("jump"); return true; }
   if(player.slide>0) player.slide=0;                       // jump cancels a slide
-  const jv = springT>0 ? 1.2 : 1;                          // spring power-up = higher jump
+  const jv = (springT>0 ? 1.2 : 1) * (power().jump||1);   // spring power-up, and Remy's longer hop
   if(player.onGround || player.coyote>0){                  // ground jump, incl. the coyote grace window
     player.vy=JUMP*jv; player.onGround=false; player.coyote=0; player.dj=true; S("jump"); return true; }
   if(player.dj){ player.vy=JUMP*0.82*jv; player.dj=false; S("jump"); return true; }   // double jump, unchanged
@@ -610,7 +663,7 @@ function tryJump(){
 function doJump(){
   if(!started){started=true;}
   jumpHeld=true;
-  if(!tryJump()) player.buf=BUFFER_FRAMES;                 // nothing to jump from yet — remember the press
+  if(!tryJump()) player.buf=bufferF();                     // nothing to jump from yet — remember the press
 }
 function doSlide(){ if(!started){started=true;return;} if(player.onGround && player.slide<=0){ player.slide=SLIDE_FRAMES; } }
 addEventListener('keydown',e=>{
@@ -705,13 +758,20 @@ function paintMenu(){
 function openHeroPick(){
   if(!heroPick || !heroPick.querySelector) return;
   const row=heroPick.querySelector('.hpRow'); if(!row) return;
-  row.innerHTML = CAST.map(c=>
-    '<div class="hpBtn'+(c.slug===heroSlug?' on':'')+'" data-slug="'+c.slug+'">'+
+  // Every hero shows what they are GOOD at, in words a five year old can read out
+  // loud. Remy shows why he is not available yet rather than just being greyed out:
+  // a locked thing with no reason is just a broken thing.
+  row.innerHTML = CAST.map(c=>{
+    const pw=POWERS[c.slug]||{}, lock=heroLocked(c.slug);
+    return '<div class="hpBtn'+(c.slug===heroSlug?' on':'')+(lock?' locked':'')+'" data-slug="'+c.slug+'"'+(lock?' data-lock="1"':'')+'>'+
       '<div class="hpFace" style="background:'+c.colour+'"><img alt="" src="'+heroUrl(c.slug)+'" onerror="this.remove()"></div>'+
       '<div class="hpName">'+c.name+'</div>'+
-    '</div>').join('');
+      '<div class="hpPower">'+(lock ? "Finish world 1" : (pw.name||""))+'</div>'+
+      '<div class="hpBlurb">'+(lock ? "to wake him up" : (pw.blurb||""))+'</div>'+
+    '</div>'; }).join('');
   row.querySelectorAll('.hpBtn').forEach(el=>{
     el.addEventListener('pointerdown',(ev)=>{ ev.preventDefault();
+      if(el.getAttribute('data-lock')){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); return; }
       const slug=el.getAttribute('data-slug'); setHero(slug); SAVE.hero=slug; saveNow();
       heroPick.hidden=true; paintMenu(); });
   });
@@ -777,7 +837,25 @@ function botThink(){
     for(const pp of L.pipes){ const d=pp.x-(player.x+24); if(d>2 && d<64*K){ doJump(); return; } }
     for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>2 && d<66*K){ doJump(); return; } }
     for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>2 && d<58*K){ doJump(); return; } } }
-  } else { jumpHeld=true; }
+  } else {
+    jumpHeld=true;
+    // AIRBORNE SAVE. The bot used to hold the jump button and hope. That made the
+    // whole always-clearable guarantee depend on the ground-jump constants below
+    // being exactly right for one speed: a 6% faster hero jumped a fraction early,
+    // came down on the near face of a crystal, and lost a heart on a level the
+    // baseline hero cleared untouched. A real child would flick the second jump
+    // there, and the engine has always had one the bot never used. So: while
+    // falling, if something is about to be landed on, spend the double jump.
+    if(player.dj && player.vy>0){
+      const px=player.x+24, K2=Math.max(1,Math.abs(player.vx)/RUN_BASE);
+      const ahead=52*K2;
+      let danger=false;
+      for(const o of L.obstacles){ const d=o.x-px; if(d>-24 && d<ahead){ danger=true; break; } }
+      if(!danger) for(const e of L.enemies){ if(e.dead)continue; const d=e.x-px; if(d>-20 && d<ahead*0.8){ danger=true; break; } }
+      if(!danger && groundUnder(px+ahead)==null && player.y>GROUND_Y-150) danger=true;   // still short of the far lip
+      if(danger) doJump();
+    }
+  }
 }
 
 // --- update ---
@@ -794,9 +872,14 @@ function update(){
         // Banking the world is what makes the start screen mean anything: the next world
         // unlocks, and the best star count for this one is kept.
         if(typeof SAVE!=="undefined"){
+          const wasCleared=SAVE.cleared|0;
           SAVE.stars[li]=Math.max(SAVE.stars[li]|0, starsGot);
           if(li+1>SAVE.cleared) SAVE.cleared=Math.min(LEVELS.length, li+1);
           saveNow();
+          // Remy wakes up the moment world one is banked. A thing you earn has to be
+          // SHOWN to you at the moment you earn it, or the child never learns it was
+          // theirs to earn: the chooser opens on its own with him newly available.
+          if(wasCleared<1 && (SAVE.cleared|0)>=1){ unlockToast=210; }
         }
         if(li<LEVELS.length-1) startLevel(li+1);      // straight on into the next world
         else startDemo();                              // last world cleared: back to the map
@@ -824,7 +907,7 @@ function update(){
     player.x = sw.ax+Math.sin(sw.ang)*sw.len - 24;
     player.y = sw.ay+Math.cos(sw.ang)*sw.len - 30;
     player.vx=0; player.vy=0; player.onGround=false;
-    for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; getCoin(k.x,k.y); } }
+    for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<coinReachX() && Math.abs((player.y+30)-k.y)<coinReachY()){ k.got=true; coinsGot++; getCoin(k.x,k.y); } }
     return;
   } else if(!botMode && !player.onGround && player.swingCool<=0){     // bonus toy; the QA "perfect runner" stays on the ground path
     for(const sw of L.swings){ const bx=sw.ax+Math.sin(sw.ang)*sw.len, by=sw.ay+Math.cos(sw.ang)*sw.len;
@@ -832,7 +915,7 @@ function update(){
   }
   // walk — player-controlled (Mario-style, no auto-scroll). A short run-up to a faster
   // top speed, and pushing against your own momentum SKIDS instead of stopping dead.
-  const MAXR=L.speed*TOP_MULT;
+  const MAXR=L.speed*TOP_MULT*(power().speed||1);
   const ACC = player.onGround ? ACC_GROUND : ACC_AIR;
   const dir = (inputLeft && !inputRight) ? -1 : (inputRight && !inputLeft) ? 1 : 0;
   if(player.skid>0) player.skid--;
@@ -867,9 +950,9 @@ function update(){
     }
     const wasOnGround=player.onGround;
     if(bounce){ player.vy=JUMP*1.55; player.onGround=false; player.dj=true; player.coyote=0; S("bounce"); }
-    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); S("land"); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; player.coyote=COYOTE_FRAMES;
+    else if(landY!=null){ if(!player.onGround){ player.land=8; spawnDust(cx, landY); S("land"); } player.y=landY-60; player.vy=0; player.onGround=true; player.dj=false; player.coyote=coyoteF();
       if(landPf&&landPf.mv){ if(landPf.mv.axis==='x'||landPf.mv.axis==='diag') player.x+=landPf.dx; player.standPf=landPf; } else player.standPf=null; }
-    else { player.onGround=false; player.standPf=null; if(wasOnGround && player.vy>=0) player.coyote=COYOTE_FRAMES; }
+    else { player.onGround=false; player.standPf=null; if(wasOnGround && player.vy>=0) player.coyote=coyoteF(); }
     if(!player.onGround && player.coyote>0) player.coyote--;
     // a jump pressed just before landing fires the moment there is something to push off
     if(player.buf>0){ player.buf--; if(player.onGround||player.coyote>0){ if(tryJump()) player.buf=0; } }
@@ -911,7 +994,7 @@ function update(){
   // magnet power-up: pull nearby coins toward the hero
   if(magnetT>0){ for(const k of L.coins){ if(k.got)continue; const dx=(player.x+24)-k.x, dy=(player.y+30)-k.y; if(dx*dx+dy*dy<170*170){ k.x+=dx*0.16; k.y+=dy*0.16; } } }
   // coins
-  for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<34 && Math.abs((player.y+30)-k.y)<40){ k.got=true; coinsGot++; getCoin(k.x,k.y); } }
+  for(const k of L.coins){ if(!k.got && Math.abs((player.x+24)-k.x)<coinReachX() && Math.abs((player.y+30)-k.y)<coinReachY()){ k.got=true; coinsGot++; getCoin(k.x,k.y); } }
   for(const st of L.stars){ if(!st.got && Math.abs((player.x+24)-st.x)<38 && Math.abs((player.y+30)-st.y)<46){ st.got=true; starsGot++; if(FEEL){ try{ FEEL.explode(sx_(st.x), sy_(st.y), "#ffd23f", {pop:"STAR!", sound:"levelup"}); }catch(e){ S("star"); } } else S("star"); } }
   // power-up pickups
   for(const u of L.powerups){ if(u.got)continue; if(Math.abs((player.x+24)-u.x)<36 && Math.abs((player.y+30)-u.y)<44){ u.got=true; if(FEEL){ try{ FEEL.explode(sx_(u.x), sy_(u.y), "#7ee0a0", {pop:"POWER!", sound:"levelup"}); }catch(e){ S("power"); } } else S("power"); if(u.kind==="shield")shieldOn=true; else if(u.kind==="magnet")magnetT=360; else if(u.kind==="spring")springT=360; else if(u.kind==="star")starT=360; else if(u.kind==="heart"&&hearts<3)hearts++; } }
@@ -954,7 +1037,20 @@ function update(){
 // No "+1" text: the coin line is dense on purpose, and a pop per coin buried the level
 // in floating numbers. The sparkle and the chime are the reward.
 function getCoin(wx,wy){ if(FEEL){ try{ FEEL.coinBurst(sx_(wx), sy_(wy), null, {n:5}); return; }catch(e){} } S("coin"); }
-function takeHit(){ if(starT>0) return; if(shieldOn){ shieldOn=false; invuln=70; return; } loseHeart(false); }
+// How close a coin has to be. Remy's power widens it: he outruns the arcs, which
+// were computed from the STANDARD jump, so without a longer reach being fast would
+// cost him coins — a downside smuggled in behind an upside-only power.
+function coinReachX(){ return 34 + (power().reach||0); }
+function coinReachY(){ return 40 + (power().reach||0); }
+function takeHit(){
+  if(starT>0) return;
+  if(shieldOn){ shieldOn=false; invuln=70; return; }
+  if(helmet>0){                                   // Finn's hard hat takes the first bump instead of a heart
+    helmet--; invuln=70;
+    if(FEEL){ try{ FEEL.explode(sx_(player.x+24), sy_(player.y+20), "#e8b52c", {pop:"BONK!", sound:"pop"}); }catch(e){ S("bonk"); } }
+    else S("bonk");
+    return; }
+  loseHeart(false); }
 function loseHeart(fell){
   hearts--; invuln=70;
   if(FEEL){ try{ FEEL.miss(); }catch(e){ S("hurt"); } } else S("hurt");
@@ -1216,6 +1312,29 @@ function draw(){
       ctx.fillStyle="rgba(255,255,255,.85)"; ctx.beginPath(); ctx.ellipse(-R*0.30,-R*0.36,R*0.30,R*0.17,-0.6,0,7); ctx.fill();
       ctx.restore(); } }
   // hidden stars (up high, reward exploring)
+  // Rowan's power. A hidden star is deliberately off the running line, so a small
+  // child never finds one by accident. With starSense the star throws a soft halo you
+  // can see from across the screen, and once it is close an arrow appears at the edge
+  // of the frame pointing at it. Nothing about reaching it changes: only knowing.
+  { const sense=power().starSense||0;
+    if(sense) for(const st of L.stars){ if(st.got)continue;
+      const dx=st.x-(player.x+24); if(Math.abs(dx)>sense) continue;
+      const near=1-Math.abs(dx)/sense, pulse=0.55+0.45*Math.sin(t*3.4);
+      const sxp=st.x-camX, syp=st.y;
+      if(sxp>-30&&sxp<W+30){                                  // on screen: a breathing halo
+        const gl=ctx.createRadialGradient(sxp,syp,4,sxp,syp,46+near*16);
+        gl.addColorStop(0,"rgba(255,238,150,"+(0.42*near*pulse).toFixed(3)+")");
+        gl.addColorStop(1,"rgba(255,238,150,0)");
+        ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(sxp,syp,46+near*16,0,7); ctx.fill(); }
+      else {                                                   // off screen: an arrow at the edge
+        const right=sxp>W, ax=right?W-26:26, ay=Math.max(60,Math.min(VH-90,syp));
+        ctx.save(); ctx.globalAlpha=0.30+0.45*near*pulse; ctx.translate(ax,ay);
+        ctx.fillStyle="rgba(30,26,18,.35)"; ctx.beginPath(); ctx.arc(0,0,17,0,7); ctx.fill();
+        ctx.fillStyle="#ffd23f"; star5(0,0,9);
+        ctx.beginPath();
+        if(right){ ctx.moveTo(15,-7); ctx.lineTo(24,0); ctx.lineTo(15,7); }
+        else { ctx.moveTo(-15,-7); ctx.lineTo(-24,0); ctx.lineTo(-15,7); }
+        ctx.closePath(); ctx.fill(); ctx.restore(); } } }
   for(const st of L.stars){ if(st.got)continue; const x=st.x-camX; if(x<-30||x>W+30)continue; const yy=st.y+Math.sin(t*2+st.x*0.01)*4; ctx.save(); ctx.translate(x,yy); ctx.rotate(Math.sin(t*1.4+st.x)*0.25); ctx.fillStyle="rgba(255,225,90,.35)"; ctx.beginPath();ctx.arc(0,0,17,0,7);ctx.fill(); ctx.fillStyle="#ffd23f"; star5(0,0,13); ctx.fillStyle="#fff7cc"; star5(0,0,6.5); ctx.restore(); }
   // obstacles (crystals)
   for(const o of L.obstacles){ const x=o.x-camX; if(x<-40||x>W+40)continue; const im=propImg("gem"); if(im){ const h=o.h+22, w=h*(im.naturalWidth/im.naturalHeight); ctx.drawImage(im, x-w/2, o.y-h+8, w, h); } else { ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/2,o.y);ctx.lineTo(x-o.w/2,o.y);ctx.closePath();ctx.fill(); ctx.fillStyle="rgba(255,255,255,.25)";ctx.beginPath();ctx.moveTo(x,o.y-o.h);ctx.lineTo(x+o.w/4,o.y-o.h/2);ctx.lineTo(x-o.w/6,o.y-o.h/3);ctx.closePath();ctx.fill(); } }
@@ -1390,6 +1509,20 @@ function draw(){
     ctx.fillStyle=P.flag; rrect(inset,by,bw*pg,9,5);ctx.fill(); }
   // music track name toast (shown briefly when the song is changed)
   if(musicToast>0){ musicToast--; const nm=Music.current(); ctx.save(); ctx.font="bold 16px Fredoka,sans-serif"; ctx.textAlign="center"; const tw=ctx.measureText(nm).width+50, x=W/2, y=Math.round(VH*0.16)+20; ctx.globalAlpha=Math.max(0,Math.min(1,musicToast/30)); ctx.fillStyle="rgba(20,30,50,.74)"; rrect(x-tw/2,y-16,tw,30,15); ctx.fill(); ctx.fillStyle="#ffd23f"; ctx.beginPath(); ctx.arc(x-tw/2+18,y+4,3.4,0,7); ctx.fill(); ctx.fillRect(x-tw/2+20.4,y-8,2,12); ctx.fillStyle="#fff"; ctx.fillText(nm, x+8, y+5); ctx.restore(); }
+  // the unlock banner, when world one has just been banked
+  if(unlockToast>0){
+    unlockToast--;
+    const locked=CAST.find(c=>(POWERS[c.slug]||{}).locked) || {name:"A new hero"};
+    const a=Math.min(1, unlockToast/30), y=Math.round(VH*0.22);
+    ctx.save(); ctx.globalAlpha=a; ctx.textAlign="center";
+    const txt=locked.name+" woke up!", sub=(POWERS[locked.slug]||{}).blurb||"";
+    ctx.font="800 26px Fredoka,sans-serif"; const w=Math.max(ctx.measureText(txt).width, 240)+64;
+    ctx.fillStyle="rgba(20,30,50,.82)"; rrect(W/2-w/2, y-34, w, 78, 20); ctx.fill();
+    ctx.fillStyle="#ffd23f"; star5(W/2-w/2+30, y+4, 13);
+    ctx.fillStyle="#fff"; ctx.fillText(txt, W/2+14, y);
+    ctx.font="15px Fredoka,sans-serif"; ctx.fillStyle="#bfe0ff"; ctx.fillText(sub, W/2+14, y+26);
+    ctx.restore();
+  }
   // banners
   if(state==="win" && (poleT===0 || poleT>POLE_SLIDE)){
     banner(li<LEVELS.length-1 ? "World Complete!" : "You Win!",
@@ -1465,6 +1598,16 @@ window.BK_GAME = { startLevel:(i)=>startLevel(i), levelCount:()=>LEVELS.length, 
     pits:()=>pitsOf(L),
     consts:()=>({ TOP_MULT, COYOTE_FRAMES, BUFFER_FRAMES, GROUND_Y, H, TILE, JUMP, GRAV, RUN_BASE }),
   },
+  // Pick the hero the sim runs as. The always-clearable guarantee is computed from ONE
+  // speed and ONE jump, so a hero with a power that touches either voids it unless the
+  // sim wins the level as THAT hero. qa-hopheroes.mjs loops every hero x every level
+  // through here.
+  setHero:(slug)=>{ setHero(slug); return heroSlug; },
+  hero:()=>heroSlug,
+  powers:()=>JSON.parse(JSON.stringify(POWERS)),
+  // QA only: sweep a power's numbers to find a setting the sim can prove safe,
+  // instead of guessing at a multiplier and shipping it.
+  setPower:(slug,patch)=>{ if(POWERS[slug]) Object.assign(POWERS[slug], patch||{}); return POWERS[slug]; },
   sim:(idx, maxFrames)=>{ demoMode=false; hearts=3; startLevel(idx); paused=false; botMode=true; started=true; inputLeft=false; inputRight=false; let f=0; const cap=maxFrames||8000;
     while(state==="play" && f<cap){ update(); f++; } botMode=false; inputLeft=false; inputRight=false; return { level:idx, result:state, frames:f, coins:coinsGot+"/"+totalCoins, hearts }; } };
 </script>

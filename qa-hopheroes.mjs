@@ -69,6 +69,45 @@ const K = T.consts();
 // engine how many levels there are rather than quietly settling for one.
 const nLevels = (BK.levelCount && BK.levelCount()) || 1;
 
+// -------------------------------------- 0. every hero clears every level
+// This block exists because of a promise the level builder makes: every level is
+// GUARANTEED finishable, and that guarantee is arithmetic done with ONE running
+// speed and ONE jump height. The moment a hero's power changes either, the promise
+// covers only the hero it was computed for. Remy runs 18% faster and jumps 5%
+// higher, so without this loop his levels would be un-guaranteed and nobody would
+// find out until a child could not cross a gap.
+//
+// The powers are all UPSIDE ONLY by design, so a hero should never do WORSE than
+// the baseline. A hero losing a heart where the baseline hero did not is therefore
+// a real failure, not a tuning nit.
+console.log('--- every hero clears every level ---');
+const heroes = (BK.cast && BK.cast()) || [];
+const POW = (BK.powers && BK.powers()) || {};
+check('the cast is wired up', heroes.length >= 1, heroes.map(h => h.slug).join(', '));
+check('every hero in the cast has a power', heroes.every(h => POW[h.slug]),
+      heroes.filter(h => !POW[h.slug]).map(h => h.slug).join(',') || 'all present');
+check('no power makes a hero slower or shorter-jumping', Object.entries(POW).every(
+        ([, p]) => (p.speed == null || p.speed >= 1) && (p.jump == null || p.jump >= 1)
+                && (p.coyote == null || p.coyote >= 0) && (p.buffer == null || p.buffer >= 0)),
+      'upside-only is the rule; a four year old cannot read a stat line');
+if (BK.setHero) {
+  for (const h of heroes) {
+    BK.setHero(h.slug);
+    let worst = 3, slowest = 0, allWin = true;
+    for (let i = 0; i < nLevels; i++) {
+      const r = BK.sim(i, 20000);
+      if (r.result !== 'win') allWin = false;
+      if (r.hearts < worst) worst = r.hearts;
+      if (r.frames > slowest) slowest = r.frames;
+    }
+    check(`${h.name} (${h.slug}) wins all ${nLevels} levels`, allWin, `slowest ${slowest} frames`);
+    check(`${h.name} never loses a heart on a perfect run`, worst === 3, `worst hearts=${worst}/3`);
+  }
+  BK.setHero(heroes[0] && heroes[0].slug);
+} else {
+  check('BK_GAME.setHero is exposed so heroes can be simulated', false);
+}
+
 // ------------------------------------------------- 1. every level is clearable
 console.log('--- a perfect player still clears every level ---');
 for (let i = 0; i < nLevels; i++) {
