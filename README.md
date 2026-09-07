@@ -6,6 +6,94 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## TS1-TS3 — the whole catalogue gets a real tile shot (September 7 2026)
+`scripts/tile-shot.mjs`, `public/tile-shots.html`, `public/tile-shots/`
+
+Nineteen games photographed, up from two, with no game code changed. The camera learned to
+shoot a game's own `?screen=demo` attract mode (thirteen games), and to drive the control
+surface a game already exposes to its QA harness (`BUILDABLE_GAME.moves/_play/_draw`,
+`TENNIS_GAME._begin/_step/_draw`) for four more that have no attract mode. The hand-posed
+`?tileshot=1` mode from TS0 is now the exception, not the plan.
+
+Zoom needs no engine help either: engines size their world by the window's ASPECT, not its
+pixel size, so the camera shoots in a window scaled up by the zoom and crops the middle
+back out — a true crop at full resolution. Framing is per-game `zoom` and `focus`.
+
+`/tile-shots` renders `/tile-shots/shots.json`, which the camera merges on each run, so
+adding a game to its table puts it on the page with nothing to edit. The page opens with
+the real Play grid card at 226x170 and 175x131, because that is the only size that matters.
+
+Not working, and not the camera's fault: **Tennis** (washed-out court art, logged as QA30),
+**Riley's Garden** (the game itself is a fairy, a bee and an empty field), and **Chess**
+(no attract mode, no QA hook, no deep link — it needs a photo mode of its own).
+
+---
+
+## TS0 — the Tile Shots rig, proved on Survival and Castle Guard (September 6 2026)
+`public/buildable-tileshot.js`, `scripts/tile-shot.mjs`, `public/tile-shots.html`,
+`public/survival-engine.html`, `public/castle-guard.html`, `vercel.json`
+
+Every game tile shows an AI painting today. TS replaces those with a staged
+screenshot of the real game, taken by the game itself. TS0 builds the one-time rig
+and proves the look on one dark world and one bright world before eighteen more
+games get one.
+
+**Photo mode.** `?tileshot=1` on a game. It borrows the existing attract-mode
+plumbing (silent, all input ignored) but instead of playing it warms up for about
+two seconds so every sprite has really arrived, then poses the recipe and freezes:
+hero just left of centre, three foes coming in from the right, one thing caught
+mid-flight, one treat, no HUD, no words. Every pixel is the game's own art file.
+
+**The shared rig** is `buildable-tileshot.js`: the flag, the signature-colour wash
+rising from the bottom, a camera that crops in on the action, a "hold still" signal
+for the shutter, and a chrome-hider that removes everything on the page that is not
+the canvas. That last one matters — the first shots came out with the shared Home
+and Sound buttons baked into them. TS1-TS3 add a pose per game and reuse all of it.
+
+**The camera** is `scripts/tile-shot.mjs`. It serves `public/` itself and never
+touches the network, so it runs anywhere, and every shot is deterministic: the
+games freeze their clock in photo mode, so the coin is caught face-on rather than
+edge-on and a re-run gives the same picture. Output is exactly 1200x900. It writes
+PNGs and nothing else — swapping a tile's live art is a separate step that only
+happens after approval.
+
+**The contact sheet** is `/tile-shots`: each new picture beside the AI painting it
+would replace, plus how it reads at real tile size. Nothing on the live site has
+changed.
+
+**How busy a tile should be.** The first proof followed the recipe literally (three
+foes, one thing mid-flight) and read as too quiet. The poses now stage a real fight:
+six foes and a sparkle volley on Survival, seven goblins and six arrows on Castle
+Guard. Worth knowing for TS1-TS3 — the recipe's counts are a floor, not a target.
+Effects that did not survive: a second lightning arc and a nova ring, which read as
+white ropes and a geometric circle, and a particle explosion big enough to hide the
+foe underneath it.
+
+**Explosions were tried and rejected.** The shared FX library holds a nine-frame cartoon
+explosion (`public/fx/explode0-8.png`, Kenney CC0) that no game has ever used. A real
+`BM.blast` was built from it and wired into both games' kill moments; Mike judged it wrong
+for the product and it was reverted in full. Do not reach for it again in TS1-TS3.
+
+**Castle Guard's effects were genuinely broken.** It had never called `BM.useTextures`, so
+every poof, spark and burst in the game fell back to plain coloured dots. It now registers
+the same pack as the other engines, and `poofBaddie` tints gold instead of a pale
+grey-green that was invisible on grass. A fix to normal play, not to the photo.
+
+**A tile is small: judge every shot at 226px.** The real Play card is `PlayGridCard` in
+`src/BuildableKids.jsx` — a 4:3 picture on a white tile, four columns inside a 940px page,
+so the picture is 226 x 170 on a laptop and 175 x 131 on a phone. `/tile-shots` opens with
+an exact copy of that card at all three widths. Castle Guard survives the shrink; Survival
+at full size reads as scenery, so `?zoom=` (photo mode) and `--zoom` (camera) were added to
+try a tighter crop without editing a game.
+
+**Two findings for the rollout.** The wash reads well on Space Survival (purple over
+a sunset sky) and all but disappears on Castle Guard (green over grass), so wash
+strength is a per-game question, not one setting. And tower defence has no coin on
+the field, so Castle Guard has no treat in its picture; its coins live in the info
+bar, which the photo hides.
+
+---
+
 ## FM4 — the farm's playtest bugs, and a wish list a child can read (September 7 2026)
 `public/skyflyer-farm.html`, `src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-skyflyer.mjs`.
 Phase **FM**, card **FM4**, branch `claude/fm4-farm-bugs-wishlist-cpciu3`. Everything here

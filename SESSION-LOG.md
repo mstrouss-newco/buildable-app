@@ -1,3 +1,142 @@
+## 2026-09-07 — TS1-TS3: tile shots for the rest of the catalogue
+
+**Shipped.** Nineteen games now have a tile shot, up from two, and the camera grew two
+ways to take one WITHOUT touching a game's code:
+
+- **`demo`** — the game's own `?screen=demo` attract mode is real play, so the camera lets
+  it run for a few seconds and photographs it. Thirteen games needed nothing else.
+- **`drive`** — four games have no attract mode but do expose the control surface their QA
+  harness drives (`BUILDABLE_GAME.moves/_play/_draw`, `TENNIS_GAME._begin/_step/_draw`), so
+  the camera plays a fixed number of moves itself and photographs the board mid-game.
+- **`photo`** — the hand-posed mode from TS0. Only Survival and Castle Guard use it, and
+  after this it looks like the exception rather than the plan: an attract shot is cheaper,
+  is real play, and needs no edit inside the game.
+
+**The zoom stopped needing engine changes too.** Every engine sizes its world by the
+window's ASPECT, not its pixel size, so a 960x720 window shows exactly the same world as a
+600x450 one, just bigger. The camera now shoots in a window scaled up by the zoom and crops
+the middle 600x450 back out: a true crop, full resolution, no engine involvement. Per-game
+`zoom` and `focus` are how a shot gets framed now.
+
+**`/tile-shots` is data-driven.** It renders `/tile-shots/shots.json`, which the camera
+rewrites (merging, so shooting one game does not wipe the sheet). Adding a game to the
+camera's table puts it on the page with nothing to edit. The page opens with the real Play
+grid card at laptop and phone size, because 226x170 is the only size that matters.
+
+**Three are not right, and none of them is the camera's fault.**
+1. **Tennis** — washed out, pale ball on pale lines. That is the court art, already logged
+   as QA30. Fix the art first; a photo of it now is not worth having.
+2. **Riley's Garden** — the shot is honest and the game is thin: a fairy, a bee and a wide
+   empty field. No crop fills it. The game needs more on screen.
+3. **Chess** — no shot at all. The only game with no attract mode, no QA hook and no way to
+   deep-link into a board, so it needs a small photo mode of its own.
+
+**Calls I made for you.**
+1. **Attract mode over hand-posed scenes.** TS1-TS3 were written assuming a photo mode per
+   game. Thirteen games did not need one, so they did not get one. Less code, real play,
+   and a new game joins the sheet with one line in a table.
+2. **Every shot judged at 226 pixels, never full size.** Six games looked fine big and
+   turned out to be black letterbox bars, empty sky or a text banner once shrunk. They were
+   reframed until they read small.
+
+**QA.** `node qa-all.mjs`: ALL CHECKS PASS (46 harnesses, serving check green). No game's code changed in this session except
+the two that already carried a photo mode, so the risk is in the camera and the page, not
+in the games.
+
+## 2026-09-06 — TS0: the Tile Shots rig (Survival + Castle Guard)
+
+**Shipped.** The one-time rig for the Tile Shots rollout, plus photo modes for the
+two proof games. `public/buildable-tileshot.js` (the shared flag, wash, camera,
+chrome-hider and shutter signal), `?tileshot=1` in `public/survival-engine.html` and
+`public/castle-guard.html`, the camera `scripts/tile-shot.mjs`, the approval page
+`public/tile-shots.html` at `/tile-shots`, and four routes in `vercel.json` so the
+new script, the page and the pictures are all reachable ahead of the catch-all.
+Four 1200x900 PNGs in `public/tile-shots/` (each game with and without the wash).
+
+**Nothing was swapped.** No live tile art changed and no `image_cache` row was
+written. That is deliberate: the plan says the contact sheet goes to Mike before any
+tile is replaced, and TS0 exists to find out whether the look is right at all.
+
+**What the first two attempts got wrong**, since TS1-TS3 will hit the same walls.
+(1) Screenshotting the canvas element still catches DOM overlays sitting on top of
+it, so the shared Home and Sound buttons and the drag-to-move hint were baked into
+the first shots. The rig now hides everything on the page that is not the canvas.
+(2) Both games draw their whole playfield to fit the screen, so the hero was a speck.
+A shot needs a camera that crops in, and the recipe has to be written in screen
+fractions and mapped back through the zoom, or the hero does not land where you
+asked. (3) The coin spins on the wall clock, so it was caught edge-on as a pale
+sliver; photo mode now freezes the clock at an instant chosen so the coin faces the
+camera, which also makes every shot reproducible.
+
+**Calls I made for you.**
+1. **Castle Guard gets no coin.** Tower defence keeps its coins in the info bar,
+   which the photo hides, and there is no coin sprite on the field. Rather than draw
+   a stand-in — the rule is real art only — its picture frames the castle instead.
+   Flagged on the contact sheet.
+2. **The Castle Guard shot looks up the road at the castle.** The recipe says bad
+   guys enter from the right, but every Castle Guard level marches left to right
+   toward the castle, so "from the right" would have meant shooting them in the back
+   with nothing recognisable in frame. The castle is the most recognisable thing in
+   the game, so the archer is left of centre and the goblins march between it and
+   the castle.
+3. **Output is 1200x900, not 2400x1800.** The games cap their own canvas at 2x
+   device pixels, so shooting bigger only inflated the file (2.9 MB down to 547 KB)
+   without adding detail. 1200x900 is what the card asked for.
+
+**Second pass: more action.** The first proof was correct and quiet — one hero, three
+foes, one thing in the air. Mike asked for more, so the poses now stage a real fight.
+Survival: six foes closing in at mixed depths, a ten-sparkle volley across the frame,
+a lightning zap connecting to the foe it is killing, impact sparks on four of them,
+three coins spilling. Castle Guard: seven goblins marching the road, four archers
+loosing at once, six arrows in the air, two goblins poofing. Both still use nothing
+but the game's own art and its own effects. Two things were tried and pulled back
+out: a second lightning arc and a nova shockwave ring read as white ropes and a
+geometric circle rather than as action, and a big particle explosion covered the foe
+it was meant to be killing.
+
+**Third pass: explosions tried, and taken back out.** Mike asked for explosions, and the
+shared FX library turned out to already hold a nine-frame cartoon explosion
+(`public/fx/explode0-8.png`, Kenney CC0) that no game had ever used. Both games got a real
+`BM.blast` built from it, wired into their kill moments so the picture would not be
+dressed up rather than honest. Mike judged the result bad and it was reverted in full:
+`BM.blast`, the `raw` particle flag and both call sites are gone, and the shots are back
+to the second pass. Recorded so TS1-TS3 do not try it again — a big cartoon fireball is
+not this product's look, even when the art is free and already in the library.
+
+**What survived, because it was a real bug.** Castle Guard had never called
+`BM.useTextures` at all, so every poof, spark and burst in the whole game had been falling
+back to plain coloured dots since it shipped. It now registers the same Kenney pack as the
+other engines (checked in a real browser: five of five textures load), and `poofBaddie`
+tints its poof gold instead of `#cfd8c0`, a pale grey-green that was invisible against
+grass. That is a fix to normal play. Nothing is staged in the photo.
+
+**Fourth pass: what a tile actually is.** The contact sheet was showing the pictures far
+bigger than any kid will see them. The real Play card is `PlayGridCard` in
+`src/BuildableKids.jsx`: a white tile on the cream page with a 4:3 picture, a colour dot,
+the name in Fredoka 15 and the category in 11px uppercase. The page caps at 940px and lays
+out four columns with a 12px gap, so a tile picture is **226 x 170 on a laptop**, 232 x 174
+on a tablet, and **175 x 131 on a phone**. `/tile-shots` now opens with an exact copy of
+that card at all three widths. Castle Guard survives the shrink — castle, road, little
+figures all still read. Survival does not: at 226px the hero is one small thing in a wide
+sky and the picture reads as scenery. `?zoom=` was added to photo mode and
+`--zoom` to the camera so a tighter crop can be tried without editing a game, and a
+`survival-z2.9` variant sits on the page beside the default. Worth carrying into TS1-TS3:
+judge every shot at 226px, never at full size.
+
+**One mismatch to settle.** Survival's signature colour is `#8A6BFF` in `GAME_CATALOG`
+(the dot beside its name) but `#7C4DFF` in `public/survival/manifest.json`, which is what
+the wash uses. Two purples, close but not the same. Whichever Mike prefers, the two should
+agree before TS1.
+
+**Open for Mike, on `/tile-shots`.** Wash or no wash. Real screenshot or the AI
+painting. Both variants are on the page.
+
+**QA.** `node qa-all.mjs`: ALL CHECKS PASS — 46 harnesses, 10 browser-only ones skipped,
+and the serving check green (the four new routes sit ahead of the catch-all).
+`qa-survival.mjs` and `qa-castleguard.mjs` both pass, so photo mode did not disturb
+normal play; a separate no-flag boot check confirms both games still open on their
+start screen with no console errors and `TILESHOT_READY` unset.
+
 ## 2026-09-07 (FM4): the farm's playtest bugs, and a wish list you can read
 
 **Phase FM, card FM4.** Everything here came out of one playtest: Mike's daughter on a
