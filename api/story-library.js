@@ -68,6 +68,21 @@ const CHARACTERS = [
   ["mermaid", "Marina the Mermaid", "a cute little mermaid child with a shimmering teal tail and a seashell top, friendly, full body"],
   ["unicorn", "Sparkle the Unicorn", "a cute little rainbow unicorn with a soft pastel rainbow mane and tail and a tiny golden horn, friendly, full body"],
   ["builder", "Bo the Builder", "a cheerful little kid builder wearing a yellow hard hat and blue tool-belt overalls, friendly, full body"],
+  // ---- Hop Heroes cast (public/play.html). NOT storybook portraits: these are
+  // PLATFORMER HEROES. Every prompt says side view, mid-stride, facing right, because
+  // the engine flips the sprite by travel direction and a front-facing portrait flipped
+  // looks like a sticker sliding along the ground. Bold silhouettes so they still read
+  // at about 60px, and eight distinct colour signatures so no two look alike on the
+  // chooser row.
+  ["hh-scout",    "Rowan the Scout",    "a cheerful young child explorer scout in a forest-green shirt with a bright red neckerchief and a small canvas backpack, SIDE VIEW running mid-stride facing right, one knee up and arms swinging, bold clear silhouette, full body"],
+  ["hh-pilot",    "Nova the Pilot",     "a cheerful young child pilot in a tan bomber jacket with flight goggles pushed up on the forehead and a long orange scarf streaming behind, SIDE VIEW running mid-stride facing right, bold clear silhouette, full body"],
+  ["hh-trekker",  "Juno the Trekker",   "a cheerful young child jungle explorer in a khaki shirt and a wide tan sun hat, binoculars bouncing on a strap, SIDE VIEW running mid-stride facing right, bold clear silhouette, full body"],
+  ["hh-caver",    "Finn the Caver",     "a cheerful young child cave explorer in a bright yellow rain jacket and a white helmet with a glowing headlamp, SIDE VIEW running mid-stride facing right, bold clear silhouette, full body"],
+  ["hh-skater",   "Remy the Skater",    "a cheerful young child skater in a purple helmet, teal hoodie, knee and elbow pads, SIDE VIEW running mid-stride facing right, bold clear silhouette, full body"],
+  ["hh-astro",    "Sol the Astronaut",  "a cheerful young child astronaut in a puffy white spacesuit with a blue visor tipped back and a small round backpack, SIDE VIEW running mid-stride facing right, bold clear silhouette, full body"],
+  ["hh-snowkid",  "Wren the Snow Kid",  "a cheerful young child snow explorer in a bright red parka with a furry hood and chunky boots, SIDE VIEW running mid-stride facing right, bold clear silhouette, full body"],
+  ["hh-tinkerer", "Bex the Tinkerer",   "a cheerful young child inventor in denim overalls with a leather tool belt and a little propeller beanie, SIDE VIEW running mid-stride facing right, bold clear silhouette, full body"],
+
   // --- Croc Tot game cast (added for croc-engine.html) ---
   ["croctot",          "Croc Tot",          "a cute happy little green crocodile-shaped tater tot character with tiny arms, big friendly eyes, a little snout, standing, full body"],
   ["homework-monster", "Homework Monster",  "a big goofy floating monster made of a messy stack of homework papers and a pencil, with a grumpy but silly cartoon face, friendly-funny not scary, full body"],
