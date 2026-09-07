@@ -1,3 +1,36 @@
+## 2026-09-07 — PB-FIX: the bar fits the phone, and the game points
+
+**Shipped.** The two faults Mike hit playing on a phone.
+
+**The HUD.** `public/buildable-hud.js` (shared, so every game gets it): the right-hand
+group of chips never shrinks and never clips, it wraps rather than overflows, and it stays
+right-aligned so the last chip is whole; the left-hand title is what gets trimmed. New
+small-phone tier under 430px, and new icon-plus-number chips (`{glyph:"paper", text:"12"}`),
+drawn SVG, no emoji. Paper Route switches to them below 620px and drops the "carrying" chip
+there, since the banner already says it. Turning the phone rebuilds the bar.
+
+**The guidance layer.** `guidance()` in `public/paper-route-engine.html` is one function the
+renderer draws from and the robot reads: a bouncing yellow arrow over the next undelivered
+subscriber (clear above the flag), a pulsing gold ring on that mailbox once it is in throw
+range, and "Tap to throw!" until `PREFS.throws` reaches 2. Raised flags are drawn out of
+scale with a dark edge and a pale halo, the target flag biggest. Overlays only: no timers,
+no fail states.
+
+**QA.** `qa-paper-route.mjs` extended: frame-by-frame guidance checks, nudge retirement, and
+static checks on the HUD wiring. New `qa-paper-route-hud.mjs` — real Chromium, serves
+`public/` itself, 320/390/430 standalone and in-shell, measures every chip. Both green.
+`node qa-all.mjs` green.
+
+**A call I made.** The browser measurement is a SEPARATE harness rather than folded into
+`qa-paper-route.mjs`, because `qa-all.mjs` skips any file containing the word "playwright"
+unless `--with-browser` is passed. Folding it in would have quietly dropped Paper Route out
+of the default release gate. This matches the `qa-skyflyer-hud.mjs` precedent.
+
+**Remains.** PB4 (the watercolour look pass) is untouched, as instructed. `soon: true` on
+the Paper Route tile is untouched. The look mock the brief names,
+`mocks/paper-route-look-mock.html`, does not exist in the repo, so the guidance layer was
+built from the written description.
+
 ## 2026-09-07 — AC8: one smart bar, and a Build menu made of pictures
 
 **Shipped.** Mike picked Option C from the HUD mock. Every element now assumes the player
