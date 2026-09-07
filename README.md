@@ -6,6 +6,135 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## PB-FIX — Paper Route: a bar that fits the phone, and a game that points (September 7 2026)
+
+Mike played the shipped game on his phone and hit two things that made it unclear. Both
+are fixed, and neither touched the look.
+
+**The top bar overflowed the phone.** The four chips (Maple Street, Papers, Delivered,
+Coins) did not fit 390px once the app shell had taken a column off each end for Home and
+Sound, so the coin count was cut off the right edge and the street name was clipped on the
+left. This is the shared `buildable-hud.js`, so the fix is shared too: the numbers group
+now never shrinks and never clips, it wins the space fight and stays right-aligned so the
+last chip is always whole, and the title is the thing that gets trimmed instead. There is
+a new small-phone tier below 430px, and the shared HUD learned an icon-plus-number chip
+(drawn geometry, no emoji), so on a phone Paper Route shows a paper icon and 12, a mailbox
+icon and 0/6, and the gold coin and the balance. Measured, not guessed: at 320, 390 and
+430 CSS pixels, standalone and inside the shell's iframe, everything sits on one row and
+the whole coin count is on screen.
+
+**Nothing told a four-year-old what to do.** The game now points. A big bouncing yellow
+arrow floats above the next undelivered subscriber mailbox, clear of the flag rather than
+over it, and retargets as each paper lands. A pulsing gold ring wraps that mailbox once it
+is inside throw range, so the tap timing teaches itself. A short "Tap to throw!" sits above
+the rider until two papers have landed, then never appears again on that device. And the
+red flags, which read small and far, are drawn deliberately out of scale: the target flag
+is biggest, every raised flag gets a dark edge and a pale halo, so it never disappears into
+the house behind it. These are overlays only. No timers, no fail states, the no-fail law
+is untouched.
+
+**QA.** `qa-paper-route.mjs` now rides the whole street frame by frame and proves the arrow
+exists on every frame a red flag is still owed, never points behind the rider, never leaves
+the screen, and that the gold ring appears exactly when a tap would reach the box. It also
+proves the nudge retires at the second landed paper and stays retired. The bar itself needs
+real CSS layout at a real phone width, so it gets its own browser harness,
+`qa-paper-route-hud.mjs`, modelled on `qa-skyflyer-hud.mjs`: it serves `public/` itself,
+opens the engine in Chromium at 320/390/430 both standalone and in an iframe, and measures
+every chip against the canvas. It is kept separate on purpose, because a harness containing
+the word "playwright" is skipped by `qa-all.mjs` unless `--with-browser` is passed, and
+folding it into `qa-paper-route.mjs` would have dropped the whole game out of the default
+gate.
+
+The `soon: true` gate on the tile is untouched.
+
+## TS1-TS3 — the whole catalogue gets a real tile shot (September 7 2026)
+`scripts/tile-shot.mjs`, `public/tile-shots.html`, `public/tile-shots/`
+
+Nineteen games photographed, up from two, with no game code changed. The camera learned to
+shoot a game's own `?screen=demo` attract mode (thirteen games), and to drive the control
+surface a game already exposes to its QA harness (`BUILDABLE_GAME.moves/_play/_draw`,
+`TENNIS_GAME._begin/_step/_draw`) for four more that have no attract mode. The hand-posed
+`?tileshot=1` mode from TS0 is now the exception, not the plan.
+
+Zoom needs no engine help either: engines size their world by the window's ASPECT, not its
+pixel size, so the camera shoots in a window scaled up by the zoom and crops the middle
+back out — a true crop at full resolution. Framing is per-game `zoom` and `focus`.
+
+`/tile-shots` renders `/tile-shots/shots.json`, which the camera merges on each run, so
+adding a game to its table puts it on the page with nothing to edit. The page opens with
+the real Play grid card at 226x170 and 175x131, because that is the only size that matters.
+
+Not working, and not the camera's fault: **Tennis** (washed-out court art, logged as QA30),
+**Riley's Garden** (the game itself is a fairy, a bee and an empty field), and **Chess**
+(no attract mode, no QA hook, no deep link — it needs a photo mode of its own).
+
+---
+
+## TS0 — the Tile Shots rig, proved on Survival and Castle Guard (September 6 2026)
+`public/buildable-tileshot.js`, `scripts/tile-shot.mjs`, `public/tile-shots.html`,
+`public/survival-engine.html`, `public/castle-guard.html`, `vercel.json`
+
+Every game tile shows an AI painting today. TS replaces those with a staged
+screenshot of the real game, taken by the game itself. TS0 builds the one-time rig
+and proves the look on one dark world and one bright world before eighteen more
+games get one.
+
+**Photo mode.** `?tileshot=1` on a game. It borrows the existing attract-mode
+plumbing (silent, all input ignored) but instead of playing it warms up for about
+two seconds so every sprite has really arrived, then poses the recipe and freezes:
+hero just left of centre, three foes coming in from the right, one thing caught
+mid-flight, one treat, no HUD, no words. Every pixel is the game's own art file.
+
+**The shared rig** is `buildable-tileshot.js`: the flag, the signature-colour wash
+rising from the bottom, a camera that crops in on the action, a "hold still" signal
+for the shutter, and a chrome-hider that removes everything on the page that is not
+the canvas. That last one matters — the first shots came out with the shared Home
+and Sound buttons baked into them. TS1-TS3 add a pose per game and reuse all of it.
+
+**The camera** is `scripts/tile-shot.mjs`. It serves `public/` itself and never
+touches the network, so it runs anywhere, and every shot is deterministic: the
+games freeze their clock in photo mode, so the coin is caught face-on rather than
+edge-on and a re-run gives the same picture. Output is exactly 1200x900. It writes
+PNGs and nothing else — swapping a tile's live art is a separate step that only
+happens after approval.
+
+**The contact sheet** is `/tile-shots`: each new picture beside the AI painting it
+would replace, plus how it reads at real tile size. Nothing on the live site has
+changed.
+
+**How busy a tile should be.** The first proof followed the recipe literally (three
+foes, one thing mid-flight) and read as too quiet. The poses now stage a real fight:
+six foes and a sparkle volley on Survival, seven goblins and six arrows on Castle
+Guard. Worth knowing for TS1-TS3 — the recipe's counts are a floor, not a target.
+Effects that did not survive: a second lightning arc and a nova ring, which read as
+white ropes and a geometric circle, and a particle explosion big enough to hide the
+foe underneath it.
+
+**Explosions were tried and rejected.** The shared FX library holds a nine-frame cartoon
+explosion (`public/fx/explode0-8.png`, Kenney CC0) that no game has ever used. A real
+`BM.blast` was built from it and wired into both games' kill moments; Mike judged it wrong
+for the product and it was reverted in full. Do not reach for it again in TS1-TS3.
+
+**Castle Guard's effects were genuinely broken.** It had never called `BM.useTextures`, so
+every poof, spark and burst in the game fell back to plain coloured dots. It now registers
+the same pack as the other engines, and `poofBaddie` tints gold instead of a pale
+grey-green that was invisible on grass. A fix to normal play, not to the photo.
+
+**A tile is small: judge every shot at 226px.** The real Play card is `PlayGridCard` in
+`src/BuildableKids.jsx` — a 4:3 picture on a white tile, four columns inside a 940px page,
+so the picture is 226 x 170 on a laptop and 175 x 131 on a phone. `/tile-shots` opens with
+an exact copy of that card at all three widths. Castle Guard survives the shrink; Survival
+at full size reads as scenery, so `?zoom=` (photo mode) and `--zoom` (camera) were added to
+try a tighter crop without editing a game.
+
+**Two findings for the rollout.** The wash reads well on Space Survival (purple over
+a sunset sky) and all but disappears on Castle Guard (green over grass), so wash
+strength is a per-game question, not one setting. And tower defence has no coin on
+the field, so Castle Guard has no treat in its picture; its coins live in the info
+bar, which the photo hides.
+
+---
+
 ## FM4 — the farm's playtest bugs, and a wish list a child can read (September 7 2026)
 `public/skyflyer-farm.html`, `src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-skyflyer.mjs`.
 Phase **FM**, card **FM4**, branch `claude/fm4-farm-bugs-wishlist-cpciu3`. Everything here
@@ -113,6 +242,41 @@ Paper Route is now in the editor catalog and in `qa/qa-map.mjs`, so editing its 
 through the editor and a save is gated by its own robot. QA: 113 checks green, `node
 qa-all.mjs` green, both streets played in real Chromium. Not flagged deployed: the live
 phone check could not run from this session. Ref: SESSION-LOG.md same date.
+
+## AC8 — Ant City: one smart bar, and a Build menu made of pictures (September 7 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`.
+Phase **AC**, card **AC8**, branch `claude/ac7-clarity-rework-antcity-bqkazl`.
+
+Mike picked Option C from the HUD mock. The rule for every element: **assume the player
+cannot read.** Information is bars, icons, pictures and countable things; words are tiny
+labels on top of pictures, never the message.
+
+**One slim bar** replaces the row of need words over the row of word buttons. On the left,
+four little vertical meters with a picture each — a green apple, a blue drop, a pink moon,
+a gold egg — and the one running out wiggles and wears a small red tag, so the thing that
+needs you is the thing that moves. In the middle, one big button carrying the tool in your
+hand: its picture, its name, and two or three words saying where to use it. On the right, a
+round button that opens a sheet of four picture cards and hides again the moment one is
+picked.
+
+**The tool really decides now.** The oldest confusion in this game was that a tap could
+mean four things and nothing said which. The big button states it at all times, and a tap
+in the wrong place is never silent: it says which picture to swap to. The guide teaches the
+swap, because it is the one genuinely new thing to learn — tap the round button, then pick
+the apple — so the intro is four steps instead of three.
+
+**The Build menu is pictures.** Four cards in a 2x2 grid, each a little scene of what the
+room does: eggs in a pink room, a pile of berries, an ant asleep under a Zz, mushrooms
+growing. What a room costs is a row of apples to count, not a number to read; a room you
+cannot afford greys out and flashes its apples; closing is a big orange X. Picking a room
+still lights up every spot it could go, exactly as AC7 left it.
+
+Presentation only: one hint line, food that only arrives when an ant carries it in, ants
+that walk to marked targets and park when idle, and straight into the colony are all
+untouched. QA drives the new controls the way a kid does — press the round button, press a
+picture card, then tap the world — in both a mouse and a touch profile, and asserts the old
+text row is gone, that the cost is countable apples, and that nothing spills off a 360px
+phone. `node qa-all.mjs` green. Ref: SESSION-LOG.md same date.
 
 ## AC7 — Ant City clarity rework: see what you do, know what to do (September 7 2026)
 `public/antcity-engine.html`, `public/antcity/manifest.json`, `qa-antcity.mjs`,
