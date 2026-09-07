@@ -7079,9 +7079,10 @@ function reactFishStep(dt, t){
   // jumps every ~0.8s of low flight over water, and the islands world is mostly
   // water, so a 0.6s sound gate meant a splash every single second for the whole
   // flight, a carpet of noise, which is what it sounded like. The jumps stay;
-  // only about a third of them speak, never closer than 7s apart and quieter,
-  // so a splash lands maybe twice a minute and still reads as "whoa, a fish".
-  if(t - REACT.lastReactSfx > 7 && Math.random() < 0.35){
+  // only about a third of them speak, never closer than 15s apart and quieter.
+  // Measured on the live autopilot: 7s gave 7 splashes a minute, still a beat;
+  // 15s gives 3, which is the "whoa, a fish" moment the rule was written for.
+  if(t - REACT.lastReactSfx > 15 && Math.random() < 0.35){
     REACT.lastReactSfx = t; sfx("react", {vol: 0.22 + Math.random()*0.1});
   }
   // find the first dormant fish and wake it up (visual side; the pool only
