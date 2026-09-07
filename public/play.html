@@ -126,10 +126,10 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   },
   palette: { ground:"#6b9b4a", groundTop:"#8fc46a", dirt:"#5a4332", coin:"#ffd23f", obstacle:"#7a4a86", enemy:"#b8477e", flag:"#ffd23f", hud:"#ffffff" },
   levels: [
-    { name:"Whispering Woods", world:"enchanted-forest", speed:3.2, length:230, gapChance:0.58, gapMax:2, obstacleChance:0.26, enemyChance:0.30, lowChance:0.20, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.8, bossHp:3 },
+    { name:"Whispering Woods", world:"enchanted-forest", speed:3.2, length:230, gapChance:0.58, gapMax:2, obstacleChance:0.26, enemyChance:0.30, lowChance:0.20, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.75, vineChance:0.42, bossHp:3 },
     { name:"Frostpine Hollow", world:"snowy-village",    speed:3.4, length:230, gapChance:0.60, gapMax:2, obstacleChance:0.30, enemyChance:0.32, lowChance:0.20, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.80, vineChance:0.4, bossHp:3 },
     { name:"Sunbaked Dunes",   world:"desert-oasis",     speed:3.6, length:235, gapChance:0.62, gapMax:2, obstacleChance:0.32, enemyChance:0.34, lowChance:0.22, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.85, vineChance:0.3, bossHp:3 },
-    { name:"Sugarplum Peaks",  world:"candy-land",       speed:3.8, length:240, gapChance:0.64, gapMax:2, obstacleChance:0.34, enemyChance:0.36, lowChance:0.22, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.90, vineChance:0.5, bossHp:4 },
+    { name:"Sugarplum Peaks",  world:"candy-land",       speed:3.8, length:240, gapChance:0.64, gapMax:2, obstacleChance:0.34, enemyChance:0.36, lowChance:0.22, coinChance:0.34, powerupChance:0.05, platformChance:0.5, starCount:3, movingPlatChance:0.90, vineChance:0.35, bossHp:4 },
   ],
   powerups: ["shield","magnet","spring","star"],   // the kid's chosen set; engine only spawns from here
 };
@@ -376,6 +376,14 @@ function coinArc(coins, cx, baseY, v, vy0, n){
     coins.push({ x: cx + v*t, y: baseY+dy, got:false }); }
 }
 function mkSwing(ax, rnd){ return {ax, ay:GROUND_Y-230, len:140+rnd()*40, ang:(rnd()<0.5?-1:1)*(0.5+rnd()*0.3), angV:0, grabbed:false}; }
+// One rope per stretch. Without a spacing rule the recipe happily hung five within a
+// screen width of each other, and a screen of ropes reads as scaffolding rather than
+// as jungle. 420 is a bit under half a screen, so you can usually see one and only one.
+const VINE_GAP=420;
+function addSwing(swings, ax, rnd){
+  for(const sw of swings) if(Math.abs(sw.ax-ax)<VINE_GAP) return false;
+  swings.push(mkSwing(ax, rnd)); return true;
+}
 function buildLevel(lv, idx){
   const rnd=mulberry(1000+idx*97);
   const ground=[], obstacles=[], enemies=[], coins=[], lowBars=[], decos=[], powerups=[], platforms=[], bounces=[], stars=[], swings=[], blocks=[], pipes=[];
@@ -450,7 +458,7 @@ function buildLevel(lv, idx){
               ground.push({x0:segStart, x1:tx, y:GROUND_Y});
               const maxGap=Math.max(1, Math.min(lv.gapMax, safeGapTiles));
               const gapTiles=1+Math.floor(rnd()*maxGap);
-              if((lv.vineChance||0)>0 && rnd()<0.6) swings.push(mkSwing(tx + gapTiles*TILE*0.5, rnd));   // optional vine to swing the pit (ground jump still clears it)
+              if((lv.vineChance||0)>0 && rnd()<0.6) addSwing(swings, tx + gapTiles*TILE*0.5, rnd);   // optional vine to swing the pit (ground jump still clears it)
               coinArc(coins, tx-takeGap, GROUND_Y-30, topV, JUMP, 6);        // an arc over EVERY gap
               i+=gapTiles; segStart=i*TILE; lastHaz=i; lastFresh=gapStart; lastAny=gapStart; arcOpen=true; continue;
             }
@@ -499,9 +507,13 @@ function buildLevel(lv, idx){
           // bulk of the level's coins now sit on the floor where a running kid meets them.
           coins.push({x:j*TILE+wT*TILE/2, y:py-30, got:false});
         }
-        if(rnd() < (lv.vineChance||0)){                           // more vines, sometimes a 2-vine chain to swing across
-          swings.push(mkSwing(pf.x+pf.w*0.5, rnd));
-          if(rnd()<0.45) swings.push(mkSwing(pf.x+pf.w*0.5 + TILE*(2.4+rnd()*1.4), rnd));
+        // Vines hang BESIDE a platform, never through the middle of it. Anchoring at
+        // pf.x+pf.w*0.5 put a rope straight through every platform it belonged to, and
+        // the optional second one landed right next to the first, so a screen with three
+        // platforms grew five ropes and read as scaffolding rather than as jungle.
+        if(rnd() < (lv.vineChance||0)){
+          const side = rnd()<0.5 ? -1 : 1;
+          addSwing(swings, pf.x + pf.w*0.5 + side*(pf.w*0.5 + TILE*(1.1+rnd()*0.9)), rnd);
         }
         if(tier===2 && stars.length<(lv.starCount||3) && rnd()<0.7) stars.push({x:j*TILE+TILE/2, y:py-36, got:false});
         else if(rnd()<0.35) powerups.push({x:j*TILE+TILE/2, y:py-36, kind:POOL[Math.floor(rnd()*POOL.length)], got:false});
@@ -841,7 +853,15 @@ function botThink(){
     for(const o of L.obstacles){ const d=o.x-(player.x+24); if(d>2 && d<66*K){ doJump(); return; } }
     for(const e of L.enemies){ if(!e.dead){ const d=e.x-(player.x+24); if(d>2 && d<58*K){ doJump(); return; } } }
   } else {
-    jumpHeld=true;
+    // A low bar is ducked, not jumped, so arriving at one in mid-air is unrecoverable.
+    // Holding the jump button stretches the hop (variable jump height), so when a bar is
+    // coming up the bot lets go instead: a shorter arc puts it back on the ground with
+    // room to slide. Remy found this by being 18% faster and reaching a bar at the end
+    // of world 4 while still falling.
+    let barAhead=false;
+    { const px=player.x+24, look=190*Math.max(1,Math.abs(player.vx)/RUN_BASE);
+      for(const b of L.lowBars){ const d=b.x-px; if(d>0 && d<look){ barAhead=true; break; } } }
+    jumpHeld=!barAhead;
     // AIRBORNE SAVE. The bot used to hold the jump button and hope. That made the
     // whole always-clearable guarantee depend on the ground-jump constants below
     // being exactly right for one speed: a 6% faster hero jumped a fraction early,
@@ -1272,6 +1292,7 @@ function draw(){
   // climbable platforms
   // HH2: platforms are grass-topped BLOCKS with a body you can see, not thin sticks —
   // so at a glance a kid can tell a thing they can stand on from a thing in the background.
+
   for(const pf of L.platforms){ const x=pf.x-camX; if(x+pf.w<-30||x>W+30)continue; const bh=30;
     ctx.fillStyle="rgba(0,0,0,.15)"; rrect(x+3,pf.y+5,pf.w,bh,9); ctx.fill();          // drop shadow
     ctx.fillStyle="#6b4d34"; rrect(x,pf.y,pf.w,bh,9); ctx.fill();                       // dirt body
