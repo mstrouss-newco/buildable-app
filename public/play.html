@@ -211,7 +211,17 @@ try{ if(FEEL){ FEEL.setFx(fx); FEEL.configure({ accent:"#8fc46a", feel:{ pace:"n
 const SFX_MAP={ select:"hop_jump", coin:"hop_coin", collect:"hop_coinrun", levelup:"hop_star",
                 powerup:"hop_power", pop:"hop_bonk", hit:"hop_stomp", shoot:"hop_bounce",
                 hurt:"hop_hurt", win:"hop_win", celebrate:"hop_flag", sparkle:"hop_star" };
-try{ if(window.BuildableAudio) window.BuildableAudio.configure({ sfxBase:"/api/sfx?s=", map:SFX_MAP }); }catch(e){}
+// Where each clip should SIT in the mix, not how loud it happened to be generated.
+// Measured peaks on the freshly generated set ran from 0.017 (hop_bonk, inaudible) to
+// 1.000 (hop_stomp, clipping), so the levelling in buildable-audio.js scales each one
+// to the number below as it decodes. The numbers are a play-frequency ladder: a coin
+// fires about 290 times in a level and a jump nearly as often, so they sit low; the
+// flag and the win happen once, so they sit high. That ladder is most of what
+// "abrasive" meant.
+const SFX_PEAKS={ hop_jump:0.30, hop_land:0.22, hop_coin:0.22, hop_coinrun:0.40,
+                  hop_star:0.60, hop_power:0.55, hop_bounce:0.45, hop_bonk:0.40,
+                  hop_stomp:0.45, hop_hurt:0.45, hop_flag:0.75, hop_win:0.85 };
+try{ if(window.BuildableAudio) window.BuildableAudio.configure({ sfxBase:"/api/sfx?s=", map:SFX_MAP, peaks:SFX_PEAKS }); }catch(e){}
 // name -> the shared palette. Every one of these now resolves to a hop_* clip through
 // SFX_MAP above, INCLUDING land, which used to be the only event still on the built-in
 // synth (a bare 190Hz sine) because nothing in the shared palette fitted it.
