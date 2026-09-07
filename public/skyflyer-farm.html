@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Sky Flyer — Farm corner (FM4)</title>
+<title>Sky Flyer — Farm corner (FM5)</title>
 <!--
   FM1 — the farm corner of Sunny Islands, built in the Sky Flyer engine style.
   Standalone scene: same three.min.js, same hand-built vertex-colored models
@@ -95,6 +95,41 @@
       over the crate, and a drawn customer face waiting on the card.
     - Mike's numbers: seeds 4/3/2, item values 4/3/2/6/7/8, and an order pays
       three times the worth of what it asked for.
+
+  FM5 — THE TOWNSHIP LESSONS. Mike's kids love Township, and the reason is
+  that it is a place they own that keeps changing and is waiting for them. The
+  farm used to forget everything on reload, so nothing could stick:
+    - IT REMEMBERS HER. The whole farm — patches, animals, the stack, the
+      pantry, the live order, the presents — saves per kid to Supabase
+      (farm_saves, via /api/farm-save) with localStorage underneath it.
+      Best-effort and silent: the game runs at full speed off the local copy
+      and syncs in the background, a save error is invisible to the kid, and
+      THERE IS NO RESET a child can reach.
+    - IT GROWS WHILE SHE IS AWAY. A deterministic catch-up finishes what was
+      started, capped by its own shape: a field cannot be more than fully
+      ready and a fed animal gives at most one thing while she is gone.
+    - AND SOMETHING IS WAITING. Away more than ten minutes with anything
+      finished and a BASKET sits by the door holding it, the items floating
+      over it in colour. Walk to it and the lot whooshes onto the stack on the
+      FM3 unload treatment. Nothing else on the farm moves until she gets
+      there, so the first ten seconds of every visit are a reward.
+    - NEVER IDLE. whatCanSheDoNow() counts what she could do THIS SECOND, and
+      if that would ever be zero the farm quietly finishes whatever is closest
+      to done before she notices. An order that cannot be progressed is a bug
+      and qa-farm asserts it never happens.
+    - THE NEXT THING IS ALWAYS VISIBLE. A fixed ladder of eight presents, one
+      shown at a time as a wrapped box with its price under it: pumpkin seed
+      130, farm dog 180, another row 240, pig 300, mill 380, bees 460,
+      strawberry 560, tractor 700. Opening one is the biggest celebration in
+      the game — confetti, the plane over the top, the thing hopping out of
+      the box. FM6 to FM8 build the things themselves; until then an opened
+      present marks the unlock owned and hops a third of its coins back out.
+    - SMALL CELEBRATIONS, CONSTANTLY. Soil puffs on planting, a chime the
+      moment a crop is takeable, hearts over a fed animal, a sparkle when an
+      egg lands. All under half a second, all through the shared Feel Kit,
+      all silent when bk_muted is set.
+  NO TIMERS ON SCREEN, still. Nothing in FM5 draws a countdown and QA greps
+  for it. Growth is a shape changing, exactly as it always was.
 
   FM3 also closed the four things FM1 left open: the farm now has a door on the
   Play page, the coins are the SHELL'S shared wallet (not a local variable), the
@@ -267,6 +302,15 @@
     font-weight:800;font-size:14px;color:#8a6a12}
   #shopCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
     border:none;background:transparent;cursor:pointer}
+  /* FM5 — THE NEXT PRESENT. It sits above the duck and it is the loud one:
+     a warm wrapped box on its own paper-coloured tile, price under it, and
+     nothing at all shown about what comes after it. */
+  #shopCard .buy + .buy{margin-top:10px}
+  #shopCard .buy.present{background:#fdf0ef;border-color:#f0c6c2}
+  #shopCard .buy.present .art{height:104px}
+  /* the reveal's confetti — the one moment allowed to cover the whole screen */
+  .confetti{position:absolute;left:0;top:0;width:10px;height:15px;border-radius:2px;
+    pointer-events:none;z-index:12;will-change:transform,opacity}
 
   /* Joystick — a soft touch pad kids can use, and drag-anywhere on the world
      also works. Kept clear of the top strip (HUD-AND-NAV rules). */
@@ -346,7 +390,8 @@
         <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
       </svg>
     </button>
-    <div class="title">A new friend for the coop</div>
+    <div class="title">Shop</div>
+    <div class="buy present" id="buyPresent"></div>
     <div class="buy" id="buyDuck"></div>
   </div>
 </div>
@@ -1727,6 +1772,9 @@ function onFed(A, now){
   A.fedAt=now;
   A.happy=0.9;                 // a bounce, so the feed lands with a reaction
   hideWant(A);
+  // FM5 — and a puff of hearts, because being fed is the nicest thing that
+  // happens to anyone on this farm.
+  heartPuff(A.x, (ANIMAL_KINDS[A.kind].wantAt||1.4)*0.8, A.z);
 }
 
 // ------------------------------------------------------------- the produce
@@ -1753,7 +1801,7 @@ function produceSpot(A,K){
   return {x:A.x, z:A.z};      // at her feet: always somewhere the kid can reach
 }
 
-function spawnProduce(A){
+function spawnProduce(A, quiet){
   var r=ITEM(A.gives); if(!r) return;
   var K=ANIMAL_KINDS[A.kind];
   var m=hbMesh(hbBake(r.parts(A.kind==="cow"?0.95:0.80)));
@@ -1771,6 +1819,9 @@ function spawnProduce(A){
   scene.add(mh); A.halo=mh;
   A.magnet=null;
   A.state="ready";
+  // FM5 — it does not just appear: it lands. (Silent on a catch-up load, or a
+  // farm restored after a long time away would go off like a fireworks box.)
+  if(!quiet){ sparklePuff(px,0.55,pz,10); sfx("sparkle"); A.happy=0.55; }
 }
 function collectProduce(A){
   pushOntoStack(A.gives, new THREE.Vector3(A.produceX, 0.8, A.produceZ));
@@ -2013,7 +2064,7 @@ function buildPlaneModel(){
 // The plane's whole trip, as one little state machine. Every leg is seconds,
 // and the WHOLE THING is 13 seconds — nothing in this farm has a timer over a
 // minute, and a payoff a kid has to wait out is not a payoff.
-var PLANE_LEGS={ taxi:2.2, roll:2.4, climb:2.6, away:1.4, back:2.8, park:1.6 };
+var PLANE_LEGS={ taxi:2.2, roll:2.4, climb:2.6, away:1.4, back:2.8, park:1.6, flyby:2.6 };
 var plane=null;
 var PL={ phase:"parked", t:0, pay:0 };
 // The camera sits 22 units behind the kid and looks down, so anything much past
@@ -2053,6 +2104,25 @@ function updatePlane(dt){
   var startZ=RUNWAY.z+RUNWAY.halfL-2.0;      // hold-short end
   var endZ=RUNWAY.z-RUNWAY.halfL+2.0;        // where the wheels leave the grass
 
+  // FM5 — THE FLY-BY. No cargo and no payout: the plane crosses the sky over
+  // a present being opened because that is the farm's biggest noise and the
+  // reveal has earned it.
+  if(PL.phase==="flyby"){
+    u=clamp(PL.t/L.flyby,0,1);
+    var F=PL.fb||{x0:-30,x1:30,z:0};
+    plane.position.x=lerp(F.x0,F.x1,u);
+    plane.position.z=F.z;
+    plane.position.y=7.5+Math.sin(u*Math.PI)*1.8;
+    plane.rotation.x=0;
+    plane.rotation.y=Math.PI/2;
+    plane.rotation.z=Math.sin(u*Math.PI*2)*0.20;
+    if(u>=1){
+      PL.phase="parked"; PL.t=0;
+      plane.position.set(PARK.x,0,PARK.z);
+      plane.rotation.set(0,PARK.yaw,0);
+    }
+    return;
+  }
   if(PL.phase==="taxi"){
     u=clamp(PL.t/L.taxi,0,1);
     plane.position.x=lerp(PARK.x, RUNWAY.x, u);
@@ -2175,11 +2245,18 @@ function paintCustomer(){
 // three crops (a patch is always there to plant), and it is kept in
 // localStorage so a reload does not forget what a kid has already carried.
 // Bread and cheese in a later phase join by the same one rule.
+// FM5 tightened it once more: carried once is necessary but not sufficient.
+// A kind must ALSO be something the farm can put in her hands right now — a
+// crop (a patch is always plantable and a seed is free when she is broke), a
+// thing an animal LIVING HERE gives, or a thing already on the stack. An
+// order she cannot progress is a bug, and qa-farm asserts it can never happen.
 function orderableKinds(){
-  var out=[], i;
+  var out=[], i, k;
   for(i=0;i<COLLECT_ORDER.length;i++){
-    if(COLLECTED[COLLECT_ORDER[i]] && ITEM(COLLECT_ORDER[i])) out.push(COLLECT_ORDER[i]);
+    k=COLLECT_ORDER[i];
+    if(COLLECTED[k] && ITEM(k) && producibleNow(k)) out.push(k);
   }
+  if(!out.length) out.push("corn");     // the floor: there is always a patch
   return out;
 }
 
@@ -2416,7 +2493,10 @@ function updateCrate(dt){
     crateBob*=0.86;
     crateObj.position.y=crateBob;
   }
-  if(!order || order.sent || !crateNear()){ unload.running=false; unload.run=0; return; }
+  // FM5 — the welcome-back basket comes FIRST. Nothing else on the farm
+  // moves until she has walked to it, so the first ten seconds of a visit are
+  // hers and are a reward.
+  if(basketWaiting() || !order || order.sent || !crateNear()){ unload.running=false; unload.run=0; return; }
   if(!unload.running){ unload.running=true; unload.gap=0; unload.run=0; }
   unload.gap-=dt;
   if(unload.gap>0) return;
@@ -2491,35 +2571,62 @@ var DUCK_SVG='<svg width="96" height="96" viewBox="0 0 96 96">'+
   '<circle cx="29" cy="33" r="2.4" fill="#241E1A"/>'+
   '<path d="M40 78 L40 84 M52 78 L52 84" stroke="#F0A62E" stroke-width="4" stroke-linecap="round"/>'+
   '</svg>';
+var buyPresentEl=document.getElementById("buyPresent");
+function priceBadge(n){
+  return '<div class="price"><svg width="15" height="15" viewBox="0 0 26 26">'+
+    '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
+    '</svg>'+n+'</div>';
+}
+// FM5 — ONE PRESENT, AND ONLY THE NEXT ONE. What comes after it is not a list
+// to be daunted by, it is a surprise. The duck FM3 built stays underneath the
+// present until she has it, because a thing that already works is never taken
+// away to make room for a new idea.
 function renderShop(){
-  var afford=walletBalance()>=DUCK_PRICE;
-  buyDuckEl.className="buy"+(afford?"":" locked");
-  buyDuckEl.innerHTML=
-    '<div class="art">'+DUCK_SVG+'</div>'+
-    '<div class="price"><svg width="15" height="15" viewBox="0 0 26 26">'+
-      '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
-      '</svg>'+DUCK_PRICE+'</div>';
+  var U=nextUnlock();
+  if(buyPresentEl){
+    buyPresentEl.style.display = U ? "" : "none";
+    if(U){
+      buyPresentEl.className="buy present"+(walletBalance()>=U.price?"":" locked");
+      buyPresentEl.innerHTML='<div class="art">'+PRESENT_SVG+'</div>'+priceBadge(U.price);
+    }
+  }
+  if(buyDuckEl){
+    buyDuckEl.style.display = DUCK_BOUGHT ? "none" : "";
+    if(!DUCK_BOUGHT){
+      buyDuckEl.className="buy"+(walletBalance()>=DUCK_PRICE?"":" locked");
+      buyDuckEl.innerHTML='<div class="art">'+DUCK_SVG+'</div>'+priceBadge(DUCK_PRICE);
+    }
+  }
 }
 function updateShopButton(){
   if(!shopBtnEl) return;
   // it only ever appears once it is worth appearing: never dangle a thing a
-  // child cannot have, and never once they already have it.
-  var show = !DUCK_BOUGHT && walletBalance() >= Math.round(DUCK_PRICE*0.5);
+  // child cannot have, and never once there is nothing left in there.
+  var U=nextUnlock();
+  var prices=[]; if(U) prices.push(U.price); if(!DUCK_BOUGHT) prices.push(DUCK_PRICE);
+  var show = prices.length>0 && walletBalance() >= Math.round(Math.min.apply(null,prices)*0.5);
   shopBtnEl.classList.toggle("on", show);
   if(shopCardEl.classList.contains("up")) renderShop();
 }
 function openShop(){ renderShop(); shopCardEl.classList.add("up"); }
 function closeShop(){ shopCardEl.classList.remove("up"); }
+// FM5 — the duck arriving is a separate thing from the duck being bought, so
+// a farm loaded out of a save can put her back in the coop without spending
+// the coins again.
+function addDuck(){
+  var d=addAnimal("duck", COOP_C.x+0.8, COOP_C.z+1.9, -0.6, "strut",
+    {patrol:{cx:COOP_C.x+0.6, cz:COOP_C.z+1.6, r:1.4, speed:0.34}});
+  d.obj.scale.setScalar(d.baseScale*0.15);       // she arrives with a pop
+  d.popIn=0;
+  return d;
+}
 function buyDuck(){
   if(DUCK_BOUGHT) return false;
   if(!spendCoins(DUCK_PRICE)){ flashToast("Keep saving"); sfx("hit"); return false; }
   DUCK_BOUGHT=true;
   closeShop();
   updateShopButton();
-  var d=addAnimal("duck", COOP_C.x+0.8, COOP_C.z+1.9, -0.6, "strut",
-    {patrol:{cx:COOP_C.x+0.6, cz:COOP_C.z+1.6, r:1.4, speed:0.34}});
-  d.obj.scale.setScalar(d.baseScale*0.15);       // she arrives with a pop
-  d.popIn=0;
+  addDuck();
   flashToast("A duck!");
   sfx("celebrate"); haptic("success");
   return true;
@@ -2528,6 +2635,7 @@ if(shopBtnEl) shopBtnEl.addEventListener("click", function(){ tapUnlock(); openS
 if(shopCloseEl) shopCloseEl.addEventListener("click", closeShop);
 if(shopCardEl) shopCardEl.addEventListener("click", function(e){ if(e.target===shopCardEl) closeShop(); });
 if(buyDuckEl) buyDuckEl.addEventListener("click", buyDuck);
+if(buyPresentEl) buyPresentEl.addEventListener("click", buyPresent);
 
 
 function buildFarmyard(){
@@ -2594,6 +2702,772 @@ function buildFarmyard(){
   addCircleBlocker(CRATE.x, CRATE.z, 1.60, "crate");
   buildPlane();
   newOrder();
+  // FM5 — the farm exists now, so it can be poured full of her save.
+  farmBoot();
+}
+
+// =========================================================================
+//  FM5 — THE TOWNSHIP LESSONS. Four things, and they are all one idea: the
+//  farm is a PLACE SHE OWNS, and it is waiting for her.
+//
+//    1. IT REMEMBERS HER. The whole farm — every patch, every animal, the
+//       stack, the pantry, the order, the presents — is saved per kid, in
+//       Supabase with localStorage underneath it. Best-effort and silent: the
+//       game runs at full speed off the local copy and syncs in the
+//       background. There is NO reset a child can reach.
+//    2. IT GROWS WHILE SHE IS AWAY, AND SOMETHING IS WAITING. A deterministic
+//       catch-up finishes what was started, and if she has been gone more
+//       than ten minutes a BASKET sits by the door holding it. Walking to it
+//       is the first ten seconds of every visit, and it is a reward.
+//    3. NEVER IDLE. whatCanSheDoNow() counts what she could do this second,
+//       and if that would ever be zero the farm quietly fixes it before she
+//       notices.
+//    4. THE NEXT THING IS ALWAYS VISIBLE. One wrapped present in the shop,
+//       with its price under it, and nothing after it shown.
+//
+//  NO TIMERS ON SCREEN. Nothing in here draws a countdown, and QA greps for
+//  it. Growth is a shape changing, exactly as it already was.
+// =========================================================================
+
+// ---------------------------------------------------------------- WHO SHE IS
+// The shell's active kid, read the same way survival-engine.html reads it. No
+// kid (a guest, or the farm opened on its own) is not an error: the save just
+// lives in this browser under the plain key.
+function activeKidId(){
+  try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");
+       return k&&k.id?String(k.id):null; }catch(e){ return null; }
+}
+var KID_ID=activeKidId();
+var SAVE_V=1;
+function saveKey(){ return "bk_farm_save"+(KID_ID?("_"+KID_ID):""); }
+
+// ------------------------------------------------------------- THE SNAPSHOT
+// Everything that makes this farm HERS. Timers are stored as SECONDS LEFT and
+// never as a wall-clock stamp, so a device with a wrong clock, a daylight
+// saving jump or a tab left open overnight can never poison the save. The one
+// wall-clock number is savedAt, and it is only ever used to work out how long
+// she has been gone.
+function collectedList(){ var out=[],k; for(k in COLLECTED) if(COLLECTED[k]) out.push(k); return out; }
+function ownedList(){ var out=[],k; for(k in OWNED) if(OWNED[k]) out.push(k); return out; }
+
+function snapshotFarm(){
+  var now=performance.now()/1000, i, P=[], A=[], S=[];
+  for(i=0;i<PATCHES.length;i++){
+    var p=PATCHES[i];
+    if(p.state==="empty"){ P.push({s:null}); continue; }
+    var r=CROP_RECIPES[p.seed];
+    // An OR and not a ternary on purpose: a ternary's colon reads as a fourth
+    // crop recipe to the harness that counts them in the source.
+    var gs = (r && r.growSec) || 34;
+    var left = (p.state==="ready") ? 0 : Math.max(0, gs - (now - p.plantedAt));
+    P.push({s:p.seed, left:+left.toFixed(2)});
+  }
+  for(i=0;i<ANIMALS.length;i++){
+    var a=ANIMALS[i], st=a.state, left=0;
+    if(st==="feeding") st="making";                 // mid-air is a fed animal
+    if(st==="making") left=Math.max(0, a.makeSec-(now-a.fedAt));
+    A.push({k:a.kind, st:st, left:+left.toFixed(2)});
+  }
+  for(i=0;i<stack.length;i++) S.push(stack[i].userData.kind);
+  return {
+    v:SAVE_V, savedAt:Date.now(),
+    patches:P, animals:A, stack:S,
+    basket:BASKET.items.slice(),
+    collected:collectedList(),
+    unlocks:ownedList(),
+    duck:DUCK_BOUGHT,
+    ordersDone:ORDERS_DONE,
+    order: order ? { pay:order.pay, face:order.face, sent:!!order.sent,
+      items:order.items.map(function(it){ return {k:it.kind, f:!!it.filled}; }) } : null
+  };
+}
+
+// ------------------------------------------------------- BEST EFFORT, ALWAYS
+// Local first, cloud after, and a failure at either end is silent. A child
+// never sees a save error, and a save never makes her wait for anything.
+var saveTimer=null, lastSig="", saveSigT=0, cloudSaves=0, cloudErrs=0, localSaves=0;
+
+function writeLocal(blob){
+  try{ localStorage.setItem(saveKey(), JSON.stringify(blob)); localSaves++; return true; }
+  catch(e){ return false; }
+}
+function readLocal(){
+  try{ var raw=localStorage.getItem(saveKey()); return raw?JSON.parse(raw):null; }
+  catch(e){ return null; }
+}
+function writeCloud(blob, beacon){
+  if(!KID_ID) return;
+  var body=JSON.stringify({kidProfileId:KID_ID, data:blob});
+  // On the way out of the page a normal fetch is killed mid-flight; a beacon
+  // is the only thing a browser promises to finish.
+  if(beacon){
+    try{ if(navigator.sendBeacon &&
+            navigator.sendBeacon("/api/farm-save", new Blob([body],{type:"application/json"}))){
+      cloudSaves++; return; } }catch(e){}
+  }
+  try{
+    fetch("/api/farm-save",{method:"POST",headers:{"Content-Type":"application/json"},body:body})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(j&&j.ok) cloudSaves++; else cloudErrs++; })
+      .catch(function(){ cloudErrs++; });
+  }catch(e){ cloudErrs++; }
+}
+// The one door out. Local is written straight away so nothing is ever lost to
+// a dead network; the cloud copy follows and may fail as often as it likes.
+function saveNow(beacon){
+  if(!SAVE_ON) return null;
+  var blob=snapshotFarm();
+  writeLocal(blob);
+  writeCloud(blob, beacon);
+  return blob;
+}
+function scheduleSave(){
+  if(!SAVE_ON) return;
+  if(saveTimer) return;
+  saveTimer=setTimeout(function(){ saveTimer=null; saveNow(false); }, 1200);
+}
+var SAVE_ON=true;    // QA turns this off to prove the farm plays without it
+
+// A signature of everything worth saving. Watching it beats sprinkling a
+// save() call through twenty call sites and forgetting the twenty-first.
+function saveSignature(){
+  var i, s=[];
+  for(i=0;i<PATCHES.length;i++) s.push(PATCHES[i].state.charAt(0)+(PATCHES[i].seed||""));
+  for(i=0;i<ANIMALS.length;i++) s.push(ANIMALS[i].kind.charAt(0)+ANIMALS[i].state.charAt(0));
+  for(i=0;i<stack.length;i++) s.push(stack[i].userData.kind);
+  s.push("b"+BASKET.items.length, "o"+ORDERS_DONE, "u"+ownedList().length,
+         "c"+collectedList().length, "d"+(DUCK_BOUGHT?1:0));
+  if(order) for(i=0;i<order.items.length;i++) s.push(order.items[i].kind+(order.items[i].filled?"1":"0"));
+  return s.join("|");
+}
+function watchForChanges(dt){
+  // NEVER write before the save has been read. Without this a slow model load
+  // lets the watcher save an empty farm over a good one — the one way a
+  // best-effort save could actually lose a child's farm.
+  if(!BOOTED) return;
+  saveSigT-=dt; if(saveSigT>0) return;
+  saveSigT=1.0;
+  var sig=saveSignature();
+  if(sig!==lastSig){ lastSig=sig; scheduleSave(); }
+}
+// Leaving the page is the one moment a debounce cannot cover.
+function flushSave(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; } saveNow(true); }
+try{
+  addEventListener("pagehide", flushSave);
+  addEventListener("visibilitychange", function(){ if(document.visibilityState==="hidden") flushSave(); });
+}catch(e){}
+
+// =========================================================================
+//  THE WELCOME-BACK BASKET
+//
+//  She was away. Things finished. They are not scattered around the farm
+//  waiting to be found — they are IN A BASKET BY THE DOOR, in colour, with
+//  the same pictures the order card uses. Walk to it and the lot whooshes
+//  onto the stack, rapid fire, exactly like the crate unload. Nothing else on
+//  the farm moves until she gets there, so the first ten seconds of every
+//  visit are a reward for coming back.
+// =========================================================================
+var AWAY_MIN=600;          // ten minutes. Under that she never really left.
+var BASKET_R=3.0;          // the same generous reach a pickup has
+// Beside where she arrives, and deliberately well clear of the crate: at z=3.8
+// the basket sat 2.98 units from the crate, inside its own 3.0 reach, so a kid
+// walking to the crate emptied it on the way past without ever seeing it.
+var BASKET_SPOT={x:-8.6, z:5.8};
+var BASKET={ items:[], obj:null, wants:null, wantT:0, gap:0, run:0, sink:0 };
+
+var BASKET_W=0xC79A5E, BASKET_D=0x9A6E3C;
+function buildBasket(){
+  var p=[], i;
+  // A basket a four-year-old reads as a basket from across the screen: DEEP,
+  // with a rim she can see over and a proper arc of a handle standing up off
+  // it. The first pass was a shallow stack of flat hoops and it came back from
+  // the picture gate looking like a pile of pancakes.
+  // straight-sided, not flared: the flared first pass read as a plant pot
+  p.push(hbTurn([[0.60,0],[0.78,0.16],[0.90,0.78],[0.97,1.28],[0.93,1.36]], BASKET_W, null, 18));
+  p.push(hbTube(1.04,1.04,0.18,BASKET_D,{p:[0,1.34,0]},20));          // the rim
+  for(i=0;i<3;i++)                                                     // the weave
+    p.push(hbTube(0.84+i*0.05,0.84+i*0.05,0.10,BASKET_D,{p:[0,0.32+i*0.34,0]},18));
+  // The handle: a half torus standing up. It is STRETCHED TALL on purpose —
+  // at its natural height it arcs less than a basket-width above the rim and
+  // from the game's overhead camera it disappeared into the lip completely.
+  p.push(hbPaint(new THREE.TorusGeometry(0.84,0.09,8,22,Math.PI),BASKET_D,
+    {s:[1,1.55,1], p:[0,1.34,0]}));
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+
+// One floating model per KIND, turning, in a row above the basket — the same
+// language the crate already speaks and the same one slot per kind the order
+// card settled on in FM4.
+function basketKinds(){
+  var seen={}, out=[], i;
+  for(i=0;i<BASKET.items.length;i++){
+    var k=BASKET.items[i]; if(!seen[k]){ seen[k]=1; out.push(k); }
+  }
+  return out;
+}
+function showBasketWants(){
+  if(BASKET.wants){ scene.remove(BASKET.wants); BASKET.wants=null; }
+  var kinds=basketKinds(); if(!kinds.length || !BASKET.obj) return;
+  var n=Math.min(kinds.length,5), g=new THREE.Group(), i, span=(n-1)*0.78;
+  for(i=0;i<n;i++){
+    var r=ITEM(kinds[i]); if(!r) continue;
+    var m=hbMesh(hbBake(r.parts(1.25)));
+    var w=new THREE.Group(); w.add(m);
+    // a tight cluster with a little stagger, so five things still read as five
+    // things and not as one smear
+    w.position.set(-span/2 + i*0.78, (i%2)*0.26, (i%2)*0.12);
+    g.add(w);
+  }
+  // JUST OVER THE RIM. The first pass hung them at 2.5 and at 0.62 scale and
+  // they read as specks somewhere off in the sky, which is exactly what the
+  // picture gate is for.
+  g.position.set(BASKET_SPOT.x, 2.85, BASKET_SPOT.z);
+  scene.add(g); BASKET.wants=g;
+}
+function openBasket(items){
+  if(!items || !items.length) return false;
+  BASKET.items = items.slice();
+  if(!BASKET.obj){
+    // never drop the basket inside something solid
+    var sx=BASKET_SPOT.x, sz=BASKET_SPOT.z, tries=0;
+    while(blockedAt(sx,sz,1.1) && tries<12){ sx-=0.7; tries++; }
+    BASKET_SPOT.x=sx; BASKET_SPOT.z=sz;
+    BASKET.obj=buildBasket();
+    BASKET.obj.position.set(sx, 0, sz);
+    scene.add(BASKET.obj);
+  }
+  BASKET.sink=0;
+  showBasketWants();
+  return true;
+}
+function closeBasket(){
+  if(BASKET.obj){ scene.remove(BASKET.obj); BASKET.obj=null; }
+  if(BASKET.wants){ scene.remove(BASKET.wants); BASKET.wants=null; }
+  BASKET.items.length=0; BASKET.run=0;
+}
+function basketWaiting(){ return BASKET.items.length>0; }
+function basketNear(){
+  return !!BASKET.obj &&
+    Math.hypot(kid.position.x-BASKET_SPOT.x, kid.position.z-BASKET_SPOT.z) < BASKET_R;
+}
+// The FM3 unload treatment, item for item: one at a time, rapid fire, each on
+// its own arc onto the stack, each note a little higher than the last.
+function updateBasket(dt, now){
+  if(BASKET.obj && BASKET.wants){
+    BASKET.wantT+=dt;
+    BASKET.wants.position.y = 2.85 + Math.sin(BASKET.wantT*2.1)*0.12;
+    for(var c=0;c<BASKET.wants.children.length;c++)
+      BASKET.wants.children[c].rotation.y += dt*1.3;
+  }
+  if(BASKET.obj && !BASKET.items.length){
+    // it has been emptied: sink it away rather than blinking it out
+    BASKET.sink+=dt;
+    BASKET.obj.position.y = -BASKET.sink*1.6;
+    BASKET.obj.scale.setScalar(Math.max(0.001, 1-BASKET.sink*1.4));
+    if(BASKET.sink>0.75) closeBasket();
+    return;
+  }
+  if(!basketWaiting() || !basketNear()) { BASKET.run=0; return; }
+  BASKET.gap-=dt;
+  if(BASKET.gap>0) return;
+  BASKET.gap=UNLOAD_GAP;
+  var kind=BASKET.items.shift();
+  pushOntoStack(kind, new THREE.Vector3(BASKET_SPOT.x, 1.25, BASKET_SPOT.z));
+  sfx("deliver",{rate:Math.min(1.55, 1+BASKET.run*0.055)});
+  haptic("light");
+  BASKET.run++;
+  showBasketWants();
+  if(!BASKET.items.length){
+    sfx("levelup"); haptic("success");
+    sparklePuff(BASKET_SPOT.x, 1.1, BASKET_SPOT.z, 14);
+  }
+}
+
+// ------------------------------------------------------------- THE CATCH-UP
+// Deterministic: the same save and the same elapsed time always give the same
+// farm. Crops that would have finished are finished; an animal that was fed
+// has ONE produce waiting, never two. Nothing over-grows: a field cannot be
+// more than fully ready.
+function applySave(blob){
+  if(!blob || blob.v!==SAVE_V) return null;
+  var now=performance.now()/1000;
+  var elapsed = Math.max(0, (Date.now() - (blob.savedAt||Date.now()))/1000);
+  var away = elapsed >= AWAY_MIN;
+  var basket = (blob.basket||[]).slice();     // anything still waiting from last time
+  var i, k;
+
+  // ---- the pantry, the presents, the money already spent
+  COLLECTED={};
+  (blob.collected||["corn","carrot","wheat"]).forEach(function(k){ COLLECTED[k]=1; });
+  COLLECTED.corn=1; COLLECTED.carrot=1; COLLECTED.wheat=1;   // a patch is always plantable
+  saveCollected();
+  OWNED={};
+  (blob.unlocks||[]).forEach(function(id){ OWNED[id]=1; });
+  ORDERS_DONE=blob.ordersDone|0;
+
+  // ---- the duck, if she bought one
+  if(blob.duck && !DUCK_BOUGHT){ DUCK_BOUGHT=true; addDuck(); }
+
+  // ---- the field
+  for(i=0;i<PATCHES.length && i<(blob.patches||[]).length;i++){
+    var sp=blob.patches[i], P=PATCHES[i];
+    if(!sp || !sp.s || !CROP_RECIPES[sp.s]) continue;
+    var r=CROP_RECIPES[sp.s];
+    var left=Math.max(0, (sp.left==null?0:sp.left) - elapsed);
+    var finishedWhileAway = away && sp.left>0 && left<=0;
+    if(finishedWhileAway){ basket.push(sp.s); continue; }   // it is in the basket, the patch is free
+    P.state="growing"; P.seed=sp.s;
+    P.plantedAt = now - (r.growSec - left);
+    P.ring.visible=false;
+    P.crop=buildCrop(sp.s, left<=0?2:(left>r.growSec*0.6?0:1));
+    P.crop.position.set(P.x,0.06,P.z);
+    scene.add(P.crop);
+    if(left<=0) P.state="ready";
+  }
+
+  // ---- the animals, matched kind by kind in the order the yard built them
+  var cur={};
+  for(i=0;i<(blob.animals||[]).length;i++){
+    var sa=blob.animals[i];
+    cur[sa.k]=(cur[sa.k]||0);
+    var A=null, seen=0;
+    for(k=0;k<ANIMALS.length;k++){
+      if(ANIMALS[k].kind!==sa.k) continue;
+      if(seen===cur[sa.k]){ A=ANIMALS[k]; break; }
+      seen++;
+    }
+    cur[sa.k]++;
+    if(!A) continue;
+    if(sa.st==="hungry"){ A.state="hungry"; continue; }
+    if(sa.st==="ready"){ A.fedAt=now-A.makeSec; spawnProduce(A); continue; }
+    if(sa.st==="making"){
+      var mleft=Math.max(0, (sa.left||0) - elapsed);
+      var madeWhileAway = away && sa.left>0 && mleft<=0;
+      if(madeWhileAway){ basket.push(A.gives); A.state="hungry"; continue; }
+      A.state="making"; A.fedAt = now - (A.makeSec - mleft);
+      if(mleft<=0) spawnProduce(A);
+    }
+  }
+
+  // ---- the tower she was carrying
+  (blob.stack||[]).forEach(function(kind){
+    if(ITEM(kind)) pushOntoStack(kind, new THREE.Vector3(kid.position.x, 0.9, kid.position.z));
+  });
+
+  // ---- the order she was in the middle of
+  if(blob.order && blob.order.items && blob.order.items.length){
+    var items=blob.order.items.filter(function(it){ return !!ITEM(it.k); })
+      .map(function(it){ return {kind:it.k, filled:!!it.f, el:null}; });
+    if(items.length){
+      order={items:items, pay:blob.order.pay||orderPay(items),
+             sent:!!blob.order.sent, face:blob.order.face|0};
+      renderOrder();
+    }
+  }
+  if(!order) newOrder();
+
+  // ---- and the basket by the door
+  if(basket.length) openBasket(basket);
+  updateShopButton();
+  return { elapsed:elapsed, away:away, basket:basket.length };
+}
+
+// =========================================================================
+//  NEVER IDLE
+//
+//  The rule: at any moment there is at least one thing she can do RIGHT NOW.
+//  Not soon, not once something finishes — now. whatCanSheDoNow() counts
+//  them, and if the count would ever be zero the farm fixes it before she can
+//  notice: whatever is closest to being finished simply finishes.
+// =========================================================================
+function heldOnStack(kind){
+  for(var i=0;i<stack.length;i++) if(stack[i].userData.kind===kind) return true;
+  return false;
+}
+function readyCropOf(kind){
+  for(var i=0;i<PATCHES.length;i++)
+    if(PATCHES[i].state==="ready" && PATCHES[i].seed===kind) return true;
+  return false;
+}
+// Something the farm can make for her, with what is standing on it today: a
+// crop (a patch is always plantable, and a seed is free when she is broke) or
+// a thing an animal that LIVES HERE gives.
+function producibleNow(kind){
+  if(CROP_RECIPES[kind]) return true;
+  for(var i=0;i<ANIMALS.length;i++) if(ANIMALS[i].gives===kind) return true;
+  return heldOnStack(kind);
+}
+// Can she move the order along this second, with what she is holding or what
+// is sitting ready on the farm?
+function orderProgressable(){
+  if(!order || order.sent) return false;
+  for(var i=0;i<order.items.length;i++){
+    var it=order.items[i]; if(it.filled) continue;
+    if(heldOnStack(it.kind)) return true;
+    if(readyCropOf(it.kind)) return true;
+    for(var a=0;a<ANIMALS.length;a++)
+      if(ANIMALS[a].state==="ready" && ANIMALS[a].gives===it.kind) return true;
+  }
+  return false;
+}
+function whatCanSheDoNow(){
+  var n=0, i;
+  for(i=0;i<PATCHES.length;i++){
+    if(PATCHES[i].state==="ready") n++;
+    else if(PATCHES[i].state==="empty") n++;      // planting is never gated: free seed floor
+  }
+  for(i=0;i<ANIMALS.length;i++){
+    if(ANIMALS[i].state==="ready") n++;           // loose produce, sitting out
+    else if(ANIMALS[i].state==="hungry" &&
+            (heldOnStack(ANIMALS[i].wants) || readyCropOf(ANIMALS[i].wants))) n++;
+  }
+  if(basketWaiting()) n++;
+  if(orderProgressable()) n++;
+  return n;
+}
+// The invisible hand. It never adds anything from nowhere: it finishes
+// something she already started, which is the only fix a child cannot feel.
+function fixIdle(){
+  var i, best=null, bestLeft=1e9, now=performance.now()/1000;
+  for(i=0;i<ANIMALS.length;i++){
+    if(ANIMALS[i].state!=="making") continue;
+    var l=ANIMALS[i].makeSec-(now-ANIMALS[i].fedAt);
+    if(l<bestLeft){ bestLeft=l; best={kind:"animal", a:ANIMALS[i]}; }
+  }
+  for(i=0;i<PATCHES.length;i++){
+    if(PATCHES[i].state!=="growing") continue;
+    var r=CROP_RECIPES[PATCHES[i].seed]; if(!r) continue;
+    var pl=r.growSec-(now-PATCHES[i].plantedAt);
+    if(pl<bestLeft){ bestLeft=pl; best={kind:"patch", p:PATCHES[i]}; }
+  }
+  if(best && best.kind==="animal"){
+    best.a.fedAt=now-best.a.makeSec;
+    spawnProduce(best.a);              // it is out on the grass THIS instant
+    return "animal";
+  }
+  if(best && best.kind==="patch"){
+    best.p.plantedAt = now - CROP_RECIPES[best.p.seed].growSec;
+    makeReady(best.p);                 // takeable THIS instant, not next frame
+    return "crop";
+  }
+  // Nothing is in flight at all, so the order is the only lever left: ask for
+  // something she is actually holding.
+  if(order && !order.sent && stack.length){
+    var kinds=[]; for(i=0;i<stack.length && kinds.length<3;i++){
+      if(kinds.indexOf(stack[i].userData.kind)<0) kinds.push(stack[i].userData.kind);
+    }
+    var items=kinds.map(function(k){ return {kind:k, filled:false, el:null}; });
+    order={items:items, pay:orderPay(items), sent:false, face:ORDERS_DONE%CUSTOMERS.length};
+    renderOrder();
+    return "order";
+  }
+  return "none";
+}
+var idleT=0, idleFixes=0;
+function watchIdle(dt){
+  if(!BOOTED) return;                  // nothing to fix before the farm is hers
+  if(basketWaiting()) return;          // the basket IS the thing she can do
+  idleT-=dt; if(idleT>0) return;
+  idleT=1.0;
+  if(whatCanSheDoNow()>0) return;
+  if(fixIdle()!=="none") idleFixes++;
+}
+
+// =========================================================================
+//  THE NEXT THING IS ALWAYS VISIBLE — one wrapped present at a time
+//
+//  A fixed path, in this order, each shown in the shop as a wrapped present
+//  with its price under it. Only the NEXT one is ever shown: what comes after
+//  is not a list to be daunted by, it is a surprise.
+//
+//  Six of the eight are built in FM6 to FM8. Until then opening one plays the
+//  whole reveal, marks the unlock owned so a later phase honours it, and hops
+//  a handful of coins out of the box instead of the thing itself. Mike chose
+//  that on 2026-09-07 over a full refund (which would let all eight be opened
+//  in one sitting) and over hiding them (which would leave no ladder at all).
+// =========================================================================
+var UNLOCKS=[
+  { id:"pumpkinseed", price:130, name:"Pumpkin seed",     built:false },
+  { id:"farmdog",     price:180, name:"A farm dog",       built:false },
+  { id:"fieldrow",    price:240, name:"Another row",      built:false },
+  { id:"pig",         price:300, name:"A pig",            built:false },
+  { id:"mill",        price:380, name:"The mill",         built:false },
+  { id:"bees",        price:460, name:"Bees",             built:false },
+  { id:"strawberry",  price:560, name:"Strawberry seed",  built:false },
+  { id:"tractor",     price:700, name:"A tractor",        built:false }
+];
+var OWNED={};
+var UNBUILT_BACK=0.3;     // a third of the price hops back out of an empty box
+function nextUnlock(){
+  for(var i=0;i<UNLOCKS.length;i++) if(!OWNED[UNLOCKS[i].id]) return UNLOCKS[i];
+  return null;
+}
+
+// The present, drawn in code: a box, a ribbon both ways, and a bow. No emoji,
+// nothing to read — the shape says present on its own.
+var PRESENT_SVG='<svg width="96" height="96" viewBox="0 0 96 96">'+
+  '<rect x="16" y="38" width="64" height="42" rx="6" fill="#E86A6A" stroke="#B84B4B" stroke-width="2.5"/>'+
+  '<rect x="11" y="28" width="74" height="15" rx="5" fill="#F27E7E" stroke="#B84B4B" stroke-width="2.5"/>'+
+  '<rect x="42" y="28" width="12" height="52" fill="#FFD86B" stroke="#D9A82C" stroke-width="2"/>'+
+  '<rect x="11" y="31" width="74" height="9" fill="#FFD86B" stroke="#D9A82C" stroke-width="2"/>'+
+  '<path d="M48 28 C40 24 30 12 38 8 C45 5 47 18 48 28 Z" fill="#FFD86B" stroke="#D9A82C" stroke-width="2.2"/>'+
+  '<path d="M48 28 C56 24 66 12 58 8 C51 5 49 18 48 28 Z" fill="#FFD86B" stroke="#D9A82C" stroke-width="2.2"/>'+
+  '<circle cx="48" cy="26" r="5" fill="#FFE7A0" stroke="#D9A82C" stroke-width="2"/>'+
+  '</svg>';
+
+function buildPresentBox(){
+  var p=[];
+  p.push(hbBox(1.5,1.15,1.5,0xE86A6A,{p:[0,0.58,0]}));
+  p.push(hbBox(0.34,1.17,1.54,0xFFD86B,{p:[0,0.58,0]}));
+  p.push(hbBox(1.54,1.17,0.34,0xFFD86B,{p:[0,0.58,0]}));
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+function buildPresentLid(){
+  var p=[];
+  p.push(hbBox(1.72,0.34,1.72,0xF27E7E,{p:[0,0,0]}));
+  p.push(hbBox(0.36,0.36,1.76,0xFFD86B,{p:[0,0,0]}));
+  p.push(hbBox(1.76,0.36,0.36,0xFFD86B,{p:[0,0,0]}));
+  p.push(hbBall(0.26,0xFFE7A0,{p:[0,0.26,0]},10));
+  p.push(hbBall(0.20,0xFFD86B,{p:[-0.30,0.24,0]},9));
+  p.push(hbBall(0.20,0xFFD86B,{p:[0.30,0.24,0]},9));
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+
+// ------------------------------------------------------------- THE REVEAL
+// The biggest celebration in the game, and the only one allowed to take three
+// seconds: confetti, the plane over the top, and the thing hopping out of the
+// box. Everything else in the farm is under half a second.
+var REVEAL={ on:false, t:0, box:null, lid:null, thing:null, unlock:null,
+             popped:false, x:0, z:0, scale:1.45 };
+
+function revealUnlock(U){
+  if(REVEAL.on) return false;
+  REVEAL.on=true; REVEAL.t=0; REVEAL.unlock=U; REVEAL.popped=false;
+  REVEAL.x=kid.position.x; REVEAL.z=kid.position.z-3.6;
+  REVEAL.scale=1.45;                     // it is the hero of its own moment
+  REVEAL.box=buildPresentBox(); REVEAL.box.position.set(REVEAL.x,0,REVEAL.z);
+  REVEAL.box.scale.setScalar(0.01); scene.add(REVEAL.box);
+  REVEAL.lid=buildPresentLid(); REVEAL.lid.position.set(REVEAL.x,1.3,REVEAL.z);
+  REVEAL.lid.scale.setScalar(0.01); scene.add(REVEAL.lid);
+  planeFlyBy();
+  sfx("whoosh"); haptic("light");
+  return true;
+}
+function updateReveal(dt){
+  if(!REVEAL.on) return;
+  REVEAL.t+=dt;
+  var t=REVEAL.t, e;
+  if(t<0.35){                                  // the box lands
+    e=t/0.35; var s=e*e*(3-2*e)*REVEAL.scale;
+    REVEAL.box.scale.setScalar(s);
+    REVEAL.lid.scale.setScalar(s);
+    REVEAL.lid.position.y=1.3*REVEAL.scale;
+  } else if(t<1.0){                            // it shakes: something is in there
+    REVEAL.box.rotation.z=Math.sin(t*34)*0.07;
+    REVEAL.lid.rotation.z=Math.sin(t*34)*0.07;
+    REVEAL.lid.position.y=1.3+Math.abs(Math.sin(t*17))*0.10;
+  } else {
+    if(!REVEAL.popped){                        // POP
+      REVEAL.popped=true;
+      REVEAL.box.rotation.z=0;
+      sfx("celebrate"); haptic("success");
+      confettiBurst(64);
+      sparklePuff(REVEAL.x, 1.5, REVEAL.z, 22);
+      var U=REVEAL.unlock;
+      if(U.built && U.model){
+        REVEAL.thing=U.model();
+      } else {
+        // the empty box: a fistful of coins, and the unlock still becomes hers
+        REVEAL.thing=buildCoinCluster();
+        var back=Math.round(U.price*UNBUILT_BACK);
+        addCoins(back); flashToast("+"+back); coinBurstToPill(back);
+      }
+      if(REVEAL.thing){ REVEAL.thing.position.set(REVEAL.x,1.1*REVEAL.scale,REVEAL.z);
+        REVEAL.thing.scale.setScalar(REVEAL.scale); scene.add(REVEAL.thing); }
+    }
+    var u=t-1.0;
+    REVEAL.lid.position.y = 1.3*REVEAL.scale + u*3.2 - u*u*2.6;   // the lid flips away
+    REVEAL.lid.rotation.z += dt*5.2;
+    REVEAL.lid.rotation.x += dt*3.4;
+    if(REVEAL.thing){
+      REVEAL.thing.position.y = 1.1*REVEAL.scale + Math.sin(Math.min(1,u/0.6)*Math.PI)*1.2
+                                    + Math.sin(t*2.4)*0.08;
+      REVEAL.thing.rotation.y += dt*1.8;
+      var pop = (u<0.3 ? (1+Math.sin(u/0.3*Math.PI)*0.3) : 1) * REVEAL.scale;
+      REVEAL.thing.scale.setScalar(pop);
+    }
+    if(u>1.9){                                          // and it is put away
+      var f=Math.max(0.001, 1-(u-1.9)*2.4);
+      REVEAL.box.scale.setScalar(f*REVEAL.scale);
+      REVEAL.lid.scale.setScalar(f*REVEAL.scale);
+      if(REVEAL.thing) REVEAL.thing.scale.setScalar(f*REVEAL.scale);
+      if(u>2.35) endReveal();
+    }
+  }
+}
+function endReveal(){
+  if(REVEAL.box) scene.remove(REVEAL.box);
+  if(REVEAL.lid) scene.remove(REVEAL.lid);
+  if(REVEAL.thing) scene.remove(REVEAL.thing);
+  REVEAL.on=false; REVEAL.box=REVEAL.lid=REVEAL.thing=null; REVEAL.unlock=null;
+  updateShopButton(); renderShop();
+}
+function buildCoinCluster(){
+  var p=[], i;
+  for(i=0;i<7;i++){
+    var a=(i/7)*Math.PI*2, r=0.30+((i%3)*0.10);
+    p.push(hbTube(0.30,0.30,0.10,0xF7C948,
+      {p:[Math.cos(a)*r, (i%4)*0.16, Math.sin(a)*r], r:[Math.PI/2,0,(i*0.4)]},14));
+  }
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+
+// The plane goes over the top of the whole thing. It is the farm's own
+// biggest noise and it costs nothing to reuse here.
+function planeFlyBy(){
+  if(!plane || planeBusy()) return false;
+  PL.phase="flyby"; PL.t=0;
+  PL.fb={ x0:kid.position.x-30, x1:kid.position.x+30, z:kid.position.z-8 };
+  return true;
+}
+
+// ----------------------------------------------------------- BUYING THE BOX
+function buyPresent(){
+  var U=nextUnlock(); if(!U) return false;
+  if(REVEAL.on) return false;
+  if(!spendCoins(U.price)){ flashToast("Keep saving"); sfx("hit"); return false; }
+  OWNED[U.id]=1;
+  closeShop();
+  scheduleSave();
+  revealUnlock(U);
+  return true;
+}
+
+// =========================================================================
+//  FM5 — SMALL CELEBRATIONS, CONSTANTLY
+//
+//  Every action gets a reaction. GAME-FEEL law 1. Each of these is under half
+//  a second so it never slows her down, each uses the shared Feel Kit, and
+//  each goes quiet when bk_muted is set, because sfx() is the only door.
+// =========================================================================
+var PUFFS=[];
+function puff(x,y,z,color,n,spread,rise,life){
+  var i;
+  for(i=0;i<(n||8);i++){
+    var m=hbMesh(hbBall(0.055+Math.random()*0.06, color, null, 6));
+    m.position.set(x,y,z);
+    scene.add(m);
+    var a=Math.random()*Math.PI*2, s=(spread||1.1)*(0.4+Math.random()*0.8);
+    PUFFS.push({ o:m, vx:Math.cos(a)*s, vz:Math.sin(a)*s,
+      vy:(rise||1.5)*(0.5+Math.random()*0.9), t:0, life:(life||0.45) });
+  }
+}
+function soilPuff(x,z){ puff(x,0.12,z,0x9C6939,10,1.5,1.1,0.42); }
+function sparklePuff(x,y,z,n){ puff(x,y,z,0xFFF3A8,n||9,1.0,1.8,0.45); }
+function heartPuff(x,y,z){ puff(x,y,z,0xF2889C,7,0.7,1.9,0.48); }
+function updatePuffs(dt){
+  for(var i=PUFFS.length-1;i>=0;i--){
+    var P=PUFFS[i];
+    P.t+=dt;
+    if(P.t>=P.life){ scene.remove(P.o); PUFFS.splice(i,1); continue; }
+    var u=P.t/P.life;
+    P.o.position.x+=P.vx*dt; P.o.position.z+=P.vz*dt;
+    P.o.position.y+=(P.vy - u*3.4)*dt;
+    P.o.scale.setScalar(Math.max(0.001, 1-u));
+  }
+}
+
+// Confetti belongs to the reveal alone, so it is DOM over the whole screen
+// rather than geometry in the scene: it is the one moment allowed to cover
+// everything.
+var CONF_COLORS=["#F27E7E","#FFD86B","#8ED08A","#7EC8E3","#C9A0DC","#F6A96B"];
+function confettiBurst(n){
+  var hud=document.getElementById("hud"); if(!hud) return;
+  for(var i=0;i<(n||48);i++) oneConfetti(hud, i);
+}
+function oneConfetti(hud, i){
+  var el=document.createElement("div");
+  el.className="confetti";
+  el.style.background=CONF_COLORS[i%CONF_COLORS.length];
+  var sx=innerWidth*(0.5+(Math.random()-0.5)*0.24);
+  var sy=innerHeight*0.44;
+  var vx=(Math.random()-0.5)*innerWidth*0.9;
+  var vy=-innerHeight*(0.28+Math.random()*0.34);
+  var spin=(Math.random()-0.5)*1080;
+  var dur=1100+Math.random()*900, t0=performance.now();
+  el.style.left=sx+"px"; el.style.top=sy+"px";
+  hud.appendChild(el);
+  (function drift(){
+    var u=Math.min(1,(performance.now()-t0)/dur);
+    el.style.transform="translate("+(vx*u)+"px,"+(vy*u + innerHeight*1.15*u*u)+"px) rotate("+(spin*u)+"deg)";
+    el.style.opacity=String(u>0.75?(1-(u-0.75)/0.25):1);
+    if(u<1) requestAnimationFrame(drift); else el.remove();
+  })();
+}
+
+// ------------------------------------------------------------------- BOOT
+// The farmyard has to exist before a save can be poured into it, so this runs
+// off the end of buildFarmyard() rather than off the end of the file.
+var BOOTED=false, BOOT_INFO=null;
+function farmBoot(){
+  if(BOOTED) return; BOOTED=true;
+  var local=readLocal();
+  if(local) BOOT_INFO=applySave(local);
+  lastSig=saveSignature();
+  // The cloud copy follows. It only ever replaces the local one if it is
+  // NEWER and she has not touched anything yet — a save must never yank the
+  // farm out from under a child who is already playing.
+  if(KID_ID && typeof fetch!=="undefined"){
+    try{
+      fetch("/api/farm-save?kidProfileId="+encodeURIComponent(KID_ID))
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if(!j || !j.ok || !j.data) return;
+          if(local && (j.data.savedAt||0) <= (local.savedAt||0)) return;
+          if(saveSignature()!==lastSig) return;      // she is already playing
+          hardResetScene();
+          BOOT_INFO=applySave(j.data);
+          lastSig=saveSignature();
+        })
+        .catch(function(){});
+    }catch(e){}
+  }
+}
+// Only ever used to swap a just-loaded local farm for a newer cloud one, in
+// the first second, before anything has been touched. It is NOT a reset a
+// child can reach: nothing calls it from any control on the screen.
+function hardResetScene(){
+  var i;
+  for(i=0;i<PATCHES.length;i++){
+    var P=PATCHES[i];
+    if(P.crop){ scene.remove(P.crop); P.crop=null; }
+    if(P.halo){ scene.remove(P.halo); P.halo=null; }
+    P.state="empty"; P.seed=null; P.plantedAt=0; P.ring.visible=true; P.chimed=false;
+  }
+  for(i=0;i<ANIMALS.length;i++){
+    var A=ANIMALS[i];
+    if(A.produce){ scene.remove(A.produce); A.produce=null; }
+    if(A.halo){ scene.remove(A.halo); A.halo=null; }
+    hideWant(A);
+    A.state="hungry"; A.magnet=null; A.produceSide=null;
+  }
+  while(stack.length){ scene.remove(stack.pop()); }
+  reindexStack();
+  closeBasket();
+  order=null;
+}
+
+// The FM5 tick, hung off the main loop in one line.
+function fm5Tick(dt, now){
+  updatePuffs(dt);
+  updateBasket(dt, now);
+  updateReveal(dt);
+  watchIdle(dt);
+  watchForChanges(dt);
 }
 
 // The models arrive on the wire, so the yard is built once we know whether the
@@ -2762,7 +3636,10 @@ function tryPlant(kind){
   var sprout=buildCrop(kind,0);
   sprout.position.set(openPatch.x, 0.06, openPatch.z);
   openPatch.crop=sprout;
+  openPatch.chimed=false;
   scene.add(sprout);
+  // FM5 — a puff of soil, so the seed going in is something that HAPPENED.
+  soilPuff(openPatch.x, openPatch.z);
   closeSeedPicker();
 }
 
@@ -3087,6 +3964,23 @@ function handleTap(x,y){
   startWalkTo(T.x, T.z, T.stopR, T.what);
 }
 
+// FM5 — the ONE place a growing patch becomes a ready one, so the main loop
+// and the never-idle fixer can never disagree about what ready looks like.
+// The wobble was already here; the chime is new, and it fires once, the moment
+// the crop becomes takeable, and never again.
+function makeReady(P){
+  if(P.state==="ready") return;
+  var r=CROP_RECIPES[P.seed]; if(!r) return;
+  if(!P.crop || P.crop.userData.stage!==2){
+    if(P.crop) scene.remove(P.crop);
+    P.crop=buildCrop(P.seed,2);
+    P.crop.position.set(P.x,0.06,P.z);
+    scene.add(P.crop);
+  }
+  P.state="ready";
+  if(!P.chimed){ P.chimed=true; sfx("sparkle"); sparklePuff(P.x,0.95,P.z,8); }
+}
+
 // -------------------------------------------------------------------------
 // MAIN LOOP — growth, harvest collision, walk, camera follow, draw
 // -------------------------------------------------------------------------
@@ -3181,7 +4075,7 @@ function step(){
       }
       // sub-stage jiggle so the crop always looks alive
       P.crop.rotation.y = Math.sin(now*1.3+i*0.4)*0.06;
-      if(wantStage===2) P.state="ready";
+      if(wantStage===2) makeReady(P);
       continue;
     }
     if(P.state==="ready"){
@@ -3215,7 +4109,7 @@ function step(){
         // clear the patch back to empty
         scene.remove(P.crop); P.crop=null;
         if(P.halo){ scene.remove(P.halo); P.halo=null; }
-        P.state="empty"; P.seed=null; P.ring.visible=true;
+        P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false;
       }
     }
   }
@@ -3233,6 +4127,10 @@ function step(){
   updateCrateWant(dt, now);
   updatePlane(dt);
 
+  // FM5 — the puffs, the welcome-back basket, the present reveal, the
+  // never-idle watch and the background save.
+  fm5Tick(dt, now);
+
   if(!NODRAW) renderer.render(scene,camera);
   requestAnimationFrame(step);
 }
@@ -3242,7 +4140,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm4",
+  version: "fm5",
   coins: function(){ return coins; },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
@@ -3436,6 +4334,56 @@ window.FARM = {
     renderOrder();
     return items.map(function(it){ return it.kind; });
   },
+  // ---- FM5 ---------------------------------------------------------------
+  // The save, the away-time catch-up, the basket, the never-idle watch and the
+  // present ladder — all drivable without a wall clock and without a network.
+  save: {
+    key: saveKey,
+    kid: function(){ return KID_ID; },
+    setKid: function(id){ KID_ID=id||null; return KID_ID; },
+    snapshot: snapshotFarm,
+    now: function(){ return saveNow(false); },
+    local: readLocal,
+    stats: function(){ return { local:localSaves, cloud:cloudSaves,
+      cloudErrs:cloudErrs, on:SAVE_ON, pending:!!saveTimer }; },
+    off: function(){ SAVE_ON=false; },
+    resume: function(){ SAVE_ON=true; },
+    clearLocal: function(){ try{ localStorage.removeItem(saveKey()); }catch(e){} return true; },
+    // Pour a blob straight in, as if the page had just opened on it. Move its
+    // savedAt back and you have been away that long — which is the whole lever
+    // the catch-up and the basket are tested through.
+    load: function(blob){ hardResetScene(); var r=applySave(blob); lastSig=saveSignature(); return r; },
+    booted: function(){ return BOOTED; },
+    info: function(){ return BOOT_INFO; }
+  },
+  awayMinSec: function(){ return AWAY_MIN; },
+  basket: function(){ return { up:!!BASKET.obj, items:BASKET.items.slice(),
+    kinds:basketKinds(), x:+BASKET_SPOT.x.toFixed(2), z:+BASKET_SPOT.z.toFixed(2),
+    r:BASKET_R, near:basketNear(),
+    floating:BASKET.wants?BASKET.wants.children.length:0 }; },
+  whatCanSheDoNow: whatCanSheDoNow,
+  idle: function(){ return { count:whatCanSheDoNow(), fixes:idleFixes,
+    orderProgressable:orderProgressable(), basket:BASKET.items.length }; },
+  fixIdle: fixIdle,
+  producibleNow: producibleNow,
+  orderProgressable: orderProgressable,
+  unlocks: function(){ return UNLOCKS.map(function(U){
+    return { id:U.id, price:U.price, name:U.name, built:!!U.built, owned:!!OWNED[U.id] }; }); },
+  nextUnlock: function(){ var U=nextUnlock();
+    return U?{ id:U.id, price:U.price, name:U.name, built:!!U.built }:null; },
+  owned: ownedList,
+  buyPresent: buyPresent,
+  revealing: function(){ return REVEAL.on ? { t:+REVEAL.t.toFixed(2),
+    popped:REVEAL.popped, unlock:REVEAL.unlock?REVEAL.unlock.id:null,
+    thing:!!REVEAL.thing, box:!!REVEAL.box, plane:PL.phase } : null; },
+  confetti: function(){ return document.querySelectorAll(".confetti").length; },
+  puffs: function(){ return PUFFS.length; },
+  duckBought: function(){ return DUCK_BOUGHT; },
+  giveDuck: function(){ if(!DUCK_BOUGHT){ DUCK_BOUGHT=true; addDuck(); } return true; },
+  // one FM5 frame by hand: the puffs, the basket, the reveal, the idle watch
+  // and the save watch, without a wall clock
+  tick5: function(dt){ var d=typeof dt==="number"?dt:1/30; fm5Tick(d, performance.now()/1000); },
+
   plane: function(){ return { phase:PL.phase, pay:PL.pay, busy:planeBusy(),
     x:plane?+plane.position.x.toFixed(2):null,
     y:plane?+plane.position.y.toFixed(2):null,
