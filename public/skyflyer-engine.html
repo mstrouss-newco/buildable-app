@@ -6158,8 +6158,10 @@ function stepSim(dt){
     if(S.pos.y<3){S.pos.y=3;S.pitch=Math.max(S.pitch,0.12);
       if(Math.random()<0.3)burst(new THREE.Vector3(S.pos.x,1,S.pos.z),3,splashMat);
       // skimming the sea is a giggle, never a fail: a light splash, throttled so
-      // a long low run is an occasional plink and not a stream of noise.
-      if(time-S.splashAt>0.9){ S.splashAt=time; sfx("hurt"); }}
+      // a long low run is an occasional plink and not a stream of noise. 0.9s
+      // was still a metronome on a long skim, so the gap is 3s and the hit is
+      // quiet: the spray does the talking, the speaker only agrees now and then.
+      if(time-S.splashAt>3){ S.splashAt=time; sfx("hurt",{vol:0.3}); }}
     if(S.pos.y>120){S.pos.y=120;S.pitch=Math.min(S.pitch,0);}
     featureBounce();
     tryLand();
@@ -7073,9 +7075,14 @@ function reactFishStep(dt, t){
   // The rule has fired — count it. This runs even in a headless harness with
   // no pool, so QA can prove the ONE RULE reached the world.
   REACT.fish++; REACT.lastFish = t;
-  // ONE shared reaction sound, throttled at the palette level too
-  if(t - REACT.lastReactSfx > 0.6){
-    REACT.lastReactSfx = t; sfx("react", {vol: 0.35 + Math.random()*0.2});
+  // ONE shared reaction sound, and it is a SURPRISE, not a metronome. A fish
+  // jumps every ~0.8s of low flight over water, and the islands world is mostly
+  // water, so a 0.6s sound gate meant a splash every single second for the whole
+  // flight, a carpet of noise, which is what it sounded like. The jumps stay;
+  // only about a third of them speak, never closer than 7s apart and quieter,
+  // so a splash lands maybe twice a minute and still reads as "whoa, a fish".
+  if(t - REACT.lastReactSfx > 7 && Math.random() < 0.35){
+    REACT.lastReactSfx = t; sfx("react", {vol: 0.22 + Math.random()*0.1});
   }
   // find the first dormant fish and wake it up (visual side; the pool only
   // exists when there is a renderer)
