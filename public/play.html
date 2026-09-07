@@ -968,6 +968,14 @@ function shadeHex(c,amt){ c=(c||"#5a4332")+""; if(c[0]==="#")c=c.slice(1);
   const n=parseInt(c,16)||0; const cl=v=>Math.max(0,Math.min(255,Math.round(v)));
   const r=cl((n>>16&255)+amt), g=cl((n>>8&255)+amt), b=cl((n&255)+amt);
   return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+// MULTIPLY, not add. Adding a flat -74 to the forest dirt (#5a4332) lands on #100000,
+// which is why the first pass still painted a black slot. Scaling keeps the hue, so a
+// hole reads as the same earth in shadow in every world, snow and candy included.
+function mulHex(c,f){ c=(c||"#5a4332")+""; if(c[0]==="#")c=c.slice(1);
+  if(c.length===3)c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  const n=parseInt(c,16)||0; const cl=v=>Math.max(0,Math.min(255,Math.round(v)));
+  const r=cl((n>>16&255)*f), g=cl((n>>8&255)*f), b=cl((n&255)*f);
+  return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 function heart(x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*0.3);ctx.bezierCurveTo(x,y,x-s,y,x-s,y+s*0.35);ctx.bezierCurveTo(x-s,y+s*0.7,x,y+s*0.9,x,y+s*1.15);ctx.bezierCurveTo(x,y+s*0.9,x+s,y+s*0.7,x+s,y+s*0.35);ctx.bezierCurveTo(x+s,y,x,y,x,y+s*0.3);ctx.closePath();ctx.fill();}
 function draw(){
   const LK=worldLook();
@@ -1035,18 +1043,18 @@ function draw(){
     // The shaft is DIRT in shadow, not ink. Pure black read as a printing fault against
     // the watercolour, so the gradient stays inside the world's own dirt hue and only
     // ever gets as dark as a deep earth brown. Depth comes from the walls, not the fill.
-    const dk=shadeHex(P.dirt,-46), dk2=shadeHex(P.dirt,-74), lit=shadeHex(P.dirt,16);
+    const dk=mulHex(P.dirt,0.60), dk2=mulHex(P.dirt,0.40), lit=mulHex(P.dirt,1.22);
     const sh=ctx.createLinearGradient(0,GROUND_Y,0,GROUND_Y+150);
     sh.addColorStop(0,dk); sh.addColorStop(0.55,dk2); sh.addColorStop(1,dk2);
     ctx.fillStyle=sh; ctx.fillRect(sx,GROUND_Y,pw,H+260-GROUND_Y);
     { const side=ctx.createLinearGradient(sx,0,ex,0);       // the walls curve away into the hole
-      side.addColorStop(0,"rgba(0,0,0,0)"); side.addColorStop(0.5,"rgba(0,0,0,.30)"); side.addColorStop(1,"rgba(0,0,0,0)");
+      side.addColorStop(0,"rgba(0,0,0,0)"); side.addColorStop(0.5,"rgba(0,0,0,.16)"); side.addColorStop(1,"rgba(0,0,0,0)");
       ctx.fillStyle=side; ctx.fillRect(sx,GROUND_Y,pw,H+260-GROUND_Y); }
     const wall=Math.max(7,Math.min(13,pw*0.17));           // the two lit dirt walls facing into the hole
     const deep=H+240-GROUND_Y;
     ctx.fillStyle=lit; ctx.fillRect(sx,GROUND_Y,wall,deep); ctx.fillRect(ex-wall,GROUND_Y,wall,deep);
-    ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fillRect(sx,GROUND_Y,wall,deep); ctx.fillRect(ex-wall,GROUND_Y,wall,deep);
-    ctx.fillStyle=shadeHex(P.dirt,34);                     // a bright edge on each wall so the mouth is crisp
+    ctx.fillStyle="rgba(0,0,0,.14)"; ctx.fillRect(sx,GROUND_Y,wall,deep); ctx.fillRect(ex-wall,GROUND_Y,wall,deep);
+    ctx.fillStyle=mulHex(P.dirt,1.5);                      // a bright edge on each wall so the mouth is crisp
     ctx.fillRect(sx,GROUND_Y,3,deep); ctx.fillRect(ex-3,GROUND_Y,3,deep);
     { ctx.fillStyle="rgba(0,0,0,.16)";                     // stones bedded in the wall, on a fixed world grid
       for(let d=18; d<deep; d+=27){ const j=((pt.x0+d)*0.021)%1;
