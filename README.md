@@ -6,6 +6,47 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## FM4 — the farm's playtest bugs, and a wish list a child can read (September 7 2026)
+`public/skyflyer-farm.html`, `src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-skyflyer.mjs`.
+Phase **FM**, card **FM4**, branch `claude/fm4-farm-bugs-wishlist-cpciu3`. Everything here
+came out of one playtest: Mike's daughter on a tablet.
+
+**An order can only ask for what has actually been carried.** The old pool listed anything
+an animal could ever give, so the first crate asked for milk before a cow had been fed. A
+kind now joins the pool the first time it lands on the stack, `pushOntoStack` is the only
+door into that set, and the set is seeded with the three crops and kept in localStorage
+under `bk_farm_collected`. The first order is always crops.
+
+**A near miss is a pickup.** Pickup reach 2.0 → 3.0, ready crops on the same radius, and a
+magnet: inside 4 units a loose egg or bottle slides over and hops on. Where produce lands
+is chosen rather than fixed, so a bottle can never end up inside the coop or outside its
+own pen.
+
+**Things are solid now.** Fence rails and posts, the coop house, the crate and the parked
+plane block, with a slide so a fence guides rather than sticks. Crops and animals stay
+walk-through on purpose. The field, coop yard and cow pen build through one shared
+`buildFenceRect()` and each has ONE gate: a 2.2-unit gap with two taller gate posts, so
+the way in reads without words.
+
+**Tap-to-go is the main way to move.** Tap ground and she walks there behind a soft ring
+that fades as she arrives; tap a crop, an egg, an animal or the crate and the behaviour
+that was already there fires on arrival. A path that crosses a fence goes via that pen's
+gate first. The joystick stays and always cancels. No new HUD.
+
+**The wish list is readable.** Full colour always (the grayscale filter is deleted), one
+74px slot per KIND with a dark count pill that ticks down to a green tick, what the crate
+wants floating over the crate as a turning 3D model, and a drawn customer face (bear, fox,
+bunny) rotating per order. The unload, the claim logic and the plane payoff are untouched.
+
+**Mike's numbers.** Seeds corn 4 / carrot 3 / wheat 2; item values corn 4, carrot 3,
+wheat 2, egg 6, duck egg 7, milk 8; an order pays three times what it asked for, so
+`ORDER_PAY_BASE/STEP/MAX` are gone. 50 starting coins, 120 duck and the free seed all stay.
+
+`qa-farm.mjs` is 114 checks green (run twice), `node qa-all.mjs` green. **Not done:** the
+planner roadmap cards (this sandbox has no network — the proxy 403s buildablekids.com) and
+the Kenney Food Kit comparison (the GLBs are in Mike's own bundle folder, not in the
+sandbox).
+
 ## Paper Route: sticking the landing (September 7 2026)
 `public/paper-route-engine.html`, `api/sfx.js`, `qa-paper-route.mjs`. A late edit to the
 **PB1** card asked for a turbo when you stick a ramp landing, so ramps now pay twice: an

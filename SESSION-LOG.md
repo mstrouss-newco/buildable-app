@@ -1,3 +1,105 @@
+## 2026-09-07 (FM4): the farm's playtest bugs, and a wish list you can read
+
+**Phase FM, card FM4.** Everything here came out of one playtest: Mike's daughter on a
+tablet, 2026-09-07. Four things she hit, and the numbers Mike approved with them.
+Touched `public/skyflyer-farm.html`, `src/BuildableKids.jsx`, `qa-farm.mjs`,
+`qa-skyflyer.mjs`.
+
+### The crate asked for milk before any milk existed
+`orderableKinds()` used to say "everything an animal in this farm can ever give", which
+on second one is eggs and milk. So the very first crate asked a child for a bottle of
+milk she had no way to have. Now a kind earns its place by **landing on the stack once**,
+and `pushOntoStack` is the single door into that set — harvest, produce pickup and the QA
+lever all come through it, so a later phase's bread and cheese join by the same one rule
+with no new code. The set is seeded with corn, carrot and wheat (an empty patch is always
+there to plant), so the first order is always crops. It is kept in `localStorage` under
+`bk_farm_collected`, so a reload never takes the pantry away.
+
+### She walked around things and could not pick them up
+`PICKUP_R` goes 2.0 → **3.0**, and ready crops now use the same radius instead of the
+tighter `PATCH_R*0.95` they had. On top of that, a **magnet**: inside 4.0 units a loose
+egg or bottle slides to the kid over about a third of a second and hops on. No tap, no
+aiming, and a near miss is now a pickup.
+
+Because fences became solid in the same session, where an egg LANDS also had to become a
+decision rather than a fixed offset off the animal's flank: `produceSpot()` starts at the
+old angle and walks round the animal until the spot is out of every blocker and inside
+the animal's own pen. The coop never shrinks to make room; the egg moves. The robot
+asserts every animal has a standable spot.
+
+### Nothing was solid, so she walked through fences
+A small blocker list (circles and boxes) and a slide: only the part of a step that goes
+INTO a thing is taken away, so a fence guides the kid along it and never sticks or
+judders. Solid: the fence rails and posts, the coop house, the crate, and the plane
+**while parked only**. Not solid, on purpose: the crops (walking through them IS the
+harvest) and the animals (they are stepped around, as before).
+
+The field, the coop yard and the cow pen now build through one shared `buildFenceRect()`,
+so all three read the same way, and each has **one gate**: a 2.2-unit rail gap with two
+taller, warm-capped gate posts on it, so a child can see where the way in is without a
+word. FM3's crate push-out is gone — the crate is just another blocker now.
+
+### Tap-to-go, with the joystick still winning
+Mike approved tap-to-go as the main way to move on a tablet. Tap open ground and the kid
+walks there behind a soft ring that fades as she arrives. Tap a ready crop, a loose egg
+or bottle, an animal or the crate and she walks to it — and the behaviour that was
+already there fires on arrival, because every one of those is a proximity check in the
+main loop and none of them changed. An empty patch still opens the seed pop-up. A growing
+crop walks her over and does nothing else. If the straight line crosses a fence the path
+takes the pen's gate first and then the target; two legs is the whole pathfinder and on
+this map that is all it needs. Touching the joystick drops the walk on the spot. **No new
+HUD, nothing to read.**
+
+### The wish list
+Full colour, always. The grayscale filter is gone: an empty slot is the real picture
+inside a dashed frame, and a done slot goes green with the tick FM3 already had. One slot
+per **kind** with a dark count pill that ticks down, so "3 corn + 2 eggs" is two pictures
+and two numbers rather than five pictures — which is what lets the slots grow to 74px and
+an order stay on one line. What the crate wants also floats over the crate as a small
+turning 3D model, cycling the kinds, the same language a hungry animal already speaks. A
+customer sits on the card: a bear, a fox or a bunny, drawn in code in the farm's rounded
+style, rotating per order. The rapid-fire unload, `orderNeeds`, the claim logic and the
+plane payoff are all untouched — every item still claims its own place, it just points at
+its kind's one slot now.
+
+One thing the pictures caught: the egg was still a pale smudge at full colour, because it
+is a cream egg on a cream slot. Its own outline went darker rather than putting a filter
+back. The hint sentence also had to move up 46px — the card is taller now.
+
+### The numbers (Mike's planning defaults, section 7)
+Seeds cost what their crop is worth: corn 4, carrot 3, wheat 2. Item values for order pay:
+corn 4, carrot 3, wheat 2, egg 6, duck egg 7, milk 8. **An order pays three times the sum
+of what it asked for**, so `ORDER_PAY_BASE/STEP/MAX` are gone and a big order pays big
+because it asked for a lot, not because it is the ninth one. Starting coins stay 50, the
+duck stays 120, and the free-seed-when-broke rule stays (it now reads the cheapest seed).
+
+### QA
+`qa-farm.mjs` is **114 checks, all green**, run twice for stability. New in it: the first
+order on a farm where nothing has been collected is crops only, over forty rolls; sixty
+more orders never name a thing outside the pantry, and the pantry survives a reload; every
+animal has a standable produce spot and an egg is collected within five seconds of walking
+up; walking flat at a rail never puts the kid through it and never leaves her inside
+anything solid; a line into a pen through the rails is blocked and the same trip through
+the gate is clear; tap-to-go reaches ground, a growing crop, an animal inside a pen
+(through the gate, in more than one leg) and the crate, an empty patch still opens the
+pop-up, and the joystick cancels; the card is one slot per kind with the right count on
+each badge, in full colour, with a customer and a floating 3D want. `qa-skyflyer.mjs`
+carries the static half. `node qa-all.mjs` green.
+
+### What is NOT done, and why
+- **Step 0, the planner.** This sandbox has no network at all — the proxy answers 403 to
+  `www.buildablekids.com`, so `scripts/planner.mjs` cannot read or write, and there is no
+  Chrome tool in this session to POST from a live tab. **FM4 to FM8 were not added to the
+  ROADMAP and FM4 is not marked in progress.** It needs doing from a session that can
+  reach the site.
+- **Step 6, the Kenney food models.** The Food Kit GLBs live in Mike's own
+  `Kenney Game Assets All-in-1 3.5.0` folder, which is not in this sandbox (searched the
+  whole filesystem; the repo holds no `corn.glb`, `egg.glb` or `carton.glb`). The card
+  says to skip and say so, so nothing was built and `?food=kenney` does not exist yet.
+  The picture-first decision is still Mike's to make.
+
+---
+
 ## 2026-09-07 — Sticking the landing: the ramp turbo (PB1 card edit)
 
 **Why this exists.** The PB1 card gained a line after PB1 shipped: ramps should give
