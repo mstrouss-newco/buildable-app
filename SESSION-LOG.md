@@ -1,13 +1,22 @@
-## 2026-09-07 (FM6): the first three presents, built for real
+## 2026-09-07: the pumpkin, the farm dog and a growable field
 
-**Phase FM, card FM6.** FM5 shipped the unlock ladder with hollow boxes. These
-three are things now. Touched `public/skyflyer-farm.html`, `db/create-farm-save.sql`,
+**NOT a card. Read this first.** This work was built as "FM6" against a scope Mike
+picked from options I offered, because at the time **no FM6 card existed and no FM6
+plan doc was reachable** from this sandbox. While it was being built, the planner
+gained real FM6, FM7 and FM8 cards, and they are different: FM6 is the Quaternius
+island, FM7 is crops and buildings and the watering can, FM8 is helpers and the
+sticker book. So **nothing here is ticked off**, and it sits on its own branch,
+`claude/farm-pumpkin-dog-fieldrow`, off `main`. What it built maps onto the real
+cards like this, and each of those cards now carries a note saying so:
+
+| built here | belongs to |
+|---|---|
+| the pumpkin, end to end | FM7 (one of its four new crops) |
+| the farm dog | FM8 (its first helper) |
+| a growable field and the plumbing for it | FM6 (its buyable land, 3x3 to 5x5) |
+
+Touched `public/skyflyer-farm.html`, `db/create-farm-save.sql`,
 `src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-farm-shot.mjs`, `qa-skyflyer.mjs`.
-
-Scope was Mike's call this session: the presents have to be built IN ORDER, because
-the shop only ever shows the next one and anything else leaves her opening a hollow
-box. So FM6 is presents one to three; FM7 is the pig and the mill, FM8 the bees, the
-strawberry and the tractor.
 
 ### The pumpkin seed, 130
 A fourth crop, and the best thing in the field: the dearest seed at 10, the slowest at
