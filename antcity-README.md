@@ -29,7 +29,9 @@ engine), so the QA robot can prove every mission is beatable.
 - **public/buildable-hud.js** - the one shared in-play info bar (no global).
 - **qa-antcity.mjs** - the headless robot (card AC2): a perfect player finishes all
   ten missions, and the cartridge contract is checked with them. AC5 added a section for
-  the working ants, the guide and the swarm.
+  the working ants, the guide and the swarm. AC7 put a small real DOM under it, so the
+  tutorial is played with the actual gestures it teaches, in a mouse profile and a touch
+  profile, and "never two hints on screen" is checked after every one of them.
 - **qa-antcity-shot.mjs** - the same game in real Chromium (card AC5): a real finger drag
   and a real tap walk the guide, and it writes pictures to look at. Needs Playwright, and
   skips loudly without it, so it is never mistaken for a check that ran.
@@ -125,6 +127,53 @@ nothing dies, and an unstaffed garden simply waits.
 
 The new room and both chain milestones live in `public/antcity/manifest.json`, so the recipe
 can add or retune them without touching the engine.
+
+## Clarity: see what you do, know what to do (AC7)
+
+AC5 and AC6 shipped and the robot was green, and the game still failed a human
+playthrough. Ten things were wrong and all ten were about the same thing: the game did
+not SHOW what it was doing, and it did not say clearly what to do next.
+
+- **Food is carried, never counted.** Every edible thing on the meadow is a real item in
+  a real place: a crumb the kid taps out, a berry the bush grew, a leaf, a drop of
+  honeydew, a drop of water. A forager claims one, walks out of the anthill, picks it up
+  (which is the moment the bush visibly loses that berry) and carries it home in its
+  mandibles. **The Food number moves on ARRIVAL and at no other moment.** A tap leaves a
+  crumb; it does not add food.
+- **ONE hint line.** There used to be two, a goal chip and a floating pill, and they
+  contradicted each other all the way through the tutorial. There is now exactly one
+  surface, `#coach`, and everything comes out of it in one order: the lesson step being
+  taught, then a message that just fired, then what is slowing the colony, then the
+  mission. A finished step's words vanish the instant the step is done.
+- **Only gestures that work are taught.** Step three used to say "slide the colour bar",
+  which did nothing at all with a mouse. It now teaches the plus button on a job card,
+  which cannot miss on any device, and the bar was fixed anyway: a press anywhere on it
+  takes hold of the nearest divider, on mouse and on touch.
+- **No unexplained modes.** Dig and Jobs were never modes (you dig by dragging in the
+  dirt, you set jobs on the strip), so those tabs are gone. What is left is **Build**,
+  **Drop Food** and **Drop Water**, and the lit one is what a tap on the meadow leaves
+  behind. Water now goes somewhere you can see: its own meter.
+- **A needs panel.** Four slim always-on meters: food, water, rest, eggs. One that runs
+  low flags itself and hands the hint line a sentence about what to do.
+- **Build is a button.** Rooms were undiscoverable because the only way in was to tap a
+  tunnel and hope. Tap **Build**, pick a room, and every spot it could go glows on the
+  colony; tap one to put it there. A short second lesson teaches exactly that, the first
+  time a room is available (and never while the colony is hungry).
+- **Ants that go somewhere.** Every working ant walks to a marked target and animates the
+  work there: diggers to the drawn spot, foragers to the item, nursery ants to the eggs or
+  the mushroom garden, builders to the half-built room or the flooded tunnel. Every job in
+  progress wears a marker in its job colour. **An idle ant parks and stands still.**
+  Nothing wanders, a cell holds two ants at most and never a third, and nobody sits on the
+  queen.
+- **A slim panel.** The jobs panel was a permanent slab over the bottom half of the
+  screen, hiding the very dirt the tutorial was pointing at. It is a strip that opens on a
+  tap, and the engine measures the panel's REAL height every frame (it used to assume 132
+  pixels while the thing on screen was far taller).
+- **No level picker.** One colony, always yours: the tile opens the anthill.
+- **Drawn ants.** At a third of a cell the library sprite read as an orange blob, so the
+  ants are drawn: a clean silhouette with a dark outline, a job-coloured marker above, and
+  the carried item in its mandibles. The art ids still come from the manifest and still
+  pick the body colour, and the fallback path is untouched.
 
 ## The colony builder loop (grow it huge)
 
