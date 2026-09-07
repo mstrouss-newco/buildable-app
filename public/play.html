@@ -98,11 +98,20 @@ const GAME_CONFIG = window.GAME_CONFIG || {
   // HH4 — THE FIXED CAST. Not the kid's own generated hero: these four, always, so the
   // game has characters a child comes back to. All four already live in the shared
   // character library, so nothing new has to be drawn.
+  // PREVIEW CAST. All eight kid-explorer candidates are in the chooser so Mike can flip
+  // between them in the running game rather than judging them off a contact sheet. Once
+  // he picks four this list gets cut down to those four. The old storybook animals
+  // (bunny/fox/penguin/dragon) are gone: they were front-facing portraits being slid
+  // along the ground, which is why the hero never looked like it was running.
   cast: [
-    { slug:"bunny",   name:"Bramble", colour:"#b9b2a8" },
-    { slug:"fox",     name:"Pip",     colour:"#e07a3c" },
-    { slug:"penguin", name:"Waddle",  colour:"#3a4a63" },
-    { slug:"dragon",  name:"Ember",   colour:"#6cc36a" },
+    { slug:"hh-scout",    name:"Rowan", colour:"#4f7a3a" },
+    { slug:"hh-pilot",    name:"Nova",  colour:"#d9682f" },
+    { slug:"hh-trekker",  name:"Juno",  colour:"#c2a45e" },
+    { slug:"hh-caver",    name:"Finn",  colour:"#e8b52c" },
+    { slug:"hh-skater",   name:"Remy",  colour:"#7b5bc4" },
+    { slug:"hh-astro",    name:"Sol",   colour:"#8fa6c9" },
+    { slug:"hh-snowkid",  name:"Wren",  colour:"#d4462f" },
+    { slug:"hh-tinkerer", name:"Bex",   colour:"#5b6f9c" },
   ],
   // HH4 — FOUR WORLDS. Each level names its own world, so its art set, its sky and its
   // ground colours all come from the world rather than one global setting. Difficulty
@@ -125,7 +134,9 @@ const GAME_CONFIG = window.GAME_CONFIG || {
 };
 const CAST = GAME_CONFIG.cast || [{ slug:"bunny", name:"Bramble", colour:"#b9b2a8" }];
 const LIB_BASE = GAME_CONFIG.libBase || "https://www.buildablekids.com/api/story-library";
-function heroUrl(slug){ return LIB_BASE+"?img=character:"+slug+"&style="+(GAME_CONFIG.artStyle||"watercolor")+"&emo=happy"; }
+// The base picture only. The old cast asked for "&emo=happy", which is a SECOND
+// generated image per character; these prompts already bake in a happy running pose.
+function heroUrl(slug){ return LIB_BASE+"?img=character:"+slug+"&style="+(GAME_CONFIG.artStyle||"watercolor"); }
 
 let W=900, VH=540; const H=540, TILE=60;       // H is the WORLD height and never moves (every platform y is baked from it).
                                                // W and VH are the VIEW: both follow the screen so the canvas always fills it.
@@ -646,7 +657,7 @@ const BS = (typeof window!=="undefined" && window.BuildableStartScreen) || null;
 const SAVE_KEY = "bk_hopheroes_v1";
 function loadSave(){
   try{ const raw=localStorage.getItem(SAVE_KEY); const o=raw?JSON.parse(raw):null;
-    return { hero:(o&&o.hero)||CAST[0].slug, cleared:Math.max(0,Math.min(LEVELS.length,(o&&o.cleared)|0)), stars:(o&&o.stars)||{} };
+    return { hero:(CAST.some(c=>c.slug===(o&&o.hero)) ? o.hero : CAST[0].slug), cleared:Math.max(0,Math.min(LEVELS.length,(o&&o.cleared)|0)), stars:(o&&o.stars)||{} };
   }catch(e){ return { hero:CAST[0].slug, cleared:0, stars:{} }; }
 }
 function saveNow(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} }
