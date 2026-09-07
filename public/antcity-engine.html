@@ -1,0 +1,2646 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="icon" href="/favicon.ico?v=4" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=4" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ant City">
+<meta name="application-name" content="Ant City">
+<meta name="theme-color" content="#E9A23B">
+<title>Ant City</title>
+<style id="no-longpress">/* Buildable: disable iOS long-press magnifier + Look Up/Translate popup app-wide; keep inputs selectable */
+*{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+input,textarea{-webkit-user-select:text;user-select:text;}
+</style>
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#2b1d10;overflow:hidden;font-family:'Baloo 2','Nunito',system-ui,sans-serif;}
+  #wrap{position:fixed;inset:0;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+  #start{position:absolute;inset:0;display:none;z-index:20;overflow:auto;}
+
+  /* ---- the bottom panel (AC7). It is SLIM: one coach line, the needs meters,
+         the three actions, and a jobs strip that opens on a tap. Nothing here may
+         cover the dirt the kid is drawing in, so the engine measures its real
+         height every frame and keeps the camera and the guide clear of it. ---- */
+  #panel{position:absolute;left:0;right:0;bottom:0;z-index:8;padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+         background:linear-gradient(180deg,rgba(43,29,16,0) 0%,rgba(43,29,16,.72) 22%,rgba(43,29,16,.94) 100%);}
+  #panel.hidden{display:none;}
+
+  /* ---- ONE hint surface (AC7). Every message the game has -- the lesson step, a
+         nudge, a queen fact, the mission goal -- comes out here and nowhere else,
+         so two of them can never contradict each other on screen. ---- */
+  #coach{display:flex;align-items:center;gap:8px;margin:0 2px 5px;color:#ffe9c2;font-size:13px;font-weight:800;
+         line-height:1.25;text-shadow:0 1px 3px rgba(0,0,0,.65);min-height:22px;}
+  #coach .qd{flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#b0553f;position:relative;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.45);}
+  #coach .qd:after{content:"";position:absolute;left:5px;top:8px;width:4px;height:4px;border-radius:50%;background:#fff8ec;box-shadow:8px 0 0 #fff8ec;}
+  #coach.teach{color:#fff6e0;}
+  #coachText{flex:1 1 auto;}
+
+  /* ---- the needs panel: what the colony has, at a glance, always ---- */
+  #needs{display:flex;gap:6px;margin:0 2px 5px;}
+  .need{flex:1 1 0;display:flex;flex-direction:column;gap:2px;}
+  .need .nl{font-size:9px;font-weight:800;letter-spacing:.4px;color:#ffe9c2;opacity:.85;text-transform:uppercase;}
+  .need .mtr{display:block;height:7px;border-radius:4px;background:rgba(0,0,0,.38);overflow:hidden;}
+  .need .mtr i{display:block;height:100%;width:0%;border-radius:4px;background:#e9c46a;transition:width .3s;}
+  .need.low .nl{color:#ffd166;}
+  .need.low .mtr{box-shadow:0 0 0 2px rgba(255,209,102,.55);}
+
+  /* ---- the three things a tap can do. The lit one is what the meadow tap drops. ---- */
+  #acts{display:flex;gap:6px;margin:0 2px 5px;}
+  /* AC7b: the three actions are PICTURES first. A five year old should know what a
+     tap will leave on the meadow without reading the word under it, and the picture
+     is the same thing the game really draws there: a crumb, a drop, a room. */
+  .tool{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;
+        border:none;border-radius:12px;padding:7px 4px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
+  .tool .ic{flex:0 0 24px;width:24px;height:24px;display:block;}
+  .tool.on{background:#ffd166;box-shadow:0 0 0 3px rgba(255,209,102,.35);}
+  .tool.pulse{animation:tpulse 1s ease-in-out infinite;}
+  @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.8);}}
+
+  /* ---- the jobs strip: slim by default, opens on a tap ---- */
+  #stripRow{display:flex;align-items:center;gap:8px;margin:0 2px;}
+  #jobsToggle{flex:0 0 auto;border:none;border-radius:11px;background:rgba(255,255,255,.14);color:#ffe9c2;
+              font-family:inherit;font-size:11px;font-weight:800;padding:5px 9px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+  #jobsToggle .chev{display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:5px solid #ffe9c2;}
+  #jobsToggle.open .chev{border-bottom:none;border-top:5px solid #ffe9c2;}
+  #bar{position:relative;flex:1 1 auto;height:22px;border-radius:11px;overflow:hidden;background:#3a2716;box-shadow:inset 0 2px 6px rgba(0,0,0,.35);touch-action:none;cursor:ew-resize;}
+  #bar .seg{position:absolute;top:0;bottom:0;}
+  #bar .gr{position:absolute;top:0;bottom:0;width:12px;margin-left:-6px;background:rgba(255,255,255,.9);border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.4);}
+  #bar.pulse{box-shadow:0 0 0 3px rgba(255,209,102,.9),inset 0 2px 6px rgba(0,0,0,.35);}
+  #jobsBody{overflow:hidden;}
+  #jobsBody.closed{display:none;}
+  #barMix{margin:5px 4px 0;color:#ffe9c2;font-size:11px;font-weight:700;opacity:.9;text-align:center;
+          overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #jobs{display:flex;gap:6px;margin-top:5px;}
+  .job{flex:1 1 0;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:4px 4px 5px;text-align:center;color:#fff;}
+  .job .nm{font-size:11px;font-weight:800;letter-spacing:.2px;opacity:.92;white-space:nowrap;}
+  .job .ct{font-size:18px;font-weight:800;line-height:1.1;}
+  .job .btns{display:flex;gap:4px;justify-content:center;margin-top:2px;}
+  .job button{width:28px;height:26px;border:none;border-radius:8px;background:rgba(255,255,255,.20);color:#fff;font-size:15px;font-weight:800;line-height:1;cursor:pointer;}
+  .job button:active{background:rgba(255,255,255,.34);}
+  .job button.pulse{animation:tpulse 1s ease-in-out infinite;}
+
+  .room .sp{display:block;font-size:11px;font-weight:800;margin-top:2px;color:#3f7a3a;}
+  .room .sp.meh{color:#8a7350;font-weight:700;}
+
+  /* ---- build a room popup ---- */
+  #build{position:absolute;inset:0;z-index:12;display:none;align-items:center;justify-content:center;background:rgba(20,12,4,.5);}
+  #buildCard{background:#fff8ec;border-radius:20px;padding:16px 18px;width:min(340px,86vw);box-shadow:0 14px 40px rgba(0,0,0,.4);}
+  #buildCard h2{margin:0 0 10px;font-size:19px;color:#4a2f10;}
+  .room{display:flex;align-items:center;gap:10px;width:100%;border:none;background:#f0e0c6;border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;text-align:left;}
+  .room:disabled{opacity:.45;}
+  .room .sw{flex:0 0 32px;height:32px;border-radius:9px;background:#e9c46a;}
+  .room .rt{flex:1 1 auto;}
+  .room .rn{display:block;font-size:15px;font-weight:800;color:#4a2f10;}
+  .room .rd{display:block;font-size:12px;color:#7a5a30;}
+  #buildCancel{width:100%;border:none;background:#e9a23b;color:#3a2600;font-weight:800;font-size:15px;padding:10px;border-radius:12px;cursor:pointer;font-family:inherit;}
+
+  /* the engine's own standalone buttons — the shared nav bridge hides these in-app */
+  .selfbtn{position:absolute;z-index:9;border:none;border-radius:999px;background:rgba(20,12,4,.55);color:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:8px 14px;cursor:pointer;}
+  #backBtn{top:58px;left:14px;}
+  #muteBtn{top:58px;right:14px;}
+  #helpBtn{top:100px;right:14px;}
+  .bk-inshell .selfbtn{display:none;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <button id="backBtn" class="selfbtn">Home</button>
+  <button id="muteBtn" class="selfbtn">Sound</button>
+  <button id="helpBtn" class="selfbtn">?</button>
+  <div id="panel" class="hidden">
+    <div id="coach" data-hint="1"><span class="qd"></span><span id="coachText">Grow your colony</span></div>
+    <div id="needs">
+      <div class="need" id="need_food"><span class="nl">Food</span><span class="mtr"><i id="mt_food"></i></span></div>
+      <div class="need" id="need_water"><span class="nl">Water</span><span class="mtr"><i id="mt_water"></i></span></div>
+      <div class="need" id="need_rest"><span class="nl">Rest</span><span class="mtr"><i id="mt_rest"></i></span></div>
+      <div class="need" id="need_eggs"><span class="nl">Eggs</span><span class="mtr"><i id="mt_eggs"></i></span></div>
+    </div>
+    <div id="acts">
+      <button class="tool" id="toolBuild" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="15" rx="4.5" fill="#e9c46a" stroke="#8a5a2b" stroke-width="2"/><path d="M9 20.5v-4a3 3 0 0 1 6 0v4z" fill="#6b431c"/></svg><span>Build</span></button>
+      <button class="tool on" id="toolFood" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="12.5" r="7" fill="#d9a05b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="17" cy="15.5" r="4.2" fill="#c98b4b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="8" cy="10" r="1.7" fill="#f0c48f"/></svg><span>Food</span></button>
+      <button class="tool" id="toolWater" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><span>Water</span></button>
+    </div>
+    <div id="jobsStrip">
+      <div id="stripRow">
+        <button id="jobsToggle" type="button"><span>Jobs</span><span id="barAnts">6 ants</span><span class="chev"></span></button>
+        <div id="bar"></div>
+      </div>
+      <div id="jobsBody" class="closed">
+        <div id="barMix">A steady, balanced crew</div>
+        <div id="jobs"></div>
+      </div>
+    </div>
+  </div>
+  <div id="build"><div id="buildCard"><h2 id="buildHead">Build a room</h2><div id="roomList"></div><button id="buildCancel" type="button">Not now</button></div></div>
+  <div id="start"></div>
+</div>
+
+<script src="buildable-renders.js"></script>
+<script src="buildable-mechanics.js"></script>
+<script src="buildable-audio.js"></script>
+<script src="buildable-startscreen.js"></script>
+<script src="buildable-manifest.js"></script>
+<script src="buildable-hud.js?v=1"></script>
+<script src="buildable-gamenav.js"></script>
+<script src="buildable-wallet.js"></script>
+<script src="buildable-feel.js"></script>
+<script src="buildable-wincard.js"></script>
+<script>
+"use strict";
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var BA = window.BuildableAudio || { unlock:function(){}, sfx:function(){}, toggleMute:function(){return false;}, muted:false };
+  var BR = window.BuildableRenders || null;
+  var BS = window.BuildableStartScreen;
+  var BW = window.BuildableWallet;
+  var Feel = window.Feel;
+
+  var ACCENT = "#E9A23B";              // kept in sync with /antcity/manifest.json "color"
+
+  // ======================================================================
+  //  Sound (AC4). Every sound Ant City makes is one WE created, named in
+  //  api/sfx.js and served from /api/sfx. The shared synth in buildable-audio
+  //  is a silent fallback only: a clip that is not generated yet is simply not
+  //  heard. The music is one shared library loop, so any game can reuse it.
+  // ======================================================================
+  var SFX_BASE = "/api/sfx?s=";
+  //  The left column is the name the ENGINE (or the shared Feel kit) asks for —
+  //  Feel.tap plays "select", Feel.coinBurst plays "coin", Feel.celebrate plays
+  //  "win" — and the right column is the clip in api/sfx.js that answers it.
+  var SFX_MAP = {
+    dig:     "antcity_dig",      // a digger opens a cell
+    select:  "antcity_march",    // a tap: ants marching to a new job
+    munch:   "antcity_munch",    // a crumb reaches the colony
+    hatch:   "antcity_hatch",    // an egg opens
+    coin:    "antcity_hatch",    // the coin burst on a finished mission
+    rain:    "antcity_rain",     // a tunnel floods
+    win:     "antcity_hatch",    // Feel.celebrate
+    levelup: "antcity_hatch",
+    hurt:    "antcity_rain"      // Feel.miss — a setback, never a buzzer
+  };
+  var MUSIC_URL = "/api/library-music?name=meadow_busy_bright";
+  function sfx(name){ try{ if(BA && BA.sfx && !DEMO) BA.sfx(name); }catch(e){} }
+  var _music = null;
+  function ensureMusic(){
+    if(DEMO || !BA || !BA.setMusic || _music === MUSIC_URL) return;
+    try{ if(BA.stopMusic) BA.stopMusic(); BA.setMusic(MUSIC_URL); _music = MUSIC_URL; if(BA.playMusic) BA.playMusic(); }catch(e){}
+  }
+
+  // ======================================================================
+  //  GAME_CONFIG — the recipe. Every number the colony runs on lives here,
+  //  so tuning Ant City never means rewriting it. The manifest may replace
+  //  the art and the feel presets; these rates stay the engine's own.
+  //  The colony is COUNTS + RATES (a tycoon/idle model), so the population
+  //  can climb into the hundreds while only a sample of ants is ever drawn.
+  // ======================================================================
+  var GAME_CONFIG = {
+    cols: 12,                 // colony width in cells (fixed; depth is what grows)
+    startRow: 2,              // the queen's first chamber
+    startAnts: 6,
+    startFood: 12,
+    startWater: 8,
+    sampleMax: 70,            // AC5: a swarm of little ants, not a handful of big ones
+    antScale: 0.34,           // ant size as a share of one cell: small enough to read as a swarm,
+                              // big enough that one ant is still an ant on a phone
+
+    dig:     { perAntPerSec: 0.55 },   // cells opened per digger per second
+    forage:  { walkSpeed: 3.0, storageSpeedMax: 1.8 },   // AC7: a forager's pay is the TRIP, not a rate
+    build:   { perAntPerSec: 0.42 },   // room progress per builder per second
+    nursery: { hatchPerAntPerSec: 0.14, layPerSec: 0.22, eggFood: 1 },
+    upkeep:  { foodPerAntPerSec: 0.035, waterPerAntPerSec: 0.018 },
+    hungryRate: 0.4,          // how much slower a hungry colony works (never stops, never punishes)
+
+    capacity: { foodBase: 25, foodPerStorage: 40, waterBase: 20, eggBase: 2, eggPerNursery: 8 },
+
+    // ---- AC7 pillar 1: food is CARRIED, never counted -----------------------
+    //  Every edible thing on the meadow is a real item an ant walks to, picks up
+    //  and hauls through the front door. The Food number moves on ARRIVAL and at
+    //  no other moment, so a tap can never make the counter jump on its own.
+    //  `give` is which store it fills, `n` how much, `pri` what a forager fetches
+    //  first (the kid's own crumbs always come before the colony's own foraging).
+    items: {
+      crumb: { give:"food",  n:4, pri:0 },
+      water: { give:"water", n:4, pri:0 },
+      berry: { give:"food",  n:3, pri:1 },
+      dew:   { give:"food",  n:2, pri:2 },
+      leaf:  { give:"leaf",  n:1, pri:3 }
+    },
+    //  what the meadow grows on its own, and how much of it is ever out at once
+    meadow: { berryGrowPerSec: 0.32, berryMax: 5, leafOut: 4, dewOut: 2, itemMax: 16 },
+    pickupSecs: 0.35,           // the beat an ant spends actually taking hold of it
+
+    denBonus: 0.10,           // each resting den speeds the colony a little (capped below)
+    denMax: 3,
+
+    rooms: {
+      nursery: { name:"Nursery",       desc:"Eggs are tended here",       food:6,  color:"#f2a2c0" },
+      storage: { name:"Storage",       desc:"Holds more food",            food:8,  color:"#e9c46a" },
+      den:     { name:"Resting Den",   desc:"Tired ants recover",         food:8,  color:"#9ad2f2" },
+      fungus:  { name:"Fungus Garden", desc:"Nursery ants grow mushrooms", food:10, color:"#cbbd85" }
+    },
+
+    // ---- AC6 pillar 1: WHERE you dig a room changes how well it works ---------
+    //  Data, not code: a rule is a test + what it speeds up + the line the kid
+    //  reads while choosing. BONUSES ONLY. A plain spot simply earns nothing, so
+    //  a colony built before this existed keeps working exactly as it did.
+    placement: {
+      storage: { test:"shallow", n:4,  mul:0.35, yes:"Right by the door: quicker trips",  no:"Storage works here. Nearer the top is quicker." },
+      nursery: { test:"queen",   n:2,  mul:0.40, yes:"Right by the queen: eggs sooner",   no:"A nursery works here. Beside the queen is faster." },
+      den:     { test:"deep",    n:8,  mul:0.50, yes:"Deep and quiet: a better rest",     no:"A den works here. Deeper down is quieter." },
+      fungus:  { test:"queen",   n:3,  mul:0.30, yes:"Close to home: mushrooms grow fast", no:"A garden works here. Nearer the queen grows faster." }
+    },
+
+    // ---- AC6 pillar 3: the production chains (real leafcutter and aphid science) ----
+    chain: {
+      leafGrowPerSec: 0.30,      // the meadow puts out new leaves on its own
+      leafMax: 12,               // how many are ever waiting to be cut at once
+      leafCarryShare: 0.6,       // a forager with no crumb to fetch cuts leaves instead
+      leafStore: 40,             // how many cut leaves the colony can hold
+      fungusPerAntPerSec: 0.22,  // leaves turned into mushroom food per nursery ant
+      fungusFoodPerLeaf: 1.5,    // mushrooms are worth more than the leaf that fed them
+      aphidPerSec: 0.16,         // honeydew the herd gives once it is unlocked
+      aphidMax: 8                // drops waiting on the plant
+    },
+
+    // ---- missions (AC2) ----------------------------------------------------
+    //  The manifest names the ten missions and their order; this maps each
+    //  manifest `layout` to the goal that finishes it, so the manifest stays the
+    //  recipe and the engine stays the fixed part. A goal is always something the
+    //  colony can reach from any state — nothing can be failed or missed.
+    goals: {
+      "tutorial-tunnel":    { type:"dug",   n:3 },
+      "forage":             { type:"food",  n:8 },
+      "build-room-nursery": { type:"room",  room:"nursery", n:1 },
+      "hatch":              { type:"born",  n:1 },
+      "grow-population":    { type:"ants" },        // the count comes from the level id
+      "build-room-storage": { type:"room",  room:"storage", n:1 },
+      "setback-rain":       { type:"flood", n:1 },
+      "build-room-den":     { type:"room",  room:"den", n:1 },
+      "dig-deep-find":      { type:"found", n:1 }
+    },
+    // which mission opens each room type (index into the mission list). A room the
+    // kid has not met yet is not offered; nothing is ever taken away again.
+    roomUnlock: { nursery:2, storage:5, den:8, fungus:99 },
+    // free rewards that never block building
+    milestones: [
+      { id:"deep-5",  type:"deep", n:5,  coins:20, unlock:"storage" },
+      { id:"leaves-20", type:"leaves", n:20, coins:20, unlock:"fungus",
+        fact:"Leafcutter ants do not eat the leaves. They feed them to a mushroom garden and eat the mushrooms." },
+      { id:"aphids",  type:"ants", n:20, coins:20, aphids:true,
+        fact:"Ants really do keep aphids like tiny cows, and drink the sweet honeydew they make." },
+      { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" }
+    ],
+    // gentle setbacks: they pause work, they never take anything away
+    setback: {
+      floodEverySec: 100,        // divided by the difficulty's setback frequency
+      floodClearPerAntPerSec: 0.12,   // a few seconds of a builder's time, long enough to notice
+      restDrainPerSec: 0.007,    // the colony gets tired slowly
+      restPerDenPerSec: 0.030,   // a resting den brings it back
+      sleepyRate: 0.45,          // how much slower a sleepy colony works
+      // AC6: rain still only PAUSES. A colony with food put by keeps working
+      // straight through it; an empty one just goes slower until it is cleared.
+      stockedFood: 12,
+      floodRate: 0.7
+    },
+    findRow: 11,                 // how deep the buried find is buried
+
+    // difficulty 1-5 -> colony pace + setback frequency
+    difficulty: [
+      { pace:0.70, setbacks:0.4 },
+      { pace:0.85, setbacks:0.7 },
+      { pace:1.00, setbacks:1.0 },
+      { pace:1.25, setbacks:1.3 },
+      { pace:1.55, setbacks:1.6 }
+    ]
+  };
+
+  var JOBS = [
+    { id:"digger",  name:"Diggers",  color:"#c98b4b" },
+    { id:"forager", name:"Foragers", color:"#7ec46a" },
+    { id:"nursery", name:"Nursery",  color:"#f2a2c0" },
+    { id:"builder", name:"Builders", color:"#6fc7e8" }
+  ];
+
+  // ======================================================================
+  //  Art. Cartridge rule: every picture is fetched at load time from the URL
+  //  the manifest resolves — nothing is baked in. Any slot that misses falls
+  //  back to clean drawn shapes, so a 404 can never break the colony.
+  // ======================================================================
+  var ART_FILES = {
+    "antcity/ant/classic-v1":     "/antcity/art/ant-classic.svg",
+    // AC5: the two poses an ant on a job is actually in, from the live library
+    "antcity/ant/carrying-v1":    "/api/asset-studio?asset=ant_city/worker_ants/meadow/carrying_normal",
+    "antcity/ant/digging-v1":     "/api/asset-studio?asset=ant_city/worker_ants/meadow/digging_normal",
+    "antcity/ant/ruby-v1":        "/antcity/art/ant-ruby.svg",
+    "antcity/ant/emerald-v1":     "/antcity/art/ant-emerald.svg",
+    "antcity/hero/queen-v1":      "/antcity/art/queen.svg",
+    "antcity/prop/egg-v1":        "/antcity/art/egg.svg",
+    "antcity/prop/nursery-v1":    "/antcity/art/room-nursery.svg",
+    "antcity/prop/storage-v1":    "/antcity/art/room-storage.svg",
+    "antcity/prop/den-v1":        "/antcity/art/room-den.svg",
+    "antcity/prop/crumb-v1":      "/antcity/art/crumb.svg",
+    // AC6: the production chain pieces
+    "antcity/prop/leaf-v1":       "/antcity/art/leaf.svg",
+    "antcity/prop/fungus-v1":     "/antcity/art/room-fungus.svg",
+    "antcity/prop/aphid-plant-v1":"/antcity/art/aphid-plant.svg",
+    "antcity/prop/honeydew-v1":   "/antcity/art/honeydew.svg",
+    "antcity/prop/buried-find-v1":"/antcity/art/buried-find.svg",
+    "antcity/soil/sandy-v1":      "/antcity/art/soil-tile.svg",
+    "antcity/soil/deep-v1":       "/antcity/art/soil-deep.svg",
+    "antcity/soil/loam-v1":       "/antcity/art/soil-loam.svg",
+    "antcity/surface/meadow-v1":       "/antcity/art/surface-meadow.svg",
+    "antcity/surface/meadow-rain-v1":  "/antcity/art/surface-meadow-rain.svg",
+    "antcity/surface/meadow-berry-v1": "/antcity/art/surface-meadow-berry.svg",
+    "antcity/prop/flood-v1":      "/antcity/art/flood.svg",
+    "antcity/prop/colony-v1":     "/antcity/art/colony.svg",
+    "antcity/loading/v1":         "/antcity/art/loading.svg",
+    "antcity/badge/v1":           "/antcity/art/badge.svg"
+  };
+  // Ids that are DRAWN GEOMETRY on purpose, not a missing file. The dig marker is
+  // the dashed outline the kid sees while a path is queued, and ASSET-PLAN says it
+  // stays drawn. Listed here so "no picture" can be told apart from "forgotten".
+  var DRAWN_ART = ["antcity/prop/dig-marker-v1"];
+  function artUrl(id){
+    if(!id || typeof id !== "string") return null;
+    if(id.charAt(0) === "/" || id.indexOf("http") === 0) return id;   // already a URL (asset studio)
+    if(ART_FILES[id]) return ART_FILES[id];
+    if(window.BuildableManifest && window.BuildableManifest.resolveAsset){
+      try{ return window.BuildableManifest.resolveAsset(id); }catch(e){}
+    }
+    return null;
+  }
+  var IMG = {};                       // slot -> HTMLImageElement (only once it really loaded)
+  function loadArt(slot, id){
+    var url = artUrl(id); if(!url || typeof Image !== "function") return;
+    var im = new Image();
+    im.onload = function(){ if(im.naturalWidth) IMG[slot] = im; };
+    im.onerror = function(){};        // keep the drawn fallback, never a broken slot
+    im.src = url;
+  }
+
+  // ---------- canvas ----------
+  var CV = $("cv"), X = CV.getContext("2d");
+  var W = 0, H = 0, DPR = 1;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    W = window.innerWidth || 360; H = window.innerHeight || 640;
+    CV.width = Math.floor(W*DPR); CV.height = Math.floor(H*DPR);
+    X.setTransform(DPR,0,0,DPR,0,0);
+    layout();
+  }
+  // geometry: the meadow on top, the soil grid under it
+  var CS = 34, OX = 0, SKY = 120, PANEL = 132, camY = 0, camTarget = 0;
+  function layout(){
+    CS = Math.max(24, Math.min(64, Math.floor(W / GAME_CONFIG.cols)));
+    OX = Math.floor((W - CS*GAME_CONFIG.cols) / 2);
+    SKY = Math.max(96, Math.min(170, Math.round(H * 0.20)));
+    // AC7: the panel's REAL height, measured. It used to be a hardcoded 132 while
+    // the thing on screen was far taller, which is how the tutorial ended up
+    // pointing at dirt that was hidden behind it.
+    PANEL = 0;
+    if(state === "play"){
+      var el = $("panel"), h = (el && el.offsetHeight) || 0;
+      PANEL = Math.max(90, Math.min(Math.round(H * 0.42), h || 132));
+    }
+  }
+  window.addEventListener("resize", resize);
+
+  // ---------- deterministic randomness (the world is scripted; the QA robot must repeat it) ----------
+  var _seed = 20260906;
+  function srand(){ _seed = (_seed + 0x6D2B79F5)|0; var t = _seed; t = Math.imul(t ^ (t>>>15), t|1); t ^= t + Math.imul(t ^ (t>>>7), t|61); return ((t ^ (t>>>14))>>>0) / 4294967296; }
+
+  // ======================================================================
+  //  The colony. Cells are stored sparsely: solid dirt is simply absent.
+  //    tunnel  { c, r, kind:"tunnel" }
+  //    plan    { c, r, kind:"plan", dig:0..1 }        a path the kid drew
+  //    room    { c, r, kind:"room", room:"nursery", build:0..1, done:bool }
+  // ======================================================================
+  var C = null;                 // the colony state
+  function key(c,r){ return c+","+r; }
+  function cellAt(c,r){ return C.cells[key(c,r)] || null; }
+  function isOpen(c,r){ var x = cellAt(c,r); return !!(x && !x.flooded && (x.kind === "tunnel" || (x.kind === "room"))); }
+
+  function freshColony(diff){
+    var g = GAME_CONFIG, col = {
+      cells:{}, plan:[], ants:g.startAnts, eggs:0, food:g.startFood, water:g.startWater,
+      jobs:{ digger:2, forager:2, nursery:1, builder:1 },
+      surface:[], sample:[],
+      layProg:0, hatchProg:0, deepest:g.startRow, difficulty:diff||3,
+      queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0,
+      // --- AC2: missions, milestones and the gentle setbacks ---
+      mission:0, done:{}, mBase:{}, freeBuild:false, hit:{}, guided:false,
+      carried:0, found:0, floods:0, floodT:0, rest:1,
+      // --- AC6: the production chains ---
+      leaves:0, leavesCut:0, leafReady:3, aphids:false, dew:0, dewGot:0, mush:0,
+      // --- AC7: what the meadow is growing, and whether the kid has met Build ---
+      berryReady:2, taught:{}, tapped:0
+    };
+    // the buried find for the last mission, waiting under the deep soil
+    col.find = { c:Math.floor(g.cols/2) + 2, r:g.findRow };
+    // the entrance shaft and the queen's first chamber, so there is always somewhere to start
+    var qc = col.queen.c;
+    for(var r=0; r<=g.startRow; r++) col.cells[key(qc,r)] = { c:qc, r:r, kind:"tunnel" };
+    col.cells[key(qc-1,g.startRow)] = { c:qc-1, r:g.startRow, kind:"tunnel" };
+    col.cells[key(qc+1,g.startRow)] = { c:qc+1, r:g.startRow, kind:"tunnel" };
+    return col;
+  }
+  function tune(){ return GAME_CONFIG.difficulty[Math.max(0,Math.min(4,(C.difficulty|0)-1))] || GAME_CONFIG.difficulty[2]; }
+
+  // ======================================================================
+  //  AC6 pillar 1: WHERE a room is dug changes how well it works. Every rule
+  //  is a BONUS. A plain spot earns nothing and costs nothing, so a colony
+  //  built before any of this existed carries on exactly as it did.
+  // ======================================================================
+  function goodSpot(id, c, r){
+    var p = GAME_CONFIG.placement[id]; if(!p) return false;
+    if(p.test === "shallow") return r <= p.n;
+    if(p.test === "deep")    return r >= p.n;
+    if(p.test === "queen")   return (Math.abs(c - C.queen.c) + Math.abs(r - C.queen.r)) <= p.n;
+    return false;
+  }
+  function spotLine(id, c, r){
+    var p = GAME_CONFIG.placement[id]; if(!p) return "";
+    return goodSpot(id, c, r) ? p.yes : p.no;
+  }
+  // how much better this room type is doing thanks to where the kid dug them
+  function roomMul(id){
+    var p = GAME_CONFIG.placement[id]; if(!p) return 1;
+    var n = 0;
+    for(var k in C.cells){
+      var x = C.cells[k];
+      if(x.kind === "room" && x.done && x.room === id && (x.good || goodSpot(id, x.c, x.r))) n++;
+    }
+    return Math.min(2.5, 1 + n * p.mul);
+  }
+  // how much of the nursery crew is on mushroom duty instead of eggs. A garden
+  // with no leaves waiting takes nobody: it just sits there.
+  function gardenShare(){ return (roomCount("fungus") > 0 && C.leaves > 0.01) ? 0.5 : 0; }
+
+  // capacities grow with the rooms the kid builds
+  function roomCount(kind){ var n=0; for(var k in C.cells){ var x=C.cells[k]; if(x.kind==="room" && x.done && x.room===kind) n++; } return n; }
+  function foodCap(){ return GAME_CONFIG.capacity.foodBase + roomCount("storage")*GAME_CONFIG.capacity.foodPerStorage; }
+  function waterCap(){ return GAME_CONFIG.capacity.waterBase + roomCount("storage")*20; }
+  function eggCap(){ return GAME_CONFIG.capacity.eggBase + roomCount("nursery")*GAME_CONFIG.capacity.eggPerNursery; }
+  function paceMul(){
+    var dens = Math.min(GAME_CONFIG.denMax, roomCount("den"));
+    var hungry = (C.food <= 0) ? GAME_CONFIG.hungryRate : 1;
+    var sleepy = (C.rest <= 0) ? GAME_CONFIG.setback.sleepyRate : 1;
+    // AC6: rain only bites a colony with an empty pantry. Ants with food put by
+    // work straight through it. It still only PAUSES, it never takes anything.
+    var wet = (floodCount() && C.food < GAME_CONFIG.setback.stockedFood) ? GAME_CONFIG.setback.floodRate : 1;
+    return tune().pace * (1 + dens*GAME_CONFIG.denBonus) * hungry * sleepy * wet;
+  }
+  // what is slowing the colony right now, in the kid's words. Never a failure,
+  // always a thing they can go and fix.
+  function setbackNow(){
+    if(C.food <= 0)  return "Your ants are hungry. Drop food up on the meadow.";
+    if(C.rest <= 0)  return "Your ants are sleepy. Build a resting den.";
+    if(floodCount())  return C.food >= GAME_CONFIG.setback.stockedFood
+      ? "Rain flooded a tunnel. Your store keeps the ants going."
+      : "Rain flooded a tunnel. Drop food to keep them going.";
+    return null;
+  }
+  function floodCount(){ var n=0; for(var k in C.cells){ if(C.cells[k].flooded) n++; } return n; }
+  function jobCount(id){ return C.jobs[id]|0; }
+
+  // ======================================================================
+  //  AC7: the things on the meadow. A crumb the kid taps out, a berry the bush
+  //  grew, a leaf, a drop of honeydew, a drop of water. Each one is a REAL item
+  //  in a real place. A forager claims it, walks to it, picks it up (which is
+  //  the moment the bush visibly loses its berry), and carries it home. Only the
+  //  arrival puts anything in a store — see deliver().
+  // ======================================================================
+  function itemDef(kind){ return GAME_CONFIG.items[kind] || GAME_CONFIG.items.crumb; }
+  function countItems(kind){ var n=0,i; for(i=0;i<C.surface.length;i++) if(C.surface[i].kind===kind) n++; return n; }
+  function dropSurface(kind, x, byKid){
+    if(kind === "food") kind = "crumb";                       // the old name for a crumb
+    var def = itemDef(kind);
+    if(byKid) C.tapped = (C.tapped|0) + 1;                    // what the KID put out, for the lesson
+    // room for one more: the OLDEST item nobody is carrying makes way, never one
+    // an ant is halfway home with
+    while(C.surface.length >= GAME_CONFIG.meadow.itemMax){
+      var drop = -1, j;
+      for(j=0;j<C.surface.length;j++){ if(!C.surface[j].held && !C.surface[j].claim){ drop = j; break; } }
+      if(drop < 0) break;
+      C.surface.splice(drop, 1);
+    }
+    // the place is kept as a SHARE of the meadow, not a pixel, so a berry stays on
+    // its bush when the phone is turned and a crumb stays where the kid put it
+    var it = { kind:kind, fx:Math.max(0.02, Math.min(0.98, x / Math.max(1, W))),
+               n:def.n, give:def.give, pri:def.pri, held:false, gone:false, claim:null, t:0 };
+    C.surface.push(it);
+    return it;
+  }
+  function itemX(it){ return (it.fx != null ? it.fx * W : (it.x || 0)); }
+  // how high off the ground it sits: a crumb on the grass, a berry up in the bush
+  function itemY(kind){
+    if(kind === "berry") return SKY - 42;
+    if(kind === "leaf")  return SKY - 38;
+    if(kind === "dew")   return SKY - 22;
+    return SKY - 17;                       // a crumb or a drop, down on the grass
+  }
+  // where each kind grows, so a berry comes off the berry bush and not out of the air
+  function itemHome(kind){ return kind === "leaf" ? "leaf" : (kind === "dew" ? "aphid" : "berry"); }
+  function spawnItem(kind){
+    var x = plantX(itemHome(kind)) + (srand() - 0.5) * 22;
+    return dropSurface(kind, Math.max(14, Math.min(Math.max(30, W - 14), x)));
+  }
+  // the meadow grows its own food, so a colony left alone still has something to
+  // fetch. Nothing here counts as food: it is only ever a thing waiting to be carried.
+  function growMeadow(dt){
+    var ch = GAME_CONFIG.chain, md = GAME_CONFIG.meadow;
+    C.berryReady = Math.min(md.berryMax, (C.berryReady||0) + md.berryGrowPerSec * dt);
+    if(C.berryReady >= 1 && countItems("berry") < md.berryMax){ C.berryReady -= 1; spawnItem("berry"); }
+    C.leafReady = Math.min(ch.leafMax, C.leafReady + ch.leafGrowPerSec * dt);
+    if(C.leafReady >= 1 && countItems("leaf") < md.leafOut && C.leaves < ch.leafStore){ C.leafReady -= 1; spawnItem("leaf"); }
+    if(C.aphids){
+      C.dew = Math.min(ch.aphidMax, C.dew + ch.aphidPerSec * dt);
+      if(C.dew >= 1 && countItems("dew") < md.dewOut){ C.dew -= 1; spawnItem("dew"); }
+    }
+    // an item whose ant went away comes back to the meadow rather than vanishing
+    for(var i=0;i<C.surface.length;i++){ var it = C.surface[i]; if(it.held && !it.claim) it.held = false; }
+  }
+  // THE ONLY PLACE A STORE EVER GROWS. An ant reached home with something.
+  function deliver(it){
+    if(!it || it.gone) return 0;
+    it.gone = true; it.claim = null;
+    var i = C.surface.indexOf(it); if(i >= 0) C.surface.splice(i, 1);
+    var got = 0;
+    if(it.give === "water"){ got = Math.min(it.n, Math.max(0, waterCap() - C.water)); C.water += got; }
+    else if(it.give === "leaf"){
+      got = Math.min(it.n, Math.max(0, GAME_CONFIG.chain.leafStore - C.leaves));
+      C.leaves += got; C.leavesCut += got;
+    } else {
+      got = Math.min(it.n, Math.max(0, foodCap() - C.food));
+      C.food += got; C.carried += got;
+      if(it.kind === "dew") C.dewGot += got;
+    }
+    sfx("munch");
+    saveSoon();
+    return got;
+  }
+  // what a free forager goes for: the kid's own crumbs first, then the meadow's own
+  function pickItem(){
+    var best = null, i;
+    for(i=0;i<C.surface.length;i++){
+      var it = C.surface[i];
+      if(it.claim || it.gone || it.held) continue;
+      if(it.kind === "leaf" && C.leaves >= GAME_CONFIG.chain.leafStore) continue;
+      if(!best || it.pri < best.pri) best = it;
+    }
+    return best;
+  }
+
+  // ======================================================================
+  //  The simulation. Fixed 1/60 steps so a headless run and a real play
+  //  reach the same colony from the same taps — that is what lets the QA
+  //  robot prove a mission is beatable.
+  // ======================================================================
+  var STEP = 1/60;
+  function step(){
+    var g = GAME_CONFIG, dt = STEP, pace = paceMul();
+    C.t += dt;
+
+    // --- diggers carve the drawn path, one cell at a time, in the order it was drawn
+    var digWork = jobCount("digger") * g.dig.perAntPerSec * pace * dt;
+    while(digWork > 0 && C.plan.length){
+      var cell = C.cells[C.plan[0]];
+      if(!cell || cell.kind !== "plan"){ C.plan.shift(); continue; }
+      if(!hasOpenNeighbour(cell.c, cell.r)){                 // not reachable yet: wait for the cell before it
+        var moved = false;
+        for(var i=1;i<C.plan.length;i++){
+          var alt = C.cells[C.plan[i]];
+          if(alt && alt.kind === "plan" && hasOpenNeighbour(alt.c, alt.r)){ C.plan.splice(i,1); C.plan.unshift(alt.c+","+alt.r); moved = true; break; }
+        }
+        if(!moved) break;
+        continue;
+      }
+      var need = 1 - cell.dig, take = Math.min(need, digWork);
+      cell.dig += take; digWork -= take;
+      if(cell.dig >= 1){
+        cell.kind = "tunnel"; delete cell.dig; C.plan.shift(); C.dug++;
+        if(cell.r > C.deepest) C.deepest = cell.r;
+        puff(cell.c, cell.r); sfx("dig");
+        // the last mission: dig deep enough and the ants turn up something buried
+        if(C.find && !C.find.gone && cell.r >= C.find.r){
+          C.find.gone = true; C.find.at = { c:cell.c, r:cell.r }; C.found++;
+          if(Feel){ try{ Feel.tap(); }catch(e){} }
+        }
+      }
+    }
+
+    // --- AC7: nothing is carried by arithmetic any more. The meadow grows what
+    //     there is to fetch; a drawn forager walks out, picks it up and brings it
+    //     home, and deliver() is the only thing that ever moves a store. The job
+    //     mix is still felt: more foragers means more trips running at once.
+    growMeadow(dt);
+
+    // --- the fungus garden: nursery ants feed cut leaves to the mushrooms and the
+    //     colony eats those. An unstaffed garden simply waits. Nothing ever rots.
+    var ch = g.chain;
+    if(roomCount("fungus") > 0 && C.leaves > 0){
+      var crew = jobCount("nursery") * gardenShare();
+      var grow = crew * ch.fungusPerAntPerSec * pace * roomMul("fungus") * dt;
+      var used = Math.min(grow, C.leaves);
+      if(used > 0){
+        C.leaves -= used;
+        var made = Math.min(used * ch.fungusFoodPerLeaf, Math.max(0, foodCap() - C.food));
+        C.food += made; C.mush += made;
+      }
+    }
+
+    // --- builders clear a flooded tunnel FIRST: it blocks the colony, so it is
+    //     the thing that most needs them. Nothing is lost while it sits there.
+    var bw = jobCount("builder") * g.build.perAntPerSec * pace * dt;
+    if(bw > 0){
+      for(var fk in C.cells){
+        var fc = C.cells[fk];
+        if(!fc.flooded) continue;
+        var cw = Math.min(1 - (fc.clear||0), bw * (g.setback.floodClearPerAntPerSec / g.build.perAntPerSec));
+        fc.clear = (fc.clear||0) + cw; bw -= cw * (g.build.perAntPerSec / g.setback.floodClearPerAntPerSec);
+        if(fc.clear >= 1){ delete fc.flooded; delete fc.clear; C.floods++; puff(fc.c, fc.r); if(Feel){ try{ Feel.tap(); }catch(e){} } }
+        if(bw <= 0) break;
+      }
+    }
+    if(bw > 0){
+      for(var k in C.cells){
+        var rm = C.cells[k];
+        if(rm.kind === "room" && !rm.done){
+          var t2 = Math.min(1 - rm.build, bw); rm.build += t2; bw -= t2;
+          if(rm.build >= 1){ rm.done = true; C.rooms++; puff(rm.c, rm.r); if(Feel){ try{ Feel.tap(); }catch(e){} } }
+          if(bw <= 0) break;
+        }
+      }
+    }
+
+    // --- the queen lays, the nursery hatches
+    if(C.food > 0 && C.eggs < eggCap()){
+      C.layProg += g.nursery.layPerSec * pace * dt;
+      while(C.layProg >= 1 && C.eggs < eggCap()){ C.layProg -= 1; C.eggs++; C.food = Math.max(0, C.food - g.nursery.eggFood); }
+    }
+    if(C.eggs > 0){
+      var tend = jobCount("nursery") * (1 - gardenShare()) * g.nursery.hatchPerAntPerSec
+                 * pace * roomMul("nursery") * dt * ((C.food > 0 && C.water > 0) ? 1 : 0.3);
+      C.hatchProg += tend;
+      while(C.hatchProg >= 1 && C.eggs > 0){
+        C.hatchProg -= 1; C.eggs--; C.ants++; C.born++;
+        C.jobs.forager++;                                  // a new ant joins the foragers; the kid slides it anywhere
+        spawnSample(); sfx("hatch");                       // the hatch chime
+        qReact = 0.9;                                      // the queen bobs at her new baby
+      }
+    }
+
+    // --- upkeep: the colony eats. Empty stores only slow it down, they never punish.
+    C.food  = Math.max(0, C.food  - C.ants * g.upkeep.foodPerAntPerSec  * dt);
+    C.water = Math.max(0, C.water - C.ants * g.upkeep.waterPerAntPerSec * dt);
+
+    // --- tiredness: it creeps in slowly, and a resting den brings it back
+    var dens2 = Math.min(g.denMax, roomCount("den"));
+    C.rest = Math.max(0, Math.min(1, C.rest - g.setback.restDrainPerSec*dt + dens2*g.setback.restPerDenPerSec*roomMul("den")*dt));
+
+    // --- rain: every so often a tunnel floods and blocks the way through it
+    C.floodT += dt * tune().setbacks;
+    if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
+
+    normalizeJobs();
+    foodTrend(dt);
+    checkMission();
+    walkSample(dt);
+    tickHow(dt); tickIdle(dt);
+    // the one hint line and the needs meters are kept true by the simulation itself,
+    // five times a second, so a headless run reads exactly what a player sees
+    if((++_uiTick % 12) === 0){ syncCoach(); syncNeeds(); }
+  }
+  var _uiTick = 0;
+  // One tunnel floods. Never the queen's chamber, never the entrance shaft, and
+  // never the only way in, so the colony can always keep working somewhere.
+  function rain(){
+    // ONE flooded tunnel at a time (two at the liveliest difficulty). A browser run
+    // with no builders assigned had eleven tunnels under water at once, which is a
+    // punishment, not a gentle setback.
+    var cap = tune().setbacks > 1.2 ? 2 : 1;
+    if(floodCount() >= cap) return null;
+    var pool = [], k, x;
+    for(k in C.cells){
+      x = C.cells[k];
+      if(x.kind !== "tunnel" || x.flooded) continue;
+      if(x.c === C.queen.c && x.r <= C.queen.r) continue;
+      pool.push(x);
+    }
+    if(!pool.length) return null;
+    var pick = pool[Math.floor(srand()*pool.length)];
+    pick.flooded = true; pick.clear = 0; sfx("rain");
+    hint(C.food >= GAME_CONFIG.setback.stockedFood
+      ? "Rain flooded a tunnel. Your food store keeps them going."
+      : "Rain flooded a tunnel. Builders will clear it.");
+    return pick;
+  }
+  function hasOpenNeighbour(c,r){
+    return isOpen(c-1,r) || isOpen(c+1,r) || isOpen(c,r-1) || isOpen(c,r+1) || r === 0;
+  }
+  // every ant always has a job; rounding drift goes to the foragers
+  function normalizeJobs(){
+    var sum = 0, i;
+    for(i=0;i<JOBS.length;i++) sum += C.jobs[JOBS[i].id]|0;
+    var diff = C.ants - sum;
+    if(diff !== 0){ C.jobs.forager = Math.max(0, (C.jobs.forager|0) + diff); }
+  }
+
+  // ======================================================================
+  //  The ants you actually see (AC5). They used to wander at random, which is
+  //  why the colony read as scenery. Now every drawn ant is DOING a thing the
+  //  colony is really doing: a digger walks THROUGH THE TUNNELS (never through
+  //  solid dirt) to the exact spot the kid drew and digs it, a forager climbs
+  //  out of the anthill, picks up the crumb the kid dropped and hauls it home.
+  //
+  //  The counts-and-rates simulation above stays the ONLY source of truth.
+  //  Nothing in here changes a number, so this is an honest animated layer on
+  //  top of it. It is fed by the same fixed 1/60 step and the same seeded
+  //  random, so a headless run still repeats exactly and QA still holds.
+  // ======================================================================
+  function openCells(){ var out=[]; for(var k in C.cells){ var x=C.cells[k]; if(x.kind==="tunnel"||(x.kind==="room"&&x.done)) out.push(x); } return out; }
+  var SURF_R = -0.92;                 // the row an ant stands on when it is up on the meadow
+
+  // a walkable route between two open cells. Solid dirt is never crossed: if
+  // there is no way through the tunnels yet, the ant simply does not take the job.
+  function routeTo(c0, r0, c1, r1){
+    if(c0 === c1 && r0 === r1) return [];
+    var start = key(c0,r0), goal = key(c1,r1), q = [start], seen = {}, prev = {}, head = 0, guard = 0;
+    seen[start] = 1;
+    while(head < q.length && guard++ < 1400){
+      var cur = q[head++], sp = cur.split(","), cc = +sp[0], rr = +sp[1];
+      var nb = [[cc-1,rr],[cc+1,rr],[cc,rr-1],[cc,rr+1]], i;
+      for(i=0;i<4;i++){
+        var nc = nb[i][0], nr = nb[i][1], kk = key(nc,nr);
+        if(seen[kk] || !isOpen(nc,nr)) continue;
+        seen[kk] = 1; prev[kk] = cur;
+        if(kk === goal){
+          var out = [], at = kk;
+          while(at && at !== start){ var pp = at.split(","); out.unshift({ fc:+pp[0], fr:+pp[1] }); at = prev[at]; }
+          return out;
+        }
+        q.push(kk);
+      }
+    }
+    return null;
+  }
+  function openNeighbour(c, r){
+    var nb = [[c,r-1],[c-1,r],[c+1,r],[c,r+1]], i;
+    for(i=0;i<4;i++) if(isOpen(nb[i][0], nb[i][1])) return { c:nb[i][0], r:nb[i][1] };
+    return null;
+  }
+  // the mouth of the anthill: the top of the shaft, where every forager comes out
+  function entranceCell(){
+    if(isOpen(C.queen.c, 0)) return { c:C.queen.c, r:0 };
+    for(var k in C.cells){ var x = C.cells[k]; if(x.r === 0 && isOpen(x.c, 0)) return { c:x.c, r:0 }; }
+    return { c:C.queen.c, r:C.queen.r };
+  }
+  // where a crumb gets put down: a finished storage room, else the queen's chamber
+  function storeCell(){
+    for(var k in C.cells){ var x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "storage") return { c:x.c, r:x.r }; }
+    return { c:C.queen.c, r:C.queen.r };
+  }
+  // AC6: a cut leaf goes to the mushroom garden, if the colony has one yet
+  function gardenCell(){
+    for(var k in C.cells){ var x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "fungus") return { c:x.c, r:x.r }; }
+    return null;
+  }
+  function haulTarget(t){ return (t && t.leaf && gardenCell()) || storeCell(); }
+  function countTask(f){ var n=0,i; for(i=0;i<C.sample.length;i++){ if(f(C.sample[i].task)) n++; } return n; }
+  function xToFc(x){
+    var fc = (x - OX)/Math.max(1, CS) - 0.5;
+    if(!isFinite(fc)) fc = C.queen.c;                    // no layout yet: aim at the anthill
+    return Math.max(0, Math.min(GAME_CONFIG.cols-1, fc));
+  }
+  function antCell(a){ return { c:Math.round(a.fc), r:Math.round(a.fr) }; }
+
+  // the rows on screen right now. The camera rides the dig face, so a colony a
+  // hundred levels deep must not leave the view empty while its ants mill about
+  // near the entrance: the drawn sample is a SAMPLE, so it is taken from here.
+  function viewBand(){
+    var rows = Math.floor((H - PANEL - SKY - CS*1.2) / Math.max(1, CS));
+    if(!isFinite(rows) || rows < 5) rows = 12;
+    var hi = C.deepest + 2;
+    return { lo:Math.max(0, hi - rows), hi:hi };
+  }
+  var bandPool = [];
+  function spawnSample(){
+    if(C.sample.length >= GAME_CONFIG.sampleMax) return;
+    var cells = bandPool.length ? bandPool : openCells(); if(!cells.length) return;
+    var free = [], i;
+    for(i=0;i<cells.length;i++) if(freeCell(cells[i].c, cells[i].r, null)) free.push(cells[i]);
+    if(free.length) cells = free;                      // never drop a new ant onto a pile
+    var s = cells[Math.floor(srand()*cells.length)];
+    C.sample.push({ fc:s.c, fr:s.r, job:"forager", wp:[], task:null, carry:null, state:"walk", t:0,
+                    cool:srand()*0.6, walked:0, flip:srand()<0.5, bob:srand()*6,
+                    post:null, hold:null, ox:0, oy:0 });
+  }
+
+  // the drawn crowd carries the same job MIX the kid set on the bar, so what is
+  // on screen matches what the panel says. An ant already on a job is never yanked off it.
+  function reJob(){
+    var n = C.sample.length; if(!n) return;
+    var total = Math.max(1, C.ants), want = {}, have = {}, made = 0, i, j;
+    for(i=0;i<JOBS.length;i++){ var id0 = JOBS[i].id; want[id0] = Math.round(((C.jobs[id0]|0)/total) * n); have[id0] = 0; made += want[id0]; }
+    want.forager = Math.max(0, want.forager + (n - made));
+    for(i=0;i<n;i++){ if(C.sample[i].task) have[C.sample[i].job] = (have[C.sample[i].job]|0) + 1; }
+    for(i=0;i<n;i++){
+      var a = C.sample[i]; if(a.task) continue;
+      var pick = "forager";
+      for(j=0;j<JOBS.length;j++){ var id = JOBS[j].id; if((have[id]|0) < (want[id]|0)){ pick = id; break; } }
+      a.job = pick; have[pick] = (have[pick]|0) + 1;
+    }
+  }
+
+  // ======================================================================
+  //  AC7: the movement rule. Every working ant WALKS to a marked target and
+  //  animates the work there. An ant with nothing to do stands still at its own
+  //  parked spot, in an idle pose. Nothing wanders, and no two ants ever stand
+  //  in the same place: one parked ant per cell, at most two workers side by side.
+  // ======================================================================
+  //  Every ant HOLDS the cell it is standing in — its parked spot, or the cell it
+  //  walked to in order to work. Two ants may share a cell only side by side, and
+  //  never three, which is what stops five of them piling onto the queen.
+  var occ = {};
+  function occKey(c,r){ return c+","+r; }
+  function rebuildOcc(){
+    occ = {};
+    for(var i=0;i<C.sample.length;i++){
+      var h = C.sample[i].hold; if(!h) continue;
+      occ[h] = (occ[h]|0) + 1;
+    }
+  }
+  function hold(a, k){ if(a.hold) occ[a.hold] = Math.max(0, (occ[a.hold]|0) - 1); a.hold = k; if(k) occ[k] = (occ[k]|0) + 1; }
+  function load(k, a){ return Math.max(0, (occ[k]|0) - ((a && a.hold === k) ? 1 : 0)); }
+  //  A cell holds two ants, side by side, and never a third. The queen's own seat
+  //  holds nobody but the queen, which is what the pile of five was sitting on.
+  function CELL_MAX(){ return 2; }
+  function freeCell(c, r, a){
+    if(c === C.queen.c && r === C.queen.r) return false;
+    return load(occKey(c,r), a) < CELL_MAX();
+  }
+  function dropPost(a){ a.post = null; hold(a, null); }
+  // let go of everything: the item goes back on the meadow, the spot goes free
+  function dropTask(a){
+    if(a.task && a.task.it){ a.task.it.claim = null; a.task.it.held = false; }
+    a.task = null; a.carry = null; hold(a, null); a.ox = 0; a.oy = 0;
+  }
+  // walk to a spot of its own and stand there. This is what "idle" looks like.
+  function takePost(a){
+    dropPost(a);
+    var pool = bandPool.length ? bandPool : openCells(), best = null, bd = 1e9, i;
+    for(i=0;i<pool.length;i++){
+      var x = pool[i];
+      if(!freeCell(x.c, x.r, a)) continue;
+      // an empty cell beats a shared one, then the nearest wins
+      var d = Math.abs(x.c - a.fc) + Math.abs(x.r - a.fr) * 1.2 + (load(occKey(x.c,x.r), a) ? 6 : 0);
+      if(d < bd){ bd = d; best = x; }
+    }
+    if(!best) return false;
+    var here = antCell(a);
+    var same = (here.c === best.c && here.r === best.r);
+    var route = same ? [] : (isOpen(here.c, here.r) ? routeTo(here.c, here.r, best.c, best.r) : null);
+    if(route === null) return false;
+    var k = occKey(best.c, best.r), slot = load(k, a);
+    a.post = { c:best.c, r:best.r };
+    hold(a, k);
+    a.wp = route; a.ox = slot ? 0.20 : -0.20; a.oy = (a.bob % 1) * 0.22 - 0.11;
+    a.state = route.length ? "walk" : "idle";
+    return true;
+  }
+
+  // how many ants are already working the same target
+  function workersOn(k){ var n=0,i; for(i=0;i<C.sample.length;i++){ var t=C.sample[i].task; if(t && t.k===k) n++; } return n; }
+  function claimedCell(k){ return workersOn(k); }
+  // take the standing cell and stand shoulder to shoulder in it, never on top
+  function standAt(a, c, r){
+    var k = occKey(c, r), slot = load(k, a);
+    if(slot >= 2) return false;
+    dropPost(a); hold(a, k);
+    a.ox = slot ? 0.22 : -0.22; a.oy = 0.10;
+    return true;
+  }
+
+  function digTask(a, here){
+    if(!C.plan.length) return false;
+    for(var i=0;i<C.plan.length && i<4;i++){
+      var cell = C.cells[C.plan[i]];
+      if(!cell || cell.kind !== "plan" || !hasOpenNeighbour(cell.c, cell.r)) continue;
+      if(workersOn(C.plan[i]) >= 2) continue;
+      var spot = openNeighbour(cell.c, cell.r); if(!spot) continue;
+      if(load(occKey(spot.c, spot.r), a) >= 2) continue;         // that ledge is full
+      var route = routeTo(here.c, here.r, spot.c, spot.r); if(!route) continue;
+      if(!standAt(a, spot.c, spot.r)) continue;
+      a.task = { kind:"dig", k:C.plan[i], c:cell.c, r:cell.r, mark:C.plan[i] };
+      a.wp = route; a.state = "walk";
+      return true;
+    }
+    return false;
+  }
+
+  function haulTask(a, here){
+    var it = pickItem(); if(!it) return false;
+    var en = entranceCell(), route = routeTo(here.c, here.r, en.c, en.r); if(!route) return false;
+    dropPost(a);                                    // a hauler is walking, it holds nothing
+    it.claim = a;
+    a.task = { kind:"haul", it:it, phase:"out", leaf:(it.kind === "leaf") };
+    a.ox = 0; a.oy = 0;
+    a.wp = route.concat([{ fc:en.c, fr:SURF_R }, { fc:xToFc(itemX(it)), fr:SURF_R }]);
+    a.state = "walk";
+    return true;
+  }
+
+  // nursery duty: the mushroom garden when there are leaves waiting, else the
+  // nursery room, else the queen's chamber where the eggs are
+  function tendCell(){
+    var g = gardenCell();
+    if(g && C.leaves > 0.01) return g;
+    for(var k in C.cells){ var x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "nursery") return { c:x.c, r:x.r }; }
+    if(g) return g;
+    return { c:C.queen.c, r:C.queen.r };
+  }
+  function tendTask(a, here){
+    var t = tendCell(); if(!t) return false;
+    var k = occKey(t.c, t.r);
+    var queenSeat = (t.c === C.queen.c && t.r === C.queen.r);
+    if(load(k, a) >= 2) return false;
+    if(queenSeat && C.eggs <= 0 && !roomCount("nursery")) return false;   // nothing to tend yet
+    var route = routeTo(here.c, here.r, t.c, t.r); if(!route) return false;
+    if(!standAt(a, t.c, t.r)) return false;
+    a.task = { kind:"tend", k:k, c:t.c, r:t.r, mark:k, until:3 + srand()*3 };
+    if(queenSeat) a.oy = 0.30;                       // sit below her, never on her
+    a.wp = route; a.state = "walk";
+    return true;
+  }
+
+  // builder duty: the water first, because it blocks the way, then the half-built room
+  function buildCell(){
+    var k, x;
+    for(k in C.cells){ x = C.cells[k]; if(x.flooded) return { c:x.c, r:x.r, wet:true }; }
+    for(k in C.cells){ x = C.cells[k]; if(x.kind === "room" && !x.done) return { c:x.c, r:x.r, wet:false }; }
+    return null;
+  }
+  function buildTask(a, here){
+    var t = buildCell(); if(!t) return false;
+    var k = occKey(t.c, t.r);
+    if(workersOn(k) >= 2) return false;
+    // a flooded tunnel is worked from the edge; a room is worked from inside it
+    var stand = t.wet ? openNeighbour(t.c, t.r) : { c:t.c, r:t.r };
+    if(!stand) return false;
+    if(load(occKey(stand.c, stand.r), a) >= 2) return false;
+    var route = routeTo(here.c, here.r, stand.c, stand.r); if(!route) return false;
+    if(!standAt(a, stand.c, stand.r)) return false;
+    a.task = { kind:"build", k:k, c:t.c, r:t.r, mark:k, wet:!!t.wet, until:4 + srand()*3 };
+    a.wp = route; a.state = "walk";
+    return true;
+  }
+
+  // give one idle ant something real to do. If there is nothing, it parks and stands.
+  function giveTask(a){
+    var here = antCell(a);
+    if(!isOpen(here.c, here.r)) return false;                  // up on the meadow: mid-trip
+    if(a.job === "digger")  return digTask(a, here);
+    if(a.job === "forager") return haulTask(a, here);
+    if(a.job === "nursery") return tendTask(a, here);
+    if(a.job === "builder") return buildTask(a, here);
+    return false;
+  }
+
+  // standing still and doing the job: digging the spot, taking hold of a crumb,
+  // tending the eggs, shoring up a room
+  function tickWork(a, dt){
+    a.t += dt;
+    if(a.task.kind === "dig"){
+      var cell = C.cells[a.task.k];
+      if(!cell || cell.kind !== "plan"){                    // the simulation opened it: a happy little hop
+        dropTask(a); a.state = "hop"; a.t = 0.45; return;
+      }
+      if(a.t > 0.34){ a.t = 0; puff(a.task.c, a.task.r); }  // dirt puffs while the digging happens
+      a.flip = a.task.c < a.fc;
+      return;
+    }
+    if(a.task.kind === "haul"){
+      var it = a.task.it;
+      if(!it || it.gone){ dropTask(a); a.state = "hop"; a.t = 0.45; return; }
+      if(a.task.phase === "out"){
+        if(a.t < GAME_CONFIG.pickupSecs) return;             // a beat to take hold of it
+        // THE PICK-UP. The item leaves the meadow here, which is what makes the
+        // bush visibly lose its berry, and it rides home in the ant's mandibles.
+        it.held = true; a.carry = it;
+        var en = entranceCell(), st = haulTarget(a.task);
+        var back = routeTo(en.c, en.r, st.c, st.r) || [];
+        a.task.phase = "home"; a.state = "walk"; a.t = 0;
+        a.wp = [{ fc:en.c, fr:SURF_R }, { fc:en.c, fr:en.r }].concat(back);
+        return;
+      }
+      if(a.t > 0.25){                                        // home: THIS is when food ticks
+        deliver(it);
+        a.carry = null; a.task = null; a.state = "hop"; a.t = 0.45;
+      }
+      return;
+    }
+    if(a.task.kind === "tend" || a.task.kind === "build"){
+      if(a.task.kind === "build"){
+        var c2 = C.cells[a.task.k];
+        if(!c2 || (!c2.flooded && !(c2.kind === "room" && !c2.done))){ dropTask(a); a.state = "hop"; a.t = 0.45; return; }
+        if(a.t > 0.5 && srand() < 0.25) puff(a.task.c, a.task.r);
+      }
+      if(a.t >= a.task.until){ dropTask(a); a.state = "hop"; a.t = 0.45; }
+      return;
+    }
+    dropTask(a); a.state = "walk";
+  }
+
+  var starAnt = null;                 // the one ant the guide is pointing at (drawn bigger)
+  var digHot = {};                    // plan cells with an ant actually digging them right now
+  var marks = {};                     // cell -> the job colour of whoever is working it
+  var qReact = 0;                     // the queen bobs when an egg hatches
+
+  function walkSample(dt){
+    // keep the drawn crowd roughly in step with the real head count, and keep it
+    // in the part of the colony that is on screen
+    var all = openCells(), b = viewBand(), j;
+    bandPool = [];
+    for(j=0;j<all.length;j++) if(all[j].r >= b.lo && all[j].r <= b.hi) bandPool.push(all[j]);
+    // two ants to a cell is the most that can stand somewhere without piling up, so
+    // that, and not a made-up number, is how big the drawn crowd is allowed to be
+    var room = (bandPool.length ? bandPool.length : all.length) * CELL_MAX();
+    var want = Math.min(GAME_CONFIG.sampleMax, C.ants, Math.max(4, room));
+    while(C.sample.length < want) spawnSample();
+    while(C.sample.length > want){ var gone = C.sample.pop(); dropTask(gone); dropPost(gone); }
+    reJob();
+    rebuildOcc();
+    if(qReact > 0) qReact = Math.max(0, qReact - dt);
+    var pace = tune().pace, grants = 0, moves = 0, i;
+    var haulBoost = Math.min(GAME_CONFIG.forage.storageSpeedMax, roomMul("storage"));
+    for(i=0;i<C.sample.length;i++){
+      var a = C.sample[i];
+      if(a.cool > 0) a.cool -= dt;                        // the look-for-work timer runs all the time
+      // an idle ant well outside the view is swapped for one inside it. They are a
+      // sample of a colony of hundreds, not named individuals, so nothing is lost.
+      if(!a.task && moves < 2 && bandPool.length && (a.fr < b.lo - 2 || a.fr > b.hi + 2)){
+        var s3 = bandPool[Math.floor(srand()*bandPool.length)];
+        dropPost(a); a.fc = s3.c; a.fr = s3.r; a.wp = []; a.state = "walk"; moves++;
+      }
+      if(a.state === "hop"){ a.t -= dt; if(a.t <= 0) a.state = "walk"; continue; }
+      if(a.state === "work"){ tickWork(a, dt); continue; }
+      if(a.state === "idle"){
+        // STANDING STILL. It only moves again when there is real work, or when the
+        // spot it is standing on stops being a spot.
+        if(a.cool <= 0 && grants < 4){
+          if(giveTask(a)) grants++; else a.cool = 0.6 + srand()*1.0;
+        }
+        if(!a.task && (!a.post || !isOpen(a.post.c, a.post.r))){ if(grants < 6){ takePost(a); grants++; } }
+        continue;
+      }
+      if(!a.wp.length){
+        if(a.task){ a.state = "work"; a.t = 0; continue; }
+        if(a.cool <= 0 && grants < 4){                      // a small budget per step keeps this cheap
+          if(giveTask(a)) grants++; else a.cool = 0.6 + srand()*1.0;
+        }
+        if(!a.wp.length && !a.task){
+          var here2 = antCell(a);
+          if(!isOpen(here2.c, here2.r)){                    // stranded: put it back in the colony
+            var cs = bandPool.length ? bandPool : all;
+            if(cs.length){ var s2 = cs[Math.floor(srand()*cs.length)]; a.fc = s2.c; a.fr = s2.r; }
+            dropPost(a);
+          } else if(a.post && a.post.c === here2.c && a.post.r === here2.r) a.state = "idle";
+          else if(grants < 6){ takePost(a); grants++; }
+          else a.state = "idle";
+        }
+        continue;
+      }
+      var tgt = a.wp[0];
+      // an ant on a job hustles; storage near the door really does shorten the trip
+      var sp = (a.task ? GAME_CONFIG.forage.walkSpeed : 1.5) * pace * dt;
+      if(a.task && a.task.kind === "haul" && !a.task.leaf) sp *= haulBoost;
+      var dx = tgt.fc - a.fc, dy = tgt.fr - a.fr, d = Math.sqrt(dx*dx + dy*dy);
+      if(d <= sp || d < 0.0005){ a.fc = tgt.fc; a.fr = tgt.fr; a.wp.shift(); }
+      else { a.fc += dx/d*sp; a.fr += dy/d*sp; if(Math.abs(dx) > 0.02) a.flip = dx < 0; }
+      a.walked += sp;
+      if(a.walked > 0.75){ a.walked = 0; foot(a.fc, a.fr); }
+      if(!a.wp.length){
+        if(a.task){ a.state = "work"; a.t = 0; }
+        else if(a.post && Math.round(a.fc) === a.post.c && Math.round(a.fr) === a.post.r) a.state = "idle";
+      }
+    }
+    // who is working what, so every job in progress wears a marker the kid can see,
+    // and which ant the guide should make easy to follow
+    digHot = {}; marks = {}; starAnt = null;
+    var intro = guide.on && guide.lesson === "intro";
+    var wantKind = (intro && guide.step === 0) ? "dig" : ((intro && guide.step === 1) ? "haul" : null);
+    for(i=0;i<C.sample.length;i++){
+      var bb = C.sample[i], t3 = bb.task;
+      if(!t3) continue;
+      if(t3.kind === "dig" && bb.state === "work") digHot[t3.k] = 1;
+      if(t3.mark) marks[t3.mark] = jobColor(bb.job);
+      if(wantKind && !starAnt && t3.kind === wantKind) starAnt = bb;
+    }
+  }
+
+  var puffs = [];
+  function puff(c,r){ if(puffs.length > 30) puffs.shift(); puffs.push({ c:c, r:r, t:0 }); }
+  // tiny footprints, so a busy tunnel looks walked-in
+  var foots = [];
+  function foot(fc, fr){ if(foots.length > 44) foots.shift(); foots.push({ fc:fc, fr:fr, t:0 }); }
+
+  // ======================================================================
+  //  Missions (AC2). The ten tutorial missions come from the manifest and sit
+  //  ON TOP of the colony: they watch what it does, they never take it over.
+  //  Nothing can be failed, nothing expires, and finishing the tenth opens
+  //  free-build, which never ends.
+  // ======================================================================
+  var FALLBACK_MISSIONS = [   // kept in step with /antcity/manifest.json
+    { id:"first-tunnel",   name:"First Tunnel",   layout:"tutorial-tunnel",    coins:10 },
+    { id:"first-forage",   name:"First Forage",   layout:"forage",             coins:10 },
+    { id:"build-nursery",  name:"Build a Nursery",layout:"build-room-nursery", coins:15 },
+    { id:"hatch-a-baby",   name:"Hatch a Baby",   layout:"hatch",              coins:15 },
+    { id:"reach-10-ants",  name:"Reach 10 Ants",  layout:"grow-population",    coins:20 },
+    { id:"storage-room",   name:"Storage Room",   layout:"build-room-storage", coins:20 },
+    { id:"rainy-day",      name:"Rainy Day",      layout:"setback-rain",       coins:20 },
+    { id:"reach-25-ants",  name:"Reach 25 Ants",  layout:"grow-population",    coins:25 },
+    { id:"resting-den",    name:"Resting Den",    layout:"build-room-den",     coins:25 },
+    { id:"dig-deep",       name:"Dig Deep",       layout:"dig-deep-find",      coins:30 }
+  ];
+  var MISSIONS = FALLBACK_MISSIONS.slice();
+
+  function signal(kind, meta){
+    if(DEMO) return;
+    try{ if(window.parent && window.parent !== window) window.parent.postMessage(meta ? { source:"buildable", kind:kind, meta:meta } : { source:"buildable", kind:kind }, "*"); }catch(e){}
+  }
+  function missionAt(i){ return MISSIONS[i] || null; }
+  function currentMission(){ return C.freeBuild ? null : missionAt(C.mission); }
+  // the goal for a mission: the layout says which kind, the id carries any number
+  // ("reach-25-ants" -> 25), so a new mission needs no engine change.
+  function goalFor(m){
+    if(!m) return null;
+    var g = GAME_CONFIG.goals[m.layout]; if(!g) return null;
+    var n = g.n;
+    if(n == null){ var d = /(\d+)/.exec(m.id || ""); n = d ? +d[1] : 1; }
+    return { type:g.type, room:g.room, n:n };
+  }
+  function haveFor(g){
+    if(!g) return 0;
+    switch(g.type){
+      case "dug":   return C.dug - (C.mBase.dug||0);
+      case "food":  return Math.floor(C.carried - (C.mBase.carried||0));
+      case "born":  return C.born - (C.mBase.born||0);
+      case "flood": if(!C.mFlood) return 1;                      // nowhere to flood: nothing to clear
+                    var fc2 = C.cells[C.mFlood];
+                    return (!fc2 || !fc2.flooded) ? 1 : 0;
+      case "found": return C.found - (C.mBase.found||0);
+      case "ants":  return C.ants;
+      case "room":  return roomCount(g.room);
+      default:      return 0;
+    }
+  }
+  // one short line telling the kid what this mission wants
+  function missionLine(){
+    var m = currentMission(); if(!m) return "Free build: grow it as big as you like";
+    var g = goalFor(m); if(!g) return m.name;
+    var have = Math.max(0, haveFor(g)), n = g.n;
+    switch(g.type){
+      case "dug":   return "Draw a tunnel: " + Math.min(have,n) + " of " + n + " dug";
+      case "food":  return "Bring food home: " + Math.min(have,n) + " of " + n;
+      case "room":  return "Tap a tunnel to build a " + (GAME_CONFIG.rooms[g.room] ? GAME_CONFIG.rooms[g.room].name.toLowerCase() : g.room);
+      case "born":  return "Put ants on nursery duty and wait for an egg";
+      case "ants":  return "Grow to " + n + " ants: " + Math.min(have,n) + " so far";
+      case "flood": return "Clear the flooded tunnel";
+      case "found": return "Keep digging down to find what is buried";
+      default:      return m.name;
+    }
+  }
+  function startMission(i){
+    C.mission = i;
+    C.mBase = { dug:C.dug, carried:C.carried, born:C.born, floods:C.floods, found:C.found };
+    var m = missionAt(i);
+    C.mFlood = null;
+    // Rainy Day brings its own rain, and wants THAT tunnel cleared — a puddle that
+    // was already sitting there does not finish it. It can never be un-finishable:
+    // if there is nowhere to flood, the goal is already met.
+    if(m && m.layout === "setback-rain"){
+      var f = rain();
+      C.mFlood = f ? key(f.c, f.r) : null;
+    }
+    syncGoal();
+  }
+  function checkMission(){
+    if(C.freeBuild) return;
+    var m = currentMission(), g = goalFor(m);
+    if(!m || !g) { C.freeBuild = true; return; }
+    if(haveFor(g) >= g.n) completeMission();
+    checkMilestones();
+  }
+  function completeMission(){
+    var m = currentMission(); if(!m) return;
+    C.done[m.id] = true;
+    award("antcity:" + m.id, m.coins || 10);
+    celebrate(m.name, m.coins || 10);
+    signal(C.mission >= MISSIONS.length - 1 ? "win" : "levelup",
+           { game:"antcity", level:m.name, mission:C.mission + 1, of:MISSIONS.length, ants:C.ants });
+    if(C.mission >= MISSIONS.length - 1){ C.freeBuild = true; hint("Free build: no ending, just keep growing"); }
+    else startMission(C.mission + 1);
+    saveSoon();
+  }
+  // milestones: a free reward for growing, and they open a room type early. They
+  // never gate anything — a kid who ignores them loses nothing.
+  function checkMilestones(){
+    var ms = GAME_CONFIG.milestones || [], i;
+    for(i=0;i<ms.length;i++){
+      var ml = ms[i]; if(C.hit[ml.id]) continue;
+      var have = ml.type === "ants" ? C.ants : (ml.type === "leaves" ? C.leavesCut : C.deepest);
+      if(have < ml.n) continue;
+      C.hit[ml.id] = true;
+      if(ml.aphids) C.aphids = true;                 // the herd arrives on the meadow
+      award("antcity:milestone:" + ml.id, ml.coins);
+      celebrate(milestoneTitle(ml), ml.coins, ml.type === "ants");
+      signal("cheer", { game:"antcity", milestone:ml.id });
+      if(ml.fact) say(ml.fact);                      // the queen shares the real ant science
+      saveSoon();
+    }
+  }
+  function milestoneTitle(ml){
+    if(ml.aphids)            return "You found aphids!";
+    if(ml.type === "leaves") return "Cut " + ml.n + " leaves!";
+    if(ml.type === "ants")   return ml.n + " ants!";
+    return "Dug " + ml.n + " levels deep!";
+  }
+  var coinsAwarded = [];
+  function award(key, n){
+    if(DEMO || !n) return;
+    coinsAwarded.push({ key:key, n:n });
+    try{ if(BW && BW.awardOnce) BW.awardOnce(key, n); }catch(e){}
+  }
+  // a room the kid has not been introduced to yet is simply not offered
+  function roomUnlocked(id){
+    if(C.freeBuild) return true;
+    var ms = GAME_CONFIG.milestones || [], i;
+    for(i=0;i<ms.length;i++) if(ms[i].unlock === id && C.hit[ms[i].id]) return true;
+    var at = GAME_CONFIG.roomUnlock[id];
+    return at == null || C.mission >= at;
+  }
+  // the celebration: Feel does the juice, a plain card says what just happened
+  var party = { t:0, title:"", coins:0, icon:false };
+  function celebrate(title, coins, icon){
+    if(DEMO) return;                      // the attract box stays a window on the colony
+    party.t = 2.0; party.title = title; party.coins = coins || 0; party.icon = !!icon;
+    if(Feel){ try{ Feel.celebrate(W, H); Feel.coinBurst(W/2, H*0.42, 14); }catch(e){} }
+    sfx("levelup");
+  }
+  function tickParty(dt){ if(party.t > 0) party.t -= dt; }
+
+  // ======================================================================
+  //  Drawing
+  // ======================================================================
+  function cellX(c){ return OX + c*CS; }
+  function cellY(r){ return SKY + r*CS - camY; }
+  // the drawn ants live in fractional cell space so they can walk smoothly and
+  // step out onto the meadow. Above ground rides with the fixed meadow, not the camera.
+  function fcToX(fc){ return OX + (fc+0.5)*CS; }
+  function frToY(fr){ return fr < -0.2 ? (SKY + (fr+0.5)*CS) : (SKY + (fr+0.5)*CS - camY); }
+  function draw(){
+    layout();
+    // camera follows the colony down as it deepens
+    var bottomLimit = H - PANEL - CS*1.2;
+    camTarget = Math.max(0, SKY + (C.deepest+2)*CS - bottomLimit);
+    camY += (camTarget - camY) * 0.06;
+
+    drawSky();
+    drawSoil();
+    drawCells();
+    drawMarks();
+    drawGhosts();
+    drawFoots();
+    drawPlants();
+    drawSurfaceItems();
+    drawAnts();
+    drawPuffs();
+  }
+  // AC7: every job in progress wears a marker in its own job colour, on the exact
+  // cell the ants walked to. Nothing is ever "being worked on" invisibly.
+  function drawMarks(){
+    for(var k in marks){
+      var sp = k.split(","), c = +sp[0], r = +sp[1];
+      var px = cellX(c), py = cellY(r);
+      if(py < SKY - CS*2 || py > H + CS) continue;
+      var g2 = 0.55 + 0.30*Math.sin(C.t*4);
+      X.globalAlpha = g2; X.strokeStyle = marks[k]; X.lineWidth = 3;
+      if(BR){ BR.rrect(X, px+2.5, py+2.5, CS-5, CS-5, 9); X.stroke(); } else X.strokeRect(px+2.5, py+2.5, CS-5, CS-5);
+      X.globalAlpha = 1;
+    }
+  }
+  // AC7: picking a room shows every spot it could go, so building is something a
+  // kid can SEE rather than something they have to be told about.
+  function drawGhosts(){
+    if(!placing) return;
+    var def = GAME_CONFIG.rooms[placing.room]; if(!def) return;
+    var spots = buildSpots(), i;
+    for(i=0;i<spots.length;i++){
+      var px = cellX(spots[i].c), py = cellY(spots[i].r);
+      if(py < SKY - CS*2 || py > H + CS) continue;
+      X.globalAlpha = 0.30 + 0.18*Math.sin(C.t*4 + i);
+      X.fillStyle = def.color;
+      if(BR){ BR.rrect(X, px+4, py+4, CS-8, CS-8, 9); X.fill(); } else X.fillRect(px+4, py+4, CS-8, CS-8);
+      X.globalAlpha = 0.9; X.strokeStyle = "#fff8ec"; X.lineWidth = 2; X.setLineDash([5,4]);
+      if(BR){ BR.rrect(X, px+3, py+3, CS-6, CS-6, 9); X.stroke(); } else X.strokeRect(px+3, py+3, CS-6, CS-6);
+      X.setLineDash([]); X.globalAlpha = 1;
+    }
+  }
+  function drawSky(){
+    // AC4: the meadow is a picture now, and it turns rainy while a flood is sitting
+    // there. The drawn meadow underneath is still the fallback for a missing file.
+    var art = (floodCount() && IMG.rainSurface) ? IMG.rainSurface : IMG.surface;
+    if(art){
+      var iw = art.naturalWidth || art.width, ih = art.naturalHeight || art.height;
+      if(iw && ih){
+        var h = SKY, w = h * (iw/ih), x0 = 0;
+        while(x0 < W){ X.drawImage(art, x0, 0, w, h); x0 += w - 1; }
+        return;
+      }
+    }
+    var gsky = X.createLinearGradient(0,0,0,SKY);
+    gsky.addColorStop(0,"#8fd8f7"); gsky.addColorStop(1,"#d9f2ce");
+    X.fillStyle = gsky; X.fillRect(0,0,W,SKY);
+    // sun
+    X.fillStyle = "#ffe9a8"; X.beginPath(); X.arc(W-52, 44, 26, 0, 7); X.fill();
+    // meadow band + mushrooms and tufts (drawn, so the meadow is never a missing file)
+    var gy = SKY - 26;
+    X.fillStyle = "#79c46a"; X.fillRect(0, gy, W, 26 + 4);
+    X.fillStyle = "#63ad57";
+    for(var i=0;i<W;i+=26){ X.beginPath(); X.moveTo(i, gy+2); X.lineTo(i+7, gy-8); X.lineTo(i+13, gy+2); X.closePath(); X.fill(); }
+    for(var m=0;m<3;m++){
+      var mx = 40 + m*(W/3);
+      X.fillStyle = "#f6f1e2"; X.fillRect(mx-3, gy-12, 6, 12);
+      X.fillStyle = "#e2685f"; X.beginPath(); X.arc(mx, gy-12, 11, Math.PI, 0); X.fill();
+      X.fillStyle = "#fff4ea"; X.beginPath(); X.arc(mx-3, gy-15, 2.2, 0, 7); X.arc(mx+4, gy-13, 1.8, 0, 7); X.fill();
+    }
+  }
+  function drawSoil(){
+    var top = SKY, h = H - SKY;
+    var gd = X.createLinearGradient(0, top, 0, top + h);
+    gd.addColorStop(0, "#c58f52"); gd.addColorStop(1, "#7a4f26");
+    X.fillStyle = gd; X.fillRect(0, top, W, h);
+    // soil texture: either the tile art or drawn speckle, never nothing
+    var tile = IMG.soil;
+    if(tile){
+      var r0 = Math.floor(camY / CS), rN = r0 + Math.ceil(h / CS) + 1;
+      X.globalAlpha = 0.5;
+      for(var r=r0; r<rN; r++) for(var c=0;c<GAME_CONFIG.cols;c++) X.drawImage(tile, cellX(c), cellY(r), CS, CS);
+      X.globalAlpha = 1;
+    } else {
+      X.fillStyle = "rgba(255,255,255,.07)";
+      for(var i=0;i<160;i++){
+        var sx = ((i*97)%W), sy = top + ((i*53 + Math.floor(camY*0.4)) % h);
+        X.fillRect(sx, sy, 3, 3);
+      }
+    }
+  }
+  function drawCells(){
+    for(var k in C.cells){
+      var x = C.cells[k], px = cellX(x.c), py = cellY(x.r);
+      if(py < SKY - CS*2 || py > H + CS) continue;                 // off screen
+      if(x.kind === "plan"){
+        var hot = digHot[k] ? 1 : 0;                                  // an ant is on this spot right now
+        X.strokeStyle = hot ? "rgba(255,224,150,1)" : "rgba(255,240,200,.85)";
+        X.lineWidth = hot ? 4 : 3; X.setLineDash([6,5]);
+        if(BR) { BR.rrect(X, px+3, py+3, CS-6, CS-6, 8); X.stroke(); } else X.strokeRect(px+3, py+3, CS-6, CS-6);
+        X.setLineDash([]);
+        if(x.dig > 0){ X.fillStyle = "rgba(255,240,200,.28)"; X.fillRect(px+4, py+CS-4-(CS-8)*x.dig, CS-8, (CS-8)*x.dig); }
+        continue;
+      }
+      // an open tunnel: a soft dark hollow
+      X.fillStyle = "#4a3016";
+      if(BR){ BR.rrect(X, px-1, py-1, CS+2, CS+2, 10); X.fill(); } else X.fillRect(px, py, CS, CS);
+      // square off the sides that touch another open cell so the burrow joins up
+      if(isOpen(x.c-1,x.r)) X.fillRect(px-1, py+2, CS*0.5, CS-4);
+      if(isOpen(x.c+1,x.r)) X.fillRect(px+CS*0.5, py+2, CS*0.5+1, CS-4);
+      if(isOpen(x.c,x.r-1)) X.fillRect(px+2, py-1, CS-4, CS*0.5);
+      if(isOpen(x.c,x.r+1)) X.fillRect(px+2, py+CS*0.5, CS-4, CS*0.5+1);
+      X.fillStyle = "rgba(0,0,0,.22)";
+      if(BR){ BR.rrect(X, px+3, py+3, CS-6, CS-8, 8); X.fill(); }
+      if(x.kind === "room") drawRoom(x, px, py);
+      if(x.flooded){
+        if(IMG.flood) drawImg(IMG.flood, px+CS/2, py+CS/2, CS);
+        else {
+          X.fillStyle = "rgba(98,182,242,.72)";
+          if(BR){ BR.rrect(X, px+2, py+2, CS-4, CS-4, 8); X.fill(); } else X.fillRect(px+2, py+2, CS-4, CS-4);
+          X.fillStyle = "rgba(255,255,255,.55)";
+          X.fillRect(px+4, py + CS*0.35 + Math.sin(C.t*3 + x.c)*CS*0.05, CS-8, 3);
+        }
+        X.fillStyle = "rgba(255,255,255,.9)"; X.fillRect(px+4, py+CS-7, (CS-8)*(x.clear||0), 3);
+      }
+    }
+    // whatever the ants turned up down deep
+    if(C.find && C.find.gone && C.find.at){
+      var fx2 = cellX(C.find.at.c)+CS/2, fy2 = cellY(C.find.at.r)+CS/2;
+      if(IMG.find) drawImg(IMG.find, fx2, fy2, CS*0.7);
+      else { X.fillStyle = "#ffd166"; X.beginPath(); X.arc(fx2, fy2, CS*0.24, 0, 7); X.fill();
+             X.fillStyle = "#fff3d6"; if(BR) BR.sparkle(X, fx2, fy2, CS*0.16, C.t); X.fill(); }
+    }
+    // the queen sits in her chamber
+    var q = C.queen, qx = cellX(q.c)+CS/2, qy = cellY(q.r)+CS/2;
+    // AC5: she gives a little bob every time one of her eggs hatches
+    var qb = qReact > 0 ? Math.sin((0.9 - qReact) * 20) * CS * 0.10 * (qReact/0.9) : 0;
+    if(IMG.queen) drawImg(IMG.queen, qx, qy + qb, CS*0.86); else drawAntShape(qx, qy + qb, CS*0.42, "#b0553f", false);
+  }
+  function drawRoom(x, px, py){
+    var def = GAME_CONFIG.rooms[x.room] || GAME_CONFIG.rooms.nursery;
+    var img = IMG["room_"+x.room];
+    if(!x.done){
+      X.globalAlpha = 0.35 + 0.5*x.build;
+      X.fillStyle = def.color;
+      if(BR){ BR.rrect(X, px+4, py+4, CS-8, CS-8, 8); X.fill(); } else X.fillRect(px+4, py+4, CS-8, CS-8);
+      X.globalAlpha = 1;
+      X.fillStyle = "rgba(255,255,255,.9)"; X.fillRect(px+5, py+CS-9, (CS-10)*x.build, 4);
+      return;
+    }
+    if(img) drawImg(img, px+CS/2, py+CS/2, CS*0.84);
+    else {
+      X.fillStyle = def.color;
+      if(BR){ BR.rrect(X, px+4, py+4, CS-8, CS-8, 9); X.fill(); } else X.fillRect(px+4, py+4, CS-8, CS-8);
+    }
+    if(x.room === "fungus"){
+      // how full the garden is right now, so a working chain is visible at a glance
+      var full = Math.max(0, Math.min(1, C.leaves / 8));
+      X.fillStyle = "rgba(232,220,174,.9)";
+      for(var f=0;f<3;f++){
+        if(f/3 >= full && f > 0) break;
+        var mx2 = px + CS*0.28 + f*CS*0.22, my2 = py + CS*0.74;
+        X.beginPath(); X.arc(mx2, my2 - CS*0.05, CS*0.08, Math.PI, 0); X.fill();
+        X.fillRect(mx2 - CS*0.02, my2 - CS*0.05, CS*0.04, CS*0.08);
+      }
+      return;
+    }
+    if(x.room === "nursery" && C.eggs > 0){
+      var show = Math.min(3, C.eggs), i;
+      for(i=0;i<show;i++){
+        var ex = px + CS*0.3 + i*CS*0.2, ey = py + CS*0.72;
+        if(IMG.egg) drawImg(IMG.egg, ex, ey, CS*0.26);
+        else { X.fillStyle = "#fff3d6"; X.beginPath(); X.ellipse(ex, ey, CS*0.09, CS*0.12, 0, 0, 7); X.fill(); }
+      }
+    }
+  }
+  // ======================================================================
+  //  The meadow. Three plants, and the food they are holding is the SAME item a
+  //  forager comes and takes: pick a berry and the bush is one berry lighter, on
+  //  screen, that instant. Nothing here is a counter with a picture next to it.
+  // ======================================================================
+  function plantX(which){
+    if(which === "leaf")  return Math.round(W*0.20);
+    if(which === "aphid") return Math.round(W*0.62);
+    return Math.round(W*0.80);                   // the berry bush
+  }
+  function drawBush(x, col, leafCol){
+    var base = SKY - 14;
+    X.strokeStyle = "#4f9636"; X.lineWidth = 4; X.lineCap = "round";
+    X.beginPath(); X.moveTo(x, base); X.lineTo(x, base - 26); X.stroke();
+    X.fillStyle = leafCol;
+    for(var i=0;i<4;i++){
+      var side = (i % 2) ? 1 : -1, ly = base - 10 - i*8;
+      X.beginPath(); X.ellipse(x + side*10, ly, 9, 6, side*0.5, 0, 7); X.fill();
+    }
+  }
+  function drawPlants(){
+    var base = SKY - 14;
+    drawBush(plantX("leaf"), "#4f9636", "#8ad05f");        // the leaf bush
+    drawBush(plantX("berry"), "#4f9636", "#5fa84a");       // the berry bush
+    if(!C.aphids) return;
+    var ax = plantX("aphid");
+    if(IMG.aphid) drawImg(IMG.aphid, ax, base - 18, 46);
+    else {
+      X.strokeStyle = "#4f9636"; X.lineWidth = 4;
+      X.beginPath(); X.moveTo(ax, base); X.lineTo(ax, base - 32); X.stroke();
+      X.fillStyle = "#b6e07a";
+      for(var a2=0;a2<3;a2++){ X.beginPath(); X.arc(ax + (a2-1)*9, base - 16 - a2*5, 5, 0, 7); X.fill(); }
+    }
+  }
+  // one item, drawn wherever it is: waiting on the meadow, or in an ant's mandibles
+  function drawItem(kind, x, y, size){
+    if(kind === "water"){
+      X.fillStyle = "#62b6f2";
+      X.beginPath(); X.moveTo(x, y-size*0.6); X.quadraticCurveTo(x+size*0.45, y+size*0.07, x, y+size*0.45);
+      X.quadraticCurveTo(x-size*0.45, y+size*0.07, x, y-size*0.6); X.fill();
+      return;
+    }
+    if(kind === "berry"){
+      X.fillStyle = "#d2405a"; X.beginPath(); X.arc(x, y, size*0.30, 0, 7); X.fill();
+      X.fillStyle = "#e8697f"; X.beginPath(); X.arc(x - size*0.10, y - size*0.10, size*0.10, 0, 7); X.fill();
+      return;
+    }
+    if(kind === "leaf"){
+      if(IMG.leaf){ drawImg(IMG.leaf, x, y, size); return; }
+      X.fillStyle = "#8ad05f"; X.beginPath(); X.ellipse(x, y, size*0.42, size*0.26, -0.4, 0, 7); X.fill();
+      return;
+    }
+    if(kind === "dew"){
+      if(IMG.honeydew){ drawImg(IMG.honeydew, x, y, size*0.7); return; }
+      X.fillStyle = "#ffd166"; X.beginPath(); X.arc(x, y, size*0.22, 0, 7); X.fill();
+      return;
+    }
+    if(IMG.crumb){ drawImg(IMG.crumb, x, y, size); return; }
+    X.fillStyle = "#d9a05b"; X.beginPath(); X.arc(x, y, size*0.32, 0, 7); X.fill();
+    X.fillStyle = "#c98b4b"; X.beginPath(); X.arc(x + size*0.16, y + size*0.10, size*0.16, 0, 7); X.fill();
+  }
+  function drawSurfaceItems(){
+    for(var i=0;i<C.surface.length;i++){
+      var it = C.surface[i];
+      if(it.held) continue;                                  // it is in an ant's mandibles
+      var y = itemY(it.kind), ix = itemX(it);
+      // a soft ring so a kid can see that this is a thing an ant is coming for
+      if(it.claim){
+        X.globalAlpha = 0.5; X.strokeStyle = "#7ec46a"; X.lineWidth = 2;
+        X.beginPath(); X.arc(ix, y, 13, 0, 7); X.stroke(); X.globalAlpha = 1;
+      }
+      drawItem(it.kind, ix, y, 22);
+    }
+  }
+  function drawFoots(){
+    for(var i=foots.length-1;i>=0;i--){
+      var f = foots[i]; f.t += STEP*0.55;
+      if(f.t >= 1){ foots.splice(i,1); continue; }
+      var fx = fcToX(f.fc), fy = frToY(f.fr) + CS*0.20;
+      if(fy < -CS || fy > H + CS) continue;
+      X.globalAlpha = (1 - f.t) * 0.30; X.fillStyle = "#2b1d10";
+      X.beginPath(); X.arc(fx - CS*0.045, fy, CS*0.022, 0, 7); X.fill();
+      X.beginPath(); X.arc(fx + CS*0.045, fy, CS*0.022, 0, 7); X.fill();
+      X.globalAlpha = 1;
+    }
+  }
+  // ======================================================================
+  //  The ants themselves (AC7). They are DRAWN, not photographed: at three tenths
+  //  of a cell an AI sprite reads as an orange blob, while a clean silhouette with
+  //  a dark outline still reads as an ant on a phone. Above every one of them sits
+  //  a marker in the colour its job wears on the jobs bar, so a glance at the
+  //  colony tells you who is doing what. The art slots are still resolved and the
+  //  fallback path is untouched, so a future card can put a sprite back.
+  // ======================================================================
+  //  The body colour has to hold up against the dark of a tunnel, which is what the
+  //  library sprite could not do at this size: it went to mud.
+  var ANT_TINT = { "antcity/ant/classic-v1":"#c9853c", "antcity/ant/ruby-v1":"#cf5468", "antcity/ant/emerald-v1":"#49a877" };
+  function antBody(){ return ANT_TINT[ART_IDS.ant] || "#c9853c"; }
+  function drawAnts(){
+    var base = GAME_CONFIG.antScale || 0.26, body = antBody();
+    for(var i=0;i<C.sample.length;i++){
+      var a = C.sample[i];
+      var px = fcToX(a.fc) + a.ox*CS, py = frToY(a.fr) + a.oy*CS;
+      if(py < -CS || py > H + CS) continue;
+      var idle = (a.state === "idle"), bob = 0;
+      if(!idle) bob = Math.sin((C.t*9) + a.bob) * CS*0.022;         // the walk
+      if(a.state === "hop") bob -= Math.sin(Math.max(0, Math.min(1, (0.45 - a.t)/0.45)) * Math.PI) * CS*0.28;
+      if(a.state === "work" && a.task){                              // the work itself
+        if(a.task.kind === "dig")        bob += Math.sin(C.t*22) * CS*0.05;
+        else if(a.task.kind === "build") bob += Math.sin(C.t*14) * CS*0.035;
+        else if(a.task.kind === "tend")  bob += Math.sin(C.t*5 + a.bob) * CS*0.018;
+      }
+      var star = (a === starAnt), scale = base * (star ? 1.75 : 1);
+      if(star){                                           // a soft halo, no words, no emoji
+        X.globalAlpha = 0.30 + 0.18*Math.sin(C.t*5); X.fillStyle = "#fff3d6";
+        X.beginPath(); X.arc(px, py+bob, CS*0.34, 0, 7); X.fill(); X.globalAlpha = 1;
+      }
+      drawAntShape(px, py+bob, CS*scale*0.42, body, a.flip, idle);
+      // what it is hauling, in its mandibles, drawn as the very same item
+      if(a.carry) drawItem(a.carry.kind, px + (a.flip ? CS*0.15 : -CS*0.15), py + bob - CS*0.12, CS*0.30);
+      jobMark(px, py + bob - CS*scale*0.85, CS*0.070, jobColor(a.job));
+    }
+  }
+  // the job marker: the same four colours as the jobs bar, in a shape a kid can
+  // pick out at a glance. Drawn geometry, never a glyph.
+  function jobMark(x, y, r, col){
+    X.fillStyle = "rgba(30,18,8,.55)";
+    X.beginPath(); X.moveTo(x, y - r*1.45); X.lineTo(x + r*1.15, y); X.lineTo(x, y + r*1.45); X.lineTo(x - r*1.15, y); X.closePath(); X.fill();
+    X.fillStyle = col;
+    X.beginPath(); X.moveTo(x, y - r); X.lineTo(x + r*0.8, y); X.lineTo(x, y + r); X.lineTo(x - r*0.8, y); X.closePath(); X.fill();
+  }
+  function jobColor(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i].color; return "#fff"; }
+  // one ant: three segments, six legs, two antennae, a dark outline so the shape
+  // holds up small. An idle ant has its legs planted and does not move.
+  function drawAntShape(x, y, r, col, flip, idle){
+    var line = "rgba(28,16,6,.85)";
+    X.save(); X.translate(x,y); if(flip) X.scale(-1,1);
+    X.fillStyle = "rgba(0,0,0,.18)"; X.beginPath(); X.ellipse(0, r*0.95, r*1.15, r*0.32, 0, 0, 7); X.fill();
+    // legs
+    X.strokeStyle = line; X.lineWidth = Math.max(1.1, r*0.17); X.lineCap = "round";
+    var lg = r*0.8, sw = idle ? 0 : Math.sin(C.t*11 + x*0.3)*r*0.16, i;
+    for(i=-1;i<=1;i++){
+      X.beginPath(); X.moveTo(i*r*0.32, 0); X.lineTo(i*r*0.32 - lg*0.55 + (i?sw:-sw), lg*0.85); X.stroke();
+      X.beginPath(); X.moveTo(i*r*0.32, 0); X.lineTo(i*r*0.32 + lg*0.30 - (i?sw:-sw), lg*0.80); X.stroke();
+    }
+    // body: abdomen, thorax, head, each outlined so the silhouette survives at size
+    X.lineWidth = Math.max(1, r*0.16); X.strokeStyle = line; X.fillStyle = col;
+    X.beginPath(); X.ellipse(-r*0.88, -r*0.05, r*0.62, r*0.48, 0.15, 0, 7); X.fill(); X.stroke();
+    X.beginPath(); X.ellipse(-r*0.12, 0, r*0.34, r*0.30, 0, 0, 7); X.fill(); X.stroke();
+    X.beginPath(); X.arc(r*0.62, -r*0.08, r*0.42, 0, 7); X.fill(); X.stroke();
+    // antennae
+    X.lineWidth = Math.max(1, r*0.13);
+    X.beginPath(); X.moveTo(r*0.80, -r*0.36); X.lineTo(r*1.20, -r*0.92); X.stroke();
+    X.beginPath(); X.moveTo(r*0.92, -r*0.20); X.lineTo(r*1.38, -r*0.56); X.stroke();
+    // eye
+    X.fillStyle = "#fff8ec"; X.beginPath(); X.arc(r*0.78, -r*0.14, r*0.15, 0, 7); X.fill();
+    X.fillStyle = "#241505"; X.beginPath(); X.arc(r*0.83, -r*0.14, r*0.08, 0, 7); X.fill();
+    X.restore();
+  }
+  function drawImg(img, cx, cy, size, flip){
+    var iw = img.naturalWidth||img.width, ih = img.naturalHeight||img.height; if(!iw||!ih) return;
+    var s = size / Math.max(iw, ih), w = iw*s, h = ih*s;
+    X.save(); X.translate(cx, cy); if(flip) X.scale(-1,1);
+    X.drawImage(img, -w/2, -h/2, w, h); X.restore();
+  }
+  // the mission celebration: a calm card, the Feel kit does the sparkle
+  function drawParty(){
+    if(party.t <= 0) return;
+    var a = Math.min(1, party.t / 0.4), cw = Math.min(320, W*0.8), ch = 116;
+    var cx = (W - cw)/2, cy = H*0.30;
+    X.globalAlpha = a;
+    X.fillStyle = "rgba(20,12,4,.34)"; X.fillRect(0, 0, W, H);   // calm: a hush, not a blackout
+    X.fillStyle = "#fff8ec";
+    if(BR){ BR.rrect(X, cx, cy, cw, ch, 20); X.fill(); } else X.fillRect(cx, cy, cw, ch);
+    if(party.icon && IMG.colony) drawImg(IMG.colony, W/2, cy - 6, 54);
+    X.fillStyle = "#4a2f10"; X.textAlign = "center";
+    X.font = "800 22px 'Baloo 2','Nunito',system-ui,sans-serif";
+    X.fillText(party.title, W/2, cy + 46);
+    if(party.coins){
+      X.fillStyle = "#c9862b"; X.font = "800 17px 'Baloo 2','Nunito',system-ui,sans-serif";
+      X.fillText("+" + party.coins + " coins", W/2, cy + 78);
+    }
+    X.textAlign = "left"; X.globalAlpha = 1;
+  }
+  function drawPuffs(){
+    for(var i=puffs.length-1;i>=0;i--){
+      var p = puffs[i]; p.t += STEP*2;
+      if(p.t >= 1){ puffs.splice(i,1); continue; }
+      var px = cellX(p.c)+CS/2, py = cellY(p.r)+CS/2;
+      X.globalAlpha = (1-p.t)*0.6; X.fillStyle = "#e8c9a0";
+      for(var j=0;j<4;j++){ var a2 = j*1.6 + p.t*2; X.beginPath(); X.arc(px + Math.cos(a2)*CS*0.5*p.t, py + Math.sin(a2)*CS*0.5*p.t, CS*0.13*(1-p.t), 0, 7); X.fill(); }
+      X.globalAlpha = 1;
+    }
+  }
+
+  // ======================================================================
+  //  HUD (shared bar) + the jobs panel
+  // ======================================================================
+  var _hud = null;
+  function HUD(){ try{ return _hud || (_hud = window.BuildableHUD.mount(CV)); }catch(e){ return { set:function(){}, show:function(){}, hide:function(){} }; } }
+  try{ if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT); }catch(e){}
+  // AC6 pillar 2: the readouts have to trend HONESTLY, or the job slider is just
+  // a slider. Food says which way it is going; the line over the bar says what the
+  // mix the kid chose is actually doing to the colony, in kid words.
+  var _foodWas = -1, _foodTrend = "", _trendT = 0;
+  function foodTrend(dt){
+    _trendT += dt || 0;
+    if(_trendT < 0.8) return _foodTrend;
+    _trendT = 0;
+    if(_foodWas >= 0){
+      var d = C.food - _foodWas;
+      _foodTrend = d > 0.4 ? " up" : (d < -0.4 ? " down" : "");
+    }
+    _foodWas = C.food;
+    return _foodTrend;
+  }
+  function mixLine(){
+    var t = Math.max(1, C.ants), dig = (C.jobs.digger|0)/t, fo = (C.jobs.forager|0)/t,
+        nu = (C.jobs.nursery|0)/t, bu = (C.jobs.builder|0)/t;
+    var falling = _foodTrend === " down";
+    if(floodCount() && bu < 0.15) return "Nobody is clearing the water";
+    if(dig >= 0.5)  return falling ? "Tunnels are flying, food is dropping" : "Tunnels are flying";
+    if(fo  >= 0.5)  return "Food is piling up, little else is moving";
+    if(nu  >= 0.5)  return gardenShare() ? "Eggs and mushrooms are being tended" : "The nursery is busy";
+    if(bu  >= 0.5)  return "Rooms are going up fast";
+    return falling ? "A steady crew, but food is dropping" : "A steady, balanced crew";
+  }
+  function syncHud(){
+    var m = currentMission();
+    HUD().set({
+      left:  [{ text: m ? (m.name) : "Free build" }, { text:"Ants "+C.ants }],
+      right: [{ text:"Food "+Math.floor(C.food)+_foodTrend }, { text:"Eggs "+C.eggs }]
+    });
+  }
+  // ======================================================================
+  //  ONE hint surface (AC7). Ant City used to run two: a goal chip and a floating
+  //  pill, and they contradicted each other all through the tutorial. There is now
+  //  exactly ONE line on screen, #coach, and everything the game wants to say goes
+  //  through it in this order: the lesson step being taught, then a message that
+  //  just fired, then what is slowing the colony, then the mission. A lesson step
+  //  disappears the moment it is done, because the lesson has already advanced.
+  // ======================================================================
+  var msgT = 0, msgTxt = "", _coachTxt = "";
+  function hint(msg, secs){
+    msgTxt = msg || "";
+    msgT = msgTxt ? (secs || (guide.on ? 2.4 : 3.6)) : 0;
+    syncCoach();
+  }
+  function clearMsg(){ msgTxt = ""; msgT = 0; }
+  function tickHint(dt){ if(msgT > 0){ msgT -= dt; if(msgT <= 0){ msgTxt = ""; syncCoach(); } } }
+  // the queen sharing a true ant fact: it is a message like any other, so it can
+  // never sit next to a second one
+  function say(msg){
+    msgTxt = msg; msgT = 7.5;
+    signal("buddy", { game:"antcity", say:msg });
+    bumpIdle(); syncCoach();
+  }
+  function coachText(){
+    // A message that just fired wins for its few seconds, even mid-lesson: a kid who
+    // taps somewhere a tunnel cannot start has to be told why, and the step comes
+    // straight back underneath it. A lesson clears the line when it begins, so a stale
+    // message can never sit on top of step one.
+    if(msgT > 0 && msgTxt) return msgTxt;
+    if(guide.on){ var st = stepNow(); if(st) return st.text; }
+    return setbackNow() || lowNeedLine() || missionLine();
+  }
+  function syncCoach(){
+    var t = coachText();
+    if(t === _coachTxt) return t;
+    _coachTxt = t;
+    var el = $("coachText"); if(el) el.textContent = t;
+    var host = $("coach"); if(host) host.className = guide.on ? "teach" : "";
+    return t;
+  }
+  function syncGoal(){ return syncCoach(); }        // the older name, still used around the engine
+
+  // ======================================================================
+  //  The needs panel (AC7): what the colony has, always on screen, in four slim
+  //  meters. A meter that runs low flags itself and hands the coach a line saying
+  //  what to do about it. Nothing here can be failed — it is a dashboard.
+  // ======================================================================
+  var NEEDS = [
+    { id:"food",  val:function(){ return C.food / Math.max(1, foodCap()); },   low:0.25,
+      line:"Your ants need more food. Tap the meadow to drop a crumb." },
+    { id:"water", val:function(){ return C.water / Math.max(1, waterCap()); }, low:0.25,
+      line:"Your ants need more water. Tap Drop Water, then tap the meadow." },
+    { id:"rest",  val:function(){ return C.rest; },                            low:0.25,
+      line:"Your ants are getting tired. A resting den gives them a break." },
+    { id:"eggs",  val:function(){ return C.eggs / Math.max(1, eggCap()); },    low:-1, line:"" }
+  ];
+  function lowNeedLine(){
+    for(var i=0;i<NEEDS.length;i++){ var n = NEEDS[i]; if(n.low >= 0 && n.val() < n.low) return n.line; }
+    return null;
+  }
+  var _needKey = "";
+  function syncNeeds(){
+    var k = "", i, v = [];
+    for(i=0;i<NEEDS.length;i++){ v[i] = Math.max(0, Math.min(1, NEEDS[i].val() || 0)); k += Math.round(v[i]*20) + "|"; }
+    if(k === _needKey) return;
+    _needKey = k;
+    for(i=0;i<NEEDS.length;i++){
+      var n = NEEDS[i], bar = $("mt_"+n.id), box = $("need_"+n.id);
+      if(bar && bar.style) bar.style.width = Math.round(v[i]*100) + "%";
+      if(box && box.classList) box.classList[(n.low >= 0 && v[i] < n.low) ? "add" : "remove"]("low");
+    }
+  }
+
+  // sit still for a while and the one line points at the next thing to do
+  var idleT = 0, idleNext = 15;
+  function bumpIdle(){ idleT = 0; idleNext = 15; }
+  function idleNudge(){
+    if(guide.on){ var st = stepNow(); if(st) return st.text; }
+    var sb = setbackNow() || lowNeedLine(); if(sb) return sb;
+    var g = goalFor(currentMission());
+    if(!g) return "Drag in the dirt to dig deeper";
+    switch(g.type){
+      case "dug": case "found": return "Drag down in the brown dirt to dig";
+      case "food":  return "Tap the green grass to drop food";
+      case "room":  return "Tap Build to make a room for your ants";
+      case "born": case "ants": return "Tap plus on Nursery so more eggs hatch";
+      case "flood": return "Tap plus on Builders to clear the water";
+      default:      return "Drag in the dirt to dig deeper";
+    }
+  }
+  function tickIdle(dt){
+    if(DEMO) return;
+    idleT += dt;
+    if(idleT < idleNext) return;
+    idleT = 0; idleNext = 25;                 // gentle: it nudges, it never nags
+    if(guide.on) return;                      // a lesson is already saying what to do
+    var t = idleNudge();
+    if(t !== _coachTxt) hint(t);              // one surface: it replaces, it never stacks
+  }
+  // a short glow on one control, so a word button can point at the thing it names
+  var pulses = [];
+  function pulse(id, secs){
+    var el = $(id); if(!el || !el.classList) return;
+    el.classList.add("pulse"); pulses.push({ id:id, t:secs });
+  }
+  function tickPulse(dt){
+    for(var i=pulses.length-1;i>=0;i--){
+      pulses[i].t -= dt; if(pulses[i].t > 0) continue;
+      var el = $(pulses[i].id), st = stepNow();
+      if(el && el.classList && !(guide.on && st && st.hi === pulses[i].id)) el.classList.remove("pulse");
+      pulses.splice(i,1);
+    }
+  }
+
+  // ======================================================================
+  //  The jobs strip (AC7). It used to be a permanent slab over the bottom half of
+  //  the screen, which is where the tutorial was asking the kid to draw. It is now
+  //  a slim row that opens on a tap, and the panel's REAL height is measured every
+  //  frame so the camera and the pointing mark always stay clear of it.
+  // ======================================================================
+  var jobsOpen = false;
+  function setJobsOpen(on){
+    jobsOpen = !!on;
+    var body = $("jobsBody"), tog = $("jobsToggle");
+    if(body && body.classList) body.classList[jobsOpen ? "remove" : "add"]("closed");
+    if(tog && tog.classList) tog.classList[jobsOpen ? "add" : "remove"]("open");
+  }
+  var jobBtns = {};
+  function buildJobsUI(){
+    var host = $("jobs"); if(!host || host.childElementCount) return;
+    for(var i=0;i<JOBS.length;i++){
+      (function(j){
+        // built as real elements, not an innerHTML blob, so every button is a thing
+        // the game (and the QA robot) can reach and press
+        var card = document.createElement("div"); card.className = "job";
+        var nm = document.createElement("div"); nm.className = "nm";
+        nm.textContent = j.name; if(nm.style) nm.style.color = j.color;
+        var ct = document.createElement("div"); ct.className = "ct"; ct.id = "ct_"+j.id; ct.textContent = "0";
+        var btns = document.createElement("div"); btns.className = "btns";
+        [["-1","−"],["1","+"]].forEach(function(pair){
+          var b = document.createElement("button");
+          b.type = "button"; b.id = "job_"+j.id+"_"+(pair[0] === "1" ? "up" : "down");
+          b.textContent = pair[1];
+          b.addEventListener("click", function(){ BA.unlock(); moveAnt(j.id, +pair[0]); });
+          jobBtns[b.id] = b;
+          btns.appendChild(b);
+        });
+        card.appendChild(nm); card.appendChild(ct); card.appendChild(btns);
+        host.appendChild(card);
+      })(JOBS[i]);
+    }
+  }
+  // move one ant into (+1) or out of (-1) a job; the foragers are the pool it comes from
+  function moveAnt(job, d){
+    if(DEMO) return;
+    if(d > 0){
+      var from = null, i;
+      for(i=JOBS.length-1;i>=0;i--){ var o=JOBS[i].id; if(o!==job && (C.jobs[o]|0) > 0){ if(o==="forager"){ from=o; break; } if(!from) from=o; } }
+      if(!from){ hint("Grow the colony first"); return; }
+      C.jobs[from]--; C.jobs[job] = (C.jobs[job]|0) + 1;
+    } else {
+      if((C.jobs[job]|0) <= 0) return;
+      // minus always sends that ant somewhere real. It used to take one off the
+      // foragers and give it straight back, so the button did nothing at all.
+      var to = (job === "forager") ? "digger" : "forager";
+      C.jobs[job]--; C.jobs[to] = (C.jobs[to]|0) + 1;
+    }
+    if(Feel){ try{ Feel.tap(); }catch(e){} }
+    guide.moved = true; bumpIdle();
+    syncJobsUI(); saveSoon();
+  }
+  var _jobsKey = "";
+  function syncJobsUI(){
+    var mx = $("barMix"); if(mx){ var ml = mixLine(); if(mx.textContent !== ml) mx.textContent = ml; }
+    var k = C.ants + "|" + JOBS.map(function(j){ return C.jobs[j.id]|0; }).join(",");
+    if(k === _jobsKey) return;                 // called every frame: only redraw on a real change
+    _jobsKey = k;
+    for(var i=0;i<JOBS.length;i++){ var el = $("ct_"+JOBS[i].id); if(el) el.textContent = C.jobs[JOBS[i].id]|0; }
+    var ct = $("barAnts"); if(ct) ct.textContent = C.ants + (C.ants === 1 ? " ant" : " ants");
+    drawBar();
+  }
+  // the colour bar: it SHOWS the mix, and dragging it moves ants between two jobs
+  function drawBar(){
+    var bar = $("bar"); if(!bar) return;
+    var total = Math.max(1, C.ants), acc = 0, html = "", cum = [];
+    for(var i=0;i<JOBS.length;i++){
+      var n = C.jobs[JOBS[i].id]|0, w = (n/total)*100;
+      html += '<div class="seg" style="left:'+acc+'%;width:'+w+'%;background:'+JOBS[i].color+'"></div>';
+      acc += w; if(i < JOBS.length-1) cum.push(acc);
+    }
+    for(var d=0;d<cum.length;d++) html += '<div class="gr" style="left:'+cum[d]+'%"></div>';
+    bar.innerHTML = html;
+  }
+  // AC7: dragging the bar used to need a press within a whisker of a divider, which
+  // on a mouse felt like nothing happening at all. A press anywhere on the bar now
+  // takes hold of the NEAREST divider, and both mouse and touch go through the same
+  // path. The +/- buttons stay the taught way in, because a tap cannot miss.
+  (function wireBar(){
+    var bar = $("bar"); if(!bar) return;
+    var dragging = -1;
+    function pct(ev){
+      var r = bar.getBoundingClientRect ? bar.getBoundingClientRect() : { left:0, width:1 };
+      var cx = (ev.clientX != null) ? ev.clientX : ((ev.touches && ev.touches[0]) ? ev.touches[0].clientX : 0);
+      return Math.max(0, Math.min(1, (cx - (r.left||0)) / Math.max(1, r.width||1)));
+    }
+    function cumFor(i){ var t = Math.max(1, C.ants), s2 = 0; for(var j=0;j<=i;j++) s2 += C.jobs[JOBS[j].id]|0; return s2/t; }
+    function grab(ev){
+      if(DEMO) return;
+      BA.unlock(); bumpIdle();
+      var p = pct(ev), best = 0, bd = 9;
+      for(var i=0;i<JOBS.length-1;i++){ var d = Math.abs(cumFor(i) - p); if(d < bd){ bd = d; best = i; } }
+      dragging = best;
+      try{ if(bar.setPointerCapture && ev.pointerId != null) bar.setPointerCapture(ev.pointerId); }catch(e){}
+      move(ev);
+    }
+    function move(ev){
+      if(dragging < 0) return;
+      if(ev.preventDefault) ev.preventDefault();
+      var a2 = JOBS[dragging].id, b2 = JOBS[dragging+1].id, before = 0, i;
+      for(i=0;i<dragging;i++) before += C.jobs[JOBS[i].id]|0;
+      var pair = (C.jobs[a2]|0) + (C.jobs[b2]|0);
+      var want = Math.round(pct(ev) * C.ants) - before;
+      want = Math.max(0, Math.min(pair, want));
+      if(want !== (C.jobs[a2]|0)){ C.jobs[a2] = want; C.jobs[b2] = pair - want; guide.moved = true; bumpIdle(); syncJobsUI(); saveSoon(); }
+    }
+    function end(){ dragging = -1; }
+    bar.addEventListener("pointerdown", grab);
+    bar.addEventListener("pointermove", move);
+    bar.addEventListener("pointerup", end);
+    bar.addEventListener("pointercancel", end);
+    // a browser with no pointer events at all still gets the same drag
+    bar.addEventListener("touchstart", grab);
+    bar.addEventListener("touchmove", move);
+    bar.addEventListener("touchend", end);
+  })();
+
+  // ======================================================================
+  //  The three things a tap can do (AC7). The old Dig/Food/Water/Jobs tabs were
+  //  modes that did not look like modes: Food stayed lit while digging worked
+  //  anyway. Dig and Jobs are not modes at all — you dig by dragging in the dirt
+  //  and you set jobs on the strip — so they are gone. What is left is Build, and
+  //  the choice of what a tap on the meadow leaves behind. The lit one is it.
+  // ======================================================================
+  var TOOL = "food";
+  function setTool(t){
+    TOOL = t;
+    var f = $("toolFood"), w = $("toolWater");
+    if(f && f.classList) f.classList[t === "food"  ? "add" : "remove"]("on");
+    if(w && w.classList) w.classList[t === "water" ? "add" : "remove"]("on");
+  }
+  $("toolFood").addEventListener("click", function(){ BA.unlock(); bumpIdle(); cancelPlacing(); setTool("food"); hint("Tap the green grass to leave a crumb"); });
+  $("toolWater").addEventListener("click", function(){ BA.unlock(); bumpIdle(); cancelPlacing(); setTool("water"); hint("Tap the green grass to leave a drop of water"); });
+  $("toolBuild").addEventListener("click", function(){ BA.unlock(); bumpIdle(); if(placing) cancelPlacing(); else openRoomPicker(null); });
+  $("jobsToggle").addEventListener("click", function(){ BA.unlock(); bumpIdle(); setJobsOpen(!jobsOpen); });
+
+  // ======================================================================
+  //  Input — drag in the dirt to dig, tap the meadow to leave food or water,
+  //  tap Build (or a tunnel) to make a room. Mouse and touch run the same path.
+  // ======================================================================
+  var drag = null;
+  function evX(ev){ return ev.clientX != null ? ev.clientX : ((ev.touches && ev.touches[0]) ? ev.touches[0].clientX : 0); }
+  function evY(ev){ return ev.clientY != null ? ev.clientY : ((ev.touches && ev.touches[0]) ? ev.touches[0].clientY : 0); }
+  function cellFromEvent(ev){
+    var r = CV.getBoundingClientRect ? CV.getBoundingClientRect() : { left:0, top:0 };
+    var x = evX(ev) - (r.left||0), y = evY(ev) - (r.top||0);
+    if(y < SKY - 20) return { surface:true, x:x, y:y };
+    var c = Math.floor((x - OX)/CS), rr = Math.floor((y - SKY + camY)/CS);
+    if(c < 0 || c >= GAME_CONFIG.cols || rr < 0) return null;
+    return { surface:false, c:c, r:rr, x:x, y:y };
+  }
+  function planCell(c, r){
+    if(cellAt(c,r)) return false;
+    var last = C.plan.length ? C.cells[C.plan[C.plan.length-1]] : null;
+    var okFromLast = last && Math.abs(last.c-c) + Math.abs(last.r-r) === 1;
+    if(!hasOpenNeighbour(c,r) && !okFromLast) return false;
+    C.cells[key(c,r)] = { c:c, r:r, kind:"plan", dig:0 };
+    C.plan.push(key(c,r));
+    return true;
+  }
+  function onDown(ev){
+    if(state !== "play" || DEMO || paused) return;
+    BA.unlock(); bumpIdle();
+    var g = cellFromEvent(ev); if(!g) return;
+    // placing a room: the glowing spots are the only thing a tap means right now
+    if(placing){
+      if(g.surface){ hint("Tap one of the glowing spots down in the colony"); return; }
+      if(canPlace(g.c, g.r)) startRoom(placing.room, g.c, g.r);
+      else hint("Tap one of the glowing spots");
+      return;
+    }
+    if(g.surface){
+      var it = dropSurface(TOOL, g.x, true);          // a crumb you can SEE, worth nothing until it is carried in
+      if(Feel){ try{ Feel.tap(); }catch(e){} }
+      if(it && !jobCount("forager")) hint("Put an ant on Foragers so somebody fetches it");
+      saveSoon(); return;
+    }
+    var here = cellAt(g.c, g.r);
+    if(here && (here.kind === "tunnel")){ drag = { mode:"tap", c:g.c, r:g.r }; return; }
+    if(here) return;                                    // a planned or built cell: nothing to do
+    if(planCell(g.c, g.r)){ drag = { mode:"dig" }; if(Feel){ try{ Feel.tap(); }catch(e){} } }
+    else { hint("Start your tunnel next to one you already have"); }
+  }
+  function onMove(ev){
+    if(!drag || drag.mode !== "dig") return;
+    if(ev.preventDefault) ev.preventDefault();
+    var g = cellFromEvent(ev); if(!g || g.surface) return;
+    planCell(g.c, g.r);
+  }
+  function onUp(){
+    if(drag && drag.mode === "tap") openRoomPicker({ c:drag.c, r:drag.r });
+    if(drag) saveSoon();
+    drag = null;
+  }
+  CV.addEventListener("pointerdown", onDown);
+  CV.addEventListener("pointermove", onMove);
+  CV.addEventListener("pointerup", onUp);
+  CV.addEventListener("pointercancel", function(){ drag = null; });
+  // a browser with no pointer events still digs and still drops
+  CV.addEventListener("touchstart", onDown);
+  CV.addEventListener("touchmove", onMove);
+  CV.addEventListener("touchend", onUp);
+
+  // ======================================================================
+  //  Build a room (AC7). Rooms used to be invisible: the only way in was to tap
+  //  a tunnel and hope. There is a Build button now. Pick a room, every spot it
+  //  could go lights up on the colony, and a tap puts it there.
+  // ======================================================================
+  var placing = null, pickCell = null, buildOpen = false;
+  function canPlace(c, r){
+    var x = cellAt(c, r);
+    return !!(x && x.kind === "tunnel" && !x.flooded && !(x.c === C.queen.c && x.r <= C.queen.r));
+  }
+  function buildSpots(){
+    var out = [], k;
+    for(k in C.cells){ var x = C.cells[k]; if(canPlace(x.c, x.r)) out.push({ c:x.c, r:x.r }); }
+    return out;
+  }
+  function anyRoomUnlocked(){
+    var ks = Object.keys(GAME_CONFIG.rooms), i;
+    for(i=0;i<ks.length;i++) if(roomUnlocked(ks[i])) return true;
+    return false;
+  }
+  function openRoomPicker(cell){
+    if(DEMO) return;
+    cancelPlacing(true);
+    pickCell = cell || null;
+    var list = $("roomList"); if(!list) return;
+    list.innerHTML = "";
+    var head = $("buildHead"); if(head) head.textContent = pickCell ? "Build a room here" : "Build a room";
+    var made = 0;
+    Object.keys(GAME_CONFIG.rooms).forEach(function(id){
+      if(!roomUnlocked(id)) return;                 // not met yet: simply not offered
+      var def = GAME_CONFIG.rooms[id], can = C.food >= def.food;
+      made++;
+      var b = document.createElement("button");
+      b.className = "room"; b.type = "button"; b.id = "room_" + id;
+      if(!can) b.disabled = true;
+      var sw = document.createElement("span");
+      sw.className = "sw"; if(sw.style) sw.style.background = def.color;
+      var txt = document.createElement("span"); txt.className = "rt";
+      var rn = document.createElement("span"); rn.className = "rn"; rn.textContent = def.name;
+      var rd = document.createElement("span"); rd.className = "rd";
+      rd.textContent = def.desc + " · " + def.food + " food" + (can ? "" : " · not enough food yet");
+      txt.appendChild(rn); txt.appendChild(rd);
+      if(pickCell){                                  // AC6: where you dig it matters, in kid words
+        var good = goodSpot(id, pickCell.c, pickCell.r), sp = document.createElement("span");
+        sp.className = "sp" + (good ? "" : " meh"); sp.textContent = spotLine(id, pickCell.c, pickCell.r);
+        txt.appendChild(sp);
+      }
+      b.appendChild(sw); b.appendChild(txt);
+      b.addEventListener("click", function(){ if(can) chooseRoom(id); });
+      list.appendChild(b);
+    });
+    if(!made){
+      var none = document.createElement("div");
+      none.className = "rd"; none.textContent = "Your ants have not learned a room yet. Keep growing.";
+      list.appendChild(none);
+    }
+    var host = $("build"); if(host && host.style) host.style.display = "flex";
+    buildOpen = true;
+    guide.opened = true;
+    syncCoach();
+  }
+  function closeBuild(){
+    var host = $("build"); if(host && host.style) host.style.display = "none";
+    buildOpen = false;
+  }
+  function chooseRoom(id){
+    closeBuild();
+    if(pickCell){ startRoom(id, pickCell.c, pickCell.r); pickCell = null; return; }
+    placing = { room:id };
+    // only ONE action is lit at a time: while a room is looking for its spot, a tap
+    // means "put it here", not "leave a crumb"
+    var tb = $("toolBuild"); if(tb && tb.classList) tb.classList.add("on");
+    ["toolFood","toolWater"].forEach(function(k){ var e = $(k); if(e && e.classList) e.classList.remove("on"); });
+    var nm = (GAME_CONFIG.rooms[id] || {}).name || "room";
+    hint(buildSpots().length
+      ? ("Tap a glowing spot to put your " + nm.toLowerCase() + " there")
+      : "Dig a tunnel first, then there will be a spot for it", 8);
+  }
+  function cancelPlacing(quiet){
+    if(!placing) return;
+    placing = null;
+    var tb = $("toolBuild"); if(tb && tb.classList) tb.classList.remove("on");
+    setTool(TOOL);                                   // the drop button lights up again
+    if(!quiet) hint("No room this time");
+  }
+  $("buildCancel").addEventListener("click", function(){ BA.unlock(); pickCell = null; closeBuild(); });
+  function startRoom(id, c, r){
+    var def = GAME_CONFIG.rooms[id]; if(!def) return false;
+    if(C.food < def.food){ hint("Not enough food yet. Bring some crumbs home first."); cancelPlacing(true); return false; }
+    var cell = cellAt(c, r);
+    if(!cell || cell.kind !== "tunnel"){ hint("That spot is taken"); return false; }
+    C.food -= def.food;
+    cell.kind = "room"; cell.room = id; cell.build = 0; cell.done = false;
+    cell.good = goodSpot(id, c, r);
+    cancelPlacing(true);
+    guide.built = true;
+    var line = GAME_CONFIG.placement[id];
+    hint(cell.good && line ? ("Builders are on it. " + line.yes) : "Builders are on it. Watch them walk over.");
+    if(jobCount("builder") <= 0) hint("Tap plus on Builders so somebody puts it up");
+    saveSoon();
+    return true;
+  }
+
+  // ======================================================================
+  //  Save (this session: local only. Real per-kid saving + away-time growth
+  //  is card AC3, which replaces this with a stored colony.)
+  // ======================================================================
+  var SAVE_KEY = "bk_antcity_colony";
+  var saveT = 0;
+  function saveSoon(){ saveT = 1.2; }
+  function saveNow(){
+    saveT = 0;
+    try{
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        v:1, cells:C.cells, plan:C.plan, ants:C.ants, eggs:C.eggs, food:C.food, water:C.water,
+        jobs:C.jobs, deepest:C.deepest, difficulty:C.difficulty, queen:C.queen,
+        born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface,
+        mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
+        carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
+        leaves:C.leaves, leavesCut:C.leavesCut, leafReady:C.leafReady, aphids:C.aphids, dew:C.dew, dewGot:C.dewGot, mush:C.mush,
+        berryReady:C.berryReady, tapped:C.tapped, taught:C.taught,
+        seen:C.seen, guided:C.guided, savedAt:Date.now()
+      }));
+    }catch(e){}
+  }
+  // a colony saved before AC7 has crumbs of the old shape sitting on its meadow.
+  // They come forward as real items rather than being thrown away.
+  function reviveSurface(list){
+    var out = [], i;
+    if(!list || !list.length) return out;
+    for(i=0;i<list.length;i++){
+      var o = list[i]; if(!o || (o.x == null && o.fx == null)) continue;
+      var kind = o.kind === "water" ? "water" : (GAME_CONFIG.items[o.kind] ? o.kind : "crumb");
+      var def = itemDef(kind);
+      var fx = o.fx != null ? o.fx : Math.max(0.02, Math.min(0.98, o.x / Math.max(1, W)));
+      out.push({ kind:kind, fx:fx, n:(o.n || def.n), give:def.give, pri:def.pri,
+                 held:false, gone:false, claim:null, t:0 });
+    }
+    return out;
+  }
+  function loadSaved(){
+    try{
+      var raw = localStorage.getItem(SAVE_KEY); if(!raw) return null;
+      var s = JSON.parse(raw); if(!s || s.v !== 1 || !s.cells) return null;
+      var col = freshColony(s.difficulty || 3);
+      col.cells = s.cells; col.plan = s.plan || []; col.ants = s.ants || col.ants; col.eggs = s.eggs || 0;
+      col.food = s.food || 0; col.water = s.water || 0; col.jobs = s.jobs || col.jobs;
+      col.deepest = s.deepest || col.deepest; col.queen = s.queen || col.queen;
+      col.born = s.born||0; col.dug = s.dug||0; col.rooms = s.rooms||0;
+      col.surface = reviveSurface(s.surface);
+      col.mission = s.mission||0; col.done = s.done||{}; col.mBase = s.mBase||{};
+      col.freeBuild = !!s.freeBuild; col.hit = s.hit||{}; col.carried = s.carried||0; col.mFlood = s.mFlood||null;
+      col.found = s.found||0; col.floods = s.floods||0; col.rest = (s.rest==null?1:s.rest);
+      col.find = s.find || col.find; col.seen = !!s.seen; col.guided = !!s.guided;
+      col.leaves = s.leaves||0; col.leavesCut = s.leavesCut||0; col.leafReady = (s.leafReady==null?3:s.leafReady);
+      col.aphids = !!s.aphids; col.dew = s.dew||0; col.dewGot = s.dewGot||0; col.mush = s.mush||0;
+      col.berryReady = s.berryReady == null ? 2 : s.berryReady;
+      col.tapped = s.tapped||0; col.taught = s.taught || {};
+      return col;
+    }catch(e){ return null; }
+  }
+
+  // ======================================================================
+  //  Screens, loop, nav
+  // ======================================================================
+  var state = "menu";      // menu | play
+  var paused = false, DEMO = false, last = 0, acc = 0, demoT = 0;
+  try{ var q = new URLSearchParams(location.search); DEMO = q.get("screen") === "demo"; }catch(e){}
+  if(DEMO){ BA = { unlock:function(){}, sfx:function(){}, toggleMute:function(){return false;}, muted:true }; }
+
+  function newColony(diff){
+    C = freshColony(diff);
+    C.surface = []; C.sample = [];
+    camY = 0; camTarget = 0;                 // a new colony starts at the top of itself
+    walkSample(0);
+  }
+  function startPlay(){
+    if(!C){ var saved = DEMO ? null : loadSaved(); C = saved || freshColony(3); }
+    if(!C.surface) C.surface = [];
+    if(!C.taught) C.taught = {};
+    if(!C.sample){ C.sample = []; walkSample(0); }
+    state = "play"; paused = false;
+    var host = $("start"); if(host && host.style) host.style.display = "none";
+    $("panel").className = "";
+    buildJobsUI(); syncJobsUI(); HUD().show(); syncHud();
+    if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
+    if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
+    setJobsOpen(false);
+    syncNeeds();
+    if(DEMO) return;
+    ensureMusic();
+    syncCoach();
+    if(!C.guided){ C.seen = true; saveSoon(); showHow(); }    // first colony: teach it, one step at a time
+  }
+  // AC7: there is no level picker any more. Ant City has ONE colony that is always
+  // yours, so a page with a single card on it was a door for the sake of a door:
+  // the tile in the app opens straight into the anthill. Home exits to the hub.
+  function leaveGame(){
+    try{ if(window.parent && window.parent !== window) window.parent.postMessage({ type:"nav:exit" }, "*"); }catch(e){}
+  }
+
+  function frame(now){
+    requestAnimationFrame(frame);
+    if(!last) last = now;
+    var dt = Math.min(0.25, (now - last)/1000); last = now;
+    if(state === "play" && !paused){
+      acc += dt;
+      var guard = 0;
+      while(acc >= STEP && guard < 12){ step(); acc -= STEP; guard++; }
+      if(acc > 0.5) acc = 0;
+      tickHint(dt); tickParty(dt); tickPulse(dt);
+      if(saveT > 0 && !DEMO){ saveT -= dt; if(saveT <= 0) saveNow(); }
+      if(DEMO) demoStep(dt);
+      syncHud(); syncJobsUI(); syncNeeds(); syncCoach();
+    }
+    if(C){ draw(); if(state === "play"){ drawHow(); drawParty(); } }
+  }
+  // attract mode: the colony plays itself, silent, input ignored (used by the picker)
+  function demoStep(dt){
+    demoT += dt;
+    if(demoT > 1.1){
+      demoT = 0;
+      var c = C.queen.c + (Math.floor(srand()*3) - 1), r = C.deepest + 1;
+      c = Math.max(0, Math.min(GAME_CONFIG.cols-1, c));
+      if(!planCell(c, r)) planCell(C.queen.c, r);
+      if(srand() < 0.5) dropSurface(srand() < 0.7 ? "food" : "water", 40 + srand()*(W-80));
+    }
+  }
+
+  // ======================================================================
+  //  The lessons (AC5, reworked in AC7). The first minute teaches the three
+  //  things the colony is made of; the moment rooms unlock, a second short lesson
+  //  teaches Build. Three rules hold for every step: it WAITS for the real action,
+  //  it only ever teaches a gesture that really works, and its words come out of
+  //  the ONE hint line, so nothing else on screen can contradict it.
+  // ======================================================================
+  var LESSONS = {
+    intro: [
+      { text:"Drag down in the brown dirt to dig a tunnel", hi:null,
+        spot:function(){ return digSpot(); },
+        done:function(){ return C.plan.length > 0 || (C.dug - guide.base.dug) > 0; } },
+      { text:"Now tap the green grass to drop some food", hi:"toolFood",
+        spot:function(){ return { fc:GAME_CONFIG.cols*0.26, fr:SURF_R }; },
+        done:function(){ return (C.tapped|0) > (guide.base.tapped|0); } },
+      // AC7: the old step three taught sliding the colour bar, which did nothing on
+      // a mouse. A tap on the plus button cannot miss, on any device.
+      { text:"Tap the plus on Foragers to give an ant that job", hi:"job_forager_up", open:true,
+        spot:null,
+        done:function(){ return guide.moved; } }
+    ],
+    build: [
+      { text:"Your ants can have rooms now. Tap Build.", hi:"toolBuild", spot:null,
+        done:function(){ return guide.opened; } },
+      { text:"Pick a room, then tap a glowing spot to put it there", hi:null, spot:null,
+        done:function(){ return guide.built; } }
+    ]
+  };
+  // where to point for "dig here": just under the dig face when that is on screen,
+  // otherwise out sideways from a tunnel that is. The ? button gets used most on a
+  // colony that has already grown, and it must never point off the bottom of the world.
+  function digSpot(){
+    // "on screen" means clear of the HUD at the top and of the panel at the bottom,
+    // not merely inside the canvas
+    var down = { fc:C.queen.c, fr:C.deepest + 1, down:true }, y = frToY(down.fr);
+    if(!isFinite(y) || (y > SKY + CS && y < H - PANEL - CS*1.2)) return down;
+    var b = viewBand(), r, c, d, yy, lim = Math.min(b.hi, C.deepest);
+    for(r = b.lo; r <= lim; r++){
+      if(!isOpen(C.queen.c, r)) continue;
+      yy = frToY(r);
+      if(isFinite(yy) && (yy < SKY + CS || yy > H - PANEL - CS*1.2)) continue;
+      for(d = 0; d < 2; d++){
+        c = C.queen.c + (d ? -1 : 1);
+        if(c < 0 || c >= GAME_CONFIG.cols) continue;
+        if(!cellAt(c, r)) return { fc:c, fr:r, down:false };
+      }
+    }
+    return down;
+  }
+  var guide = { on:false, lesson:"intro", step:0, t:0, base:{ dug:0, tapped:0 },
+                moved:false, opened:false, built:false };
+  var openedForLesson = false;      // the job cards were opened BY a lesson, not by the kid
+  var how = { on:false };            // the shell and the QA robot still ask for it by this name
+  function stepNow(){ var L = LESSONS[guide.lesson]; return L ? L[guide.step] : null; }
+  function lessonLen(name){ var L = LESSONS[name || guide.lesson]; return L ? L.length : 0; }
+
+  function startLesson(name){
+    if(!LESSONS[name]) return;
+    guide.on = true; guide.lesson = name; guide.step = 0; guide.t = 0;
+    guide.moved = false; guide.opened = false; guide.built = false;
+    guide.base = { dug:C.dug, tapped:C.tapped|0 };
+    how.on = true;
+    clearMsg();                       // one surface: the lesson owns it while it runs
+    setGuideHi(); bumpIdle(); syncCoach();
+  }
+  function showHow(){ startLesson("intro"); }
+  function endHow(){ guide.on = false; how.on = false; teachCool = 8; setGuideHi(); syncCoach(); }
+  // the build lesson fires the moment a room is really available, and only once
+  var teachCool = 0;
+  function maybeTeachBuild(){
+    if(DEMO || guide.on || !C.guided) return;
+    if(teachCool > 0) return;                    // let the last lesson's words be read first
+    if(setbackNow()) return;                     // a hungry colony comes before a new idea
+    if(!C.taught) C.taught = {};
+    if(C.taught.build || !anyRoomUnlocked()) return;
+    C.taught.build = true;
+    startLesson("build");
+    saveSoon();
+  }
+  function tickHow(dt){
+    if(teachCool > 0) teachCool = Math.max(0, teachCool - dt);
+    if(!guide.on){ maybeTeachBuild(); return; }
+    guide.t += dt;
+    var st = stepNow();
+    if(!st){ endHow(); return; }
+    if(guide.t < 0.5 || !st.done()) return;
+    guide.step++; guide.t = 0; guide.moved = false; guide.opened = false; guide.built = false;
+    guide.base = { dug:C.dug, tapped:C.tapped|0 };
+    if(Feel){ try{ Feel.tap(); }catch(e){} }
+    if(guide.step >= lessonLen()){
+      var was = guide.lesson;
+      endHow();
+      if(openedForLesson){ setJobsOpen(false); openedForLesson = false; }
+      if(was === "intro"){
+        C.guided = true; saveSoon();
+        hint("You have got it. Now keep growing your colony.");
+      } else hint("Nice. Your ants will walk over and put it up.");
+    } else { setGuideHi(); syncCoach(); }
+  }
+  // the one control this step is about gets a soft pulse; everything else is left alone
+  function setGuideHi(){
+    var ids = ["toolBuild","toolFood","toolWater","bar","jobsToggle","job_forager_up","job_digger_up","job_nursery_up","job_builder_up"], i;
+    for(i=0;i<ids.length;i++){ var e = $(ids[i]); if(e && e.classList) e.classList.remove("pulse"); }
+    if(!guide.on) return;
+    var st = stepNow(); if(!st) return;
+    if(st.open && !jobsOpen){ setJobsOpen(true); openedForLesson = true; }   // a step about the job cards opens them
+    if(st.hi){ var e2 = $(st.hi); if(e2 && e2.classList) e2.classList.add("pulse"); }
+  }
+  function drawHow(){
+    if(!guide.on) return;
+    var st = stepNow(); if(!st || !st.spot) return;
+    var p = st.spot(), x = fcToX(p.fc), y = frToY(p.fr);
+    if(guide.lesson === "intro" && guide.step === 0 && p.down){
+      // where the tunnel is headed, so the shape of the idea is on screen at once
+      X.strokeStyle = "rgba(255,240,200,.5)"; X.lineWidth = 2.5; X.setLineDash([5,5]);
+      for(var i=0;i<4;i++){
+        var cxp = cellX(C.queen.c), cyp = cellY(C.deepest + 1 + i);
+        if(BR){ BR.rrect(X, cxp+4, cyp+4, CS-8, CS-8, 8); X.stroke(); } else X.strokeRect(cxp+4, cyp+4, CS-8, CS-8);
+      }
+      X.setLineDash([]);
+      var slide = Math.min(1, (guide.t % 2.8) / 1.9);            // the mark drags down, over and over
+      y = frToY(C.deepest + 1 + slide*3);
+      X.strokeStyle = "rgba(255,240,200,.8)"; X.lineWidth = Math.max(4, CS*0.28); X.lineCap = "round";
+      X.beginPath(); X.moveTo(fcToX(C.queen.c), frToY(C.deepest + 1)); X.lineTo(x, y); X.stroke();
+    }
+    // the touch itself: a soft ring under a solid dot, the same mark a finger makes
+    // on every touchscreen. Drawn, so it needs no art and says nothing in words.
+    handDot(x, y);
+  }
+  function handDot(x,y){
+    var p2 = 0.75 + 0.25*Math.sin(guide.t*6);
+    X.strokeStyle = "rgba(255,255,255,.55)"; X.lineWidth = 3;
+    X.beginPath(); X.arc(x, y, CS*0.42*p2, 0, 7); X.stroke();
+    X.fillStyle = "rgba(255,255,255,.92)"; X.beginPath(); X.arc(x, y, CS*0.2, 0, 7); X.fill();
+  }
+
+  // ---------- shared nav bridge (Home exits, Sound, Help) ----------
+  if(window.BuildableGameNav){
+    window.BuildableGameNav.register({
+      hide:["backBtn","muteBtn","helpBtn"],
+      onSound:function(){ BA.unlock(); BA.toggleMute(); },
+      onHelp:function(){ showHow(); },
+      soundOn:function(){ return !BA.muted; },
+      inGame:function(){ return state === "play"; }
+    });
+  }
+  $("muteBtn").addEventListener("click", function(){ BA.unlock(); BA.toggleMute(); });
+  $("helpBtn").addEventListener("click", function(){ showHow(); });
+  $("backBtn").addEventListener("click", function(){ leaveGame(); });
+
+  // ---------- cartridge contract: shell -> game ----------
+  window.addEventListener("message", function(ev){
+    var d = ev && ev.data; if(!d || !d.type) return;
+    if(d.type === "pause"){ paused = true; return; }                  // freeze NOW
+    if(d.type === "resume"){ paused = false; last = 0; acc = 0; return; }
+    if(d.type === "start"){ startPlay(); return; }
+  });
+  document.addEventListener("visibilitychange", function(){ if(document.hidden){ saveNow(); } else { last = 0; } });
+  window.addEventListener("pagehide", saveNow);
+
+  // ======================================================================
+  //  Boot: read the manifest for art + feel, keep every built-in fallback
+  // ======================================================================
+  var ART_IDS = {
+    // AC7: the ant slot is a LOOK, not a picture. The ants are drawn (see drawAntShape)
+    // because an AI sprite reads as an orange blob at three tenths of a cell; the id
+    // still comes from the manifest and still picks the body colour, and the art file
+    // behind it is untouched, so putting a sprite back is a one-line change.
+    ant:"antcity/ant/classic-v1", queen:"antcity/hero/queen-v1", soil:"antcity/soil/sandy-v1",
+    egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1", find:"antcity/prop/buried-find-v1",
+    surface:"antcity/surface/meadow-v1", rainSurface:"antcity/surface/meadow-rain-v1",
+    flood:"antcity/prop/flood-v1", colony:"antcity/prop/colony-v1", loading:"antcity/loading/v1",
+    room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1",
+    room_fungus:"antcity/prop/fungus-v1", leaf:"antcity/prop/leaf-v1",
+    aphid:"antcity/prop/aphid-plant-v1", honeydew:"antcity/prop/honeydew-v1"
+  };
+  // The shell owns the kid's picks and hands the engine the option INDEX per slot
+  // (?ant=1&meadow=0&dirt=1), the same tiny-param handoff Breaker and Sky Flyer use.
+  function equippedLooks(){
+    var out = {};
+    try{
+      var q2 = new URLSearchParams(location.search);
+      ["ant","meadow","dirt"].forEach(function(k){ var v = q2.get(k); if(v != null && v !== "" && !isNaN(+v)) out[k] = +v; });
+    }catch(e){}
+    return out;
+  }
+  function applyManifest(m){
+    if(!m || typeof m !== "object") return;
+    try{
+      if(m.color) ACCENT = m.color;
+      var lv = (m.levels && m.levels[0]) || null, parts = (lv && lv.parts) || {};
+      if(parts.ant)  ART_IDS.ant  = parts.ant;
+      if(parts.soil) ART_IDS.soil = parts.soil;
+      if(parts.surface) ART_IDS.surface = parts.surface;
+      if(m.art && m.art.loadingScreen) ART_IDS.loading = m.art.loadingScreen;
+      if(m.art && m.art.hero) ART_IDS.queen = m.art.hero;
+      // AC6: rooms and the chain milestones are recipe, not engine. The manifest may
+      // add or retune either; anything it does not mention keeps the built-in value.
+      if(m.rooms && typeof m.rooms === "object"){
+        for(var rk in m.rooms){
+          var rd = m.rooms[rk] || {};
+          GAME_CONFIG.rooms[rk] = GAME_CONFIG.rooms[rk] || { name:rk, desc:"", food:8, color:"#e9c46a" };
+          if(rd.name) GAME_CONFIG.rooms[rk].name = rd.name;
+          if(rd.desc) GAME_CONFIG.rooms[rk].desc = rd.desc;
+          if(typeof rd.food === "number") GAME_CONFIG.rooms[rk].food = rd.food;
+          if(rd.color) GAME_CONFIG.rooms[rk].color = rd.color;
+          if(rd.asset) ART_IDS["room_"+rk] = rd.asset;
+        }
+      }
+      if(m.milestones && m.milestones.length){
+        var have = {}, mi;
+        for(mi=0;mi<GAME_CONFIG.milestones.length;mi++) have[GAME_CONFIG.milestones[mi].id] = mi;
+        m.milestones.forEach(function(ml){
+          if(!ml || !ml.id) return;
+          if(have[ml.id] != null){                       // the manifest wins on the numbers
+            var cur = GAME_CONFIG.milestones[have[ml.id]];
+            for(var f in ml) cur[f] = ml[f];
+          } else GAME_CONFIG.milestones.push(ml);
+        });
+      }
+      if(m.levels && m.levels.length){
+        MISSIONS = m.levels.map(function(l){ return { id:l.id, name:l.name, layout:l.layout, coins:l.coins || 10, difficulty:l.difficulty }; });
+      }
+      // the kid's equipped look wins over the level default
+      var looks = equippedLooks();
+      (m.customization||[]).forEach(function(slot){
+        var nm = String(slot.slot||"").toLowerCase();
+        var want = looks[nm]; if(want == null) return;
+        var o = (slot.options||[])[want]; if(!o || !o.asset) return;
+        if(nm === "ant")    ART_IDS.ant     = o.asset;
+        if(nm === "dirt")   ART_IDS.soil    = o.asset;
+        if(nm === "meadow") ART_IDS.surface = o.asset;
+      });
+      if(Feel) Feel.configure({ accent:ACCENT, feel:m.feel || { pace:"chill", celebration:"calm", haptics:"on" }, sfxBase:SFX_BASE, sfxMap:SFX_MAP });
+      if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT);
+    }catch(e){}
+  }
+  function loadAllArt(){ for(var slot in ART_IDS) loadArt(slot, ART_IDS[slot]); }
+
+  var booted = false;
+  function bootScreen(){
+    if(booted) return; booted = true;
+    loadAllArt();
+    if(DEMO) newColony(3);
+    startPlay();                       // AC7: straight into the colony, no picker
+  }
+  function boot(){
+    resize();
+    if(Feel){ try{ Feel.configure({ accent:ACCENT, feel:{ pace:"chill", celebration:"calm", haptics:"on" }, sfxBase:SFX_BASE, sfxMap:SFX_MAP }); }catch(e){} }
+    if(!C) C = (DEMO ? null : loadSaved()) || freshColony(3);
+    if(!C.surface) C.surface = []; if(!C.sample){ C.sample = []; walkSample(0); }
+    try{
+      if(window.BuildableManifest && window.BuildableManifest.rawManifest){
+        window.BuildableManifest.rawManifest("antcity", function(m){ applyManifest(m); bootScreen(); });
+        setTimeout(bootScreen, 1800);          // safety net if the manifest never answers
+      } else bootScreen();
+    }catch(e){ bootScreen(); }
+  }
+  boot();
+  requestAnimationFrame(frame);
+
+  // ======================================================================
+  //  The platform game handle. The QA robot (qa-antcity.mjs, card AC2) and
+  //  the shell drive the colony only through this.
+  // ======================================================================
+  window.ANTCITY_GAME = {
+    state: function(){ return state; },
+    play: function(diff){ if(diff) { newColony(diff); } startPlay(); },
+    newColony: function(diff){ newColony(diff||3); },
+    setDifficulty: function(d){ C.difficulty = Math.max(1, Math.min(5, d|0)); },
+    step: function(n){ n = n||1; for(var i=0;i<n;i++) step(); return this.dbg(); },
+    seconds: function(s){ var n = Math.round((s||1)/STEP); for(var i=0;i<n;i++) step(); return this.dbg(); },
+    dig: function(c, r){ return planCell(c, r); },
+    digDown: function(n){ var made = 0; for(var i=0;i<(n||1);i++){ if(planCell(C.queen.c, C.deepest + 1 + i)) made++; } return made; },
+    drop: function(kind, x){ dropSurface(kind === "water" ? "water" : "food", x != null ? x : W/2, true); return C.surface.length; },
+    assign: function(job, n){ if(!(job in C.jobs)) return null; var d = (n|0) - (C.jobs[job]|0); for(var i=0;i<Math.abs(d);i++) moveAnt(job, d > 0 ? 1 : -1); return C.jobs[job]; },
+    build: function(c, r, room){ var cell = cellAt(c, r); if(!cell || cell.kind !== "tunnel") return false;
+      var def = GAME_CONFIG.rooms[room]; if(!def || C.food < def.food) return false;
+      C.food -= def.food; cell.kind = "room"; cell.room = room; cell.build = 0; cell.done = false;
+      cell.good = goodSpot(room, c, r); return true; },
+    rooms: function(){ var o = {}; for(var k in GAME_CONFIG.rooms) o[k] = roomCount(k); return o; },
+    // --- missions (AC2), for the robot and the shell ---
+    missions: function(){ return MISSIONS.map(function(m){ return { id:m.id, name:m.name, layout:m.layout, coins:m.coins, done:!!C.done[m.id] }; }); },
+    mission: function(){ var m = currentMission(); if(!m) return { free:true, line:missionLine() };
+      var g = goalFor(m); return { index:C.mission, id:m.id, name:m.name, layout:m.layout, coins:m.coins,
+        goal:g, have:Math.max(0, haveFor(g)), line:missionLine(), free:false }; },
+    freeBuild: function(){ return !!C.freeBuild; },
+    unlocked: function(id){ return roomUnlocked(id); },
+    rain: function(){ var c = rain(); return c ? { c:c.c, r:c.r } : null; },
+    // the first plain tunnel a room could go in (the robot builds there)
+    openTunnel: function(){ for(var k in C.cells){ var x = C.cells[k];
+      if(x.kind === "tunnel" && !x.flooded && !(x.c === C.queen.c && x.r <= C.queen.r)) return { c:x.c, r:x.r }; } return null; },
+    floods: function(){ return floodCount(); },
+    setback: function(){ return setbackNow(); },
+    find: function(){ return C.find ? { c:C.find.c, r:C.find.r, gone:!!C.find.gone } : null; },
+    how: function(){ return how.on; },
+    showHow: showHow,
+    // --- AC5: the visible ants, the guide and the goal line ---
+    crowd: function(){ return C.sample.map(function(a){
+      return { fc:Math.round(a.fc*100)/100, fr:Math.round(a.fr*100)/100, job:a.job, state:a.state,
+               task:a.task ? a.task.kind : null, phase:(a.task && a.task.phase) || null,
+               carry:a.carry ? a.carry.kind : null, idle:(a.state === "idle"),
+               post:a.post ? (a.post.c + "," + a.post.r) : null,
+               at:Math.round(a.fc) + "," + Math.round(a.fr),
+               inDirt:(a.fr > -0.2 && !isOpen(Math.round(a.fc), Math.round(a.fr))) }; }); },
+    // --- AC7: the one hint line, the needs meters, the meadow and the build flow ---
+    // hints() is the whole point of the AC7 hint rework: there is ONE surface, so
+    // this can never return two, and the QA robot asserts exactly that.
+    hints: function(){
+      var out = [], el = $("coachText"), host = $("coach");
+      var hidden = !!(host && host.className && host.className.indexOf("gone") >= 0);
+      var panel = $("panel"), off = !!(panel && panel.className === "hidden");
+      if(el && el.textContent && !hidden && !off) out.push(el.textContent);
+      return out;
+    },
+    coach: function(){ return syncCoach(); },
+    needs: function(){
+      var o = {};
+      for(var i=0;i<NEEDS.length;i++){
+        var n = NEEDS[i], v = Math.max(0, Math.min(1, n.val() || 0));
+        o[n.id] = { v:Math.round(v*100)/100, low:(n.low >= 0 && v < n.low) };
+      }
+      return o;
+    },
+    items: function(){ return C.surface.map(function(it){
+      return { kind:it.kind, x:Math.round(itemX(it)), n:it.n, give:it.give, held:!!it.held, claimed:!!it.claim }; }); },
+    spots: function(){ return buildSpots(); },
+    queen: function(){ return { c:C.queen.c, r:C.queen.r }; },
+    geom: function(){ layout(); return { cs:CS, ox:OX, sky:SKY, panel:PANEL, w:W, h:H, camY:Math.round(camY) }; },
+    placing: function(){ return placing ? placing.room : null; },
+    buildOpen: function(){ return buildOpen; },
+    jobsOpen: function(){ return jobsOpen; },
+    panelH: function(){ layout(); return PANEL; },
+    lesson: function(){ return { on:guide.on, name:guide.lesson, step:guide.step, steps:lessonLen() }; },
+    guide: function(){ return { on:guide.on, lesson:guide.lesson, step:guide.step, steps:lessonLen(),
+                                text:(stepNow() || {}).text || "" }; },
+    goal: function(){ return syncCoach(); },
+    antScale: function(){ return GAME_CONFIG.antScale; },
+    // --- AC6: layout bonuses, the felt job mix, and the production chains ---
+    spot: function(id, c, r){ return { good:goodSpot(id, c, r), line:spotLine(id, c, r) }; },
+    bonus: function(id){ return roomMul(id); },
+    mix: function(){ return mixLine(); },
+    trend: function(){ return (_foodTrend || "").replace(" ", "") || "steady"; },
+    chain: function(){
+      var r1 = function(n){ return Math.round(n*100)/100; };
+      return { leaves:r1(C.leaves), ready:r1(C.leafReady), cut:r1(C.leavesCut), mush:r1(C.mush),
+               aphids:!!C.aphids, dew:r1(C.dew), dewGot:r1(C.dewGot), gardens:roomCount("fungus"), nurseryOnMushrooms:gardenShare(),
+               hauling:countTask(function(t){ return t && t.kind === "haul" && t.it && (t.it.kind === "leaf" || t.it.kind === "dew"); }) };
+    },
+    setAphids: function(on){ C.aphids = !!on; return C.aphids; },
+    dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
+                              jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
+                              dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
+                              mission:C.mission, free:!!C.freeBuild, carried:Math.round(C.carried*10)/10,
+                              floods:C.floods, flooded:floodCount(), found:C.found, rest:Math.round(C.rest*100)/100,
+                              leaves:Math.round(C.leaves*10)/10, mush:Math.round(C.mush*10)/10, aphids:!!C.aphids,
+                              surface:C.surface.length, tapped:C.tapped|0, guided:!!C.guided,
+                              coins:coinsAwarded.slice() }; },
+    _cfg: function(){ return GAME_CONFIG; },
+    _applyManifest: function(m){ applyManifest(m); loadAllArt(); },
+    _art: function(){ var o = {}; for(var s in ART_IDS) o[s] = artUrl(ART_IDS[s]); return o; },
+    _draw: function(){ try{ draw(); return "ok"; }catch(e){ return "ERR: " + (e && e.message || e); } },
+    _save: saveNow,
+    _openAll: function(){ C.freeBuild = true; return true; },   // robot only: skip to free build
+    _reset: function(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} newColony(3); }
+  };
+  try{ window.BUILDABLE_GAME = window.ANTCITY_GAME; }catch(e){}
+})();
+</script>
+</body>
+</html>

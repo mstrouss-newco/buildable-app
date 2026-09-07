@@ -28,7 +28,9 @@
 //   BW.add(n)             -> owner: add n; announcer: announce +n. returns balance
 //   BW.awardOnce(key,n)   -> owner: add n only the FIRST time this key is seen;
 //                            announcer: announce {key,n} (shell de-dupes by key)
-//   BW.spend(n)           -> owner: true + deduct if enough, else false; announcer: false
+//   BW.spend(n)           -> true + deduct if enough, else false. The owner deducts
+//                            from storage; an announcer checks its cached balance and
+//                            announces the deduction up as a NEGATIVE coins delta (FM3).
 (function (root) {
   "use strict";
   var KEY = "bk_wallet_v1";
@@ -49,7 +51,11 @@
   }
   function ownerAnnounce(bal){ fireLocal(bal); broadcastDown(bal); }
   function ownerBalance(){ return ownerLoad().balance; }
-  function ownerAdd(n){ n=Math.round(+n||0); if(n<=0) return ownerBalance(); var o=ownerLoad(); o.balance+=n; ownerSave(o); ownerAnnounce(o.balance); return o.balance; }
+  // FM3: n may be NEGATIVE. A game that spends inside its own iframe (the farm
+  // buys seeds) has nowhere else to put the deduction — the shell owns the
+  // number, so the shell has to be able to take some away too. Clamped at zero
+  // so a stale announcer can never push a kid's wallet below nothing.
+  function ownerAdd(n){ n=Math.round(+n||0); if(n===0) return ownerBalance(); var o=ownerLoad(); o.balance=Math.max(0,o.balance+n); ownerSave(o); ownerAnnounce(o.balance); return o.balance; }
   function ownerAwardOnce(key,n){ n=Math.round(+n||0); if(!key||n<=0) return 0; var o=ownerLoad(); if(o.credited[key]) return 0; o.credited[key]=1; o.balance+=n; ownerSave(o); ownerAnnounce(o.balance); return n; }
   function ownerSpend(n){ n=Math.round(+n||0); if(n<=0) return true; var o=ownerLoad(); if(o.balance<n) return false; o.balance-=n; ownerSave(o); ownerAnnounce(o.balance); return true; }
   function ownerReset(){ ownerSave({balance:0,credited:{}}); ownerAnnounce(0); }
@@ -59,7 +65,7 @@
   function ownerListen(){
     try{ root.addEventListener("message", function(ev){
       var d=ev&&ev.data; if(!d||d.source!=="buildable") return;
-      if(d.kind==="coins"){ var n=Math.round(+d.delta||0); if(n<=0) return; if(d.key) ownerAwardOnce(String(d.key), n); else ownerAdd(n); }
+      if(d.kind==="coins"){ var n=Math.round(+d.delta||0); if(n===0) return; if(n>0 && d.key) ownerAwardOnce(String(d.key), n); else ownerAdd(n); }
       else if(d.kind==="walletHello"){ broadcastDown(ownerBalance()); }
     }); }catch(e){}
   }
@@ -70,7 +76,16 @@
   function annBalance(){ return cachedBal; }
   function annAdd(n){ n=Math.round(+n||0); if(n>0) post({source:"buildable",kind:"coins",delta:n}); return cachedBal; }
   function annAwardOnce(key,n){ n=Math.round(+n||0); if(key&&n>0) post({source:"buildable",kind:"coins",delta:n,key:String(key)}); return 0; }
-  function annSpend(){ return false; }   // games never spend; the shell loadout does
+  // FM3: a game MAY now spend, but only against the balance the shell last told
+  // it about, and only by announcing the deduction upward like any other coin
+  // message — it still never touches storage. The local cache moves first so
+  // the pill answers on the same frame the finger lands; the shell's broadcast
+  // then overwrites it with the truth a moment later.
+  function annSpend(n){ n=Math.round(+n||0); if(n<=0) return true;
+    if(cachedBal<n) return false;
+    cachedBal-=n; fireLocal(cachedBal);
+    post({source:"buildable",kind:"coins",delta:-n});
+    return true; }
   function annReset(){ /* only the owner can reset */ }
   function annListen(){
     try{ root.addEventListener("message", function(ev){

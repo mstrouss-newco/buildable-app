@@ -53,8 +53,16 @@ back down. Games no longer read or write shared storage from inside the iframe; 
 only announce, per the messages-only rule. The loadout spends in the shell, where the
 number lives.
 
+**Spending from inside a game (added FM3).** A game that has a shop of its own —
+the farm buys seeds and, eventually, a new animal — may now call `BW.spend(n)`
+inside its iframe. The announcer checks the balance the shell last broadcast down,
+refuses if it is short, and otherwise announces the deduction upward as a NEGATIVE
+`coins` delta. It still never reads or writes shared storage; the shell remains the
+only place the number lives, and clamps the balance at zero. A negative delta never
+carries a `key` (award-once is for earning, not spending).
+
 Messages used by the wallet:
-- game -> shell: `coins` `{ delta, key? }` (announce coins earned; `key` makes it award-once)
+- game -> shell: `coins` `{ delta, key? }` (announce coins earned; `key` makes it award-once). `delta` may be NEGATIVE, which is a spend announced by a game with its own shop.
 - game -> shell: `walletHello` (a freshly-loaded game asking for the current balance)
 - shell -> game: `walletBalance` `{ balance }` (broadcast so a game's cached balance matches)
 

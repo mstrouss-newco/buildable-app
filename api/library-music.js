@@ -44,6 +44,14 @@ const MUSIC = {
     prompt: "Warm uplifting soaring flight music for kids: gentle glockenspiel and soft mellow marimba over warm cushiony pads with a light optimistic mid-tempo pulse and soft hand percussion, a rising sense of lifting off and gliding, cheerful and warm, warm rounded tones with a touch of soft sparkle but never shrill or piercing, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
   },
 
+  // Added card AC4 for Ant City, but reusable by ANY game that wants a sunny,
+  // busy, keep-going-forever feel (a colony, a farm, a little town).
+  meadow_busy_bright: {
+    label: "Sunny Meadow (Busy)",
+    theme: "adventure",
+    prompt: "Warm sunny meadow music for kids: light mellow marimba and soft pizzicato strings trotting along over warm rounded upright bass and a gentle brushed shaker, busy and industrious in a friendly pottering way, like a summer afternoon of small creatures getting things done, cheerful and never rushed, all warm rounded low-mid tones, absolutely no shrill or piercing high notes, no chiptune, no harsh synths, instrumental, no vocals, seamless loop",
+  },
+
   adventure_meadow_soft: {
     label: "Meadow Explore (Soft)",
     theme: "adventure",

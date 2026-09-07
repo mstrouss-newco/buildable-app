@@ -31,6 +31,10 @@ const OWNER_CODE = process.env.OWNER_PREVIEW_CODE || "1025";
 // The only switches this endpoint will ever write, and what they mean if the
 // database cannot be reached. Safe side only.
 const FLAGS = {
+  cobuild_live: {
+    def: false,
+    note: "When true, the Start buttons on /cobuild go to real signup and Stripe checkout instead of the waitlist, and the studio meters new games against a plan. FALSE is the safe side: the fake door keeps taking names and nobody is charged or blocked.",
+  },
   lessons_live: {
     def: false,
     note: "When true, the Lessons tile on Home is live for kids instead of Coming soon behind the owner gate.",

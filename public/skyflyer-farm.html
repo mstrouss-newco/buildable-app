@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Sky Flyer — Farm corner (FM2)</title>
+<title>Sky Flyer — Farm corner (FM4)</title>
 <!--
   FM1 — the farm corner of Sunny Islands, built in the Sky Flyer engine style.
   Standalone scene: same three.min.js, same hand-built vertex-colored models
@@ -46,7 +46,60 @@
     - zoo(): ?zoo=1 (or window.FARM.zoo()) stands every farm model on a
       turntable at a fixed camera, so a model is judged BEFORE it is placed.
 
-  FM3 (order crate/plane) builds on this file.
+  FM3 — THE ORDER CRATE AND THE PLANE PAYOFF. West of the field:
+    - a wooden CRATE beside a grass runway. Over it floats a picture wish-list:
+      one silhouette slot per item wanted (3 corn + 2 eggs is five slots), and
+      each slot lights up to full colour with a tick the moment that item lands
+      in it. FL5b tick/cross language, icons drawn in code from the same
+      recipes as the 3D crops. No reading, NO EMOJIS.
+    - WALK TO THE CRATE AND THE WHOLE STACK WHOOSHES OFF, one item at a time,
+      rapid fire, each on its own arc into its slot. This unload is the moment
+      the genre is built on, so it gets the works: a pop and a spin per item,
+      a sound per item rising in pitch as the run goes, the slot flashing as it
+      fills, and a nudge of the camera on the last one. An item the order does
+      not want stays on the stack — the crate flashes a cross on it and moves on.
+    - WHEN THE ORDER FILLS the plane taxis out, rolls down the runway, climbs
+      away, and comes back a moment later with a burst of coins that fly up
+      into the wallet pill.
+    - Orders scale gently (2 items, then 3, then 4, up to 6) and may only ever
+      ask for something the kid can grow or collect RIGHT NOW.
+    - Coins buy seeds, and at 120 coins they buy a DUCK for the coop — a real
+      model out of island-animals.glb. She eats corn like the hens and lays a
+      pale blue egg, which becomes a fourth thing an order can ask for.
+    - Guardrails held: nothing here has a timer over a minute, nothing can fail,
+      nothing costs real money, and a kid who runs out of coins gets their next
+      seed free rather than being stuck.
+
+  FM4 — THE PLAYTEST FIXES, AND A WISH LIST A CHILD CAN READ. Every one of
+  these came out of one afternoon with Mike's daughter on a tablet:
+    - AN ORDER MAY ONLY ASK FOR WHAT HAS ALREADY BEEN CARRIED. A kind joins
+      the pool the first time it lands on the stack (COLLECTED, kept in
+      localStorage), seeded with the three crops, so the first crate can only
+      ever ask for something a kid can go and grow. FM3 listed anything an
+      animal could ever give, and the very first order asked for MILK.
+    - A NEAR MISS IS A PICKUP. Reach 2.0 -> 3.0 for produce AND ready crops,
+      and inside 4.0 a loose egg or bottle slides over and hops on by itself.
+    - SOLID THINGS. Fence rails and posts, the coop house, the crate and the
+      PARKED plane all block, with a slide so a fence is something you run
+      along and never something you stick to. Crops and animals stay
+      walk-through on purpose. The field, the coop yard and the cow pen each
+      have ONE gate: a rail gap with two taller posts on it, so the way in
+      reads as a doorway without a word being written.
+    - TAP TO GO, the main way to move on a tablet, with the joystick kept as
+      the backup that always wins. Tap ground and she walks there behind a
+      soft ring that fades as she arrives; tap a crop, an egg, an animal or
+      the crate and the behaviour that was already there fires on arrival.
+      A path that crosses a fence takes that pen's gate first. No new HUD.
+    - THE WISH LIST IN FULL COLOUR: one big slot per KIND with a count badge
+      that ticks down to a green tick, what the crate wants turning in 3D
+      over the crate, and a drawn customer face waiting on the card.
+    - Mike's numbers: seeds 4/3/2, item values 4/3/2/6/7/8, and an order pays
+      three times the worth of what it asked for.
+
+  FM3 also closed the four things FM1 left open: the farm now has a door on the
+  Play page, the coins are the SHELL'S shared wallet (not a local variable), the
+  shared nav bridge is loaded so Home works on iPhone, and the shared Feel Kit
+  gives it sound.
 -->
 <style>
   html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#B3E58C;
@@ -63,7 +116,12 @@
     left:calc(96px + env(safe-area-inset-left));
     background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px;
     font-weight:800;font-size:14px;color:#33566e;box-shadow:0 3px 10px rgba(30,60,90,.18)}
-  #hint{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);
+  /* The order card owns the bottom of the screen now, so the hint is hung off
+     the SAME variable rather than a percentage that happened to clear it before
+     FM3 existed. The first render had the card sitting on top of the sentence
+     telling a kid what to do. */
+  :root{--fm-card-b:calc(20px + env(safe-area-inset-bottom))}
+  #hint{position:absolute;left:50%;bottom:calc(var(--fm-card-b) + 196px);transform:translateX(-50%);
     background:rgba(255,252,240,.94);border-radius:20px;padding:12px 22px;
     text-align:center;color:#33566e;font-weight:800;font-size:16px;
     box-shadow:0 4px 14px rgba(30,60,90,.2);transition:opacity .5s;
@@ -101,9 +159,114 @@
   #seedCard .seed .price{display:inline-flex;align-items:center;gap:4px;
     background:#fff7d6;border-radius:999px;padding:2px 8px;margin-top:4px;
     font-weight:800;font-size:13px;color:#8a6a12}
+  /* FM3: when a kid is broke the price badge turns into a green FREE badge
+     rather than the button going dead. Nobody is ever locked out of planting. */
+  #seedCard .seed .price.free{background:#eaf7e4;color:#3f8f46}
+  #seedCard .seed .price.free svg{display:none}
+  #seedCard .seed .price.free::after{content:"FREE"}
+  #seedCard .seed .price.free>span{display:none}
   #seedCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
     border:none;background:transparent;cursor:pointer}
   #seedCard .close svg{display:block}
+
+  /* FL9/HUD-AND-NAV: in the shell the top strip belongs to Home / Sound, so the
+     coin pill and the title drop below whatever depth the nav bridge publishes.
+     The 96px fallback is the depth a two-button strip resolves to, so the very
+     first frame is already right and nothing jumps when the bridge answers. */
+  .bk-inshell .pill      {top:calc(var(--bk-nav-bottom,96px) + 10px)}
+  .bk-inshell #titlePill {top:calc(var(--bk-nav-bottom,96px) + 10px)}
+
+  /* FM3 — THE ORDER CARD. One silhouette slot per item the crate wants; a slot
+     fills to full colour with a tick as that item lands. No emojis: every icon
+     is the crop's own drawn SVG, the same one the seed buttons use (FL5b).
+     It lives bottom-centre. On a phone the joystick owns the bottom-left, so
+     below 640px the card lifts clear ABOVE the stick rather than shrinking into
+     a strip too small to read. */
+  #orderCard{position:absolute;left:50%;transform:translateX(-50%) scale(.96);
+    bottom:var(--fm-card-b);
+    background:#fffef7;border-radius:22px;padding:9px 12px 11px;
+    box-shadow:0 10px 30px rgba(30,60,90,.3),0 2px 0 #d9c99a inset;
+    width:max-content;max-width:min(392px,calc(100vw - 190px));
+    opacity:0;visibility:hidden;transition:opacity .2s,transform .2s,visibility .2s;
+    pointer-events:none;z-index:8}
+  #orderCard.up{opacity:1;visibility:visible;transform:translateX(-50%) scale(1)}
+  #orderCard.done{box-shadow:0 10px 30px rgba(60,150,80,.45),0 0 0 3px #63C466 inset}
+  /* FM4 — the customer sits next to the word, and the word is small: the
+     PICTURES are the message. */
+  #orderCard .cap{display:flex;align-items:center;justify-content:center;gap:8px;
+    font-weight:900;font-size:12px;color:#8a7a4a;letter-spacing:.6px;
+    text-transform:uppercase;padding:0 0 7px}
+  #orderCard .cap .face{width:36px;height:36px;display:block;flex:0 0 auto}
+  #orderCard .slots{display:flex;flex-wrap:nowrap;justify-content:center;gap:8px}
+  #orderCard .slot{width:74px;height:78px;border-radius:18px;background:#f6efd6;
+    border:2px dashed #cbb887;display:flex;align-items:center;justify-content:center;
+    position:relative;transition:transform .12s,background .18s,border-color .18s}
+  /* FM4 — FULL COLOUR, ALWAYS. FM3 greyed an empty slot to mean "not yet", and
+     on a tablet Mike's daughter read that as a broken picture: the one thing a
+     child who cannot read has to go on was a grey smudge. The DASHED FRAME is
+     what says not-yet now. The picture is just the picture, corn-yellow and
+     carrot-orange, from the first frame to the last. */
+  #orderCard .slot svg.pic{width:58px;height:58px;display:block}
+  #orderCard .slot.full{background:#eaf7e4;border-style:solid;border-color:#8ed08a}
+  /* ONE SLOT PER KIND, with how many are still wanted on a dark pill. Three
+     corn and two eggs is TWO pictures and two numbers, not five pictures. */
+  #orderCard .slot .count{position:absolute;left:-6px;top:-7px;min-width:25px;height:25px;
+    border-radius:999px;background:#3d4f5c;color:#fff;font-weight:900;font-size:14px;
+    line-height:1;display:flex;align-items:center;justify-content:center;padding:0 6px;
+    box-shadow:0 2px 5px rgba(30,60,90,.32)}
+  #orderCard .slot.full .count{display:none}
+  #orderCard .slot.pop{transform:scale(1.22)}
+  #orderCard .slot .mark{position:absolute;right:-4px;bottom:-4px;width:26px;height:26px;
+    opacity:0;transform:scale(.5);transition:opacity .16s,transform .16s}
+  #orderCard .slot.full .mark{opacity:1;transform:scale(1)}
+  #orderCard .slot.nope{animation:nope .34s ease}
+  @keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}
+    60%{transform:translateX(5px)}}
+  #orderCard .payline{display:flex;align-items:center;justify-content:center;gap:4px;
+    margin-top:7px;font-weight:800;font-size:13px;color:#8a6a12}
+  @media (max-width:640px){
+    :root{--fm-card-b:calc(174px + env(safe-area-inset-bottom))}
+    #orderCard{max-width:min(392px,96vw)}
+  }
+  /* the smallest phones: still one row, still full colour, just a shade smaller */
+  @media (max-width:400px){
+    #orderCard .slot{width:64px;height:68px}
+    #orderCard .slot svg.pic{width:50px;height:50px}
+  }
+
+  /* FM3 — the coins that fly up into the wallet when the plane lands. */
+  .flyCoin{position:absolute;width:22px;height:22px;pointer-events:none;z-index:9}
+
+  /* FM3 — THE SHOP. One card, one thing in it: the duck. Same AR1R shape as
+     the seed picker so the farm only ever teaches one card. */
+  #shopBtn{position:absolute;right:14px;
+    top:calc(58px + env(safe-area-inset-top));
+    background:rgba(255,252,240,.92);border:none;border-radius:999px;
+    padding:7px 13px 7px 9px;display:none;align-items:center;gap:6px;
+    box-shadow:0 3px 10px rgba(30,60,90,.18);font-weight:800;font-size:13px;
+    color:#5b4a1f;pointer-events:auto;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #shopBtn.on{display:flex}
+  .bk-inshell #shopBtn{top:calc(var(--bk-nav-bottom,96px) + 56px)}
+  #shopCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+    background:#fffef7;border-radius:26px;padding:14px 14px 18px;
+    box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
+    width:min(340px,92vw);max-width:340px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:11;text-align:center}
+  #shopCard.up{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+  #shopCard .title{font-weight:900;font-size:17px;color:#5b4a1f;padding:2px 0 8px}
+  #shopCard .buy{background:#f6efd6;border:2px solid #e7d9a4;border-radius:18px;
+    padding:10px 8px 12px;cursor:pointer;user-select:none;
+    -webkit-tap-highlight-color:transparent;transition:transform .08s}
+  #shopCard .buy:active{transform:translateY(2px)}
+  #shopCard .buy.locked{opacity:.42;cursor:not-allowed}
+  #shopCard .buy .art{height:96px;display:flex;align-items:center;justify-content:center}
+  #shopCard .buy .price{display:inline-flex;align-items:center;gap:4px;
+    background:#fff7d6;border-radius:999px;padding:3px 10px;margin-top:6px;
+    font-weight:800;font-size:14px;color:#8a6a12}
+  #shopCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
+    border:none;background:transparent;cursor:pointer}
 
   /* Joystick — a soft touch pad kids can use, and drag-anywhere on the world
      also works. Kept clear of the top strip (HUD-AND-NAV rules). */
@@ -116,6 +279,14 @@
     box-shadow:0 4px 10px rgba(30,60,90,.25);
     transform:translate(-50%,-50%);transition:opacity .2s}
 </style>
+<script>
+  // FL9: tag the page in-shell HERE, before <body> is parsed, so the class is on
+  // <html> in time for first paint and the coin pill never flashes up in the
+  // corner the shell is about to draw its Home button over. buildable-gamenav.js
+  // sets the same class later and stays the only source of the real geometry;
+  // classList.add is idempotent, so the two cannot drift.
+  try { if (window.parent && window.parent !== window) document.documentElement.classList.add('bk-inshell'); } catch(e){}
+</script>
 </head>
 <body>
 <div id="hud">
@@ -146,9 +317,51 @@
     <div class="title">Plant a seed</div>
     <div class="row" id="seedRow"><!-- three .seed cells injected --></div>
   </div>
+
+  <!-- FM3 — THE ORDER CARD. One slot per item wanted, drawn as a greyed
+       silhouette of that item's own SVG and lit to full colour with a green
+       tick as it lands. Slots are injected from the live order. -->
+  <div id="orderCard" aria-label="What the crate wants">
+    <div class="cap"><span id="orderFace"></span>Wants</div>
+    <div class="slots" id="orderSlots"></div>
+    <div class="payline">
+      <svg width="15" height="15" viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>
+      </svg><span id="orderPay">0</span>
+    </div>
+  </div>
+
+  <!-- FM3 — THE SHOP. Appears only once a duck is affordable-ish, so it never
+       dangles something a kid cannot have. -->
+  <button id="shopBtn" aria-label="Shop">
+    <svg width="20" height="20" viewBox="0 0 24 24">
+      <path d="M4 8 h16 l-1.6 11 a2 2 0 0 1 -2 1.7 H7.6 a2 2 0 0 1 -2 -1.7 Z"
+            fill="#F6E3B0" stroke="#B08A3C" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M8.6 8 V6.2 a3.4 3.4 0 0 1 6.8 0 V8" fill="none" stroke="#B08A3C" stroke-width="1.8"/>
+    </svg>Shop
+  </button>
+  <div id="shopCard" role="dialog" aria-label="Shop">
+    <button class="close" id="shopClose" aria-label="Close">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="title">A new friend for the coop</div>
+    <div class="buy" id="buyDuck"></div>
+  </div>
 </div>
 <script src="/three.min.js"></script>
 <script src="/GLTFLoader.js"></script>
+<!-- FM3 closed three of the four gaps FM1 left open, and they are all here:
+     buildable-audio + buildable-feel give the farm the shared sound palette and
+     the shared juice (GAME-FEEL.md), buildable-wallet makes the coin pill the
+     SHELL'S real balance instead of a local variable, and buildable-gamenav is
+     the nav bridge — without it a touch on the shell's Home button on iPhone
+     routes into this page and does nothing, which is exactly the Tennis bug. -->
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-feel.js"></script>
+<script src="/buildable-wallet.js"></script>
+<script src="/buildable-gamenav.js"></script>
 <script>
 (function(){
 "use strict";
@@ -235,6 +448,29 @@ function hbTurn(profile,c,tf,sg){
   return hbPaint(new THREE.LatheGeometry(pts,sg||12),c,tf);
 }
 function hbMesh(geo){ return new THREE.Mesh(geo,HB_MAT); }
+// FM3 — a TAPERED aerofoil. Everything else in this file is a lathe or a ball
+// and neither can make a wing. A single BOX can, but a box reads as a plank,
+// and building one out of stepped boxes reads as a staircase — the first two
+// renders showed exactly that. So this takes one segmented box and pulls its
+// VERTICES in: the chord shrinks smoothly toward the tip while the trailing
+// edge stays straight, which is the shape a paper plane has and the shape the
+// eye recognises as a wing. `up` builds a fin standing on its root instead.
+function hbAero(span, rootChord, tipChord, thick, color, tf, up){
+  var g = up ? new THREE.BoxGeometry(thick, span, rootChord, 1, 16, 1)
+             : new THREE.BoxGeometry(span, thick, rootChord, 16, 1, 1);
+  var pa=g.attributes.position, i;
+  for(i=0;i<pa.count;i++){
+    var t = up ? (pa.getY(i)+span/2)/span : Math.abs(pa.getX(i))/(span/2);
+    t = t<0?0:(t>1?1:t);
+    var chord = rootChord+(tipChord-rootChord)*t;
+    // scale the chord about the centre, then slide it back so the TRAILING
+    // edge stays on one straight line and only the leading edge sweeps
+    pa.setZ(i, pa.getZ(i)*(chord/rootChord) - (rootChord-chord)/2);
+  }
+  g.computeVertexNormals();
+  return hbPaint(g, color, tf);
+}
+
 
 // -------------------------------------------------------------------------
 // Grass ground, big enough that a walking kid never sees the edge on iPad.
@@ -296,6 +532,166 @@ function buildFenceRail(len){
   return hbMesh(g);
 }
 
+// =========================================================================
+//  FM4 — SOLID THINGS.
+//
+//  Mike's daughter walked straight through every fence on the farm, which
+//  makes a pen a drawing rather than a place. So a small blocker list, and a
+//  kid who SLIDES along what she touches: only the part of her step that goes
+//  INTO a thing is taken away, so a fence guides her along it and she never
+//  sticks or judders.
+//
+//  What is solid: the fence rails and their posts, the coop house, the crate,
+//  and the parked plane. What is NOT, deliberately: the crops (walking through
+//  them IS the harvest) and the animals (they are stepped around, as before).
+//
+//  Every fenced area has ONE opening with two taller gate posts on it, so a
+//  child can see where the way in is without a word being written.
+// =========================================================================
+var KID_R=0.55;
+var BLOCKERS=[];       // {t:"circle",x,z,r} or {t:"box",x,z,hx,hz}
+var AREAS=[];          // the fenced areas, each with its one gate
+var GATE_GAP=2.2;      // the doorway, in world units — about two kid-widths
+var RAIL_T=0.11;       // half the thickness of a rail, for blocking
+
+function addCircleBlocker(x,z,r,tag){
+  var B={t:"circle",x:x,z:z,r:r,tag:tag||"",on:true}; BLOCKERS.push(B); return B;
+}
+function addBoxBlocker(x,z,hx,hz,tag){
+  var B={t:"box",x:x,z:z,hx:hx,hz:hz,tag:tag||"",on:true}; BLOCKERS.push(B); return B;
+}
+
+// How far INTO a blocker a point at (x,z) is, given a body radius. Negative
+// (or zero) means clear. Also hands back the direction to push out along.
+function pushOut(B,x,z,rad){
+  var dx,dz,d,cx,cz;
+  if(B.t==="circle"){
+    dx=x-B.x; dz=z-B.z; d=Math.hypot(dx,dz);
+    var want=B.r+rad;
+    if(d>=want) return null;
+    if(d<1e-4){ dx=1; dz=0; d=1; }
+    return {nx:dx/d, nz:dz/d, depth:want-d};
+  }
+  cx=clamp(x,B.x-B.hx,B.x+B.hx); cz=clamp(z,B.z-B.hz,B.z+B.hz);
+  dx=x-cx; dz=z-cz; d=Math.hypot(dx,dz);
+  if(d>=rad){
+    if(d>0) return null;
+    // dead inside the box: push out through the nearest wall
+    var ox=B.hx-Math.abs(x-B.x), oz=B.hz-Math.abs(z-B.z);
+    if(ox<oz) return {nx:(x>=B.x?1:-1), nz:0, depth:ox+rad};
+    return {nx:0, nz:(z>=B.z?1:-1), depth:oz+rad};
+  }
+  if(d<1e-4){
+    var px=B.hx-Math.abs(x-B.x), pz=B.hz-Math.abs(z-B.z);
+    if(px<pz) return {nx:(x>=B.x?1:-1), nz:0, depth:px+rad};
+    return {nx:0, nz:(z>=B.z?1:-1), depth:pz+rad};
+  }
+  return {nx:dx/d, nz:dz/d, depth:rad-d};
+}
+
+function blockedAt(x,z,rad){
+  for(var i=0;i<BLOCKERS.length;i++){
+    if(!BLOCKERS[i].on) continue;
+    if(pushOut(BLOCKERS[i],x,z,rad||0)) return true;
+  }
+  return false;
+}
+
+// Slide, don't stop. Two passes so an inside corner settles instead of
+// bouncing between its two walls.
+function slideClear(p, rad){
+  var pass,i,r;
+  for(pass=0;pass<3;pass++){
+    var moved=false;
+    for(i=0;i<BLOCKERS.length;i++){
+      if(!BLOCKERS[i].on) continue;
+      r=pushOut(BLOCKERS[i], p.x, p.z, rad);
+      if(!r) continue;
+      p.x+=r.nx*r.depth; p.z+=r.nz*r.depth; moved=true;
+    }
+    if(!moved) break;
+  }
+  return p;
+}
+
+// Is the straight line between two points clear? Used by tap-to-go to decide
+// whether it needs to aim for a gate first.
+function lineClear(x0,z0,x1,z1,rad){
+  var d=Math.hypot(x1-x0,z1-z0), n=Math.max(1,Math.ceil(d/0.35)), i,u;
+  for(i=0;i<=n;i++){ u=i/n;
+    if(blockedAt(x0+(x1-x0)*u, z0+(z1-z0)*u, rad)) return false;
+  }
+  return true;
+}
+
+function inArea(A,x,z,inset){
+  var m=inset||0;
+  return x>A.cx-A.halfX+m && x<A.cx+A.halfX-m && z>A.cz-A.halfZ+m && z<A.cz+A.halfZ-m;
+}
+function areaContaining(x,z){
+  for(var i=0;i<AREAS.length;i++) if(inArea(AREAS[i],x,z,0)) return AREAS[i];
+  return null;
+}
+
+// The gate post: taller than a rail post and capped in a warmer colour, so the
+// one gap in a fence reads as a DOORWAY and not as a bit of missing fence.
+function buildGatePost(){
+  var parts=[];
+  parts.push(hbTube(0.17,0.17,1.80,0xE6D8AE,{p:[0,0.90,0]},8));
+  parts.push(hbTube(0.21,0.21,0.14,0xC7B579,{p:[0,1.20,0]},8));
+  parts.push(hbCone(0.27,0.36,0xC0894C,{p:[0,1.98,0]},8));
+  return hbMesh(hbBake(parts));
+}
+
+// One rail run: the two rails FM1 draws, plus the blocker that makes them real.
+function buildFenceRun(g,len,rotY,x,z){
+  var a=buildFenceRail(len); a.rotation.y=rotY; a.position.set(x,0.55,z); g.add(a);
+  var b=buildFenceRail(len); b.rotation.y=rotY; b.position.set(x,0.9,z); g.add(b);
+  if(rotY) addBoxBlocker(x,z,RAIL_T,len/2,"fence");
+  else     addBoxBlocker(x,z,len/2,RAIL_T,"fence");
+}
+
+// A fenced rectangle with exactly ONE gate. Used by the field, the coop yard
+// and the cow pen, so all three read the same way.
+function buildFenceRect(g,cx,cz,halfX,halfZ,gapSide){
+  var xs=[-halfX,0,halfX], zs=[-halfZ,0,halfZ], i,j,post;
+  for(i=0;i<3;i++) for(j=0;j<3;j++){
+    if(i===1&&j===1) continue;                                  // never the middle
+    if(gapSide==="W" && i===0 && j===1) continue;                // never in the doorway
+    if(gapSide==="E" && i===2 && j===1) continue;
+    if(gapSide==="S" && j===0 && i===1) continue;
+    if(gapSide==="N" && j===2 && i===1) continue;
+    post=buildFencePost(); post.position.set(cx+xs[i],0,cz+zs[j]); g.add(post);
+    addCircleBlocker(cx+xs[i], cz+zs[j], 0.20, "post");
+  }
+  function gatePost(x,z){
+    var p=buildGatePost(); p.position.set(x,0,z); g.add(p);
+    addCircleBlocker(x,z,0.20,"gate");
+  }
+  function side(name,isX,fx,fz,half){
+    if(name!==gapSide){ buildFenceRun(g, half*2, isX?0:Math.PI/2, fx, fz); return; }
+    var seg=Math.max(0.5, half-GATE_GAP/2), off=half-seg/2;
+    if(isX){
+      buildFenceRun(g,seg,0,fx-off,fz); buildFenceRun(g,seg,0,fx+off,fz);
+      gatePost(fx-GATE_GAP/2,fz); gatePost(fx+GATE_GAP/2,fz);
+    } else {
+      buildFenceRun(g,seg,Math.PI/2,fx,fz-off); buildFenceRun(g,seg,Math.PI/2,fx,fz+off);
+      gatePost(fx,fz-GATE_GAP/2); gatePost(fx,fz+GATE_GAP/2);
+    }
+  }
+  side("N", true,  cx, cz+halfZ, halfX);
+  side("S", true,  cx, cz-halfZ, halfX);
+  side("E", false, cx+halfX, cz, halfZ);
+  side("W", false, cx-halfX, cz, halfZ);
+  var gx = gapSide==="W" ? cx-halfX : (gapSide==="E" ? cx+halfX : cx);
+  var gz = gapSide==="N" ? cz+halfZ : (gapSide==="S" ? cz-halfZ : cz);
+  var ox = gapSide==="W" ? -1 : (gapSide==="E" ? 1 : 0);
+  var oz = gapSide==="N" ? 1 : (gapSide==="S" ? -1 : 0);
+  AREAS.push({cx:cx,cz:cz,halfX:halfX,halfZ:halfZ,side:gapSide,
+              gate:{x:gx,z:gz}, out:{x:ox,z:oz}});
+  return g;
+}
+
 function buildField(){
   var group=new THREE.Group();
   var i,j;
@@ -321,38 +717,8 @@ function buildField(){
       });
     }
   }
-  // fence around the whole field
-  var half=(1*PATCH_STEP)+PATCH_R+0.8;
-  var side=half*2;
-  // posts at 4 corners + midpoints
-  var postXs=[-half,0,half], postZs=[-half,0,half];
-  for(i=0;i<postXs.length;i++){
-    for(j=0;j<postZs.length;j++){
-      if(i===1 && j===1) continue; // don't put a post in the middle
-      var p=buildFencePost(); p.position.set(FIELD_CX+postXs[i],0,FIELD_CZ+postZs[j]); group.add(p);
-    }
-  }
-  // rails N/S/E/W
-  var rail;
-  // N
-  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.55,FIELD_CZ+half); group.add(rail);
-  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.9,FIELD_CZ+half); group.add(rail);
-  // S
-  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.55,FIELD_CZ-half); group.add(rail);
-  rail=buildFenceRail(side); rail.position.set(FIELD_CX,0.9,FIELD_CZ-half); group.add(rail);
-  // E
-  rail=buildFenceRail(side); rail.rotation.y=Math.PI/2; rail.position.set(FIELD_CX+half,0.55,FIELD_CZ); group.add(rail);
-  rail=buildFenceRail(side); rail.rotation.y=Math.PI/2; rail.position.set(FIELD_CX+half,0.9,FIELD_CZ); group.add(rail);
-  // W — leave a GAP for the kid to walk in and out
-  var half2=half*0.55;
-  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
-  rail.position.set(FIELD_CX-half,0.55,FIELD_CZ+(half-half2/2)); group.add(rail);
-  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
-  rail.position.set(FIELD_CX-half,0.9,FIELD_CZ+(half-half2/2)); group.add(rail);
-  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
-  rail.position.set(FIELD_CX-half,0.55,FIELD_CZ-(half-half2/2)); group.add(rail);
-  rail=buildFenceRail(half2); rail.rotation.y=Math.PI/2;
-  rail.position.set(FIELD_CX-half,0.9,FIELD_CZ-(half-half2/2)); group.add(rail);
+  // fence around the whole field — one gate on the west side, facing the crate
+  buildFenceRect(group, FIELD_CX, FIELD_CZ, (1*PATCH_STEP)+PATCH_R+0.8, (1*PATCH_STEP)+PATCH_R+0.8, "W");
   return group;
 }
 scene.add(buildField());
@@ -367,10 +733,36 @@ scene.add(buildField());
 //   svg(size)      -> a string of <svg>...</svg> for the picker button
 //   colors         -> {main, accent, stem} used by both
 // -------------------------------------------------------------------------
+// =========================================================================
+//  FM3 — THE COIN ECONOMY (Mike's call, 2026-09-06).
+//
+//  FM1 shipped prices 10/6/4 against harvest rewards 8/5/3, so growing a crop
+//  visibly LOST coins. A child reads that as a punishment for doing the thing
+//  the game just told them to do. The fix Mike picked is the simplest one:
+//
+//    CROPS ARE INGREDIENTS, NOT MONEY. Harvesting pays nothing at all.
+//    A seed costs the same 3 coins whatever it is, so there is no sum to do.
+//    The ONLY way to earn is filling the crate and sending the plane.
+//
+//  And the floor that makes it impossible to get stuck: if a kid cannot afford
+//  a seed, the next seed is FREE. There is no state in this farm from which a
+//  child cannot carry on playing.
+// =========================================================================
+// FM4 — Mike's numbers, taken from section 7 of the growth plan. A seed costs
+// what its crop is worth, an order pays THREE TIMES what it asked for, so the
+// walk out to the crate is always worth more than the seeds that started it.
+var SEED_PRICES = { corn:4, carrot:3, wheat:2 };
+var ITEM_VALUES = { corn:4, carrot:3, wheat:2, egg:6, duckegg:7, milk:8 };
+var ORDER_PAY_MULT = 3;       // an order pays 3x the sum of what it wants
+var SEED_PRICE = 2;           // the CHEAPEST seed — what the free-seed floor reads
+var DUCK_PRICE = 120;         // about four deliveries
+function seedPriceOf(kind){ return SEED_PRICES[kind]!=null ? SEED_PRICES[kind] : SEED_PRICE; }
+function itemValueOf(kind){ return ITEM_VALUES[kind]!=null ? ITEM_VALUES[kind] : 3; }
+
 var CROP_RECIPES = {
   corn: {
-    price: 10,
-    reward: 8,
+    price: SEED_PRICES.corn,
+    reward: 0,
     growSec: 34,
     colors: {main:0xF6C64A, accent:0xE0A82E, stem:0x4FB05B},
     parts:function(s){
@@ -412,8 +804,8 @@ var CROP_RECIPES = {
     }
   },
   carrot: {
-    price: 6,
-    reward: 5,
+    price: SEED_PRICES.carrot,
+    reward: 0,
     growSec: 30,
     colors: {main:0xF08A2E, accent:0xC66220, stem:0x4FB05B},
     parts:function(s){
@@ -448,8 +840,8 @@ var CROP_RECIPES = {
     }
   },
   wheat: {
-    price: 4,
-    reward: 3,
+    price: SEED_PRICES.wheat,
+    reward: 0,
     growSec: 42,
     colors: {main:0xE0C25A, accent:0xB48A26, stem:0xC7B15C},
     parts:function(s){
@@ -592,8 +984,49 @@ function buildStackItem(kind){
   return wrap;
 }
 
+// =========================================================================
+//  FM4 — WHAT THE KID HAS ACTUALLY CARRIED.
+//
+//  Mike's daughter's very first crate asked for MILK, before a cow had been
+//  fed, before a bottle existed. The order pool used to be "everything an
+//  animal in the farm could ever give", which on second one is milk and eggs.
+//  Now a kind earns its place in the pool by LANDING ON THE STACK once, and
+//  pushOntoStack below is the only door into this set — harvest, produce
+//  pickup and the QA lever all come through it, and a later phase's bread and
+//  cheese will too without another line here.
+//
+//  Seeded with the three crops, because an empty patch is always there to
+//  plant, so the FIRST order is always crops the kid can go and grow.
+// =========================================================================
+var COLLECT_KEY="bk_farm_collected";
+var COLLECT_ORDER=["corn","carrot","wheat","egg","duckegg","milk"];
+var COLLECTED={corn:1,carrot:1,wheat:1};
+(function loadCollected(){
+  try{
+    var raw=localStorage.getItem(COLLECT_KEY);
+    if(!raw) return;
+    var got=JSON.parse(raw), i;
+    if(got && got.length) for(i=0;i<got.length;i++){
+      if(COLLECT_ORDER.indexOf(got[i])>=0) COLLECTED[got[i]]=1;
+    }
+  }catch(e){}
+})();
+function saveCollected(){
+  try{
+    var out=[], k;
+    for(k in COLLECTED) if(COLLECTED[k]) out.push(k);
+    localStorage.setItem(COLLECT_KEY, JSON.stringify(out));
+  }catch(e){}
+}
+function markCollected(kind){
+  if(!kind || COLLECTED[kind]) return;
+  COLLECTED[kind]=1;
+  saveCollected();
+}
+
 function pushOntoStack(kind, worldPos){
   var it=buildStackItem(kind); if(!it) return;
+  markCollected(kind);
   // start where the crop is on the ground, so we can animate it bouncing UP.
   it.position.copy(worldPos);
   it.userData.hopFrom=worldPos.clone();
@@ -688,8 +1121,30 @@ var PRODUCE_RECIPES = {
     svg:function(size){
       size = size || 82;
       return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
-        '<ellipse cx="41" cy="46" rx="21" ry="27" fill="#FDF6E3" stroke="#B9A87E" stroke-width="2.5"/>'+
-        '<path d="M24 52 Q41 60 58 52" fill="none" stroke="#E8D9B5" stroke-width="3"/>'+
+        '<ellipse cx="41" cy="46" rx="21" ry="27" fill="#FFFCF2" stroke="#9C8555" stroke-width="3.2"/>'+
+        '<path d="M24 52 Q41 60 58 52" fill="none" stroke="#D8C393" stroke-width="3"/>'+
+        '</svg>';
+    }
+  },
+  // FM3 — the duck's egg. A DIFFERENT COLOUR from the hen's, because the crate
+  // has to be able to ask for one and not the other, and a four-year-old tells
+  // them apart by colour long before size. Pale blue, and a shade bigger.
+  duckegg: {
+    from: "duck",
+    colors: {main:0xCFE6F2, accent:0xA8C9DC},
+    parts:function(s){
+      var C=this.colors, p=[];
+      p.push(hbTurn([
+        [0.001,-0.40*s],[0.21*s,-0.26*s],[0.28*s,-0.02*s],
+        [0.26*s,0.20*s],[0.17*s,0.34*s],[0.001,0.42*s]
+      ], C.main, {p:[0, 0.40*s, 0]}, 14));
+      return p;
+    },
+    svg:function(size){
+      size = size || 82;
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        '<ellipse cx="41" cy="45" rx="23" ry="29" fill="#CFE6F2" stroke="#7FA6BC" stroke-width="2.5"/>'+
+        '<path d="M22 52 Q41 61 60 52" fill="none" stroke="#A8C9DC" stroke-width="3"/>'+
         '</svg>';
     }
   },
@@ -791,7 +1246,7 @@ function loadFarmAnimals(done){
     gl.scene.children.slice().forEach(function(o){
       if(o.name) try{ ANM[o.name]=anmPrep(o); }catch(e){}
     });
-    ANM_ON=!!ANM.Chicken;
+    ANM_ON=!!ANM.Chicken;   // the hen is the gate; the duck rides in the same file
     done(ANM_ON);
   },null,function(){ done(false); });
 }
@@ -1104,34 +1559,7 @@ function buildHayBale(){
 // A rectangle of the SAME fence FM1 built for the field, with a gap on one
 // side so the kid always has a way in and can never be shut out.
 function buildPen(cx,cz,halfX,halfZ,gapSide){
-  var g=new THREE.Group(), i, post, rail;
-  var xs=[-halfX,0,halfX], zs=[-halfZ,0,halfZ], j;
-  for(i=0;i<xs.length;i++) for(j=0;j<zs.length;j++){
-    if(i===1&&j===1) continue;
-    post=buildFencePost(); post.position.set(cx+xs[i],0,cz+zs[j]); g.add(post);
-  }
-  function run(len,rotY,x,z){
-    var a=buildFenceRail(len); a.rotation.y=rotY; a.position.set(x,0.55,z); g.add(a);
-    var b=buildFenceRail(len); b.rotation.y=rotY; b.position.set(x,0.9,z); g.add(b);
-  }
-  var sideX=halfX*2, sideZ=halfZ*2, part;
-  if(gapSide!=="N") run(sideX,0,cx,cz+halfZ); else {
-    part=halfX*0.55;
-    run(part,0,cx-(halfX-part/2),cz+halfZ); run(part,0,cx+(halfX-part/2),cz+halfZ);
-  }
-  if(gapSide!=="S") run(sideX,0,cx,cz-halfZ); else {
-    part=halfX*0.55;
-    run(part,0,cx-(halfX-part/2),cz-halfZ); run(part,0,cx+(halfX-part/2),cz-halfZ);
-  }
-  if(gapSide!=="E") run(sideZ,Math.PI/2,cx+halfX,cz); else {
-    part=halfZ*0.55;
-    run(part,Math.PI/2,cx+halfX,cz-(halfZ-part/2)); run(part,Math.PI/2,cx+halfX,cz+(halfZ-part/2));
-  }
-  if(gapSide!=="W") run(sideZ,Math.PI/2,cx-halfX,cz); else {
-    part=halfZ*0.55;
-    run(part,Math.PI/2,cx-halfX,cz-(halfZ-part/2)); run(part,Math.PI/2,cx-halfX,cz+(halfZ-part/2));
-  }
-  return g;
+  return buildFenceRect(new THREE.Group(), cx, cz, halfX, halfZ, gapSide);
 }
 
 // =========================================================================
@@ -1153,7 +1581,9 @@ var FEED_R=2.9;        // how close the kid must walk to trigger a feed
 // GENEROUS ON PURPOSE, and it must be bigger than the biggest produceOut
 // below, or a kid who walks right up to the cow still misses the bottle
 // sitting beside her and has to learn to aim. Nobody aims here.
-var PICKUP_R=2.0;
+var PICKUP_R=3.0;      // FM4: was 2.0, and she walked around eggs she meant to take
+var MAGNET_R=4.0;      // and inside this, the egg comes to HER
+var MAGNET_SEC=0.35;   // how long the slide takes
 var ANIMALS=[];
 
 var ANIMAL_KINDS={
@@ -1172,15 +1602,27 @@ var ANIMAL_KINDS={
     makeSec:26,
     size:4.10,
     wantAt:3.55, mouthAt:2.30, produceOut:1.60
+  },
+  // FM3 — the bought animal. She eats corn like the hens so nothing new has to
+  // be learned to feed her; only what she leaves behind is different.
+  duck: {
+    wants:"corn", gives:"duckegg",
+    makeSec:20,
+    size:1.95,
+    wantAt:1.85, mouthAt:0.85, produceOut:1.20
   }
 };
 
 function makeAnimalBody(kind){
-  if(kind==="chicken"){
-    var real = ANM_ON ? anmGet("Chicken", ANIMAL_KINDS.chicken.size) : null;
+  if(kind==="chicken"||kind==="duck"){
+    var node = (kind==="duck") ? "PekinDuck" : "Chicken";
+    var real = ANM_ON ? anmGet(node, ANIMAL_KINDS[kind].size) : null;
     if(real) return {obj:real, real:true};
+    // The duck falls back to the drawn hen tinted white-and-orange rather than
+    // to nothing, so a missing file costs a look and never the mechanic.
     var fb=buildChickenFallback();
     var w=new THREE.Group(); w.add(fb);
+    if(kind==="duck") w.scale.setScalar(ANIMAL_KINDS.duck.size/ANIMAL_KINDS.chicken.size);
     return {obj:w, real:false};
   }
   // the cow, normalised the same way a loaded model is: sized by its LONGEST
@@ -1211,7 +1653,8 @@ function addAnimal(kind, x, z, facing, gait, opts){
     patrol:(opts&&opts.patrol)||null,
     patrolT:Math.random()*6.283
   };
-  A.rig=puppet(obj, gait, kind==="cow"?1.5:3.6);
+  A.baseScale=obj.scale.x;      // anmGet normalised it; a pop-in must not undo that
+  A.rig=puppet(obj, gait, kind==="cow"?1.5:(kind==="duck"?2.9:3.6));
   ANIMALS.push(A);
   return A;
 }
@@ -1268,13 +1711,14 @@ function updateFlying(dt, now){
     // it flies OUT and OVER, so it reads as thrown rather than teleported
     F.obj.position.x=lerp(F.from.x,F.to.x,u);
     F.obj.position.z=lerp(F.from.z,F.to.z,u);
-    F.obj.position.y=lerp(F.from.y,F.to.y,u)+Math.sin(u*Math.PI)*1.15;
-    F.obj.rotation.y+=dt*7.0;
-    F.obj.rotation.x+=dt*4.5;
+    F.obj.position.y=lerp(F.from.y,F.to.y,u)+Math.sin(u*Math.PI)*(F.slot?0.85:1.15);
+    F.obj.rotation.y+=dt*(F.slot?11.0:7.0);
+    F.obj.rotation.x+=dt*(F.slot?7.5:4.5);
     if(u>=1){
       scene.remove(F.obj);
       FLYING.splice(i,1);
-      onFed(F.animal, now);
+      if(F.slot) onCrateLanded(F);           // FM3: it landed in the crate
+      else onFed(F.animal, now);             // FM2: an animal ate it
     }
   }
 }
@@ -1286,14 +1730,36 @@ function onFed(A, now){
 }
 
 // ------------------------------------------------------------- the produce
+// FM4 — WHERE THE EGG LANDS. FM3 dropped it at a fixed offset off the
+// animal's flank, which was fine while nothing was solid. Now that the coop
+// house and the rails block, that offset can put a bottle inside a wall or
+// outside its own pen. So the spot is CHOSEN: start at the old angle, and if
+// it is inside something or outside the pen, walk round the animal until it
+// is neither. The coop never shrinks to make room; the egg moves.
+function produceSpot(A,K){
+  var side=A.produceSide||(A.produceSide=(Math.random()<0.5?-1:1));
+  var base=Math.atan2(-Math.sin(A.obj.rotation.y)*side, Math.cos(A.obj.rotation.y)*side);
+  var area=areaContaining(A.x,A.z), k,i,d,a,px,pz;
+  for(k=0;k<2;k++){
+    d=K.produceOut*(k?0.72:1);
+    for(i=0;i<12;i++){
+      a=base+(i%2?1:-1)*Math.ceil(i/2)*(Math.PI/6);
+      px=A.x+Math.cos(a)*d; pz=A.z+Math.sin(a)*d;
+      if(blockedAt(px,pz,0.34)) continue;
+      if(area && !inArea(area,px,pz,0.55)) continue;
+      return {x:px,z:pz};
+    }
+  }
+  return {x:A.x, z:A.z};      // at her feet: always somewhere the kid can reach
+}
+
 function spawnProduce(A){
   var r=ITEM(A.gives); if(!r) return;
   var K=ANIMAL_KINDS[A.kind];
   var m=hbMesh(hbBake(r.parts(A.kind==="cow"?0.95:0.80)));
   var g=new THREE.Group(); g.add(m);
-  var side=A.produceSide||(A.produceSide=(Math.random()<0.5?-1:1));
-  var px=A.x+Math.cos(A.obj.rotation.y)*K.produceOut*side;
-  var pz=A.z-Math.sin(A.obj.rotation.y)*K.produceOut*side;
+  var spot=produceSpot(A,K);
+  var px=spot.x, pz=spot.z;
   g.position.set(px, 0.10, pz);
   scene.add(g);
   A.produce=g; A.produceX=px; A.produceZ=pz;
@@ -1303,6 +1769,7 @@ function spawnProduce(A){
   var mh=new THREE.Mesh(halo,new THREE.MeshBasicMaterial({color:0xFFF6A8,transparent:true,opacity:0.7}));
   mh.position.set(px,0.10,pz);
   scene.add(mh); A.halo=mh;
+  A.magnet=null;
   A.state="ready";
 }
 function collectProduce(A){
@@ -1310,6 +1777,7 @@ function collectProduce(A){
   scene.remove(A.produce); A.produce=null;
   if(A.halo){ scene.remove(A.halo); A.halo=null; }
   A.produceSide=null;
+  A.magnet=null;
   A.state="hungry";
   A.happy=0.6;
 }
@@ -1318,6 +1786,14 @@ function collectProduce(A){
 function updateAnimals(dt, now){
   for(var i=0;i<ANIMALS.length;i++){
     var A=ANIMALS[i], K=ANIMAL_KINDS[A.kind];
+    // FM3: a bought animal grows in from nothing rather than blinking into
+    // existence — a thing you saved 120 coins for gets an entrance.
+    if(A.popIn!=null && A.popIn<1){
+      A.popIn=Math.min(1, A.popIn+dt*1.6);
+      var e=1+Math.sin(Math.min(1,A.popIn)*Math.PI)*0.22;
+      A.obj.scale.setScalar(A.baseScale*(0.15+0.85*A.popIn)*e);
+      if(A.popIn>=1) A.obj.scale.setScalar(A.baseScale);
+    }
 
     // the one chicken that walks: a slow loop around the yard
     if(A.patrol){
@@ -1370,8 +1846,23 @@ function updateAnimals(dt, now){
         A.halo.rotation.z+=dt*2.2;
         A.halo.material.opacity=0.35+0.35*Math.abs(Math.sin(now*3+i));
       }
+      // FM4 — THE MAGNET. Get anywhere near a loose egg or bottle and it
+      // slides over to you and hops on. There is no tap, no menu, and no
+      // aiming: a near miss is a pickup, which is the whole point.
       var pd=Math.hypot(kid.position.x-A.produceX, kid.position.z-A.produceZ);
-      if(pd<PICKUP_R) collectProduce(A);
+      if(pd<PICKUP_R){ collectProduce(A); continue; }
+      if(A.magnet==null && pd<MAGNET_R){
+        A.magnet=0; A.magFrom={x:A.produceX,z:A.produceZ};
+      }
+      if(A.magnet!=null){
+        A.magnet+=dt/MAGNET_SEC;
+        var mu=clamp(A.magnet,0,1), me=mu*mu*(3-2*mu);
+        A.produceX=lerp(A.magFrom.x, kid.position.x, me);
+        A.produceZ=lerp(A.magFrom.z, kid.position.z, me);
+        A.produce.position.x=A.produceX; A.produce.position.z=A.produceZ;
+        if(A.halo){ A.halo.position.x=A.produceX; A.halo.position.z=A.produceZ; }
+        if(mu>=1){ collectProduce(A); continue; }
+      }
     }
   }
 }
@@ -1382,6 +1873,663 @@ function updateAnimals(dt, now){
 // freely, because being stuck is a way to fail.
 var COOP_C={x:16.5,z:-5.5}, PEN_C={x:15.5,z:8.5};
 
+// =========================================================================
+//  FM3 — THE ORDER CRATE, THE UNLOAD, AND THE PLANE.
+//
+//  This is the payoff the whole mode was built toward. The kid grows and
+//  collects, carries a leaning tower of it on their head, walks it to a crate,
+//  and the tower WHOOSHES off into a picture wish-list one item at a time.
+//  Fill the list and a plane taxis, takes off, and comes back with coins.
+//
+//  Two rules shaped every decision below:
+//    1. NO READING. The wish-list is silhouettes of the items themselves, lit
+//       to full colour with a green tick as they land. FL5b tick/cross.
+//    2. NO FAILING. There is no timer on the order, no way to spoil it, and no
+//       way to be left with nothing to do. An order never asks for something
+//       the kid cannot grow or collect right now.
+// =========================================================================
+// Placement, redone after the first real render. The first pass put a 44-unit
+// bone-white strip 6.8 wide across the whole west side and it read as a
+// concrete ramp dropped on a farm — the brightest thing on screen, and the
+// first thing the eye went to. This is a MOWN GRASS strip: shorter, narrower,
+// and only a shade off the field it is cut into.
+var RUNWAY={x:-19.0, z:0, halfL:15.0, halfW:2.6};
+var CRATE={x:-10.5, z:1.5};
+var CRATE_R=3.2;               // generously wide, per feel law 5. Nobody aims.
+var UNLOAD_GAP=0.11;           // seconds between items — rapid fire, on purpose
+
+// ------------------------------------------------------------- the runway
+function buildRunway(){
+  var p=[], i;
+  // the mown strip itself: a warm hay colour, a shade off the grass, sunk a
+  // hair in so it never z-fights
+  p.push(hbBox(RUNWAY.halfW*2, 0.06, RUNWAY.halfL*2, 0xCFCE86, {p:[RUNWAY.x,0.03,RUNWAY.z]}));
+  // a mown border either side, so the strip has an edge without needing paint
+  [-1,1].forEach(function(sx){
+    p.push(hbBox(0.5, 0.05, RUNWAY.halfL*2, 0xB9BE6E, {p:[RUNWAY.x+sx*(RUNWAY.halfW+0.25), 0.025, RUNWAY.z]}));
+  });
+  // centre dashes: the whole reason the strip reads as a runway and not a path.
+  // Cream, not white — white is the loudest thing a screen can do.
+  for(i=-5;i<=5;i++){
+    p.push(hbBox(0.26, 0.02, 1.3, 0xF4EFCE, {p:[RUNWAY.x, 0.08, RUNWAY.z + i*(RUNWAY.halfL/5.6)]}));
+  }
+  // little wooden marker posts, spaced wide so they read as markers not litter
+  for(i=-2;i<=2;i++){
+    [-1,1].forEach(function(sx){
+      p.push(hbTube(0.09,0.11,0.50,0xEDDDA8,{p:[RUNWAY.x+sx*(RUNWAY.halfW+0.85), 0.25, RUNWAY.z+i*(RUNWAY.halfL/2.3)]},8));
+      p.push(hbBall(0.13,0xE2604F,{p:[RUNWAY.x+sx*(RUNWAY.halfW+0.85), 0.52, RUNWAY.z+i*(RUNWAY.halfL/2.3)]},8));
+    });
+  }
+  return hbMesh(hbBake(p));
+}
+
+// -------------------------------------------------------------- the crate
+// Slatted, open topped, with the near slats lower so a kid can see INTO it.
+function buildCrate(){
+  var p=[], i;
+  // Sized against the kid, who is about 2.5 tall: the first pass was 2.3 wide
+  // and a child stood taller than the thing they were loading, which made it
+  // read as a toolbox. A crate a plane could carry has to look like one.
+  var W=3.3, D=2.5, H=1.9;
+  // four corner posts
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(function(c){
+    p.push(hbBox(0.26,H,0.26,WOOD_D,{p:[c[0]*(W/2-0.08), H/2, c[1]*(D/2-0.08)]}));
+  });
+  // three slats a side; the front wall stops one slat short so the load shows
+  for(i=0;i<3;i++){
+    var y=0.34+i*0.62;
+    p.push(hbBox(W,0.42,0.16,WOOD,{p:[0,y,-(D/2-0.06)]}));              // back
+    if(i<2) p.push(hbBox(W,0.42,0.16,WOOD,{p:[0,y,(D/2-0.06)]}));       // front, lower
+    p.push(hbBox(0.16,0.42,D,WOOD,{p:[-(W/2-0.06),y,0]}));
+    p.push(hbBox(0.16,0.42,D,WOOD,{p:[(W/2-0.06),y,0]}));
+  }
+  // floor, and a straw bed so an empty crate is not a black hole
+  p.push(hbBox(W-0.24,0.12,D-0.24,WOOD_D,{p:[0,0.12,0]}));
+  p.push(hbBox(W-0.7,0.12,D-0.7,STRAW,{p:[0,0.23,0]}));
+  return hbMesh(hbBake(p));
+}
+
+var crateObj=null, crateBob=0;
+
+// --------------------------------------------------------------- the plane
+// The AR1Q plane, rebuilt in the farm's hb* vocabulary: same silhouette (high
+// wing on struts, cowled nose, bubble canopy, tall fin, spatted wheels) so a
+// kid who has flown it recognises it sitting on the grass. Everything is baked
+// into one geometry except the propeller, which has to turn.
+var PLANE_BODY=0xE2604F, PLANE_TRIM=0xF7E3B8, PLANE_WING=0xF2F0E4, PLANE_GLASS=0xBFE3F0;
+function buildPlaneModel(){
+  var p=[], prop;
+  var s=0.62;    // the farm's plane sits at kid scale, not flight scale
+  // fuselage: a lathe laid on its side, nose at +Z
+  p.push(hbTurn([
+    [0.02,-4.9],[0.32,-4.5],[0.66,-3.85],[1.02,-2.8],[1.30,-1.4],
+    [1.46,0.2],[1.46,1.5],[1.34,2.7],[1.12,3.6],[0.84,4.2],
+    [0.58,4.55],[0.32,4.74],[0.02,4.82]
+  ], PLANE_BODY, {r:[Math.PI/2,0,0], s:[s,s,s], p:[0,1.55,0]}, 14));
+  // cowl over the nose, in the trim colour
+  p.push(hbTurn([
+    [0.58,3.4],[1.22,3.45],[1.28,4.05],[1.10,4.45],[0.78,4.68],[0.38,4.82],[0.02,4.88]
+  ], PLANE_TRIM, {r:[Math.PI/2,0,0], s:[s,s,s], p:[0,1.55,0]}, 14));
+  // HIGH WING on two struts. A low wing on a taildragger reads as a dart, and
+  // a RECTANGULAR one reads as a plank — the first render came out as a rocket
+  // with a shelf on it. So the wing is built in segments that narrow toward the
+  // tips, which is what makes a shape read as a wing at a glance.
+  p.push(hbAero(8.6*s, 2.5*s, 1.15*s, 0.22*s, PLANE_WING, {p:[0, 1.55+1.72*s, 0.45*s]}));
+  [-1,1].forEach(function(sx){
+    p.push(hbBox(0.16*s,1.5*s,0.7*s,PLANE_TRIM,{r:[0,0,sx*0.18],p:[sx*1.55*s,1.55+1.05*s,0.45*s]}));
+  });
+  // tailplane, tapered the same way, and a SWEPT fin (an upright slab reads as
+  // a sail; the sweep is what says aeroplane)
+  p.push(hbAero(5.0*s, 1.35*s, 0.65*s, 0.18*s, PLANE_WING, {p:[0, 1.55+0.55*s, -3.85*s]}));
+  p.push(hbAero(2.4*s, 1.9*s, 0.75*s, 0.18*s, PLANE_BODY, {p:[0, 1.55+1.60*s, -4.05*s]}, true));
+  // bubble canopy, forward of the wing's leading edge or the wing buries it
+  p.push(hbTurn([
+    [0.02,-1.0],[0.64,-0.7],[0.92,0.2],[0.94,1.0],[0.72,1.7],[0.30,2.1],[0.02,2.2]
+  ], PLANE_GLASS, {r:[Math.PI/2,0,0], s:[s*1.12,s*1.05,s], p:[0,1.55+1.00*s,1.75*s]}, 12));
+  // WHEELS, in spats. Spats in the wing colour: in the body colour they read
+  // as lumps falling off the plane (the AR1Q note, and it still holds here).
+  // WHEELS. AR1Q spats it, but at farm scale a white teardrop beside a red
+  // fuselage read as a floatplane pontoon, so this is a plain leg and a wheel.
+  [[-1.62,1.20],[1.62,1.20]].forEach(function(w){
+    p.push(hbTube(0.19*s,0.23*s,1.85*s,PLANE_TRIM,{r:[0,0,w[0]>0?-0.26:0.26],p:[w[0]*0.82*s,1.55-0.85*s,w[1]*s]},8));
+    p.push(hbTube(0.54*s,0.54*s,0.34*s,0x4A4A4A,{r:[0,0,Math.PI/2],p:[w[0]*s,1.55-1.78*s,w[1]*s]},12));
+  });
+  p.push(hbTube(0.28*s,0.28*s,0.22*s,0x4A4A4A,{r:[0,0,Math.PI/2],p:[0,1.55-2.47*s,-3.60*s]},10));
+  p.push(hbTube(0.11*s,0.13*s,0.7*s,PLANE_TRIM,{p:[0,1.55-2.10*s,-3.60*s]},7));
+
+  var g=new THREE.Group();
+  g.add(hbMesh(hbBake(p)));
+  // the propeller turns, so it cannot be baked in with the rest
+  prop=hbMesh(hbBake([
+    hbBox(0.14*s, 3.4*s, 0.30*s, 0x3B3B3B, null),
+    hbBall(0.30*s, PLANE_TRIM, null, 10)
+  ]));
+  prop.position.set(0, 1.55, 5.0*s);
+  g.add(prop);
+  g.userData.prop=prop;
+  return g;
+}
+
+// The plane's whole trip, as one little state machine. Every leg is seconds,
+// and the WHOLE THING is 13 seconds — nothing in this farm has a timer over a
+// minute, and a payoff a kid has to wait out is not a payoff.
+var PLANE_LEGS={ taxi:2.2, roll:2.4, climb:2.6, away:1.4, back:2.8, park:1.6 };
+var plane=null;
+var PL={ phase:"parked", t:0, pay:0 };
+// The camera sits 22 units behind the kid and looks down, so anything much past
+// z+6 is off the bottom of the screen. The first pass parked the plane 15 units
+// south of the strip and a kid standing at the crate never saw it at all — the
+// payoff was happening off screen. It now sits between the crate and the strip.
+var PARK={x:RUNWAY.x+4.0, z:RUNWAY.z+4.0, yaw:-1.15};
+// The plane is solid ON THE GROUND and only there: once she is taxiing or in
+// the air the blocker switches off, so a kid can never be shoved by a wing
+// that is no longer where the picture says it is.
+var planeBlocker=null;
+
+function buildPlane(){
+  if(!planeBlocker) planeBlocker=addCircleBlocker(PARK.x, PARK.z, 1.80, "plane");
+  plane=buildPlaneModel();
+  plane.position.set(PARK.x, 0, PARK.z);
+  plane.rotation.y=PARK.yaw;
+  scene.add(plane);
+}
+
+function planeBusy(){ return PL.phase!=="parked"; }
+
+function sendPlane(pay){
+  if(planeBusy()) return false;
+  PL.phase="taxi"; PL.t=0; PL.pay=pay;
+  sfx("whoosh"); haptic("light");
+  return true;
+}
+
+function updatePlane(dt){
+  if(planeBlocker) planeBlocker.on = (PL.phase==="parked");
+  if(!plane) return;
+  if(plane.userData.prop) plane.userData.prop.rotation.z += dt*(planeBusy()?38:2.2);
+  if(PL.phase==="parked") return;
+  PL.t+=dt;
+  var L=PLANE_LEGS, u;
+  var startZ=RUNWAY.z+RUNWAY.halfL-2.0;      // hold-short end
+  var endZ=RUNWAY.z-RUNWAY.halfL+2.0;        // where the wheels leave the grass
+
+  if(PL.phase==="taxi"){
+    u=clamp(PL.t/L.taxi,0,1);
+    plane.position.x=lerp(PARK.x, RUNWAY.x, u);
+    plane.position.z=lerp(PARK.z, startZ, u);
+    plane.position.y=0;
+    plane.rotation.y=lerp(PARK.yaw, Math.PI, u);   // line up down the strip
+    plane.rotation.x=0;
+    if(u>=1){ PL.phase="roll"; PL.t=0; sfx("mission"); }
+    return;
+  }
+  if(PL.phase==="roll"){
+    u=clamp(PL.t/L.roll,0,1);
+    var acc=u*u;                                   // it ACCELERATES, or it drifts
+    plane.position.x=RUNWAY.x;
+    plane.position.z=lerp(startZ, endZ, acc);
+    plane.position.y=Math.max(0,(acc-0.72)/0.28)*1.1;
+    plane.rotation.x=-Math.max(0,(acc-0.72)/0.28)*0.22;
+    if(u>=1){ PL.phase="climb"; PL.t=0; }
+    return;
+  }
+  if(PL.phase==="climb"){
+    u=clamp(PL.t/L.climb,0,1);
+    plane.position.x=RUNWAY.x - u*u*14;
+    plane.position.z=endZ - u*62;
+    plane.position.y=1.1 + u*26;
+    plane.rotation.x=-0.30;
+    plane.rotation.z=-u*0.5;
+    if(u>=1){ PL.phase="away"; PL.t=0; plane.visible=false; }
+    return;
+  }
+  if(PL.phase==="away"){
+    if(PL.t>=L.away){ PL.phase="back"; PL.t=0; plane.visible=true; sfx("land"); }
+    return;
+  }
+  if(PL.phase==="back"){
+    u=clamp(PL.t/L.back,0,1);
+    plane.position.x=lerp(RUNWAY.x-16, RUNWAY.x, u);
+    plane.position.z=lerp(endZ-70, startZ-6, u);
+    plane.position.y=lerp(28, 0, u*u);
+    plane.rotation.x=lerp(0.16, 0, u);
+    plane.rotation.z=0;
+    plane.rotation.y=Math.PI;
+    if(u>=1){ PL.phase="park"; PL.t=0; payTheOrder(PL.pay); }
+    return;
+  }
+  if(PL.phase==="park"){
+    u=clamp(PL.t/L.park,0,1);
+    plane.position.x=lerp(RUNWAY.x, PARK.x, u);
+    plane.position.z=lerp(startZ-6, PARK.z, u);
+    plane.rotation.y=lerp(Math.PI, PARK.yaw+Math.PI*2, u);
+    if(u>=1){
+      PL.phase="parked"; PL.t=0;
+      plane.rotation.y=PARK.yaw;
+      newOrder();                                 // the next wish-list, straight away
+    }
+  }
+}
+
+// =========================================================================
+//  THE ORDER
+// =========================================================================
+var ORDERS_DONE=0;
+var order=null;                 // {items:[{kind,filled,el}], pay}
+var orderCardEl=document.getElementById("orderCard");
+var orderSlotsEl=document.getElementById("orderSlots");
+var orderPayEl=document.getElementById("orderPay");
+var orderFaceEl=document.getElementById("orderFace");
+
+// =========================================================================
+//  FM4 — THE CUSTOMER. Somebody is waiting for this, and a face says that
+//  faster than any sentence. Drawn in code in the farm's rounded style, one
+//  per order in rotation. No Kenney block animals, no emojis, no photos.
+// =========================================================================
+var CUSTOMERS=[
+  // bear
+  '<svg class="face" viewBox="0 0 40 40" aria-hidden="true">'+
+    '<circle cx="9.5" cy="10.5" r="6" fill="#A9764B"/><circle cx="30.5" cy="10.5" r="6" fill="#A9764B"/>'+
+    '<circle cx="9.5" cy="10.5" r="3" fill="#E0B98E"/><circle cx="30.5" cy="10.5" r="3" fill="#E0B98E"/>'+
+    '<circle cx="20" cy="22" r="13.2" fill="#B98253"/>'+
+    '<ellipse cx="20" cy="26.6" rx="8.4" ry="6.6" fill="#EBD3B0"/>'+
+    '<circle cx="14.6" cy="18.6" r="2" fill="#3A2A1E"/><circle cx="25.4" cy="18.6" r="2" fill="#3A2A1E"/>'+
+    '<ellipse cx="20" cy="24.4" rx="3" ry="2.2" fill="#3A2A1E"/>'+
+    '<path d="M20 26.6 v2.2 M20 28.8 q-2.6 2.1 -4.4 .2 M20 28.8 q2.6 2.1 4.4 .2" fill="none" '+
+      'stroke="#3A2A1E" stroke-width="1.6" stroke-linecap="round"/>'+
+  '</svg>',
+  // fox
+  '<svg class="face" viewBox="0 0 40 40" aria-hidden="true">'+
+    '<path d="M7 15 L8.5 3 L18 9.5 Z" fill="#E2803C"/><path d="M33 15 L31.5 3 L22 9.5 Z" fill="#E2803C"/>'+
+    '<path d="M9.4 12.6 L10.2 6.4 L15.4 10 Z" fill="#3A2A1E"/>'+
+    '<path d="M30.6 12.6 L29.8 6.4 L24.6 10 Z" fill="#3A2A1E"/>'+
+    '<path d="M20 34.5 C10 30 6.6 22.6 7.8 15.2 C13 11.8 27 11.8 32.2 15.2 C33.4 22.6 30 30 20 34.5 Z" fill="#EE9046"/>'+
+    '<path d="M20 34.5 C15.4 31.8 12.6 28.2 11.4 24.4 C14.6 22.4 25.4 22.4 28.6 24.4 C27.4 28.2 24.6 31.8 20 34.5 Z" fill="#FBEEDF"/>'+
+    '<circle cx="14.8" cy="20.4" r="2" fill="#3A2A1E"/><circle cx="25.2" cy="20.4" r="2" fill="#3A2A1E"/>'+
+    '<ellipse cx="20" cy="27.4" rx="2.6" ry="2" fill="#3A2A1E"/>'+
+    '<path d="M20 29.4 v1.8" fill="none" stroke="#3A2A1E" stroke-width="1.5" stroke-linecap="round"/>'+
+  '</svg>',
+  // bunny
+  '<svg class="face" viewBox="0 0 40 40" aria-hidden="true">'+
+    '<ellipse cx="13.6" cy="9" rx="4.2" ry="8.6" fill="#D7D3E4"/>'+
+    '<ellipse cx="26.4" cy="9" rx="4.2" ry="8.6" fill="#D7D3E4"/>'+
+    '<ellipse cx="13.6" cy="9.4" rx="2.1" ry="6" fill="#F2C3CE"/>'+
+    '<ellipse cx="26.4" cy="9.4" rx="2.1" ry="6" fill="#F2C3CE"/>'+
+    '<circle cx="20" cy="24" r="12.6" fill="#E6E3F0"/>'+
+    '<circle cx="15.2" cy="21.6" r="2" fill="#3A2A1E"/><circle cx="24.8" cy="21.6" r="2" fill="#3A2A1E"/>'+
+    '<ellipse cx="20" cy="26.4" rx="2.4" ry="1.8" fill="#E08A9C"/>'+
+    '<path d="M20 28.2 v1.6 M20 29.8 q-2.4 1.9 -4 .2 M20 29.8 q2.4 1.9 4 .2" fill="none" '+
+      'stroke="#3A2A1E" stroke-width="1.5" stroke-linecap="round"/>'+
+    '<circle cx="11.6" cy="27.4" r="2" fill="#F6CBD6"/><circle cx="28.4" cy="27.4" r="2" fill="#F6CBD6"/>'+
+  '</svg>'
+];
+function paintCustomer(){
+  if(!orderFaceEl) return;
+  orderFaceEl.innerHTML = CUSTOMERS[(order && order.face!=null ? order.face : 0) % CUSTOMERS.length];
+}
+
+// FM4 — THE GUARDRAIL WITH REAL TEETH. FM3 put a kind in the pool the moment
+// the animal that makes it existed, so the very first crate asked a child for
+// MILK when no milk had ever been made. Now a kind joins the pool the first
+// time it lands on the stack, and nowhere else. The set is seeded with the
+// three crops (a patch is always there to plant), and it is kept in
+// localStorage so a reload does not forget what a kid has already carried.
+// Bread and cheese in a later phase join by the same one rule.
+function orderableKinds(){
+  var out=[], i;
+  for(i=0;i<COLLECT_ORDER.length;i++){
+    if(COLLECTED[COLLECT_ORDER[i]] && ITEM(COLLECT_ORDER[i])) out.push(COLLECT_ORDER[i]);
+  }
+  return out;
+}
+
+// FM4: the pay is the ORDER'S OWN worth, three times over. A big order pays
+// big because it asked for a lot, not because it is the ninth one.
+function orderPay(items){
+  var sum=0, i;
+  for(i=0;i<(items||[]).length;i++) sum+=itemValueOf(items[i].kind);
+  return Math.max(6, Math.round(sum*ORDER_PAY_MULT));
+}
+
+function newOrder(){
+  var pool=orderableKinds().slice(), i, n;
+  // gently bigger each time: two items, then three, and never more than six —
+  // six silhouettes is the most that still reads at a glance on a phone.
+  var size=Math.min(6, 2+ORDERS_DONE);
+  var distinct=Math.min(pool.length, size<=2?1:(size<=4?2:3));
+  for(i=pool.length-1;i>0;i--){ n=Math.floor(Math.random()*(i+1)); var t=pool[i]; pool[i]=pool[n]; pool[n]=t; }
+  var kinds=pool.slice(0,distinct);
+  var counts=[]; for(i=0;i<distinct;i++) counts.push(1);
+  for(i=distinct;i<size;i++) counts[Math.floor(Math.random()*distinct)]++;
+  var items=[];
+  for(i=0;i<distinct;i++){ for(n=0;n<counts[i];n++) items.push({kind:kinds[i], filled:false, el:null}); }
+  order={ items:items, pay:orderPay(items), sent:false, face:ORDERS_DONE%CUSTOMERS.length };
+  renderOrder();
+  return order;
+}
+
+var TICK_SVG='<svg class="mark" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#63C466"/>'+
+  '<path d="M7 12.5 L10.6 16 L17 8.6" fill="none" stroke="#fff" stroke-width="2.8" '+
+  'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+// FM4 — ONE SLOT PER KIND, counted down. "3 corn + 2 eggs" is two pictures
+// and two numbers, not five pictures, so the slots can be big enough to read
+// across a room and an order never wraps onto a second line.
+function orderKinds(){
+  var seen={}, out=[], i, k;
+  if(!order) return out;
+  for(i=0;i<order.items.length;i++){
+    k=order.items[i].kind;
+    if(!seen[k]){ seen[k]=1; out.push(k); }
+  }
+  return out;
+}
+function kindCounts(kind){
+  var total=0, left=0, i;
+  if(!order) return {total:0,left:0};
+  for(i=0;i<order.items.length;i++) if(order.items[i].kind===kind){
+    total++; if(!order.items[i].filled) left++;
+  }
+  return {total:total, left:left};
+}
+
+function renderOrder(){
+  orderSlotsEl.innerHTML="";
+  if(!order){
+    orderCardEl.classList.remove("up","done");
+    hideCrateWants();
+    return;
+  }
+  var kinds=orderKinds();
+  kinds.forEach(function(k){
+    var r=ITEM(k), c=kindCounts(k);
+    var el=document.createElement("div");
+    el.className="slot"+(c.left===0?" full":"");
+    el.dataset.kind=k;
+    el.dataset.want=c.total;
+    el.innerHTML=(r ? r.svg(58).replace("<svg ","<svg class=\"pic\" ") : "")+
+      '<div class="count">'+c.left+'</div>'+TICK_SVG;
+    orderSlotsEl.appendChild(el);
+  });
+  // every ITEM still exists and still claims itself — the unload, orderNeeds
+  // and the claim logic are untouched. They just all point at their kind's one
+  // slot now instead of owning a slot each.
+  order.items.forEach(function(it){
+    it.el=orderSlotsEl.querySelector('.slot[data-kind="'+it.kind+'"]');
+  });
+  orderCardEl.dataset.n=kinds.length;
+  orderPayEl.textContent=order.pay;
+  paintCustomer();
+  orderCardEl.classList.toggle("done", orderFull());
+  orderCardEl.classList.add("up");
+  showCrateWants(kinds);
+}
+
+// Repaint just the one kind that changed: the number ticks down, and at zero
+// the frame goes green and the tick appears.
+function paintSlot(kind){
+  var el=orderSlotsEl.querySelector('.slot[data-kind="'+kind+'"]');
+  if(!el) return;
+  var c=kindCounts(kind), cnt=el.querySelector(".count");
+  if(cnt) cnt.textContent=c.left;
+  el.classList.toggle("full", c.left===0);
+  el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+  setTimeout(function(){ el.classList.remove("pop"); }, 150);
+  if(c.left===0) swapCrateWant();
+}
+
+// =========================================================================
+//  FM4 — WHAT THE CRATE WANTS, FLOATING OVER THE CRATE.
+//
+//  The same language a hungry animal already speaks: the real 3D item, small,
+//  turning, over the thing that wants it. With more than one kind wanted it
+//  cycles through them. No words, nothing to read, and it is the same picture
+//  as the slot on the card and the same model as the thing on the stack.
+// =========================================================================
+var crateWant=null, crateWantKinds=[], crateWantI=0, crateWantT=0;
+var CRATE_WANT_Y=2.75, CRATE_WANT_SEC=1.9;
+
+function hideCrateWants(){
+  crateWantKinds=[];
+  if(crateWant){ scene.remove(crateWant); crateWant=null; }
+}
+function showCrateWants(kinds){
+  crateWantKinds=(kinds||[]).slice();
+  crateWantI=0; crateWantT=0;
+  swapCrateWant();
+}
+function swapCrateWant(){
+  if(crateWant){ scene.remove(crateWant); crateWant=null; }
+  var live=[], i;
+  for(i=0;i<crateWantKinds.length;i++)
+    if(kindCounts(crateWantKinds[i]).left>0) live.push(crateWantKinds[i]);
+  if(!live.length || !order || order.sent) return;
+  var r=ITEM(live[crateWantI%live.length]); if(!r) return;
+  var g=new THREE.Group();
+  g.add(hbMesh(hbBake(r.parts(0.95))));
+  g.position.set(CRATE.x, CRATE_WANT_Y, CRATE.z);
+  scene.add(g); crateWant=g;
+}
+function updateCrateWant(dt, now){
+  if(!crateWant) return;
+  crateWant.rotation.y += dt*1.4;
+  crateWant.position.y = CRATE_WANT_Y + Math.sin(now*2.2)*0.13;
+  crateWantT += dt;
+  if(crateWantT>CRATE_WANT_SEC){ crateWantT=0; crateWantI++; swapCrateWant(); }
+}
+
+// A slot that has an item ALREADY IN THE AIR toward it is spoken for. Without
+// this the rapid fire is its own bug: three corn leave the stack in a third of
+// a second, all three aim at slot one, and two of them vanish on arrival.
+function orderNeeds(kind){
+  if(!order || order.sent) return false;
+  for(var i=0;i<order.items.length;i++){
+    var it=order.items[i];
+    if(!it.filled && !it.claimed && it.kind===kind) return true;
+  }
+  return false;
+}
+function orderFull(){
+  if(!order) return false;
+  for(var i=0;i<order.items.length;i++) if(!order.items[i].filled) return false;
+  return true;
+}
+// The next empty slot for this kind — the one the flying item is aimed at.
+function claimSlot(kind){
+  for(var i=0;i<order.items.length;i++){
+    var it=order.items[i];
+    if(!it.filled && !it.claimed && it.kind===kind) return it;
+  }
+  return null;
+}
+
+// =========================================================================
+//  THE UNLOAD — the moment the whole genre is built on.
+//
+//  Walk to the crate and the tower comes off your head one item at a time,
+//  fast, each on its own arc, each landing with a pop and a note a little
+//  higher than the one before. It is the ONLY thing in this file that gets a
+//  per-item sound, because it is the only thing that has earned one.
+// =========================================================================
+var unload={ running:false, gap:0, run:0, missT:0 };
+
+function crateNear(){
+  return Math.hypot(kid.position.x-CRATE.x, kid.position.z-CRATE.z) < CRATE_R;
+}
+
+function pullOneIntoCrate(){
+  var i;
+  // the TOPMOST wanted item, because that is the one a child can see leave
+  for(i=stack.length-1;i>=0;i--){
+    var kind=stack[i].userData.kind;
+    if(!orderNeeds(kind)) continue;
+    var slot=claimSlot(kind); if(!slot) continue;
+    var it=stack.splice(i,1)[0];
+    reindexStack();
+    FLYING.push({
+      obj:it,
+      from:it.position.clone(),
+      to:new THREE.Vector3(CRATE.x + (Math.random()-0.5)*0.9, 0.85, CRATE.z + (Math.random()-0.5)*0.7),
+      t:0, dur:0.34, slot:slot, note:unload.run
+    });
+    slot.claimed=true;
+    unload.run++;
+    return true;
+  }
+  return false;
+}
+
+// A slot fills the instant its item lands in the crate, not when it left the
+// stack — the tick has to be caused by something the eye followed.
+function onCrateLanded(F){
+  var slot=F.slot;
+  slot.filled=true;
+  paintSlot(slot.kind);
+  sfx("deliver",{rate:Math.min(1.55, 1 + F.note*0.055)});
+  haptic("light");
+  crateBob=0.16;
+  if(orderFull() && !order.sent){
+    order.sent=true;
+    orderCardEl.classList.add("done");
+    hideCrateWants();
+    sfx("mission");
+    haptic("success");
+    sendPlane(order.pay);
+  }
+}
+
+// The cross half of the FL5b language: you walked up carrying things the crate
+// does not want. Nothing is taken, nothing is lost, the card just shakes once.
+function flashNope(){
+  if(unload.missT>0) return;
+  unload.missT=1.1;
+  var els=orderSlotsEl.querySelectorAll(".slot:not(.full)");
+  Array.prototype.forEach.call(els,function(el){
+    el.classList.remove("nope"); void el.offsetWidth; el.classList.add("nope");
+  });
+  sfx("hit"); 
+}
+
+function updateCrate(dt){
+  if(unload.missT>0) unload.missT-=dt;
+  if(crateObj){
+    crateBob*=0.86;
+    crateObj.position.y=crateBob;
+  }
+  if(!order || order.sent || !crateNear()){ unload.running=false; unload.run=0; return; }
+  if(!unload.running){ unload.running=true; unload.gap=0; unload.run=0; }
+  unload.gap-=dt;
+  if(unload.gap>0) return;
+  unload.gap=UNLOAD_GAP;
+  if(!pullOneIntoCrate()){
+    unload.running=false;
+    if(stack.length) flashNope();
+  }
+}
+
+// =========================================================================
+//  THE PAYOFF — coins fly from the plane up into the wallet pill.
+// =========================================================================
+function payTheOrder(pay){
+  addCoins(pay);
+  ORDERS_DONE++;
+  flashToast("+"+pay);
+  sfx("collect"); haptic("success");
+  coinBurstToPill(pay);
+  order=null;
+  renderOrder();
+  updateShopButton();
+}
+
+// A real burst, aimed at the number it is going into. GAME-FEEL law 3: coins
+// are a reward the body feels, never a number that quietly ticks up.
+var COIN_SVG='<svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#F7C948" '+
+  'stroke="#D89B1C" stroke-width="2.5"/><circle cx="13" cy="13" r="6" fill="none" '+
+  'stroke="#D89B1C" stroke-width="2"/></svg>';
+function coinBurstToPill(pay){
+  var hud=document.getElementById("hud"); if(!hud) return;
+  var pill=document.querySelector(".pill"); if(!pill) return;
+  var pr=pill.getBoundingClientRect();
+  var n=Math.max(6, Math.min(14, Math.round(pay/3)));
+  var sx=innerWidth*0.5, sy=innerHeight*0.42;
+  if(plane && plane.visible && camera){
+    var v=plane.position.clone().project(camera);
+    sx=(v.x*0.5+0.5)*innerWidth; sy=(-v.y*0.5+0.5)*innerHeight;
+  }
+  for(var i=0;i<n;i++) oneFlyCoin(hud, sx, sy, pr.left+pr.width*0.32, pr.top+pr.height*0.5, i);
+}
+function oneFlyCoin(hud, sx, sy, tx, ty, i){
+  var el=document.createElement("div");
+  el.className="flyCoin"; el.innerHTML=COIN_SVG;
+  el.style.left=(sx-11)+"px"; el.style.top=(sy-11)+"px";
+  hud.appendChild(el);
+  var jx=(Math.random()-0.5)*120, jy=-40-Math.random()*70;
+  var t0=performance.now(), dur=520+i*45;
+  function fly(){
+    var u=Math.min(1,(performance.now()-t0)/dur);
+    var e=u*u;
+    el.style.transform="translate("+((tx-sx)*e + jx*(1-e)*u*2)+"px,"+((ty-sy)*e + jy*(1-e))+"px) scale("+(1-0.35*u)+")";
+    el.style.opacity=String(1-Math.max(0,(u-0.82)/0.18));
+    if(u<1) requestAnimationFrame(fly); else if(el.parentNode) el.parentNode.removeChild(el);
+  }
+  requestAnimationFrame(fly);
+}
+
+// =========================================================================
+//  THE SHOP — one thing in it, the duck, for the coins the plane brings back.
+// =========================================================================
+var DUCK_BOUGHT=false;
+var shopBtnEl=document.getElementById("shopBtn");
+var shopCardEl=document.getElementById("shopCard");
+var shopCloseEl=document.getElementById("shopClose");
+var buyDuckEl=document.getElementById("buyDuck");
+var DUCK_SVG='<svg width="96" height="96" viewBox="0 0 96 96">'+
+  '<ellipse cx="46" cy="60" rx="27" ry="19" fill="#FBF7EF" stroke="#C9BFA8" stroke-width="2.5"/>'+
+  '<path d="M66 62 Q80 58 84 44 Q76 52 68 52 Z" fill="#FBF7EF" stroke="#C9BFA8" stroke-width="2.5"/>'+
+  '<circle cx="32" cy="36" r="13" fill="#FBF7EF" stroke="#C9BFA8" stroke-width="2.5"/>'+
+  '<path d="M20 37 Q10 39 12 44 Q18 45 21 42 Z" fill="#F0A62E" stroke="#C8801C" stroke-width="2"/>'+
+  '<circle cx="29" cy="33" r="2.4" fill="#241E1A"/>'+
+  '<path d="M40 78 L40 84 M52 78 L52 84" stroke="#F0A62E" stroke-width="4" stroke-linecap="round"/>'+
+  '</svg>';
+function renderShop(){
+  var afford=walletBalance()>=DUCK_PRICE;
+  buyDuckEl.className="buy"+(afford?"":" locked");
+  buyDuckEl.innerHTML=
+    '<div class="art">'+DUCK_SVG+'</div>'+
+    '<div class="price"><svg width="15" height="15" viewBox="0 0 26 26">'+
+      '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
+      '</svg>'+DUCK_PRICE+'</div>';
+}
+function updateShopButton(){
+  if(!shopBtnEl) return;
+  // it only ever appears once it is worth appearing: never dangle a thing a
+  // child cannot have, and never once they already have it.
+  var show = !DUCK_BOUGHT && walletBalance() >= Math.round(DUCK_PRICE*0.5);
+  shopBtnEl.classList.toggle("on", show);
+  if(shopCardEl.classList.contains("up")) renderShop();
+}
+function openShop(){ renderShop(); shopCardEl.classList.add("up"); }
+function closeShop(){ shopCardEl.classList.remove("up"); }
+function buyDuck(){
+  if(DUCK_BOUGHT) return false;
+  if(!spendCoins(DUCK_PRICE)){ flashToast("Keep saving"); sfx("hit"); return false; }
+  DUCK_BOUGHT=true;
+  closeShop();
+  updateShopButton();
+  var d=addAnimal("duck", COOP_C.x+0.8, COOP_C.z+1.9, -0.6, "strut",
+    {patrol:{cx:COOP_C.x+0.6, cz:COOP_C.z+1.6, r:1.4, speed:0.34}});
+  d.obj.scale.setScalar(d.baseScale*0.15);       // she arrives with a pop
+  d.popIn=0;
+  flashToast("A duck!");
+  sfx("celebrate"); haptic("success");
+  return true;
+}
+if(shopBtnEl) shopBtnEl.addEventListener("click", function(){ tapUnlock(); openShop(); });
+if(shopCloseEl) shopCloseEl.addEventListener("click", closeShop);
+if(shopCardEl) shopCardEl.addEventListener("click", function(e){ if(e.target===shopCardEl) closeShop(); });
+if(buyDuckEl) buyDuckEl.addEventListener("click", buyDuck);
+
+
 function buildFarmyard(){
   var g=new THREE.Group(), i;
 
@@ -1391,6 +2539,9 @@ function buildFarmyard(){
   coop.position.set(COOP_C.x+1.6, 0, COOP_C.z-2.6);
   coop.rotation.y=-0.35;
   g.add(coop);
+  // the hut is a building, so you walk round it. The box is a shade inside the
+  // turned footprint, so a shoulder brushing the wall slides rather than snags.
+  addBoxBlocker(COOP_C.x+1.6, COOP_C.z-2.6, 1.50, 1.36, "coop");
 
   // ---- the cow pen
   g.add(buildPen(PEN_C.x, PEN_C.z, 4.8, 3.6, "W"));
@@ -1431,6 +2582,18 @@ function buildFarmyard(){
 
   // ---- THE COW
   addAnimal("cow", PEN_C.x, PEN_C.z, -1.2, "graze");
+
+  // ---- FM3: the runway, the crate and the plane, west of the field
+  var rw=buildRunway(); scene.add(rw);
+  crateObj=buildCrate();
+  crateObj.position.set(CRATE.x, 0, CRATE.z);
+  crateObj.rotation.y=0.28;
+  scene.add(crateObj);
+  // FM3 pushed the kid out of the crate by hand. FM4 has a blocker list, so the
+  // crate joins it and the bespoke push goes away — one rule for solid things.
+  addCircleBlocker(CRATE.x, CRATE.z, 1.60, "crate");
+  buildPlane();
+  newOrder();
 }
 
 // The models arrive on the wire, so the yard is built once we know whether the
@@ -1466,7 +2629,13 @@ function zoo(){
     {name:"trough", make:buildTrough},
     {name:"hay bale", make:buildHayBale},
     {name:"egg", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.egg.parts(1))); }},
-    {name:"milk bottle", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.milk.parts(1))); }}
+    {name:"milk bottle", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.milk.parts(1))); }},
+    // FM3 — judged on the stand before any of them went into the world, same
+    // rule that caught the cow reading as a pig.
+    {name:"duck (model)", make:function(){ return ANM_ON?anmGet("PekinDuck",1.0):null; }},
+    {name:"duck egg", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.duckegg.parts(1))); }},
+    {name:"crate", make:buildCrate},
+    {name:"plane", make:buildPlaneModel}
   ];
   // EVERY EXHIBIT IS NORMALISED TO THE SAME LONGEST DIMENSION, which is the
   // whole point of a stand: a shape is judged against the others rather than
@@ -1542,7 +2711,7 @@ function buildSeedPicker(){
       '<div class="price">'+
         '<svg width="14" height="14" viewBox="0 0 26 26">'+
           '<circle cx="13" cy="13" r="11" fill="#F7C948" stroke="#D89B1C" stroke-width="2.5"/>'+
-        '</svg>'+r.price+
+        '</svg><span>'+r.price+'</span>'+
       '</div>';
     el.addEventListener("click",function(){ tryPlant(k); });
     seedRowEl.appendChild(el);
@@ -1562,19 +2731,29 @@ function closeSeedPicker(){
 seedCloseEl.addEventListener("click",closeSeedPicker);
 seedCardEl.addEventListener("click",function(e){ if(e.target===seedCardEl) closeSeedPicker(); });
 
+// FM3 — THE FLOOR THAT MAKES BEING STUCK IMPOSSIBLE. If a kid cannot afford a
+// seed, the next seed is free. Nothing else in this farm has a fail state, and
+// "you have no coins and nothing growing" would have been the only one.
+function seedIsFree(kind){
+  return walletBalance() < (kind ? seedPriceOf(kind) : SEED_PRICE);
+}
+
 function updateSeedAffordability(){
+  if(!seedRowEl) return;
   var kids=seedRowEl.querySelectorAll(".seed");
   kids.forEach(function(el){
-    var k=el.dataset.kind, r=CROP_RECIPES[k];
-    if(coins < r.price) el.classList.add("locked"); else el.classList.remove("locked");
+    var priceEl=el.querySelector(".price");
+    if(priceEl) priceEl.classList.toggle("free", seedIsFree(el.dataset.kind));
+    el.classList.remove("locked");     // never locked: it is affordable or it is free
   });
 }
 
 function tryPlant(kind){
   if(!openPatch) return;
   var r=CROP_RECIPES[kind]; if(!r) return;
-  if(coins < r.price){ flashToast("Not enough coins"); return; }
-  addCoins(-r.price);
+  tapUnlock();
+  if(!seedIsFree(kind) && !spendCoins(r.price)){ flashToast("Not enough coins"); sfx("hit"); return; }
+  sfx("select"); haptic("light");
   openPatch.state="growing";
   openPatch.seed=kind;
   openPatch.plantedAt=performance.now()/1000;
@@ -1590,16 +2769,129 @@ function tryPlant(kind){
 // -------------------------------------------------------------------------
 // Coins + toasts
 // -------------------------------------------------------------------------
-var coins=50;
+// FM3 — GAP 2 CLOSED. FM1 kept a plain local coins number and a pill of its
+// own, which is
+// exactly what CARTRIDGE-CONTRACT.md says a cartridge may not do: the SHELL
+// owns the wallet, there is ONE balance per kid, and a game only announces
+// against it. buildable-wallet.js works out its own role — inside the shell it
+// is an announcer that posts deltas up and caches what comes back down; opened
+// on its own it owns the number itself — so this same code is right both ways.
+var BW = window.BuildableWallet || null;
 var coinsEl=document.getElementById("coins");
 var toastEl=document.getElementById("toast");
 var hintEl=document.getElementById("hint");
 var hintHidden=false;
-function addCoins(n){
-  coins=Math.max(0,coins+n);
-  coinsEl.textContent=coins;
-  updateSeedAffordability();
+
+// A tiny local mirror, so a page with no wallet script (headless QA, a cold
+// offline load) still has a number to show rather than throwing.
+var localCoins = 50;
+function walletBalance(){
+  if(BW){ try{ return BW.balance(); }catch(e){} }
+  return localCoins;
 }
+function paintCoins(){
+  var v=walletBalance();
+  if(coinsEl) coinsEl.textContent=v;
+  updateSeedAffordability();
+  updateShopButton();
+}
+function addCoins(n){
+  n=Math.round(n||0);
+  if(n>0){ if(BW){ try{ BW.add(n); }catch(e){} } else localCoins+=n; }
+  else if(n<0){ spendCoins(-n); return; }
+  paintCoins();
+}
+function spendCoins(n){
+  n=Math.round(n||0); if(n<=0) return true;
+  var ok;
+  if(BW){ try{ ok=BW.spend(n); }catch(e){ ok=false; } }
+  else { ok = localCoins>=n; if(ok) localCoins-=n; }
+  paintCoins();
+  return !!ok;
+}
+// FM1's fifty starting coins survive the move to the shared wallet, but as a
+// ONE-TIME grant rather than a hardcoded balance: awardOnce is exactly the
+// mechanism the contract already has for "credit this, and only ever once".
+// A kid arriving with coins from another game keeps them and gets the fifty on
+// top; a kid coming back to the farm is not paid twice.
+function grantSeedMoney(){
+  if(BW){ try{ BW.awardOnce("farm:seedmoney", 50); }catch(e){} }
+  paintCoins();
+}
+
+// The shell broadcasts the real balance down whenever it changes, and the
+// wallet re-fires it here as a plain event. Repaint on it or the pill drifts
+// away from the truth the moment coins are earned in another game.
+try{ addEventListener("bk-wallet", paintCoins); }catch(e){}
+grantSeedMoney();
+paintCoins();
+
+// ============ FM3 — GAP 4 CLOSED: sound, through the shared Feel Kit ============
+// GAME-FEEL law 6: a game triggers PALETTE NAMES, never a raw tone. These names
+// resolve to Sky Flyer's own created ElevenLabs one-shots (api/sfx.js), because
+// the farm is the same cartridge as the flying engine and shares its voice.
+var FEEL = window.BuildableFeel || null;
+var BA   = window.BuildableAudio || null;
+var SFX_MAP = {
+  select:  "sky_coin",       // a tap, a small yes
+  coin:    "sky_coin",
+  collect: "sky_coinrun",    // a whole burst of coins at once
+  pickup:  "sky_pickup",     // one thing hopping onto the stack
+  deliver: "sky_deliver",    // ONE item landing in the crate (the unload note)
+  mission: "sky_mission",    // the order is full
+  whoosh:  "sky_takeoff",
+  land:    "sky_land",
+  levelup: "sky_bank",
+  sparkle: "sky_bank",
+  hit:     "sky_bump",       // the soft "not that one" — never a buzzer
+  pop:     "sky_bump",
+  win:     "sky_win",
+  celebrate:"sky_win"
+};
+// The single shared mute flag. bk_muted is read by buildable-audio itself, so
+// the farm never keeps a second idea of whether sound is on.
+function soundOn(){ try{ return !(BA && BA.muted); }catch(e){ return true; } }
+function sfx(name,opt){ if(!soundOn()) return; try{ if(FEEL) FEEL.sfx(name,opt); else if(BA) BA.sfx(name,opt); }catch(e){} }
+function haptic(kind){ if(!soundOn()) return; try{ if(FEEL&&FEEL.haptic) FEEL.haptic(kind); }catch(e){} }
+try{ if(FEEL&&FEEL.configure) FEEL.configure({accent:"#8ED08A", feel:{pace:"chill",celebration:"big",haptics:"on"}, sfxMap:SFX_MAP});
+     else if(BA&&BA.configure) BA.configure({map:SFX_MAP}); }catch(e){}
+// Audio only ever wakes on the first tap INSIDE this page — a browser will not
+// start it any other way, and a farm that is silent until the kid happens to
+// hit the right control is a bug report waiting to happen.
+var audioWoken=false;
+function tapUnlock(){
+  if(audioWoken) return; audioWoken=true;
+  try{ if(BA&&BA.unlock) BA.unlock(); }catch(e){}
+}
+try{
+  ["pointerdown","touchstart","keydown"].forEach(function(ev){
+    addEventListener(ev, tapUnlock, {once:false, passive:true});
+  });
+}catch(e){}
+
+// ============ FM3 — GAP 3 CLOSED: the shared nav bridge ============
+// Without this the page has no Home pill of its own AND, on iPhone, a touch on
+// the SHELL'S Home button routes into this page and does nothing at all. That
+// is precisely the Tennis bug, and the farm had it.
+try{
+  if(window.BuildableGameNav){
+    window.BuildableGameNav.register({
+      hide:["helpBtn"],                 // the farm teaches itself; there is no help screen
+      onSound:function(){ try{ if(BA&&BA.toggleMute) BA.toggleMute(); }catch(e){} },
+      soundOn:soundOn,
+      inGame:function(){ return true; }
+    });
+  }
+}catch(e){}
+// The shell may pause us (a quiz gate, a parent interruption, a tab switch).
+// Every game MUST honour it — CARTRIDGE-CONTRACT.md.
+var PAUSED=false;
+addEventListener("message",function(ev){
+  var d=ev&&ev.data;
+  var kind=(typeof d==="string")?d:(d&&(d.type||d.kind));
+  if(kind==="pause") PAUSED=true;
+  else if(kind==="resume"){ PAUSED=false; last=performance.now()/1000; }
+});
 function flashToast(text){
   toastEl.textContent=text;
   toastEl.classList.remove("show");
@@ -1631,6 +2923,9 @@ function stickMove(clientX,clientY){
 }
 stickEl.addEventListener("pointerdown",function(e){
   stickActive=true; stickEl.setPointerCapture(e.pointerId); stickMove(e.clientX,e.clientY);
+  // THE STICK ALWAYS WINS. Touching it drops any walk the kid was on, so a
+  // child can always take back the wheel mid-journey.
+  clearWalkTo();
   hideHint(); e.preventDefault();
 });
 stickEl.addEventListener("pointermove",function(e){ if(!stickActive) return; stickMove(e.clientX,e.clientY); });
@@ -1654,6 +2949,122 @@ canvas.addEventListener("pointerup",function(e){
   if(Math.hypot(dx,dy)>10 || t>380) return;   // it was a drag, not a tap
   handleTap(e.clientX,e.clientY);
 });
+// =========================================================================
+//  FM4 — TAP TO GO. Mike's call: on a tablet this is the MAIN way to move,
+//  and the joystick stays as the backup that always wins.
+//
+//  Tap open ground and the kid walks there. Tap a ready crop, a loose egg or
+//  bottle, an animal or the crate and she walks to it — and the behaviour
+//  that was already there fires on arrival, because every one of those is a
+//  proximity check in the main loop and nothing about them changed. Tapping
+//  an empty patch still opens the seed pop-up, exactly as before.
+//
+//  No new button, no new panel, nothing to read.
+// =========================================================================
+var walkTo=null;                 // {legs:[{x,z}], stopR, what, stuck, lastD}
+var tapRing=null, tapRingFade=0;
+
+function showTapRing(x,z){
+  if(!tapRing){
+    var geo=new THREE.TorusGeometry(0.74,0.075,8,26);
+    geo.rotateX(Math.PI/2);
+    tapRing=new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color:0xFFF3B8, transparent:true, opacity:0.85, depthWrite:false }));
+    scene.add(tapRing);
+  }
+  tapRing.position.set(x,0.06,z);
+  tapRing.visible=true; tapRing.scale.setScalar(1.35); tapRingFade=1;
+}
+// The ring FADES AS SHE ARRIVES — it is a "going there", not a marker left on
+// the ground, so it can never be mistaken for something to collect.
+function updateTapRing(dt){
+  if(!tapRing || !tapRing.visible) return;
+  tapRing.rotation.y += dt*1.1;
+  tapRing.scale.setScalar(lerp(tapRing.scale.x, 1, 0.18));
+  var o;
+  if(walkTo){
+    var d=Math.hypot(tapRing.position.x-kid.position.x, tapRing.position.z-kid.position.z);
+    o=clamp(d/3.2,0,1)*0.85;
+  } else {
+    tapRingFade=Math.max(0, tapRingFade-dt*3.4);
+    o=tapRingFade*0.85;
+  }
+  tapRing.material.opacity=o;
+  if(o<=0.012) tapRing.visible=false;
+}
+function clearWalkTo(){ walkTo=null; }
+
+// A fenced area has ONE gate, so the path in or out is never a search: aim for
+// the gate, then aim for the thing. Two legs is the whole pathfinder, and on
+// this map that is all it takes.
+function gateLegs(A, entering){
+  var inx=A.gate.x - A.out.x*1.05, inz=A.gate.z - A.out.z*1.05;
+  var outx=A.gate.x + A.out.x*1.45, outz=A.gate.z + A.out.z*1.45;
+  return entering ? [{x:outx,z:outz},{x:inx,z:inz}] : [{x:inx,z:inz},{x:outx,z:outz}];
+}
+function planWalk(tx,tz){
+  var legs=[], aK=areaContaining(kid.position.x, kid.position.z), aT=areaContaining(tx,tz);
+  if(aK && aK!==aT) legs=legs.concat(gateLegs(aK,false));
+  if(aT && aT!==aK) legs=legs.concat(gateLegs(aT,true));
+  legs.push({x:tx,z:tz});
+  return legs;
+}
+function startWalkTo(x,z,stopR,what){
+  walkTo={ legs:planWalk(x,z), stopR:(stopR==null?0.35:stopR),
+           what:what||"ground", stuck:0, lastD:null };
+  showTapRing(x,z);
+}
+// Returns the move direction for this frame, and retires legs as they land.
+function stepWalkTo(dt){
+  var guard=0;
+  while(walkTo && guard++<4){
+    var leg=walkTo.legs[0];
+    var dx=leg.x-kid.position.x, dz=leg.z-kid.position.z, d=Math.hypot(dx,dz);
+    var stop=(walkTo.legs.length>1)?0.6:walkTo.stopR;
+    if(d<=stop){
+      walkTo.legs.shift();
+      if(!walkTo.legs.length){ clearWalkTo(); return {x:0,z:0}; }
+      walkTo.stuck=0; walkTo.lastD=null;
+      continue;
+    }
+    // Wedged against something we cannot get round? Give up quietly rather
+    // than grinding into a fence forever. Nothing is ever stuck in this farm.
+    if(walkTo.lastD!=null && walkTo.lastD-d < 0.004) walkTo.stuck+=dt; else walkTo.stuck=0;
+    walkTo.lastD=d;
+    if(walkTo.stuck>1.2){ clearWalkTo(); return {x:0,z:0}; }
+    var k=Math.min(1, d/0.7);      // ease down at the end so she does not skate past
+    return {x:dx/d*k, z:dz/d*k};
+  }
+  return {x:0,z:0};
+}
+
+// What did that tap MEAN? The nearest interesting thing under the finger wins;
+// with nothing there, it means "walk here".
+function pickTapTarget(hx,hz){
+  var cands=[], i, d, A, P;
+  d=Math.hypot(hx-CRATE.x, hz-CRATE.z);
+  if(d<CRATE_R+0.9) cands.push({d:d, x:CRATE.x, z:CRATE.z, stopR:2.55, what:"crate"});
+  for(i=0;i<ANIMALS.length;i++){
+    A=ANIMALS[i];
+    d=Math.hypot(hx-A.x, hz-A.z);
+    if(d<2.1) cands.push({d:d, x:A.x, z:A.z, stopR:FEED_R*0.7, what:"animal"});
+    if(A.produce){
+      d=Math.hypot(hx-A.produceX, hz-A.produceZ);
+      if(d<2.1) cands.push({d:d, x:A.produceX, z:A.produceZ, stopR:PICKUP_R*0.55, what:"produce"});
+    }
+  }
+  for(i=0;i<PATCHES.length;i++){
+    P=PATCHES[i]; if(P.state==="empty") continue;
+    d=Math.hypot(hx-P.x, hz-P.z);
+    if(d<PATCH_R*1.4)
+      cands.push({d:d, x:P.x, z:P.z,
+        stopR:(P.state==="ready"?PICKUP_R*0.55:PATCH_R*0.6), what:P.state});
+  }
+  if(!cands.length) return {x:hx, z:hz, stopR:0.35, what:"ground"};
+  cands.sort(function(a,b){ return a.d-b.d; });
+  return cands[0];
+}
+
 function handleTap(x,y){
   _mouse.x=(x/W)*2 - 1;
   _mouse.y=-(y/H)*2 + 1;
@@ -1663,14 +3074,17 @@ function handleTap(x,y){
   if(Math.abs(dir.y)<1e-4) return;
   var t=-org.y/dir.y; if(t<0) return;
   var hx=org.x+dir.x*t, hz=org.z+dir.z*t;
-  // find the nearest empty patch within reach
+  // find the nearest empty patch within reach — still the seed pop-up
   var best=null, bestD=PATCH_R*1.4;
   for(var i=0;i<PATCHES.length;i++){
     var P=PATCHES[i]; if(P.state!=="empty") continue;
     var d=Math.hypot(hx-P.x, hz-P.z);
     if(d<bestD){ best=P; bestD=d; }
   }
-  if(best){ hideHint(); openSeedPicker(best); }
+  if(best){ hideHint(); openSeedPicker(best); return; }
+  hideHint();
+  var T=pickTapTarget(hx,hz);
+  startWalkTo(T.x, T.z, T.stopR, T.what);
 }
 
 // -------------------------------------------------------------------------
@@ -1680,6 +3094,14 @@ var last=performance.now()/1000;
 var speed=6.4;   // world units per second
 function step(){
   var now=performance.now()/1000, dt=Math.min(0.05, now-last); last=now;
+
+  // The shell may freeze us (a quiz gate, a parent interruption, a tab switch).
+  // Freeze means freeze: the clock is still read so nothing lurches on resume.
+  if(PAUSED){
+    if(!NODRAW) renderer.render(scene,camera);
+    requestAnimationFrame(step);
+    return;
+  }
 
   // FM2 — the model stand takes the whole frame: no kid, no farm, no camera
   // follow, just the exhibits turning under a fixed camera.
@@ -1694,9 +3116,11 @@ function step(){
   // walk from joystick vector. Y axis on screen is Z axis in world (into
   // screen is -Z), so up on the stick moves you forward.
   var mv=stickVec, mag=Math.hypot(mv.x,mv.y);
-  kidState.moving = mag > 0.08;
+  var mx=0, mz=0;
+  if(mag>0.08){ mx=mv.x; mz=mv.y; clearWalkTo(); }
+  else if(walkTo){ var wv=stepWalkTo(dt); mx=wv.x; mz=wv.z; }
+  kidState.moving = Math.hypot(mx,mz) > 0.02;
   if(kidState.moving){
-    var mx = mv.x, mz = mv.y;
     // Screen-relative move against camera facing (camera looks down -Z).
     kid.position.x += mx * speed * dt;
     kid.position.z += mz * speed * dt;
@@ -1717,6 +3141,12 @@ function step(){
   // clamp so the kid can't run off the map
   kid.position.x = clamp(kid.position.x, -70, 70);
   kid.position.z = clamp(kid.position.z, -70, 70);
+  // FM4 — and now the solid things push back, by taking away only the part of
+  // the step that went INTO them. That is what makes a fence something you
+  // slide along instead of something you stick to.
+  slideClear(kid.position, KID_R);
+  kidState.pos.set(kid.position.x, 0, kid.position.z);
+  updateTapRing(dt);
 
   // camera follows the kid, offset overhead 3/4
   var camTargetX = kid.position.x;
@@ -1773,12 +3203,14 @@ function step(){
       P.halo.material.opacity = 0.35 + 0.35*Math.abs(Math.sin(now*3+i));
 
       // harvest? kid within pickup radius of this patch
+      // FM4: the same radius the produce uses. A ready crop is harvested by
+      // walking NEAR it, not by standing on the exact spot.
       var kd=Math.hypot(kid.position.x-P.x, kid.position.z-P.z);
-      if(kd < PATCH_R*0.95){
-        // pay and add to the stack
-        var rr=CROP_RECIPES[P.seed];
-        addCoins(rr.reward);
-        flashToast("+"+rr.reward);
+      if(kd < PICKUP_R){
+        // FM3: NO COINS HERE. A crop is an ingredient, not money — the coins
+        // all come from the crate and the plane. What harvesting gives is the
+        // hop onto the stack, which is the thing a kid is actually playing for.
+        sfx("pickup"); haptic("light");
         pushOntoStack(P.seed, new THREE.Vector3(P.x, 0.9, P.z));
         // clear the patch back to empty
         scene.remove(P.crop); P.crop=null;
@@ -1796,6 +3228,11 @@ function step(){
   updateFlying(dt, now);
   stepPuppets(now);
 
+  // FM3 — the crate takes the stack, and the plane takes the order away
+  updateCrate(dt);
+  updateCrateWant(dt, now);
+  updatePlane(dt);
+
   if(!NODRAW) renderer.render(scene,camera);
   requestAnimationFrame(step);
 }
@@ -1805,7 +3242,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm2",
+  version: "fm4",
   coins: function(){ return coins; },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
@@ -1835,7 +3272,7 @@ window.FARM = {
     }
   },
   kid: function(){ return { x:kid.position.x, y:kid.position.y, z:kid.position.z, facing:kidState.facing }; },
-  moveKidTo: function(x,z){ kid.position.x=x; kid.position.z=z; kidState.pos.set(x,0,z); },
+  moveKidTo: function(x,z){ clearWalkTo(); kid.position.x=x; kid.position.z=z; kidState.pos.set(x,0,z); },
   stack: function(){ return stack.map(function(it,i){
     return { i:i, kind:it.userData.kind,
              x:+it.position.x.toFixed(3), y:+it.position.y.toFixed(3), z:+it.position.z.toFixed(3),
@@ -1870,12 +3307,155 @@ window.FARM = {
     return c;
   },
   flying: function(){ return FLYING.length; },
+  // A testing lever, the same kind as giveItem and advanceTime: put the tower
+  // back to nothing so one check does not inherit the last one's leftovers.
+  clearStack: function(){ var n=stack.length;
+    while(stack.length){ scene.remove(stack.pop()); }
+    reindexStack(); return n; },
   feedRadius: function(){ return FEED_R; },
   pickupRadius: function(){ return PICKUP_R; },
+  magnetRadius: function(){ return MAGNET_R; },
   // there is no lose state to report: nothing here can starve, die or expire
   canFail: function(){ return false; },
   zoo: zoo,
-  inZoo: function(){ return ZOO_ON; }
+  inZoo: function(){ return ZOO_ON; },
+
+  // ---- FM3 ---------------------------------------------------------------
+  // Everything a robot needs to prove the crate, the unload, the plane, the
+  // payout and the shop without a renderer and without waiting out a flight.
+  economy: function(){ return { seedPrice:SEED_PRICE, seedPrices:SEED_PRICES,
+    itemValues:ITEM_VALUES, payMult:ORDER_PAY_MULT, duckPrice:DUCK_PRICE,
+    harvestPays:CROP_RECIPES.corn.reward }; },
+  wallet: function(){ return { balance:walletBalance(),
+    role:(BW&&BW.role)||"none", shared:!!BW }; },
+  seedIsFree: function(){ return seedIsFree(); },
+  crate: function(){ return { x:CRATE.x, z:CRATE.z, r:CRATE_R,
+    near:crateNear(), unloading:unload.running }; },
+  order: function(){ return order ? {
+    pay:order.pay, sent:!!order.sent, full:orderFull(), face:order.face,
+    items:order.items.map(function(it){ return { kind:it.kind, filled:!!it.filled }; }),
+    kinds:orderKinds(),
+    slots:Array.prototype.slice.call(orderSlotsEl.querySelectorAll(".slot")).map(function(el){
+      var c=el.querySelector(".count");
+      return { kind:el.dataset.kind, want:+el.dataset.want,
+               badge:c?+c.textContent:null,
+               grey:/grayscale/.test(getComputedStyle(el.querySelector("svg.pic")||el).filter||""),
+               full:el.classList.contains("full") };
+    }),
+    faceShown:!!(orderFaceEl && orderFaceEl.querySelector("svg")),
+    floating:crateWant?crateWant.children.length>0:false,
+    cardUp:orderCardEl.classList.contains("up")
+  } : null; },
+  ordersDone: function(){ return ORDERS_DONE; },
+  orderableKinds: orderableKinds,
+
+  // ---- FM4 ---------------------------------------------------------------
+  // What the kid has actually carried, and the lever that forgets it, so one
+  // check does not inherit the last one's pantry.
+  collected: function(){ var out=[],k; for(k in COLLECTED) if(COLLECTED[k]) out.push(k); return out; },
+  resetCollected: function(){
+    COLLECTED={corn:1,carrot:1,wheat:1};
+    try{ localStorage.removeItem(COLLECT_KEY); }catch(e){}
+    return true;
+  },
+  // The solid things, and the one gate each fenced area has.
+  blockers: function(){ return BLOCKERS.filter(function(B){ return B.on; })
+    .map(function(B){ return {t:B.t, tag:B.tag, x:B.x, z:B.z,
+      r:B.r||null, hx:B.hx||null, hz:B.hz||null}; }); },
+  areas: function(){ return AREAS.map(function(A){ return {cx:A.cx, cz:A.cz,
+    halfX:A.halfX, halfZ:A.halfZ, side:A.side, gate:{x:A.gate.x,z:A.gate.z}}; }); },
+  gateGap: function(){ return GATE_GAP; },
+  kidRadius: function(){ return KID_R; },
+  blockedAt: function(x,z,rad){ return blockedAt(x,z,rad==null?KID_R:rad); },
+  // Can the kid stand here, and is the straight line to there clear?
+  lineClear: function(x0,z0,x1,z1){ return lineClear(x0,z0,x1,z1,KID_R); },
+  // TAP-TO-GO, driven by world coordinates so a robot does not need a camera.
+  tapAt: function(x,z){
+    var best=null, bestD=PATCH_R*1.4, i, P, d;
+    for(i=0;i<PATCHES.length;i++){
+      P=PATCHES[i]; if(P.state!=="empty") continue;
+      d=Math.hypot(x-P.x, z-P.z);
+      if(d<bestD){ best=P; bestD=d; }
+    }
+    if(best){ openSeedPicker(best); return {what:"seedCard"}; }
+    var T=pickTapTarget(x,z);
+    startWalkTo(T.x, T.z, T.stopR, T.what);
+    return {what:T.what, x:+T.x.toFixed(2), z:+T.z.toFixed(2), legs:walkTo?walkTo.legs.length:0};
+  },
+  walkingTo: function(){ return walkTo ? { what:walkTo.what, legs:walkTo.legs.length,
+    x:+walkTo.legs[walkTo.legs.length-1].x.toFixed(2),
+    z:+walkTo.legs[walkTo.legs.length-1].z.toFixed(2) } : null; },
+  tapRing: function(){ return tapRing && tapRing.visible ?
+    { x:+tapRing.position.x.toFixed(2), z:+tapRing.position.z.toFixed(2),
+      opacity:+tapRing.material.opacity.toFixed(3) } : null; },
+  // Drive the stick by hand, so a robot can prove that it cancels a walk.
+  stick: function(x,y){
+    stickVec.x=x||0; stickVec.y=y||0;
+    if(Math.hypot(stickVec.x,stickVec.y)>0.08) clearWalkTo();
+    return { x:stickVec.x, y:stickVec.y };
+  },
+  // One frame of walking, so a walk can be played out without a wall clock.
+  walkTick: function(dt){
+    var d=typeof dt==="number"?dt:1/30, i, n=1;
+    for(i=0;i<n;i++){
+      var wv = walkTo ? stepWalkTo(d) : {x:0,z:0};
+      kid.position.x += wv.x*speed*d;
+      kid.position.z += wv.z*speed*d;
+      slideClear(kid.position, KID_R);
+      kidState.pos.set(kid.position.x,0,kid.position.z);
+      updateTapRing(d);
+    }
+    return { x:+kid.position.x.toFixed(2), z:+kid.position.z.toFixed(2), walking:!!walkTo };
+  },
+  produceSpots: function(){ return ANIMALS.filter(function(A){ return !!A.produce; })
+    .map(function(A){ return {kind:A.kind, gives:A.gives,
+      x:+A.produceX.toFixed(2), z:+A.produceZ.toFixed(2),
+      blocked:blockedAt(A.produceX,A.produceZ,KID_R*0.7)}; }); },
+  // Where an egg WOULD land for every animal, without waiting one out.
+  plannedProduceSpots: function(){ return ANIMALS.map(function(A){
+    var sp=produceSpot(A, ANIMAL_KINDS[A.kind]);
+    return { kind:A.kind, gives:A.gives, x:+sp.x.toFixed(2), z:+sp.z.toFixed(2),
+             standable:!blockedAt(sp.x,sp.z,KID_R*0.7) };
+  }); },
+  customers: function(){ return CUSTOMERS.length; },
+  // A picture-gate lever: put a named customer on the card so all three faces
+  // can be shot without playing three whole orders.
+  setCustomer: function(i){
+    if(!order) return null;
+    order.face=((i|0)%CUSTOMERS.length+CUSTOMERS.length)%CUSTOMERS.length;
+    paintCustomer(); return order.face;
+  },
+  newOrder: function(){ return newOrder().items.map(function(it){ return it.kind; }); },
+  // Force an order the test can actually fill, so a run is not at the mercy of
+  // the shuffle. Only ever accepts kinds the farm really offers.
+  setOrder: function(kinds){
+    var ok=orderableKinds(), items=[];
+    (kinds||[]).forEach(function(k){ if(ok.indexOf(k)>=0) items.push({kind:k,filled:false,el:null}); });
+    if(!items.length) return null;
+    order={items:items, pay:orderPay(items), sent:false, face:ORDERS_DONE%CUSTOMERS.length};
+    renderOrder();
+    return items.map(function(it){ return it.kind; });
+  },
+  plane: function(){ return { phase:PL.phase, pay:PL.pay, busy:planeBusy(),
+    x:plane?+plane.position.x.toFixed(2):null,
+    y:plane?+plane.position.y.toFixed(2):null,
+    z:plane?+plane.position.z.toFixed(2):null,
+    visible:plane?plane.visible:false }; },
+  planeLegs: function(){ return PLANE_LEGS; },
+  // Whole flight in seconds, so the "no timer over a minute" guardrail is a
+  // number a harness can assert rather than a promise in a comment.
+  flightSeconds: function(){ var t=0; for(var k in PLANE_LEGS) t+=PLANE_LEGS[k]; return t; },
+  shop: function(){ return { duckBought:DUCK_BOUGHT, price:DUCK_PRICE,
+    btnShown:shopBtnEl?shopBtnEl.classList.contains("on"):false,
+    cardUp:shopCardEl?shopCardEl.classList.contains("up"):false }; },
+  openShop: openShop, closeShop: closeShop, buyDuck: buyDuck,
+  // Drive the world clock by hand: the harness owns the frame, so a 13-second
+  // flight is proved in 13 ticks and not in 13 seconds.
+  tick: function(dt){ var d=typeof dt==="number"?dt:1/30; updateCrate(d); updatePlane(d); updateFlying(d, performance.now()/1000); },
+  paused: function(){ return PAUSED; },
+  sfxMap: SFX_MAP,
+  soundOn: soundOn,
+  navRegistered: function(){ return !!window.BuildableGameNav; }
 };
 })();
 </script>

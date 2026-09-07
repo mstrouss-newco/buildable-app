@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 56" width="80" height="56">
+  <title>A rolled newspaper in the air</title>
+  <g>
+    <rect x="6" y="12" width="68" height="32" rx="10" fill="#fbf7ec"/>
+    <rect x="6" y="12" width="68" height="32" rx="10" fill="none" stroke="#ddd5c2" stroke-width="2"/>
+    <rect x="6" y="24" width="68" height="5" fill="#c9c1ad"/>
+    <path d="M20 12 a10 16 0 0 0 0 32" fill="#efe9da"/>
+    <rect x="30" y="18" width="26" height="4" rx="2" fill="#d9d2c0"/>
+  </g>
+</svg>

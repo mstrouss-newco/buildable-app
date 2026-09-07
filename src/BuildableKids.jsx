@@ -86,7 +86,9 @@ const SCREEN_MAHJONG = "mahjong";
 const SCREEN_STRINGMATCH = "stringmatch";
 const SCREEN_BUBBLE = "bubble";
 const SCREEN_MATHCANNON = "mathcannon";
+const SCREEN_PAPERROUTE = "paper-route";  // Card PB1: Paper Route — the delivery ride
 const SCREEN_SKYFLYER = "skyflyer";   // Session FL2: Sky Flyer, the 3D one-finger flight cartridge
+const SCREEN_FARM = "farm";           // Phase FM: the farm corner — grow, stack, feed, pack, send
 const SCREEN_GAME_LANDING = "game_landing";   // Session 7F: shared landing as the front door for every keeper
 const SCREEN_GAME_LOADOUT = "game_loadout";   // Session 7F: shared "Make it mine" loadout for the landed game
 const SCREEN_TENNIS_LANDING = "tennis_landing"; // Session 7F: Tennis on the shared landing (mode row + court skins)
@@ -96,6 +98,7 @@ const SCREEN_EXPLORE_HUB = "explore_hub"; // NV3: the Explore section page (Labs
 const SCREEN_MAKE_HUB = "make_hub"; // NV3: the Make section page (studios + coming-soon, same shape as Play)
 const SCREEN_LESSONS = "lessons"; // Session LS2: the Lessons section (subject picker, path map, player)
 const SCREEN_PRACTICE = "practice"; // Session PT1: Practice — the shared deck engine (sight words first)
+const SCREEN_ANTCITY = "antcity";  // Card AC2: Ant City — the grow-a-colony game
 const SCREEN_KIDGAME = "kidgame";  // Session CB1: a game a KID made — an engine we ship, launched with ?kg=<id>
 
 // Which screens are games (for per-kid play/win/lose logging). Family variants
@@ -107,6 +110,7 @@ const GAME_SLUGS = {
   [SCREEN_CASTLE]: "castle",
   [SCREEN_CROC]: "croc",
   [SCREEN_MATHCANNON]: "mathcannon",
+  [SCREEN_PAPERROUTE]: "paper-route",
   [SCREEN_RILEYS]: "rileys",
   [SCREEN_TUMBLE]: "tumble",
   [SCREEN_CHESS]: "chess",
@@ -125,6 +129,8 @@ const GAME_SLUGS = {
   [SCREEN_STRINGMATCH]: "stringmatch",
   [SCREEN_BUBBLE]: "bubble",
   [SCREEN_SKYFLYER]: "skyflyer",
+  [SCREEN_FARM]: "farm",
+  [SCREEN_ANTCITY]: "antcity",
   [SCREEN_PLAY]: "generated",
 };
 const SCREEN_TOP = "top";
@@ -155,6 +161,7 @@ const LANDING_WRAP = {
   memory: { play: SCREEN_MEMORY, loadout: true, journey: true, demo: "/memory-engine.html?v=hud2&screen=demo" },
   mahjong: { play: SCREEN_MAHJONG, loadout: true, journey: true, demo: "/mahjong-engine.html?v=hud2&screen=demo" },
   bingo: { play: SCREEN_BINGO, loadout: true },
+  antcity: { play: SCREEN_ANTCITY, loadout: true, demo: "/antcity-engine.html?v=ac2&screen=demo" },
   croctot: { play: SCREEN_CROC, loadout: true, journey: true, demo: "/croctot.html?v=hud2&screen=demo" },
   stringmatch: { play: SCREEN_STRINGMATCH, journey: true, demo: "/string-match.html?v=2&screen=demo" },
   bubble: { play: SCREEN_BUBBLE, journey: true, demo: "/bubble-engine.html?v=hud2&screen=demo" },
@@ -163,7 +170,9 @@ const LANDING_WRAP = {
   "rileys-garden": { play: SCREEN_RILEYS, journey: true, demo: "/rileys-garden.html?v=art2&screen=demo" },
   typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
   mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
-  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fm2&screen=demo" },
+  "paper-route": { play: SCREEN_PAPERROUTE, journey: true, demo: "/paper-route-engine.html?v=pb1&screen=demo" },
+  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fm3&screen=demo" },
+  farm: { play: SCREEN_FARM },
   platformer: { play: SCREEN_PLATFORMER },
   town: { play: SCREEN_TOWN },
   runner: { play: SCREEN_RUNNER },
@@ -193,6 +202,7 @@ const BOARD_MP_LANDING = {
 // ---------------------------------------------------------------------------
 const GAME_CATALOG = [
   { id: "skyflyer",    name: "Sky Flyer",         category: "Action",   color: "#2FB7D6", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly wherever you like, scoop up coins, or take on a flying job!" },
+  { id: "farm",        name: "The Farm",         category: "Action",   color: "#8CC152", type: "game", tile: "farm",         handler: "onFarm",        desc: "Grow it, stack it high, feed the animals, load the plane!" },
   { id: "breaker",     name: "Breaker",          category: "Arcade",   color: "#FF6B6B", type: "game", imgId: "breaker",     handler: "onBreaker",     desc: "Bounce the ball, smash every brick!" },
   { id: "music-maker", name: "Music Maker",      category: "Studio",   color: "#37B6F5", type: "studio", imgId: "music",     handler: "onMusicMaker",  desc: "Make your own songs — pick a vibe and press go!" },
   { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!", multiplayer: true },
@@ -212,7 +222,9 @@ const GAME_CATALOG = [
   { id: "typing",      name: "Typing",           category: "Classic",  color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
   { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!", multiplayer: true },
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
+  { id: "antcity",     name: "Ant City",         category: "Colony",   color: "#E9A23B", type: "game", tile: "antcity",      handler: "onAntCity",     desc: "Draw tunnels, feed your ants, grow a colony!" },
   { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
+  { id: "paper-route", name: "Paper Route",        category: "Arcade",   color: "#3FA9F5", type: "game", imgId: "paper-route", handler: "onPaperRoute",  desc: "Ride the street and land a paper on every red flag!", soon: true },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
   { id: "town",        name: "Family Town",      category: "Board",    color: "#7C5CFC", type: "game", imgId: "town",        handler: "onTown",        desc: "Roll, move, collect coins — 3-4 players!", soon: true, multiplayer: true },
   { id: "runner",      name: "Sunny Town Drive", category: "Arcade",   color: "#FF8FB1", type: "game", imgId: "runner",      handler: "onRunner",      desc: "Drive through town, dodge and grab treats!", soon: true },
@@ -378,6 +390,55 @@ async function startGuestLink(catalogId) {
   } catch (e) { /* offline: silently no-op */ }
 }
 
+// FM3 — A DRAWN BADGE, NOT A GENERATED PICTURE. Every other door on the Play
+// page shows an AI image fetched by imgId. The Farm's shows drawn geometry
+// instead, built from the same shapes as its own 3D crops (the FL5b law), so
+// the tile looks like the place it opens. No emoji anywhere in it — that is a
+// standing guardrail, not a style choice.
+const TILE_ART = {
+  // AC2 — Ant City's badge is the game's own shipped art, on its meadow, so the
+  // door looks like the place it opens and needs no image API to draw.
+  antcity: () => (
+    <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg,#8fd8f7 0%,#d9f2ce 46%,#c58f52 47%,#8a5a2b 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <img src="/antcity/art/badge.svg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+        style={{ width: "68%", height: "68%", objectFit: "contain", display: "block" }} />
+    </div>
+  ),
+  farm: () => (
+    <svg viewBox="0 0 120 80" style={{ width: "100%", height: "100%", display: "block" }} aria-hidden="true">
+      <rect x="0" y="0" width="120" height="80" fill="#8CC152" />
+      <path d="M0 52 Q30 44 60 50 Q90 56 120 48 L120 80 L0 80 Z" fill="#7AB246" />
+      {/* three furrows of corn, tallest in front, the same yellow as the crop */}
+      {[14, 34, 54, 74, 94].map((x, i) => (
+        <g key={x} transform={`translate(${x} ${56 + (i % 2) * 3})`}>
+          <rect x="-1.6" y="-22" width="3.2" height="22" rx="1.6" fill="#4FB05B" />
+          <ellipse cx="0" cy="-24" rx="4.6" ry="8" fill="#F6C64A" stroke="#E0A82E" strokeWidth="1.4" />
+          <path d="M-1.6 -14 L-8 -19" stroke="#4FB05B" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M1.6 -10 L8 -15" stroke="#4FB05B" strokeWidth="2.6" strokeLinecap="round" />
+        </g>
+      ))}
+      {/* the barn, and the stack over the kid's head: the two things the mode is */}
+      <path d="M74 34 L92 22 L110 34 L110 58 L74 58 Z" fill="#C9543F" />
+      <path d="M74 34 L92 22 L110 34 Z" fill="#A34B3E" />
+      <rect x="86" y="42" width="12" height="16" rx="1.5" fill="#EDDDA8" />
+      <g transform="translate(24 40)">
+        <ellipse cx="0" cy="-16" rx="5" ry="4" fill="#F08A2E" stroke="#C66220" strokeWidth="1.4" />
+        <ellipse cx="1" cy="-8" rx="5" ry="4" fill="#FDF6E3" stroke="#B9A87E" strokeWidth="1.4" />
+        <ellipse cx="-1" cy="0" rx="5" ry="4" fill="#F6C64A" stroke="#E0A82E" strokeWidth="1.4" />
+      </g>
+    </svg>
+  ),
+};
+// ONE place that decides what a catalog tile shows, so a new drawn badge never
+// has to be threaded through four render sites by hand again.
+function GameTileArt({ g }) {
+  const drawn = g.tile && TILE_ART[g.tile];
+  if (drawn) return drawn();
+  if (!g.imgId) return null;
+  return <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
+    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />;
+}
+
 // One picker card, generated entirely from a GAME_CATALOG entry (badge art, name,
 // category, signature color, studio tag). No card is hand-placed anymore.
 function PickerCard({ g, onOpen, onShare }) {
@@ -385,7 +446,7 @@ function PickerCard({ g, onOpen, onShare }) {
   return (
     <button onClick={onOpen} style={{ position: "relative", textAlign: "left", padding: "16px", borderRadius: "24px", border: `1px solid ${accent}55`, background: CARD_BG, color: "#fff", cursor: "pointer", opacity: g.soon ? 0.6 : 1, fontFamily: NUN, display: "flex", flexDirection: "column", gap: "14px", boxShadow: "0 10px 26px rgba(0,0,0,0.4)" }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "3 / 2", borderRadius: 20, background: `linear-gradient(160deg, ${accent}, ${accent}88)`, boxShadow: "0 12px 26px rgba(0,0,0,0.42)", overflow: "hidden" }}>
-        {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        <GameTileArt g={g} />
         {g.type === "studio" && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 11, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999, background: "rgba(12,10,24,0.72)", color: "#fff" }}>Studio</span>}
         {onShare && !g.soon && <span role="button" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onShare(); }} style={{ position: "absolute", top: 10, right: 10, fontSize: 11, fontWeight: 900, letterSpacing: "0.3px", padding: "6px 11px", borderRadius: 999, background: "rgba(12,10,24,0.8)", color: "#fff", border: `1px solid ${accent}`, cursor: "pointer" }}>Play a friend</span>}
       </div>
@@ -1448,9 +1509,27 @@ function MazeScreen({ onHome }) { return <GameFrame title="Maze Munchers" src="/
 function SlingScreen({ onHome, level }) { const lv = (typeof level === "number") ? `&level=${level}` : ""; return <GameFrame title="Sling Squad" src={`/sling-squad.html?v=hud3${lv}`} onHome={onHome} bg="#7fc7ff" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function TankScreen({ onHome }) { return <GameFrame title="Hilltop Tanks" src="/tank-engine.html?v=hud1" onHome={onHome} bg="#8fd0f2" iframeProps={{ onLoad: (e) => { try { e.currentTarget.contentWindow.focus(); } catch (_) {} } }} />; }
 function CrocScreen({ onHome, level }) { return <GameFrame title="Croc Tot" src={"/croctot.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#7fc7ff" />; }
+// PB1 — Paper Route. The journey picks the street (?level=); the engine owns the
+// ride and nothing else, so the shell keeps the landing, the HUD chrome and the coins.
+function PaperRouteScreen({ onHome, level }) { return <GameFrame title="Paper Route" src={"/paper-route-engine.html?v=pb1" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0f1b2a" />; }
 function MathCannonScreen({ onHome, level }) { return <GameFrame title="Math Cannon" src={"/mathcannon-engine.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#12102a" />; }
 function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Garden" src={"/rileys-garden.html?v=art2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#87CEEB" />; }
+// FM3 — GAP 1 CLOSED. Until now `skyflyer-farm` appeared nowhere in this file at
+// all: the page existed and was routed, but the only way in was to type the URL.
+// It gets its own cache-bust because it is its own page, on its own release
+// cycle from the flying engine next door.
+function FarmScreen({ onHome, level }) { return <GameFrame title="The Farm" src={"/skyflyer-farm.html?v=fm4" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#B3E58C" />; }
 function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
+// AC2 — Ant City. One colony the kid keeps, so there is no level param: the shell
+// hands over the equipped look (Ant / Meadow / Dirt indexes from Make it mine) and
+// the engine carries its own mission progress.
+function AntCityScreen({ onHome }) {
+  const eq = readEquipped("antcity");
+  const look = (typeof eq.Ant === "number" ? `&ant=${eq.Ant}` : "") +
+               (typeof eq.Meadow === "number" ? `&meadow=${eq.Meadow}` : "") +
+               (typeof eq.Dirt === "number" ? `&dirt=${eq.Dirt}` : "");
+  return <GameFrame title="Ant City" src={"/antcity-engine.html?v=ac2" + look} onHome={onHome} bg="#2b1d10" />;
+}
 function BubbleScreen({ onHome, level }) { return <GameFrame title="Bubble Buddies" src={"/bubble-engine.html?v=hud2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#0e1830" />; }
 // Sky Flyer (FL2). The journey picks the world (?level=), the shell hangar picks the
 // plane (?ride= from the Make-it-mine loadout). The engine reads both on load, so a
@@ -1465,7 +1544,7 @@ function SkyFlyerScreen({ onHome, level }) {
   // FL5: jobs are found out in the world, not offered on a card when you arrive,
   // so the shell hands over exactly what it always did - a world and a ride. The
   // shell journey stays the one and only level picker (the 7J double-picker rule).
-  const src = "/skyflyer-engine.html?v=fm2&ride=" + ride + (level != null ? "&level=" + level : "");
+  const src = "/skyflyer-engine.html?v=fm3&ride=" + ride + (level != null ? "&level=" + level : "");
   // FL4 learning moment: the engine asks before the NEXT world unlocks, exactly
   // like Breaker. The shell is the authority — the parent's Learning Mode toggle
   // overrides the manifest default, and if it is off we answer "done" instantly
@@ -1824,6 +1903,24 @@ export default function BuildableKids() {
   const [slingLevel, setSlingLevel] = useState(null); // which level index the Sling Journey launched into
   const [wrapLevel, setWrapLevel] = useState(null); // Session 7I: level index the shared journey hands to a wrapped engine (?level=)
   const [kidGame, setKidGame] = useState(null);     // Session CB1: the kid-made game row currently being played
+  const [houseStop, setHouseStop] = useState(null); // Session CB4: a house rule standing in front of a game
+
+  // CB4 — THE HOUSE-RULE GATE. Every door into a kid-made game goes through here.
+  // A family with no rules set never notices it: the gate answers yes and the game
+  // opens exactly as before. When a rule does apply the child gets a short list to
+  // tick or a goodnight, BEFORE the game rather than over the top of it, and a
+  // network wobble opens the game rather than blocking a child out of their own
+  // work. The rules themselves are set on /studio/grownups.
+  const openKidGame = (g) => {
+    const open = () => { setHouseStop(null); setKidGame(g); setScreen(SCREEN_KIDGAME); };
+    let famId = "dev_anon", kid = null;
+    try { famId = localStorage.getItem("deviceId") || famId; kid = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); } catch (e) {}
+    fetch("/api/cobuild-rules", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ op: "gate", familyId: famId, kidId: (kid && kid.id) || "default" }) })
+      .then((r) => r.json())
+      .then((j) => { if (!j || !j.ok || j.allowed) return open(); setHouseStop({ ...j, go: open }); })
+      .catch(open);
+  };
   const [boardDiff, setBoardDiff] = useState(null); // Session 7I: manifest tier index the shared board picker hands to a board engine (?diff=)
   const openLanding = (id) => { setLandingId(id); setScreen(SCREEN_GAME_LANDING); };
   const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
@@ -1990,7 +2087,7 @@ export default function BuildableKids() {
     onUseCharacter: useSavedCharacter,
     // CB1: My Stuff's games row opens a kid-made game in the shell's own frame.
     // (useSavedLevel above still serves the old AI road, which nothing routes to.)
-    onOpenKidGame: (g) => { setKidGame(g); setScreen(SCREEN_KIDGAME); },
+    onOpenKidGame: openKidGame,
     onBack: () => setScreen(returnTo || SCREEN_INTRO),
     onHome: goHome,
   };
@@ -2036,7 +2133,7 @@ export default function BuildableKids() {
           onMusic={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_MUSIC); }}
           onTop={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_TOP); }}
           onGames={() => setScreen(SCREEN_PLAY_HUB)}
-          onMakeGame={() => setScreen(SCREEN_INTRO)}
+          onMakeGame={() => { window.location.href = "/studio"; }}   /* CB3: the studio, not the dead generator */
           onSounds={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_SOUNDS); }}
           onStories={() => { setReturnTo(SCREEN_HOME); setScreen(SCREEN_STORY); }}
           onArt={() => setScreen(SCREEN_ART)}
@@ -2070,15 +2167,18 @@ export default function BuildableKids() {
           onCastle={() => openLanding("castleguard")}
           onSling={() => openLanding("sling")}
           onCroc={() => openLanding("croctot")} onMathCannon={() => openLanding("mathcannon")}
+          onPaperRoute={() => openLanding("paper-route")}
           onRileys={() => openLanding("rileys-garden")}
           onStringMatch={() => openLanding("stringmatch")}
           onTank={() => openLanding("tank")}
           onBubble={() => openLanding("bubble")}
+          onAntCity={() => openLanding("antcity")}
           onSkyFlyer={() => openLanding("skyflyer")}
+          onFarm={() => openLanding("farm")}
           onExplore={(id) => { setExploreId(id || "solar-system"); setScreen(SCREEN_EXPLORE); }}
           onExploreHub={() => setScreen(SCREEN_EXPLORE_HUB)}
           onMakeHub={() => setScreen(SCREEN_MAKE_HUB)}
-          onOpenKidGame={(g) => { setKidGame(g); setScreen(SCREEN_KIDGAME); }}
+          onOpenKidGame={openKidGame}
           onLessons={() => setScreen(SCREEN_LESSONS)}
           onPractice={() => setScreen(SCREEN_PRACTICE)}
         />
@@ -2099,6 +2199,7 @@ export default function BuildableKids() {
           onSurvival={() => openLanding("survival")}
           onStringMatch={() => openLanding("stringmatch")}
           onBubble={() => openLanding("bubble")}
+          onAntCity={() => openLanding("antcity")}
           onTennis={() => { setTennisStart(null); setScreen(SCREEN_TENNIS_LANDING); }}
           onCastle={() => openLanding("castleguard")}
           onTumble={() => openLanding("tumble")}
@@ -2111,7 +2212,9 @@ export default function BuildableKids() {
           onMemory={() => openLanding("memory")}
           onMahjong={() => openLanding("mahjong")}
           onMathCannon={() => openLanding("mathcannon")}
+          onPaperRoute={() => openLanding("paper-route")}
           onSkyFlyer={() => openLanding("skyflyer")}
+          onFarm={() => openLanding("farm")}
           onPlatformer={() => openLanding("platformer")}
           onTown={() => openLanding("town")}
           onRunner={() => openLanding("runner")}
@@ -2136,7 +2239,7 @@ export default function BuildableKids() {
           onSounds={() => { setReturnTo(SCREEN_MAKE_HUB); setScreen(SCREEN_SOUNDS); }}
           onArt={() => setScreen(SCREEN_ART)}
           onStories={() => { setReturnTo(SCREEN_MAKE_HUB); setScreen(SCREEN_STORY); }}
-          onMakeGame={() => setScreen(SCREEN_INTRO)}
+          onMakeGame={() => { window.location.href = "/studio"; }}   /* CB3: the studio, not the dead generator */
         />
         <BottomBar current="make" {...bottomBarProps} />
       </>
@@ -2264,7 +2367,7 @@ export default function BuildableKids() {
         onHome={() => { setRemixData(null); setScreen(SCREEN_HOME); }}
         onBack={() => { setRemixData(null); setScreen(returnTo || SCREEN_HOME); }}
         onRemix={startRemix}
-        onOpenKidGame={(g) => { setKidGame(g); setScreen(SCREEN_KIDGAME); }}
+        onOpenKidGame={openKidGame}
       />
     );
   }
@@ -2435,6 +2538,58 @@ export default function BuildableKids() {
   if (screen === SCREEN_CASTLE) {
     return <CastleGuardScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
+  // Session CB4 — a HOUSE RULE standing in front of a game. Chores to tick, or a
+  // goodnight when the play clock is done. It renders BEFORE the game, never over
+  // the top of one, and there is no countdown anywhere: a child sees a short list
+  // or a kind ending, not a timer. Set on /studio/grownups; off by default.
+  if (houseStop) {
+    const chores = houseStop.chores || [];
+    const allDone = chores.length > 0 && chores.every((c) => c.done);
+    const tick = (id) => {
+      let famId = "dev_anon", kid = null;
+      try { famId = localStorage.getItem("deviceId") || famId; kid = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null"); } catch (e) {}
+      fetch("/api/cobuild-rules", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op: "chore", familyId: famId, kidId: (kid && kid.id) || "default", choreId: id, done: true }) })
+        .then((r) => r.json())
+        .then((j) => { if (j && j.ok) setHouseStop({ ...houseStop, chores: j.chores || [] }); })
+        .catch(() => {});
+    };
+    return (
+      <div style={{ minHeight: "100dvh", background: "#14122b", color: "#fff", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center", fontFamily: "Nunito, system-ui, sans-serif" }}>
+        <div style={{ width: "100%", maxWidth: 420 }}>
+          <h2 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 6px" }}>
+            {houseStop.why === "clock" ? "That is play for today" : "These first, then play"}
+          </h2>
+          <p style={{ color: "#B9AEEA", fontSize: 15, lineHeight: 1.5, margin: "0 0 18px" }}>
+            {houseStop.said || (houseStop.why === "clock" ? "See you tomorrow." : "Tap each one when it is done.")}
+          </p>
+          {chores.map((c) => (
+            <button key={c.id} onClick={() => !c.done && tick(c.id)}
+              style={{ display: "block", width: "100%", textAlign: "left", fontFamily: "inherit", fontWeight: 800, fontSize: 15,
+                color: c.done ? "#7EE0A0" : "#fff", background: c.done ? "rgba(126,224,160,.1)" : "#1d1b36",
+                border: "1px solid rgba(255,255,255,.12)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, cursor: c.done ? "default" : "pointer" }}>
+              {c.text}<span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#B9AEEA", marginTop: 2 }}>
+                {c.done ? "done" : "tap when it is done"}</span>
+            </button>
+          ))}
+          {houseStop.why !== "clock" && (
+            <button onClick={() => allDone && houseStop.go()} disabled={!allDone}
+              style={{ width: "100%", fontFamily: "inherit", fontWeight: 900, fontSize: 17, color: "#16142b",
+                background: "linear-gradient(160deg,#9B7BFF,#67E8F9)", border: "none", borderRadius: 16, padding: "15px 26px",
+                opacity: allDone ? 1 : .45, cursor: allDone ? "pointer" : "default", marginTop: 6 }}>
+              All done, let me play
+            </button>
+          )}
+          <button onClick={() => { setHouseStop(null); setScreen(SCREEN_HOME); }}
+            style={{ width: "100%", fontFamily: "inherit", fontWeight: 900, fontSize: 15, color: "#cdbcff",
+              background: "rgba(155,123,255,.16)", border: "none", borderRadius: 16, padding: "12px 20px", marginTop: 10, cursor: "pointer" }}>
+            {houseStop.why === "clock" ? "Goodnight" : "Not now"}
+          </button>
+        </div>
+      </div>
+    );
+  }
   // Session CB1 — a KID'S game. There is no new engine here: it is one of the
   // engines we already ship, opened with ?kg=<id> so the shared loader serves the
   // kid's manifest instead of the stock one. The shell still owns the frame.
@@ -2530,14 +2685,23 @@ export default function BuildableKids() {
   if (screen === SCREEN_MATHCANNON) {
     return <MathCannonScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
+  if (screen === SCREEN_PAPERROUTE) {
+    return <PaperRouteScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
   if (screen === SCREEN_SKYFLYER) {
     return <SkyFlyerScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_RILEYS) {
     return <RileysScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
+  if (screen === SCREEN_FARM) {
+    return <FarmScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
   if (screen === SCREEN_STRINGMATCH) {
     return <StringMatchScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
+  }
+  if (screen === SCREEN_ANTCITY) {
+    return <AntCityScreen onHome={() => setScreen(SCREEN_HOME)} />;
   }
   if (screen === SCREEN_BUBBLE) {
     return <BubbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
@@ -3515,7 +3679,7 @@ function HomeScreen(props) {
               overflow: "hidden", boxShadow: HOME_SHADOW,
             }}>
               <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: "linear-gradient(160deg, " + g.color + ", " + g.color + "99)" }}>
-                {g.imgId && <img src={"/api/images?kind=game&id=" + g.imgId} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+                <GameTileArt g={g} />
                 {g.multiplayer && <span style={{ position: "absolute", top: 6, left: 6, fontSize: 8, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "2px 7px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multi</span>}
               </div>
               <div style={{ padding: "8px 10px 10px" }}>
@@ -3888,7 +4052,7 @@ function PlayScreen(props) {
   const PlayGridCard = ({ g }) => (
     <button data-game-id={g.id} data-soon={g.soon ? "1" : "0"} onClick={() => openGame(g)} style={{ ...cardStyle, opacity: g.soon ? 0.72 : 1 }}>
       <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", background: `linear-gradient(160deg, ${g.color}, ${g.color}99)` }}>
-        {g.imgId && <img src={`/api/images?kind=game&id=${g.imgId}`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+        <GameTileArt g={g} />
         {g.soon && <span style={{ position: "absolute", top: 8, right: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(58,46,77,0.82)", color: "#fff" }}>Soon</span>}
         {g.multiplayer && <span style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 800, letterSpacing: "0.4px", textTransform: "uppercase", padding: "3px 8px", borderRadius: 999, background: "rgba(52,211,153,0.9)", color: "#fff" }}>Multiplayer</span>}
       </div>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 120" width="60" height="120">
+  <title>Mailbox flag raised, a paper is owed</title>
+  <g>
+    <rect x="20" y="20" width="8" height="96" rx="3" fill="#b9333a"/>
+    <path d="M28 22 h28 a3 3 0 0 1 3 3 v18 a3 3 0 0 1 -3 3 h-28 z" fill="#e8443f"/>
+    <path d="M28 22 h28 a3 3 0 0 1 3 3 v6 h-31 z" fill="#f26a63"/>
+  </g>
+</svg>

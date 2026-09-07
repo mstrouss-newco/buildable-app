@@ -46,7 +46,7 @@
     return BA.ctx;
   }
 
-  BA.configure = function (o) { o = o || {}; if (o.sfxBase != null) BA.sfxBase = o.sfxBase; if (o.map) BA.map = o.map; BA._wantsAudio = true; if (BA._unlocked) BA.preload(); };
+  BA.configure = function (o) { o = o || {}; if (o.sfxBase != null) BA.sfxBase = o.sfxBase; if (o.map) BA.map = o.map; if (o.peaks) BA.peaks = o.peaks; BA._wantsAudio = true; if (BA._unlocked) BA.preload(); };
 
   // Canonical shared one-shots (real ElevenLabs sounds in /api/sfx). Any game that
   // triggers one of these bare event names resolves to the created sound even if it
@@ -57,6 +57,31 @@
     error:"error", celebrate:"celebrate" };
 
   // ---- real crafted sounds: fetch -> decode -> cache as AudioBuffer ----
+  // ---- clip levelling -------------------------------------------------------
+  // Generated clips come back at wildly different levels. Measured across one game's
+  // twelve new ElevenLabs sounds: peak 0.017 (inaudible) to 1.000 (clipping), for
+  // sounds meant to sit beside each other. A gain passed at the call site cannot fix
+  // that, because the loudest sound in a game is usually played from INSIDE the Feel
+  // Kit (coinBurst, explode, celebrate), which never sees a caller's options.
+  //
+  // So a game declares the level each clip should SIT AT, and the buffer is scaled once
+  // when it decodes. Every path gets it. A game that declares nothing is untouched.
+  BA.peaks = {};
+  function levelTo(key, buf) {
+    const tgt = BA.peaks[key]; if (tgt == null || !buf) return buf;
+    try {
+      let peak = 0;
+      for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c);
+        for (let i = 0; i < d.length; i += 3) { const a = Math.abs(d[i]); if (a > peak) peak = a; } }
+      if (peak < 0.002) return buf;                       // silence: nothing to scale
+      const g = Math.min(32, tgt / peak);
+      if (Math.abs(g - 1) < 0.05) return buf;
+      for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c);
+        for (let i = 0; i < d.length; i++) d[i] *= g; }
+    } catch (e) {}
+    return buf;
+  }
+
   function load(key) {
     if (!key || BA.buffers[key] || BA._loading[key] || !BA.sfxBase) return;
     const ac = ctx(); if (!ac || typeof fetch === "undefined") return;
@@ -64,7 +89,7 @@
     fetch(BA.sfxBase + encodeURIComponent(key) + (BA.sfxBase.indexOf("?")>=0?"&_v=":"?_v=") + BA.sfxVer)
       .then(r => r.arrayBuffer())
       .then(buf => ac.decodeAudioData(buf))
-      .then(b => { BA.buffers[key] = b; })
+      .then(b => { BA.buffers[key] = levelTo(key, b); })
       .catch(() => {})                  // leave undefined -> synth fallback
       .finally(() => { BA._loading[key] = false; });
   }
@@ -163,7 +188,8 @@
       // when they don't (tier still owns the coin-combo scale below).
       const rate = (opt && typeof opt.rate === "number" && opt.rate > 0) ? opt.rate
                    : (name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0);
-      playBuf(b, rate, VOL[name]||1, CUTOFF[name]);
+      const vol = (opt && typeof opt.volume === "number") ? opt.volume : (VOL[name]||1);
+      playBuf(b, rate, vol, CUTOFF[name]);
     }
     else { synth(name, opt); if (key) load(key); }   // real sound not ready -> synth now, fetch for next time
   };

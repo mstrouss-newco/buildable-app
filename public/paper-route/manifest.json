@@ -1,0 +1,549 @@
+{
+  "id": "paper-route",
+  "name": "Paper Route",
+  "type": "game",
+  "category": "Arcade",
+  "color": "#3FA9F5",
+  "ageBand": "5-10",
+  "shellVersion": 2,
+  "engine": "canvas",
+  "entry": "/paper-route-engine.html",
+  "features": {
+    "demoOnLoad": true,
+    "journey": true,
+    "customization": false,
+    "coins": true,
+    "buddy": {
+      "on": true,
+      "personality": "cheerleader"
+    },
+    "multiplayer": "off",
+    "learning": {
+      "beforeUnlock": false,
+      "coinTopUp": true,
+      "bonusAfterWin": false,
+      "subjects": []
+    }
+  },
+  "feel": {
+    "pace": "normal",
+    "celebration": "big",
+    "haptics": "on"
+  },
+  "art": {
+    "badge": "paper-route/badge/v1",
+    "loadingScreen": "paper-route/loading/v1",
+    "hero": "paper-route/rider/classic-v1",
+    "rider": "paper-route/rider/classic-v1",
+    "paper": "paper-route/paper/rolled-v1",
+    "bundle": "paper-route/bundle/tied-v1",
+    "mailbox": "paper-route/mailbox/white-v1",
+    "flagUp": "paper-route/flag/up-v1",
+    "flagDown": "paper-route/flag/down-v1"
+  },
+  "levels": [
+    {
+      "id": "maple-street",
+      "name": "Maple Street",
+      "difficulty": 1,
+      "unlocked": true,
+      "coins": 18,
+      "parts": {
+        "theme": "maple",
+        "houses": [
+          {
+            "at": 0.08,
+            "side": -1,
+            "sub": true
+          },
+          {
+            "at": 0.14,
+            "side": 1,
+            "sub": false
+          },
+          {
+            "at": 0.22,
+            "side": 1,
+            "sub": true
+          },
+          {
+            "at": 0.3,
+            "side": -1,
+            "sub": false
+          },
+          {
+            "at": 0.38,
+            "side": -1,
+            "sub": true
+          },
+          {
+            "at": 0.47,
+            "side": 1,
+            "sub": true
+          },
+          {
+            "at": 0.56,
+            "side": -1,
+            "sub": false
+          },
+          {
+            "at": 0.64,
+            "side": 1,
+            "sub": true
+          },
+          {
+            "at": 0.74,
+            "side": -1,
+            "sub": true
+          },
+          {
+            "at": 0.86,
+            "side": 1,
+            "sub": false
+          }
+        ],
+        "obstacles": [
+          {
+            "at": 0.11,
+            "x": -0.35,
+            "kind": "bin"
+          },
+          {
+            "at": 0.19,
+            "x": 0.3,
+            "kind": "cone"
+          },
+          {
+            "at": 0.27,
+            "x": -0.1,
+            "kind": "puddle"
+          },
+          {
+            "at": 0.35,
+            "x": 0.4,
+            "kind": "bin"
+          },
+          {
+            "at": 0.43,
+            "x": -0.45,
+            "kind": "hydrant"
+          },
+          {
+            "at": 0.52,
+            "x": 0.15,
+            "kind": "cone"
+          },
+          {
+            "at": 0.6,
+            "x": -0.3,
+            "kind": "skateboard"
+          },
+          {
+            "at": 0.69,
+            "x": 0.35,
+            "kind": "puddle"
+          },
+          {
+            "at": 0.78,
+            "x": -0.15,
+            "kind": "bin"
+          },
+          {
+            "at": 0.88,
+            "x": 0.25,
+            "kind": "cone"
+          }
+        ],
+        "ramps": [
+          {
+            "at": 0.33,
+            "x": 0.0
+          },
+          {
+            "at": 0.72,
+            "x": -0.2
+          }
+        ],
+        "boosts": [
+          {
+            "at": 0.25,
+            "x": 0.35
+          },
+          {
+            "at": 0.58,
+            "x": -0.35
+          },
+          {
+            "at": 0.82,
+            "x": 0.1
+          }
+        ],
+        "bundles": [
+          {
+            "at": 0.2,
+            "x": -0.25
+          },
+          {
+            "at": 0.5,
+            "x": 0.2
+          },
+          {
+            "at": 0.76,
+            "x": 0.3
+          }
+        ],
+        "alive": [
+          {
+            "at": 0.16,
+            "side": -1,
+            "kind": "sprinkler"
+          },
+          {
+            "at": 0.29,
+            "x": 0.62,
+            "side": 1,
+            "kind": "car"
+          },
+          {
+            "at": 0.45,
+            "kind": "birds",
+            "x": -0.1
+          },
+          {
+            "at": 0.63,
+            "x": -0.55,
+            "side": -1,
+            "kind": "icecream"
+          },
+          {
+            "at": 0.81,
+            "side": 1,
+            "kind": "sprinkler"
+          }
+        ],
+        "gigs": [
+          {
+            "id": "taco-order",
+            "name": "Taco Order",
+            "blurb": "Grab the order at the taco stand, then drop it at the house with the balloon.",
+            "cargo": {
+              "name": "taco order",
+              "color": "#F2A33C"
+            },
+            "pickup": {
+              "at": 0.28,
+              "side": 1,
+              "label": "Taco Stand",
+              "style": "stand"
+            },
+            "dropoff": {
+              "at": 0.66,
+              "side": -1,
+              "label": "The house with the balloon",
+              "style": "balloon"
+            },
+            "verb": "Order up!",
+            "coins": 12,
+            "badge": "Taco Runner",
+            "tip": "Ride close to the kerb on the right to grab it, then close to the left kerb to drop it off."
+          },
+          {
+            "id": "bus-stop-ride",
+            "name": "A Ride to the Bus Stop",
+            "blurb": "Someone at the kerb is waving. Give them a ride on the back to the bus stop.",
+            "cargo": {
+              "name": "passenger",
+              "color": "#7C5CFC"
+            },
+            "pickup": {
+              "at": 0.12,
+              "side": -1,
+              "label": "Waving neighbour",
+              "style": "person"
+            },
+            "dropoff": {
+              "at": 0.9,
+              "side": 1,
+              "label": "Bus Stop",
+              "style": "busstop"
+            },
+            "verb": "Dropped off!",
+            "coins": 14,
+            "badge": "Best Bike Taxi",
+            "tip": "Ride close to the left kerb to pick them up, then close to the right kerb at the bus stop."
+          }
+        ],
+        "art": {
+          "houseA": "paper-route/house/cream-v1",
+          "houseB": "paper-route/house/blue-v1",
+          "tree": "paper-route/tree/leafy-v1",
+          "bush": "paper-route/bush/flowering-v1",
+          "bin": "paper-route/obstacle/bin-v1",
+          "cone": "paper-route/obstacle/cone-v1",
+          "car": "paper-route/vehicle/car-v1",
+          "icecream": "paper-route/vehicle/icecream-v1"
+        }
+      }
+    },
+    {
+      "id": "sunset-beach",
+      "name": "Sunset Beach",
+      "difficulty": 2,
+      "coins": 22,
+      "parts": {
+        "theme": "sunset",
+        "houses": [
+          {
+            "at": 0.07,
+            "side": 1,
+            "sub": true
+          },
+          {
+            "at": 0.15,
+            "side": -1,
+            "sub": true
+          },
+          {
+            "at": 0.24,
+            "side": -1,
+            "sub": false
+          },
+          {
+            "at": 0.33,
+            "side": 1,
+            "sub": true
+          },
+          {
+            "at": 0.42,
+            "side": -1,
+            "sub": true
+          },
+          {
+            "at": 0.51,
+            "side": 1,
+            "sub": false
+          },
+          {
+            "at": 0.6,
+            "side": 1,
+            "sub": true
+          },
+          {
+            "at": 0.7,
+            "side": -1,
+            "sub": true
+          },
+          {
+            "at": 0.8,
+            "side": 1,
+            "sub": true
+          },
+          {
+            "at": 0.91,
+            "side": -1,
+            "sub": false
+          }
+        ],
+        "obstacles": [
+          {
+            "at": 0.1,
+            "x": 0.3,
+            "kind": "cone"
+          },
+          {
+            "at": 0.18,
+            "x": -0.4,
+            "kind": "bin"
+          },
+          {
+            "at": 0.26,
+            "x": 0.1,
+            "kind": "puddle"
+          },
+          {
+            "at": 0.34,
+            "x": -0.2,
+            "kind": "skateboard"
+          },
+          {
+            "at": 0.41,
+            "x": 0.45,
+            "kind": "hydrant"
+          },
+          {
+            "at": 0.49,
+            "x": -0.35,
+            "kind": "cone"
+          },
+          {
+            "at": 0.57,
+            "x": 0.2,
+            "kind": "bin"
+          },
+          {
+            "at": 0.66,
+            "x": -0.05,
+            "kind": "puddle"
+          },
+          {
+            "at": 0.75,
+            "x": 0.4,
+            "kind": "cone"
+          },
+          {
+            "at": 0.84,
+            "x": -0.3,
+            "kind": "bin"
+          },
+          {
+            "at": 0.93,
+            "x": 0.15,
+            "kind": "skateboard"
+          }
+        ],
+        "ramps": [
+          {
+            "at": 0.22,
+            "x": -0.15
+          },
+          {
+            "at": 0.55,
+            "x": 0.25
+          },
+          {
+            "at": 0.86,
+            "x": 0.0
+          }
+        ],
+        "boosts": [
+          {
+            "at": 0.13,
+            "x": 0.4
+          },
+          {
+            "at": 0.38,
+            "x": -0.4
+          },
+          {
+            "at": 0.63,
+            "x": 0.35
+          },
+          {
+            "at": 0.88,
+            "x": -0.2
+          }
+        ],
+        "bundles": [
+          {
+            "at": 0.2,
+            "x": 0.25
+          },
+          {
+            "at": 0.47,
+            "x": -0.3
+          },
+          {
+            "at": 0.72,
+            "x": 0.15
+          }
+        ],
+        "alive": [
+          {
+            "at": 0.12,
+            "side": 1,
+            "kind": "sprinkler"
+          },
+          {
+            "at": 0.31,
+            "x": -0.6,
+            "side": -1,
+            "kind": "car"
+          },
+          {
+            "at": 0.44,
+            "kind": "birds",
+            "x": 0.15
+          },
+          {
+            "at": 0.58,
+            "x": 0.55,
+            "side": 1,
+            "kind": "icecream"
+          },
+          {
+            "at": 0.77,
+            "kind": "birds",
+            "x": -0.25
+          },
+          {
+            "at": 0.89,
+            "side": -1,
+            "kind": "sprinkler"
+          }
+        ],
+        "gigs": [
+          {
+            "id": "beach-cooler",
+            "name": "Cooler Run",
+            "blurb": "Pick the cooler up at the beach shack and take it to the picnic table.",
+            "cargo": {
+              "name": "cooler",
+              "color": "#3FC4E0"
+            },
+            "pickup": {
+              "at": 0.21,
+              "side": -1,
+              "label": "Beach Shack",
+              "style": "stand"
+            },
+            "dropoff": {
+              "at": 0.68,
+              "side": 1,
+              "label": "Picnic table on the dune",
+              "style": "balloon"
+            },
+            "verb": "Cooler down!",
+            "coins": 14,
+            "badge": "Cooler Courier",
+            "tip": "Hug the left kerb at the shack, then the right kerb at the dune."
+          },
+          {
+            "id": "pier-ride",
+            "name": "A Ride to the Pier",
+            "blurb": "A surfer at the kerb wants a lift down to the pier.",
+            "cargo": {
+              "name": "surfer",
+              "color": "#F0577E"
+            },
+            "pickup": {
+              "at": 0.09,
+              "side": 1,
+              "label": "Surfer at the kerb",
+              "style": "person"
+            },
+            "dropoff": {
+              "at": 0.83,
+              "side": -1,
+              "label": "The Pier",
+              "style": "busstop"
+            },
+            "verb": "Surf's up!",
+            "coins": 16,
+            "badge": "Pier Pilot",
+            "tip": "Hug the right kerb to pick them up, then the left kerb at the pier."
+          }
+        ],
+        "art": {
+          "houseA": "paper-route/house/cream-v1",
+          "houseB": "paper-route/house/blue-v1",
+          "tree": "paper-route/tree/leafy-v1",
+          "bush": "paper-route/bush/flowering-v1",
+          "bin": "paper-route/obstacle/bin-v1",
+          "cone": "paper-route/obstacle/cone-v1",
+          "car": "paper-route/vehicle/car-v1",
+          "icecream": "paper-route/vehicle/icecream-v1"
+        }
+      }
+    }
+  ]
+}

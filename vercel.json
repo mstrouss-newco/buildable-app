@@ -73,6 +73,24 @@
       "dest": "/antcity-art-gallery.html"
     },
     {
+      "src": "/antcity-engine.html",
+      "dest": "/antcity-engine.html",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/antcity/manifest.json",
+      "dest": "/antcity/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/antcity/(.*)",
+      "dest": "/antcity/$1"
+    },
+    {
       "src": "/asset-library.html",
       "dest": "/asset-library.html"
     },
@@ -320,6 +338,42 @@
       }
     },
     {
+      "src": "/buildable-recipes.js",
+      "dest": "/buildable-recipes.js",
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=604800",
+        "content-type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "src": "/breaker/cobuild.json",
+      "dest": "/breaker/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/sling/cobuild.json",
+      "dest": "/sling/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/castleguard/cobuild.json",
+      "dest": "/castleguard/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/skyflyer/cobuild.json",
+      "dest": "/skyflyer/cobuild.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/breaker/manifest.json",
       "dest": "/breaker/manifest.json",
       "headers": {
@@ -375,6 +429,25 @@
       "headers": {
         "cache-control": "no-cache, must-revalidate"
       }
+    },
+    {
+      "src": "/paper-route/manifest.json",
+      "dest": "/paper-route/manifest.json",
+      "headers": {
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
+      "src": "/paper-route-engine.html",
+      "dest": "/paper-route-engine.html"
+    },
+    {
+      "src": "/paper-route",
+      "dest": "/paper-route-engine.html"
+    },
+    {
+      "src": "/paper-route/(.*)",
+      "dest": "/paper-route/$1"
     },
     {
       "src": "/rileys-garden/manifest.json",
@@ -959,6 +1032,26 @@
       "headers": {
         "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
       }
+    },
+    {
+      "src": "/studio.html",
+      "dest": "/studio.html"
+    },
+    {
+      "src": "/studio-grownups.html",
+      "dest": "/studio-grownups.html"
+    },
+    {
+      "src": "/studio/grownups",
+      "dest": "/studio-grownups.html"
+    },
+    {
+      "src": "/studio",
+      "dest": "/studio.html"
+    },
+    {
+      "src": "/studio/([A-Za-z0-9][A-Za-z0-9-]{1,63})",
+      "dest": "/studio.html"
     },
     {
       "src": "/cobuild.html",

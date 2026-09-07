@@ -309,5 +309,39 @@ chk('the table keeps RLS on', /enable row level security/.test(sql));
 chk('the migration drops nothing', !/\b(drop table|truncate|delete from)\b/i.test(sql));
 chk('delete is soft, so a kid never loses a game', /deleted_at/.test(sql) && /deleted_at/.test(read('api/kid-game.js')));
 
+// ---------------------------------------------------------------------------
+// 7. A LINK IS A SHARE (CB-QA). Before this, /g/<slug> played ANY row it could
+//    find: a game nobody had shared, from a family nobody knew, to anyone who
+//    guessed the link — while the page still promised "games only go where you
+//    send them". These checks are the promise.
+// ---------------------------------------------------------------------------
+{
+  const g = code('api/g.js');
+  chk('viewer: a game that is neither shared nor public is not served',
+      /if \(!g\.shared && !g\.public\) return \{ private: true \};/.test(g));
+  chk('viewer: an unshared link counts no play',
+      g.indexOf('if (!g.shared && !g.public) return { private: true };') < g.indexOf('plays: (g.plays || 0) + 1'));
+  chk('viewer: an unshared link gives away no name and no cover',
+      /BK_KID_GAME_PRIVATE/.test(g) && /This game is not shared/.test(g));
+
+  const page = code('public/g.html');
+  chk('viewer: private and missing look the same to a stranger',
+      /BK_KID_GAME_PRIVATE/.test(page) && /THIS GAME HAS NOT BEEN SHARED/.test(page));
+
+  const api = code('api/kid-game.js');
+  chk('load: an unshared game opens only for the family that made it',
+      /!game\.shared && !game\.public && !ownsRow\(game, str\(get\("familyId"\)\), str\(get\("kidId"\)\)\)/.test(api));
+  chk('load: the ownership check can actually see who owns the row',
+      /select=\$\{PLAY_COLS\},family_id,kid_id/.test(api) && /delete game\.family_id; delete game\.kid_id;/.test(api));
+  chk('load: the shared loader says who is asking, so a kid still plays their own game',
+      /familyId=/.test(code('public/buildable-manifest.js')) && /bk_active_kid_v1/.test(code('public/buildable-manifest.js')));
+  chk('share: turning a link on or off needs the grown-up code',
+      /if \(op === "share"\)[\s\S]{0,400}grownupOk\(req, body\)/.test(api));
+
+  const grown = code('public/studio-grownups.html');
+  chk('share sheet: a grown-up can turn the link off again',
+      /The link works/.test(grown) && /setLink\(/.test(grown));
+}
+
 console.log(ok ? '\nALL GOOD  kid games save, refuse junk, fork, and load by ?kg= on all four engines.' : '\nSOMETHING IS WRONG  (see FAIL lines above)');
 process.exit(ok ? 0 : 1);

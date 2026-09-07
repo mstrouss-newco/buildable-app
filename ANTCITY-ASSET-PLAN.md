@@ -53,10 +53,12 @@ Preview: `public/antcity/art/_preview.svg`. Files and the manifest IDs they fill
 | `soil-tile.svg` | `antcity/soil/sandy-v1` (tiles cleanly for the huge colony) |
 | `badge.svg` | `antcity/badge/v1` |
 
-Still to do (follow-ups): loading screen, rainy-meadow + flood overlay, `colony`/anthill
-icon, and the Berry Bushes / Rich Loam customization variants. Registering these to the
-shared `community_*` tables happens once the game deploys (so the URLs resolve). Any piece
-can later be swapped for an AI-pipeline render without touching the engine.
+**Done in card AC4** (the follow-ups above): `surface-meadow.svg`, `surface-meadow-rain.svg`,
+`surface-meadow-berry.svg`, `soil-deep.svg`, `soil-loam.svg`, `flood.svg`, `colony.svg` and
+`loading.svg`, filling the last placeholder ids. `antcity/prop/dig-marker-v1` stays DRAWN on
+purpose and is declared in the engine's `DRAWN_ART` list. Registered to the shared
+`community_*` tables in the same session. Any piece can later be swapped for an AI-pipeline
+render without touching the engine.
 
 ## Delivered via the AI pipeline (LIVE in the shared library)
 
@@ -85,6 +87,33 @@ out off-model (one strawberry, one ant-in-a-hole); the clean poses (idle_normal,
 idle_happy, the digging/carrying ants) are plenty. Still on vectors (not yet AI): the
 dig-marker, colony/anthill icon, rainy-meadow + flood overlay, loading screen, and the
 ruby/emerald ant + berry/loam customization variants.
+
+## The ants themselves are drawn now (AC7)
+
+Card AC7 changed one thing in this plan, on the evidence of a real playthrough: at
+`antScale` 0.34 (about a third of a cell, which is what a swarm needs) the glossy worker
+sprite reads as an orange blob on a phone. The ants are therefore **drawn** in the engine —
+a clean silhouette with a dark outline, six legs, antennae, and a job-coloured marker above
+the head — and the three worker poses (idle, carrying, digging) are no longer fetched.
+
+Nothing else changed. `antcity/ant/classic-v1` is still the manifest id for the ant slot,
+still resolves to `/antcity/art/ant-classic.svg`, and now also picks the drawn body colour
+(`ANT_TINT` in the engine), which is how the ruby and emerald customization options work.
+Putting a sprite back is a one-line change in `drawAnts`. The queen, the rooms, the crumb,
+the meadow and the rest are untouched and still come from the library.
+
+## The chain pieces (AC6, drawn vectors, live)
+
+Card AC6 added the production chains, so four new pieces ship as clean drawn vectors in
+`public/antcity/art/` with the usual `BR` fallback behind them. AI-pipeline upgrades are a
+follow-up, exactly as this plan says for anything new.
+
+| Manifest ID | File |
+|---|---|
+| `antcity/prop/leaf-v1` | `leaf.svg` (a cut leaf, the shape a leafcutter carries) |
+| `antcity/prop/fungus-v1` | `room-fungus.svg` (the mushroom garden chamber) |
+| `antcity/prop/aphid-plant-v1` | `aphid-plant.svg` (the host plant with its herd) |
+| `antcity/prop/honeydew-v1` | `honeydew.svg` (a sweet drop) |
 
 ## Coverage gaps (honest)
 

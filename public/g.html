@@ -149,12 +149,16 @@
     showCover(g);
   }
 
+  // CB-QA: /api/g.js says so when a link was never turned on. The page shows the
+  // same card whether the game is private or missing, so a stranger cannot tell
+  // a real game from a wrong guess.
+  if(window.BK_KID_GAME_PRIVATE){ showMissing("THIS GAME HAS NOT BEEN SHARED"); return; }
   if(PRE && PRE.id){ start(PRE); return; }
   var id = idFromUrl();
   if(!id){ showMissing("NO GAME IN THAT LINK"); return; }
   fetch("/api/kid-game?op=load&play=1&id=" + encodeURIComponent(id))
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(j){ start(j && j.ok ? j.game : null); })
+    .then(function(j){ if(j && j.ok) start(j.game); else showMissing("THIS GAME HAS NOT BEEN SHARED"); })
     .catch(function(){ showMissing("WE COULD NOT REACH THE GAME"); });
 })();
 </script>

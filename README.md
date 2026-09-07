@@ -94,6 +94,702 @@ bar, which the photo hides.
 
 ---
 
+## FM4 — the farm's playtest bugs, and a wish list a child can read (September 7 2026)
+`public/skyflyer-farm.html`, `src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-skyflyer.mjs`.
+Phase **FM**, card **FM4**, branch `claude/fm4-farm-bugs-wishlist-cpciu3`. Everything here
+came out of one playtest: Mike's daughter on a tablet.
+
+**An order can only ask for what has actually been carried.** The old pool listed anything
+an animal could ever give, so the first crate asked for milk before a cow had been fed. A
+kind now joins the pool the first time it lands on the stack, `pushOntoStack` is the only
+door into that set, and the set is seeded with the three crops and kept in localStorage
+under `bk_farm_collected`. The first order is always crops.
+
+**A near miss is a pickup.** Pickup reach 2.0 → 3.0, ready crops on the same radius, and a
+magnet: inside 4 units a loose egg or bottle slides over and hops on. Where produce lands
+is chosen rather than fixed, so a bottle can never end up inside the coop or outside its
+own pen.
+
+**Things are solid now.** Fence rails and posts, the coop house, the crate and the parked
+plane block, with a slide so a fence guides rather than sticks. Crops and animals stay
+walk-through on purpose. The field, coop yard and cow pen build through one shared
+`buildFenceRect()` and each has ONE gate: a 2.2-unit gap with two taller gate posts, so
+the way in reads without words.
+
+**Tap-to-go is the main way to move.** Tap ground and she walks there behind a soft ring
+that fades as she arrives; tap a crop, an egg, an animal or the crate and the behaviour
+that was already there fires on arrival. A path that crosses a fence goes via that pen's
+gate first. The joystick stays and always cancels. No new HUD.
+
+**The wish list is readable.** Full colour always (the grayscale filter is deleted), one
+74px slot per KIND with a dark count pill that ticks down to a green tick, what the crate
+wants floating over the crate as a turning 3D model, and a drawn customer face (bear, fox,
+bunny) rotating per order. The unload, the claim logic and the plane payoff are untouched.
+
+**Mike's numbers.** Seeds corn 4 / carrot 3 / wheat 2; item values corn 4, carrot 3,
+wheat 2, egg 6, duck egg 7, milk 8; an order pays three times what it asked for, so
+`ORDER_PAY_BASE/STEP/MAX` are gone. 50 starting coins, 120 duck and the free seed all stay.
+
+`qa-farm.mjs` is 114 checks green (run twice), `node qa-all.mjs` green. **Not done:** the
+planner roadmap cards (this sandbox has no network — the proxy 403s buildablekids.com) and
+the Kenney Food Kit comparison (the GLBs are in Mike's own bundle folder, not in the
+sandbox).
+
+## PB3 — Paper Route: real art on the street (September 7 2026)
+`public/paper-route/art/` (16 new files), `public/paper-route-engine.html`,
+`public/paper-route/manifest.json`, `public/buildable-manifest.js`,
+`db/seed-paper-route-art.sql`, `qa-paper-route.mjs`. Phase **PB**, card **PB3**.
+
+Every visible piece of the street became a **slot** pointing at an asset id, resolved to a
+URL at load time and fetched then, with its old drawn geometry kept underneath. Whole-game
+art comes from the manifest's `art` block and a street may override any slot in its own
+`parts.art`, so re-skinning a street is a manifest edit. Sixteen hand-drawn vectors: two
+houses, a tree, a bush, the mailbox with its flag up and down as separate pieces (the flag
+is what a kid aims at), the rider from behind, the bin, the cone, the car, the ice cream
+van, a rolled paper, a bundle, the badge and a loading screen. The lawns were the emptiest
+thing on screen, so a tree or a bush now grows between each pair of houses, derived from
+the houses themselves, which means a new street gets its gardens for free.
+
+The pieces that can never be a picture, because the perspective generates them every frame,
+are named in `DRAWN_ART` (road, sky, ramps, boost strips, sprinklers) so a missing file is
+never confused with a deliberate drawing.
+
+**Registered in the shared library.** `db/seed-paper-route-art.sql` was written AND applied
+in-session through the Supabase MCP, verified at 16 rows, tagged town/suburb plus beach,
+forest or meadow where they suit it, so any project can reuse a house or a tree.
+
+**A real bug this caught:** once the house art loaded, the mailbox stopped drawing, because
+the picture path returned before reaching it. There is now a check pinned to exactly that.
+141 checks green, `qa-all` green, verified in real Chromium. Ref: SESSION-LOG.md same date.
+
+## Paper Route: sticking the landing (September 7 2026)
+`public/paper-route-engine.html`, `api/sfx.js`, `qa-paper-route.mjs`. A late edit to the
+**PB1** card asked for a turbo when you stick a ramp landing, so ramps now pay twice: an
+air throw is still double coins, and a clean landing surges the bike for 1.9 seconds, more
+than a boost strip, with a "Nice landing!" card and a new `pr_turbo` sound. Landing on top
+of something gives the ordinary wobble and no prize; there is no crash path in the engine
+and never will be. The QA bot now steers onto ramps rather than round them, so both streets
+are proven with real jumps. 122 checks green, `qa-all` green, verified in real Chromium.
+Ref: SESSION-LOG.md same date.
+
+## PB2 — Paper Route: gigs, the alive street, and Sunset Beach (September 7 2026)
+`public/paper-route-engine.html`, `public/paper-route/manifest.json`,
+`public/buildable-manifest.js`, `api/sfx.js`, `public/editor.html`, `qa/qa-map.mjs`,
+`qa-paper-route.mjs`. Phase **PB**, card **PB2**.
+
+**Gigs are recipes, not code.** A gig names what you carry, where it comes from, where it
+goes, the word that flashes and what it pays, and nothing else. The loader enforces the
+FL5 law on the shape: a gig carrying a `timer`, `expiry`, `penalty` or `lives` fails
+validation, as does one whose drop-off comes before its pickup. Two ship per street. You
+take one by riding close to its kerb, and skipping it costs nothing.
+
+**The alive street** is level data too: sprinklers, a car easing out of a driveway, an ice
+cream truck coming the other way (new sound `pr_jingle`), and birds that scatter. Only the
+car and the truck are soft-bounce, and a bump is the same wobble a bin gives.
+
+**Sunset Beach** proves the data rule: a second street is a palette plus a layout, no
+engine change. A perfect route on Maple Street opens it; three rides open it too, so the
+perfect is a goal and never a wall.
+
+**Photo mode (`?tileshot=1`)** is the engine's half of the TS rig: it stages one frame of
+its own real game at the moment of impact, hides all chrome, tilts the camera, holds still
+and signals `sceneReady`. The tile art itself is NOT swapped: TS0 is still on
+`claude/ts0-startup-9jwhfx` rather than main, and the look is unapproved. The tile stays
+Coming Soon behind the 1111 gate.
+
+Paper Route is now in the editor catalog and in `qa/qa-map.mjs`, so editing its levels goes
+through the editor and a save is gated by its own robot. QA: 113 checks green, `node
+qa-all.mjs` green, both streets played in real Chromium. Not flagged deployed: the live
+phone check could not run from this session. Ref: SESSION-LOG.md same date.
+
+## AC7 — Ant City clarity rework: see what you do, know what to do (September 7 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `qa-antcity.mjs`,
+`qa-antcity-shot.mjs`, `antcity-README.md`. Phase **AC**, card **AC7**,
+branch `claude/ac7-clarity-rework-antcity-bqkazl`.
+
+AC5 and AC6 shipped with `qa-antcity.mjs` green, and the game still failed a human
+playthrough. Mike and a hands-on run hit the same ten problems, and every one of them was
+the same problem: the game did not show what it was doing, and did not say plainly what to
+do next. All ten are fixed here.
+
+**Food is carried, never counted.** Tapping the grass used to raise the Food number on the
+spot. Now every edible thing on the meadow is a real item in a real place — a crumb the kid
+taps out, a berry the bush grew, a leaf, a drop of honeydew, a drop of water — and a
+forager claims one, walks out of the anthill, picks it up (the moment the bush visibly
+loses that berry) and hauls it home. `deliver()` is the ONLY place a store ever grows. A
+tap leaves a crumb and nothing else.
+
+**One hint, not two.** The goal chip and the floating pill used to contradict each other
+all the way through the tutorial. There is one line now, and everything comes out of it in
+one order: the lesson step, then a message that just fired, then what is slowing the
+colony, then the mission. A finished step's words are gone the instant it is done.
+
+**Nothing is taught that does not work.** Step three told kids to slide the colour bar,
+which did nothing with a mouse. It teaches the plus button on a job card now, and the bar
+was fixed anyway — a press anywhere on it takes the nearest divider, mouse or finger. The
+minus button on Foragers used to take an ant and hand it straight back; it moves it to
+Diggers now.
+
+**Modes, needs and Build.** The Dig and Jobs tabs were never modes and are gone; Build,
+Drop Food and Drop Water are left and the lit one is what a meadow tap leaves behind. Four
+slim always-on meters carry food, water, rest and eggs, and a low one flags itself and
+hands the hint line a sentence. Rooms were undiscoverable, so there is a Build button: pick
+a room, every spot it could go glows, tap one to place it. A two-step lesson teaches that
+the first time a room is available, and never while the colony is hungry.
+
+**Ants that go somewhere, and a panel that gets out of the way.** Every working ant walks
+to a marked target and animates the work: diggers, foragers, nursery ants at the eggs or
+the mushroom garden, builders at the half-built room or the flood. Idle ants park and stand
+still. A cell holds two ants at most, never three, and nobody sits on the queen. The jobs
+panel is a slim strip that opens on a tap, and the engine measures its REAL height every
+frame — it used to assume 132 pixels while the thing on screen was far taller, which is why
+the tutorial pointed at dirt hidden behind it. The level picker is gone: the tile opens the
+colony. The ants are drawn rather than sprited, because at a third of a cell the library
+sprite read as an orange blob; the manifest ids still pick the look and the fallback path
+is untouched.
+
+QA: `qa-antcity.mjs` has a small real DOM under it now, so the tutorial is played with the
+gestures it actually teaches, in a mouse profile AND a touch profile, and "never two hints
+on screen" is asserted after every one of them (187 checks). `qa-antcity-shot.mjs` does the
+same in real Chromium and photographs it. `node qa-all.mjs` green.
+Ref: SESSION-LOG.md same date.
+## PB1 — Paper Route: the spec, the cartridge, and Maple Street (September 6 2026)
+`public/paper-route-engine.html`, `public/paper-route/manifest.json`,
+`public/buildable-manifest.js` (new `paper-route` profile), `api/sfx.js`,
+`src/BuildableKids.jsx`, `vercel.json`, `qa-paper-route.mjs`. Phase **PB**, card **PB1**.
+
+A new game built the BUILDING-A-GAME way: spec first, engine as a cartridge, QA harness in
+the same session. The ride is a straight street seen from behind the rider — the classic
+diagonal Paperboy view was thumb-tested and rejected because the right thumb covers the
+road ahead. Slide to steer, tap to throw a paper at a red-flag mailbox.
+
+**Everything on the street is data.** The manifest holds Maple Street's ten houses (six
+subscribers), ten obstacles, two ramps, three boost strips and three bundles, each placed
+by an `at` of 0 to 1 along the street. Difficulty 1 to 5 is the only dial: the new
+`paper-route` profile in the shared loader turns it into the paper count, the length, the
+pace and how much of the obstacle set is live. No raw number lives in the manifest, so a
+second street is data plus art (that is PB2).
+
+**Nothing can be lost.** A bump is a wobble and one dropped paper. No lives, no timer, no
+penalty. A tap with no mailbox in range costs no paper, so a happy tapper can never reach a
+red flag with an empty bag, and the mailbox a tap would throw at wears a pulsing ring so
+the timing is seen rather than explained. Ramps carry you over what is on the road and an
+air throw pays double; three in a row is a streak; every delivery lights a porch and brings
+a neighbour out to wave.
+
+**Sound.** Delivery moments reuse the shared FL5 clips (`sky_pickup`, `sky_deliver`,
+`sky_mission`) — they were written generic for exactly this. Three new one-shots are Paper
+Route's own, over the 0.5s floor: `pr_throw`, `pr_clunk`, `pr_streak`. They generate on
+their first live fetch through the owner's ElevenLabs key.
+
+QA: `qa-paper-route.mjs` (66 checks) drives the engine headlessly in a vm — a perfect
+player finishes the street with all six papers delivered, pause/resume behave, every coin
+goes to the shared wallet under a key so replays cannot farm, and there is no lose state,
+no baked art, no emoji. `node qa-all.mjs` green. Verified in a real headless Chromium on a
+portrait phone. The tile stays Coming Soon behind the 1111 gate until PB2.
+Ref: SESSION-LOG.md same date.
+
+Also fixed here: `README.md` carried committed merge-conflict markers from the AC4 merge
+(`<<<<<<<` at the top of the log, `>>>>>>>` 200 lines down). Resolved as the plain union
+the repo's own rule prescribes — both sides kept, markers removed.
+## AC6 - Ant City's strategy layer: layout, felt job trade-offs, and real ant chains (September 7 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/` (4 new
+files), `qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`, `ANTCITY-ASSET-PLAN.md`.
+Phase **AC**, card **AC6**, branch `claude/ac5-planner-launch-u3ciu2`.
+
+**Layout matters.** Storage near the top means quicker forager trips, a nursery beside the
+queen hatches eggs sooner, a den dug deep rests better, a fungus garden close to home grows
+faster. The build popup names the good spot in kid words, in green, before the kid commits.
+The rules are data in `GAME_CONFIG.placement` and they are bonuses ONLY: a plain spot earns
+nothing and costs nothing, so every existing colony is untouched.
+
+**Job trade-offs you can feel.** The food chip says up or down, and a line over the job bar
+says what the mix is doing (tunnels flying while food drops, food piling up while nothing
+moves, nobody clearing the water). Rain now rewards a stocked pantry: with food put by the
+colony works straight through a flood, with an empty one it only slows. It still takes
+nothing, ever.
+
+**Production chains.** Leaves grow on the meadow and a forager with no crumb to fetch cuts
+one and hauls it, visibly, to the new Fungus Garden, where nursery ants turn leaves into
+mushroom food (so nursery duty is a real choice between eggs and mushrooms). A milestone
+brings an aphid plant and honeydew herding. The queen shares the true leafcutter and aphid
+facts the first time each appears. Nothing rots, nothing dies, an unstaffed garden waits.
+
+The new room and both chain milestones live in the manifest, merged over the engine's own
+fallback values, so a future room is a recipe change rather than an engine change. Four new
+drawn vectors ship with it. `qa-antcity.mjs` gained an AC6 section and `qa-antcity-shot.mjs`
+proves the same in real Chromium. `node qa-all.mjs` green.
+
+## AC5 — Ant City: ants that mean it, a game that teaches itself, and a real swarm (September 6 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs`, new `qa-antcity-shot.mjs`, `antcity-README.md`.
+Phase **AC**, card **AC5**, branch `claude/ac5-planner-launch-u3ciu2`.
+
+Mike's playtest after AC1, AC2 and AC4: kinda cool but not delightful, the ants do not move
+intentionally, and he was completely clueless how to play. Three parts, one session.
+
+**Intentional ants.** The drawn ants used to wander at random, which is exactly why the
+colony read as scenery. Now every one of them is doing something the colony is really doing.
+Pick a dig spot and a nearby digger walks to it through the existing tunnels (a real
+breadth-first route, never through solid dirt, and no route means it does not take the job),
+then digs it with dirt puffs while the marker on the spot brightens. Drop a crumb and a
+forager climbs up and out of the anthill, picks it up in the carrying pose, and hauls it
+back down to storage. Ants face the way they walk, hustle when on a job, hop when they
+finish one, leave tiny footprints, and the queen bobs at every hatch. The counts-and-rates
+simulation stays the ONLY source of truth: nothing in the visible layer changes a number,
+and it runs on the same fixed 1/60 step and the same seeded random, so the robot repeats
+exactly.
+
+**The game explains itself.** A new colony opens into a guided first minute driven by the
+queen: three steps, one at a time, each WAITING until the kid really does it (drag in the
+dirt, tap the grass, slide an ant to a new job). A pointing mark shows the spot, the control
+being taught glows, and nothing is blocked or has to be dismissed. Alongside it, always-on
+clarity: every control now says what it is in a word (Dig, Food, Water, Jobs), and a goal
+strip above the panel carries what the colony wants next in kid words the whole time,
+handing over to whatever is slowing the colony down when there is one. Fifteen seconds idle
+brings one friendly bubble pointing at the next thing to do, never repeating the strip. The
+? button replays the guide.
+
+**Swarm scale.** Ants drawn at 0.30 of a cell instead of 0.44, up to seventy on screen
+instead of twenty six. The drawn crowd is a sample taken from the rows the camera is looking
+at, so a shaft a hundred levels deep no longer leaves the view empty, and it wears the job
+mix the panel says. The ant the guide points at is bigger with a soft halo.
+
+`qa-antcity.mjs` gained an AC5 section (a digger takes the drawn spot, a forager carries a
+crumb home, no ant ever stands in solid dirt, the guide advances only on the real action).
+New `qa-antcity-shot.mjs` drives it in real Chromium with a real drag and tap and writes
+pictures. `node qa-all.mjs` green. Also fixed: a window reporting no size used to turn the
+grid into NaN, which never mattered until the ants started reading the geometry.
+
+Not done: the carrying and digging worker poses live at `/api/asset-studio`, which only
+exists on the deployed site, so they were never loaded for real here (the drawn ants stand
+in, as designed). AC3 is still open.
+
+---
+
+## AC4 — Ant City gets its own sounds, a meadow loop, and the last of its art (September 6 2026)
+`api/sfx.js`, `api/library-music.js`, `public/antcity-engine.html`, `public/antcity/art/` (8 new
+files), `qa-antcity.mjs`. Phase **AC**, card **AC4**. Taken out of order, ahead of AC3, because
+Mike asked for it and nothing in it depends on the save work.
+
+**Five sounds we created, not a synth.** `antcity_dig`, `antcity_march`, `antcity_hatch`,
+`antcity_munch` and `antcity_rain` are named in `api/sfx.js` with a duration each — every one
+comfortably over the 0.5s floor, which is the trap the card warns about: under it the generator
+refuses and the sound is silently gone in game. The engine hands Feel a `sfxBase` of `/api/sfx?s=`
+and a map, so `Feel.tap` plays marching feet, `Feel.coinBurst` plays the hatch chime, and the
+shared synth stays what it always was — a silent fallback, never the product.
+
+**One music loop, shared not owned.** `meadow_busy_bright` ("Sunny Meadow (Busy)") goes into
+`api/library-music.js` under theme `adventure`, so `/api/list-audio` lists it for every project
+and any game wanting a pottering-about feel can call it by name. Ant City plays it through
+`BA.setMusic` + `BA.playMusic` once the colony opens.
+
+**The art leftovers are done.** Eight new hand-drawn vectors in `public/antcity/art/`: the sunny
+meadow strip, the same meadow in the rain, the berry-bush meadow, deep soil, rich loam, the flood
+tile, the anthill icon and a loading screen. They fill the manifest ids that were still
+placeholders, the meadow turns rainy on screen while a tunnel is flooded, and the anthill rides
+on the celebration card for a population milestone. Every slot keeps its drawn fallback, and the
+one id that is drawn ON PURPOSE (the dig marker) is now declared in `DRAWN_ART` so "no picture"
+can be told apart from "forgotten".
+
+**What the robot now checks.** `qa-antcity.mjs` gained an audio and art section: the five sounds
+registered with a legal duration, the meadow loop in the shared library and not named after this
+game, the engine routing through `/api/sfx` and mapping every key, each art file existing and
+resolving from its manifest id, no manifest id left with nothing behind it, and the drawn fallback
+still standing. `node qa-all.mjs` green, 47 harnesses.
+
+**What I could NOT verify.** The card asks for a `fetch(/api/sfx?s=<key>)` returning 200
+audio/mpeg per sound. This session cannot reach buildablekids.com at all (network policy), and the
+first call is what generates the clip through the owner's ElevenLabs key, server-side. So the five
+clips are registered and wired but have never been generated. Opening the live game plays them
+into existence; if one comes back 503 the prompt or the duration needs a nudge, and nothing else
+in the game breaks meanwhile.
+
+---
+
+## CB4 — the grown-up studio: shelves, games a month, the share sheet, house rules, real signup (September 6 2026)
+`db/create-cobuild-plans.sql` (written AND applied), `api/cobuild-billing.js`,
+`api/cobuild-rules.js`, `api/cobuild-poster.js`, `api/cobuild-lead.js`,
+`api/app-flags.js`, `public/studio-grownups.html`, `public/studio.html`,
+`public/cobuild.html`, `src/BuildableKids.jsx`, `qa-grownups.mjs`, `vercel.json`.
+
+CB3 gave a child the studio. CB4 is everything a child never sees. Money and limits
+live ONLY here, and nothing with a currency on it appears anywhere a kid can reach.
+
+1. **What a family is on.** Two tables, `cobuild_plans` and `cobuild_house_rules`,
+   written as a migration and applied in the same session (verified against
+   `information_schema`). `api/cobuild-billing.js` does Stripe Checkout for the two
+   monthly plans and the three-game add-on, a signed webhook that keeps the row
+   honest, and THE METER: a new game counts one, a remix counts one, an edit never
+   counts, a layer-three build counts two. The sentence the grown-up page shows,
+   "N of M new games this month, renews <date>. Edits are always free", is generated
+   by the same code that enforces it, so the words and the behaviour cannot drift.
+   No secret is in the repo: the Stripe key, the webhook secret and the three price
+   ids are read by name from the environment, which the owner sets in Vercel.
+2. **The grown-up studio** at `/studio/grownups`, behind the grown-up code: one
+   shelf per kid in the house with plays per game, the plan line, the add-on button
+   and plan management.
+3. **A share sheet per game**: copy the link (CB1's `/g/<slug>`), text it with a
+   prewritten line through the share API, a Top Board toggle (public, first name
+   only), and Print the poster. The poster is a real PDF built server-side: one A4
+   page with the cover the kid painted, the title, "A GAME BY <kid>", and a QR code
+   drawn as vector squares so it prints crisply. Printing turns the link on, and
+   says so, rather than printing a code that does not work.
+4. **House rules per kid, all off by default.** Vegetables first is not a new
+   feature: it applies the CB2 `mathGate` recipe to the games the grown-up chose, so
+   it is re-validated and re-played by the robot like any other change, and turning
+   it off really takes the questions back out. Chores unlock play is a short list the
+   grown-up writes and the child ticks; it clears itself every day and it is shown
+   BEFORE a game, never over the top of one. The play clock is minutes a day with no
+   countdown on screen: when the time is up the session ends with a goodnight. Every
+   door in the app into a kid-made game now goes through the same gate, and a
+   network wobble opens the game rather than locking a child out of their own work.
+5. **The fake door becomes a real one, on a switch.** `app_flags.cobuild_live` is
+   FALSE by default. While it is off, `/cobuild` behaves exactly as it has: it logs
+   the click and takes a name. When the owner flips it on, the same buttons go to
+   real checkout, and the click is still logged either way. `api/cobuild-lead.js`
+   gains a waitlist notifier that needs the owner code AND an explicit `send:true`;
+   anything else is a dry run that shows who would be emailed and changes nothing,
+   and nobody is ever emailed twice.
+6. **`qa-grownups.mjs`**: the meter (including the edit-is-free promise), the rule
+   gates, the share toggles, the poster PDF built for real and parsed back (its xref
+   offsets followed, its content stream inflated, its 577 QR squares counted), and
+   both sides of the switch. `node qa-all.mjs` green: 50 harnesses.
+
+**Still needs the owner, and cannot be done from here:** the Stripe account, its
+keys and the three price ids, and linking a paid family to a signed-in Google
+account rather than to the device they paid on.
+
+## CB3 — the studio: a child says it, the game appears, and they change it by asking (September 6 2026)
+`public/studio.html`, `api/cobuild-plan.js`, `api/cobuild-edit.js`, `api/_cobuildBrain.js`,
+`api/cobuild-voice.js`, `api/transcribe.js`, `api/asset-studio.js` (kids lane),
+`public/buildable-mechanics.js` (clip playback), `public/<engine>/cobuild.json` (plain words),
+`src/BuildableKids.jsx`, `qa-studio.mjs`, `vercel.json`.
+
+CB1 gave a kid a game they own. CB2 built the fence and the robot. CB3 is the door a
+child actually walks through, at `/studio` (and `/studio/<id>` to reopen a game),
+behind the same 1111 coming-soon gate as everything else until CB4.
+
+**The shape of it.** Buddy asks what the game is about; the child says it out loud or
+types it. Then ONE follow-up question at a time, never a settings screen: who is the
+star, and how tricky should it be. A plan card comes back naming the game it will be
+built on and why, with every choice as a chip you tap to change. Build takes about a
+minute and narrates itself as a story list. Then the real game is playing at the top
+of the screen with the asking underneath: tap a tile or just say "make it snowy".
+
+**The rule that shapes all of it: the studio never writes a manifest.** The plan is
+ASSEMBLED out of a shipped game by named CB2 recipes, and every tweak is CB2 recipes
+and rules. So what a child gets is inside the engine's fence by construction. Every
+version is then strict-validated AND played by the CB2 robot on the server before it
+reaches the screen, on the build and on every single edit.
+
+**It works with every key switched off.** The engine is chosen by the plain words each
+cobuild sheet now carries about itself, the manifest is assembled locally, and the
+edit door understands the phrases children actually use before it ever asks a model.
+A model, when there is one, only improves the name, the theme and the wording, and
+its answer is dropped if it names anything the sheets do not have. That is why
+`qa-studio.mjs` can drive plan to tweak on all four engines with no API key and no
+database, and why a model outage costs a family cleverness rather than their game.
+
+**Art.** The kids lane in `api/asset-studio.js` (`action:"kid-art"`) LOOKS IN THE
+SHARED LIBRARY FIRST by kind and theme, and only paints when nothing is there — then
+files what it painted back with a made-in-cobuild tag so the next family gets it
+free. A painted piece is hung on the manifest BY THE SERVER, which validates it
+against the sheet and drops it if it does not fit, so the engine's own drawn art
+stands in rather than a game with a hole in it. With no picture key at all the game
+still builds.
+
+**The child's own voice.** Hold the mic, say a line, and it rides on an ordinary CB2
+rule: `{when, do:"sayLine", params:{text, clip}}`. The clip is stored through the same
+narration cache `/api/say.js` uses, and the shared rules runtime plays it when it is
+there and shows the words when it is not.
+
+**Keep is earned by the family, not the robot.** The robot proves a game CAN be
+finished; Keep waits for the engine to post up that the child actually beat it. Then
+the title screen reads "A game by <kid> and <grown-up>" and the card is on the My
+Games shelf, where Change it reopens the same conversation.
+
+**Kid mode is the default** and shows no money, no limits, no publishing and no
+settings. Sharing sits behind the grown-up gate; the real share sheet, the plans and
+the house rules are CB4. The app's "Make a game" tile now opens the studio instead of
+the dead Phaser generator flow.
+
+`node qa-studio.mjs` and `node qa-all.mjs` green: 49 harnesses.
+
+## CB2 — safe outputs: the fence, the recipe book, the rules, and the robot gate (September 6 2026)
+`public/<engine>/cobuild.json` (breaker, sling, castleguard, skyflyer),
+`public/buildable-recipes.js`, `public/buildable-mechanics.js` (`BM.rules`),
+`public/buildable-manifest.js` (strict mode), `qa/kid-game-robot.mjs`,
+`api/kid-game-check.js`, `api/_cobuild.js`, `api/kid-game.js`, `qa-recipes.mjs`,
+`qa-rules.mjs`, `MECHANICS.md`, `vercel.json`.
+
+CB1 let a kid own a game. CB2 is what makes a game an AI assembles nearly bug-free by
+construction: the AI may only touch what a sheet allows, every edit is a named
+recipe, and nothing is kept until a robot has played it.
+
+1. **A cobuild sheet per engine** at `public/<engine>/cobuild.json`: every art slot
+   with the themes it takes, every dial with min/max/default and a plain-English
+   label, the level shape (its geometry tier — what a level is made of and the size
+   limits — and its dial tier), the feel presets, the rules it really fires, and a
+   plain list of what that engine can NEVER do, so the AI can offer the nearest
+   thing instead of pretending. `validate(m, {strict:true, sheet})` in the shared
+   loader rejects any field, slot or value outside the sheet. All four shipped
+   games pass their own sheet, which is how we know a sheet describes the real
+   engine and not a wish.
+2. **The recipe book** at `public/buildable-recipes.js`: 18 named, deterministic,
+   non-mutating manifest edits (`rename`, `swapHero`, `swapWorld`, `recolor`,
+   `moreCollectibles`, `fewerCollectibles`, `harder`, `easier`, `addBoss`,
+   `removeBoss`, `nightMode`, `dayMode`, `zoomier`, `calmer`, `addLevel`,
+   `removeLevel`, `mathGate`, `voiceLine`), each declaring which engines it works
+   on and clamping to the sheet's own limits. Asking for one an engine does not
+   have is an honest no with the reason. `MECHANICS.md` is re-aimed around this;
+   it had been written for the dead Phaser generator.
+3. **Rules vocabulary v0 (layer two)** in `public/buildable-mechanics.js`: six
+   moments (`onLevelStart`, `onCollect`, `onHit`, `onLand`, `onWin`,
+   `everyNSeconds`) and eight actions (`playSound`, `sayLine`, `showText`, `spawn`,
+   `speedUp`, `slowDown`, `addPoints`, `loseItem`). A manifest may carry
+   `rules:[{when,do,params}]` and the shared runtime applies them. Sling Squad and
+   Sky Flyer fire their events for real. The sheet decides which moments an engine
+   really fires, so a rule it would ignore is an error rather than a
+   disappointment.
+4. **The robot build gate.** `qa/kid-game-robot.mjs` plays a manifest headless — the
+   same vm sandbox the `qa-*.mjs` runners already use, through each engine's own
+   `sim()` hook, not a third robot — and answers per level: beatable,
+   not-beatable or too-long. `api/kid-game-check.js` is the endpoint;
+   `api/kid-game.js` calls it on every save and every fork, stores the verdict on
+   the row (`kid_games.robot`) and REFUSES a game no robot can finish, offering the
+   `easier` variant when that one passes. Sky Flyer is the honest exception: its
+   flight needs a real browser and WebGL, so its worlds are checked structurally
+   (a world asking for more landings than it has pads is caught) and the verdict
+   says "checked, not flown" rather than claiming a play-through it never did.
+5. **`qa-recipes.mjs` and `qa-rules.mjs`**, both auto-discovered by `qa-all.mjs`.
+   Every recipe on every engine it claims is proved pure, deterministic, still
+   inside the sheet AND still beatable by the robot. Sling's four events are proved
+   by PLAYING a level with rules in it and catching what they did, not by reading
+   the source. `node qa-all.mjs` green: 48 harnesses.
+
+No database change: the `robot` column CB1 created is the one the verdict lands in.
+
+---
+
+## Hop Heroes: four worlds, a cast, and the shared Feel Kit (HH4 + HH5, September 6 2026)
+`public/play.html`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`, `qa-hopheroes-shot.mjs`.
+Phase **HH**, cards **HH4 + HH5**, branch `claude/hop-heroes-mario-feel-safrvp`.
+
+**Four worlds.** Whispering Woods, Frostpine Hollow, Sunbaked Dunes and Sugarplum
+Peaks, on art sets that already existed in `api/game-art`. Art is now a per-world set
+built the first time that world is played (it used to be ONE global set baked from
+`GAME_CONFIG.world` at load, which is why four worlds were impossible), and the sky,
+grass and dirt colours come from the world too. The boss lives on the last world only.
+
+**The fixed cast, Mike's call:** Bramble the Bunny, Pip the Fox, Waddle the Penguin and
+Ember the Dragon, all already in the shared character library. The picker is a
+start-screen choice, not a locker: four big faces, nothing to read, each falling back to
+that hero's colour if the art will not load, and the choice remembered on the device.
+
+**The shared start screen.** `buildable-startscreen.js` replaces the bespoke overlay:
+the four worlds as a level row with cleared / next / locked states, the hero with a
+Change button, the star count and the sound toggle. Clearing a world banks it and
+unlocks the next; clearing the last gives a You Win and returns to the world map.
+
+**The Feel Kit.** Sound and juice go through `buildable-feel.js` as palette names, so a
+Buildable coin sounds the same here as everywhere else: the shared gold burst on coins,
+the shared pop on stars and power-ups, the gentle amber nudge on a lost heart, the one
+shared win celebration. The built-in tone generator is the offline fallback only, and
+`qa-hopheroes.mjs` fails the build if anything calls it directly again.
+
+**QA.** All four worlds won, unhurt, 68 to 77 percent of coins on the ground path.
+`qa-hopheroes.mjs` is 63 checks. Fixed on the way: `qa/sim-node.mjs` read the level
+count from a `const` that is not a sandbox property and silently settled for one level,
+so four worlds could have shipped with only the first simulated.
+
+**Still shut:** the Hop Heroes tile is deliberately still coming-soon behind the 1111
+gate. Opening it puts the game in front of every kid, and Mike has not yet seen it.
+
+## Hop Heroes feels like Mario (HH1 + HH2 + HH3, September 6 2026)
+`public/play.html`, `public/buildable-hud.js`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`.
+Phase **HH**, cards **HH1, HH2, HH3**, branch `claude/hop-heroes-mario-feel-safrvp`.
+
+**Moving.** A run-up over about sixteen frames to a top speed of the recipe speed x
+1.55, a skid with dust and a lean when you turn around, six frames of coyote grace off
+a ledge, a jump buffered up to eight frames before landing, and a stomp that squashes
+the enemy flat and bounces you. Variable jump height and the double jump are unchanged.
+The level recipe grew 150 to 230 tiles so the perfect run stayed at about 47 seconds.
+Camera look-ahead scaled by speed, plus a clamped vertical follow.
+
+**Bramble's poses come from transforms, not new art.** `api/story-library` can only
+make FACE and MOOD variants of a character, never a run or a jump pose, and none of
+Bramble's are generated. Mike's call was to animate the one watercolour cutout: idle
+breathe, a two-beat run cycle, a stretch up, a brace down, land squash, skid lean-back.
+The drawn fallback body gets the same treatment, so a missing image is never broken.
+
+**Reading the screen.** Holes get a dark shaft, dirt walls, a shadow lip and grass over
+the edges. Background trees and bushes are skipped over a hole (they used to grow
+straight through the pits). Canopy and ferns are a frame at the screen edges, drawn
+under the hero. The HUD is the shared `buildable-hud.js` strip (which gained drawn coin
+and star chips) and the engine registers with `buildable-gamenav.js`. The world height
+stays 540 because level geometry is baked from it, but the VIEW is now W x VH and both
+follow the screen, so the canvas exactly fills any viewport with no letterbox: a wide
+screen shows more level, a tall phone gets more sky above the same world.
+
+**Mario ingredients.** Bonk blocks in short rows over solid ground, ? blocks popping a
+coin or a power-up. Coin arcs over every gap, crystal, critter, pipe and bounce pad,
+laid on the engine's own jump curve. Pipes as solid stand-on markers. A flag pole you
+slide down that runs straight into the next level.
+
+**QA.** `qa/sim-node.mjs` now checks that every level wins, that the perfect player
+finishes unhurt with all three hearts, and that 60%+ of its
+coins are reachable without leaving the floor (3 of 63 before, 224 of 290 now). New
+`qa-hopheroes.mjs`: 42 dependency-free checks driving the hero a frame at a time
+through a `BK_GAME.test` seam. Both green. Bugs fixed on the way: a bounce pad could push
+the ground off the bottom of the screen, replaying a level gave an empty world because
+nothing was reset, and the level generator spaced hazards using a tapped jump's air
+time while the QA bot always holds the button. The perfect player used to finish the
+level on its last heart; it now finishes with all three.
+
+**Not done.** No Vercel preview link (the connector in that session listed no
+projects). HH4 (worlds, the fixed hero cast, the picker) and HH5 remain, and the tile
+is still coming-soon behind the 1111 gate.
+
+## AC2 — Ant City's ten missions, its gentle rain, and the door into the app (September 6 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs` (new), `src/BuildableKids.jsx`, `qa-nv2.mjs`.
+Phase **AC**, card **AC2**. **Ant City is LIVE.**
+
+The ten tutorial missions from `/antcity/manifest.json` now sit on top of the AC1 colony.
+The manifest names them and their order; the engine maps each `layout` to a goal, so a new
+mission is a manifest edit, not engine code. Finishing the tenth opens free-build, which
+never ends. Each mission pays its manifest coins into the shared wallet through
+`BuildableWallet.awardOnce`, pops a calm celebration through `Feel`, and posts `levelup`
+(or `win` on the last one) to the buddy.
+
+**The setbacks pause, they never punish.** Hunger and tiredness only slow the colony down,
+and a resting den brings tiredness back up. Rain floods ONE tunnel at a time (two at the
+liveliest difficulty), which blocks the way through it until a builder clears it; builders
+always clear water before starting anything new. There is still no lose state anywhere.
+Milestones (dig 5 levels, reach 50 ants) pay coins and open a room type early, and block
+nothing if a kid ignores them.
+
+**The first launch shows, it does not tell.** A touch mark drags down a dashed path so a
+kid who cannot read knows the one thing to do. The first tap ends it, and the `?` button
+replays it.
+
+**The robot the card asked for.** `qa-antcity.mjs` builds the engine in a vm with the shared
+libs, drives it from the manifest, and a perfect-player bot finishes all ten missions in
+order, headlessly — then checks the coins reached the wallet and were never claimed twice,
+that a flood is cleared without losing anything, that hunger keeps every ant, that pause
+and resume land as shell messages, that every art slot resolves to a manifest URL, and that
+there is no emoji anywhere in the engine.
+
+**Three bugs the robot caught before Mike could.** Dig Deep was impossible: the buried find
+only counted if the kid dug within one column of it, so digging straight down (the obvious
+move) missed it forever — depth is the goal, so depth now uncovers it. Rainy Day could be
+finished by a puddle that was already sitting there, so the mission the kid was meant to
+learn from flashed past — it brings its own rain and wants that tunnel cleared. And a
+browser run with no builders left eleven tunnels under water at once, which is a punishment,
+not a setback — hence the one-at-a-time cap.
+
+**Going live.** An Ant City tile in the Play picker (a drawn badge over its own meadow, no
+image API), the `antcity` slug so plays are counted, a landing door with its own attract
+demo, and the equipped Ant / Meadow / Dirt look handed to the engine as index params, the
+same tiny handoff Breaker uses. The Vercel routes landed with AC1. `qa-nv2.mjs` now expects
+22 live games.
+
+---
+
+## AC1 — the Ant City colony engine, counts and rates under a drawn burrow (September 6 2026)
+`public/antcity-engine.html` (new), `vercel.json`. Phase **AC**, card **AC1**.
+
+Ant City is now a playable, growing colony. The kid drags in the dirt to draw a tunnel
+path and digger ants carve it out over time (the kid never digs a cell directly); taps
+the meadow to leave crumbs and water drops that foragers carry down; taps an open tunnel
+to have builders raise a nursery, a storage room or a resting den; and slides one bar to
+move ants across the four jobs. Eggs appear while there is food, nursery ants hatch them,
+and every new ant joins the workforce, which is what makes the loop compound.
+
+**The colony is counts and rates, not a crowd of simulated insects.** Population, food,
+water, eggs and dig progress are numbers advanced by fixed 1/60 steps, so the ant count
+can climb into the hundreds for free. What you SEE is a sample of at most 26 drawn ants
+walking the real tunnels, capped again by how much dug space there is, so a small burrow
+looks busy instead of a stack of sprites in one cell. No physics engine, no per-ant
+pathfinding, and a seeded random number generator, so the same taps give the same colony
+— which is what lets the AC2 robot prove a mission is beatable.
+
+**Nothing punishes.** Empty stores only slow the colony (`hungryRate`), they never take
+anything away, and there is no lose state. Every rate lives in `GAME_CONFIG`, difficulty
+1-5 maps to colony pace plus a setback frequency AC2 will use, and the manifest supplies
+art and the feel presets on top.
+
+Shared libs throughout: the drawn `BR` fallback under every art slot, `Feel` for taps and
+juice, the shared HUD bar, and the gamenav bridge (the engine's own Home/Sound/? buttons
+are declared to it and hidden in-app). `pause` freezes the colony and `resume` continues
+it, verified in a real browser. Art is fetched from the URLs the manifest resolves and
+never baked in: the local Style A vector set fills the `antcity/...` ids, an asset-studio
+URL passes through, and a miss falls back to clean drawn shapes.
+
+`window.BUILDABLE_GAME` (with the `ANTCITY_GAME` alias) exposes the whole colony to a
+robot: `dig`, `drop`, `assign`, `build`, `step`/`seconds`, `dbg`, `_art`, `_draw`.
+
+**Two calls I made.** The save is `localStorage` only for now, as the card allows — real
+per-kid storage and away-time growth are AC3. And I added the `vercel.json` routes for
+`/antcity-engine.html` and `/antcity/` early (they were listed under AC2), because
+without them the page falls into the landing catch-all and nobody, Mike included, can
+open it. The game is NOT live: there is no tile in the Games picker and no slug in
+`GAME_SLUGS`, so it is reachable by link only. Missions, coins, celebrations, the
+wordless demo, `qa-antcity.mjs` and going live all stay with AC2.
+
+---
+## Farm 3 — the order crate, the plane payoff, and the farm's front door (FM2 + FM3, September 6 2026)
+`public/skyflyer-farm.html`, `public/buildable-wallet.js`,
+`public/models/skyflyer/animals/farm-animals.glb`, `src/BuildableKids.jsx`,
+`CARTRIDGE-CONTRACT.md`, `qa-farm.mjs`, `qa-skyflyer.mjs`. Phase **FM**, cards
+**FM2 + FM3**.
+
+**FM2 landed first.** Its branch had been sitting unmerged since August 16, five
+commits ahead of `main` and fifty-five behind. Merged by hand; the four conflicts
+were all both-sides-added at the top of a file, and both dated entries were kept
+on the README and the session log. Checked by counting rather than by eye, because
+an earlier resolver on this branch swallowed a QA block once: `qa-skyflyer` came
+out at exactly 382 + 39 = 421.
+
+**The payoff loop.** A slatted **crate** by a mown grass runway shows a picture
+wish-list — one silhouette slot per item wanted, lit to full colour with a tick as
+it lands. Walking to it **whooshes the whole carried stack off one item at a
+time**, rapid fire, each with its own pop and a note a step higher than the last;
+anything the order did not ask for stays on your head. Fill it and the **plane**
+taxis, rolls, climbs away and comes back thirteen seconds later with a burst of
+coins that fly into the wallet pill. Orders grow gently from two items to six and
+can only ever ask for something the farm can make that minute.
+
+**The economy, Mike's call.** FM1 priced seeds above what harvesting paid back, so
+every crop lost money. Now **crops are ingredients, not money**: harvesting pays
+nothing, every seed costs the same 3 coins, and the crate is the only income. If a
+kid cannot afford a seed the next one is **free** — there is no state in the farm
+you cannot play out of.
+
+**The duck.** 120 coins, about five deliveries, buys a real `PekinDuck` model for
+the coop (cut out of `island-animals.glb`). She eats corn like the hens and lays a
+pale blue egg, which becomes a fourth thing an order can ask for — but only once
+she exists.
+
+**The four gaps FM1 left open are closed.** The farm now has a real door on the
+Play page with a **drawn** tile badge (no generated image, no emoji) and its own
+`?v=fm3` cache-bust; the coin pill is the **shell's shared wallet**, which grew
+the ability for a game to spend inside its own iframe (a negative `coins` delta,
+now written into `CARTRIDGE-CONTRACT.md`); `buildable-gamenav.js` is wired, so the
+shell's Home button reaches the page on iPhone instead of dying in it; and the
+shared audio and Feel kits give it sound on one `bk_muted` flag.
+
+**Looked at, not just reviewed.** Every new shape went on the `?zoo=1` stand
+first, and the renders changed the build three times: the runway shipped as a
+bone-white slab, the crate came out smaller than the kid loading it, and the empty
+card slots were unreadable smudges. Card states captured empty / half / full at
+phone, tablet and desktop widths.
+
+**Landed on `main` as `482f1b6`** once Mike had seen the renders. Not marked
+deployed on the planner: this session could not reach the live site to check,
+and a push is not a deploy.
+
+`qa-farm.mjs` is 78 checks green (the whole loop played for real in Chromium),
+`qa-skyflyer.mjs` 466, `qa-all.mjs` green.
 ## CB1 — a kid's game is a row they own, not new engine code (September 6 2026)
 `db/create-kid-games.sql`, `api/kid-game.js`, `api/_manifestLib.js`, `api/g.js`,
 `public/g.html`, `public/buildable-manifest.js`, `public/skyflyer-engine.html`,
@@ -3529,6 +4225,37 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-07 (Sky Flyer: the endless splashing noise)
+
+Mike: "on skflyer, there is a splashing sound that just goes the whole time."
+Two throttles in `public/skyflyer-engine.html` were both firing on a loop:
+
+- **The FL13 fish reaction** (`reactFishStep`) spawns a jumping fish behind the
+  plane every ~0.8s of low flight over water, and the islands world is mostly
+  water at the default 22-unit cruise, so its 0.6s sound gate let `sky_splash`
+  play about once a second for the entire flight. The jumps are unchanged; now
+  only ~35% of them make a sound, never closer than 7s apart, at a lower volume.
+- **The sea-skim splash** in `stepSim` fired every 0.9s while the plane was
+  pinned to the y=3 floor. Gap raised to 3s and dropped to vol 0.3.
+
+Net: a splash is a surprise again (roughly twice a minute) instead of a bed of
+noise. No visual change: spray, wakes and fish arcs all still fire at their old
+rate.
+
+## Session log — 2026-09-06 (RB1: a Run builder in the planner)
+
+The Roadmap tab gains **Build a run**: tick the cards you want worked, drag or arrow them
+into order, group two or more into ONE session, set Ship-or-Park / Carry-on-or-Stop / give
+up after N failures / a hard stop / start now or at a time, and save. Saving writes one
+`ready` row to the new `planner_runs` table and nothing else — the page never starts
+anything, which is card RB2's job. Before saving it says out loud what is wrong: a card
+waiting on review, a card whose text says it comes AFTER one that is later in the run or
+missing, a grouped pair that needs a set order, a session holding more than three cards.
+`api/planner.js` gains `?scope=runs`, `saveRun` and `cancelRun`, all validating card ids
+against the live roadmap server-side and allowing only one waiting run at a time.
+`db/create-planner-runs.sql` was written AND applied to Buildable Kids in the same session.
+New `qa-runbuilder.mjs`: 50 checks, all pass. See SESSION-LOG.md for detail.
+
 ## Session log — 2026-08-29 (MK2: the Make page gets studio doorways)
 
 Mike found the Make section tiles unexciting. From four mocked options he picked

@@ -19,14 +19,22 @@ engine), so the QA robot can prove every mission is beatable.
 
 ## The files (planned for this game)
 
-- **public/antcity-engine.html** - the game itself (built in a later session).
+- **public/antcity-engine.html** - the game itself (the colony engine, card AC1: dig,
+  forage, build, assign jobs, hatch. Missions and going live are AC2).
 - **public/antcity/manifest.json** - the settings sheet the shell reads (this session).
 - **public/buildable-renders.js** - `BR`, shared drawn art (always-on fallback).
 - **public/buildable-audio.js** - `BA`, shared sound (dig, march, hatch, munch, rain).
 - **public/buildable-mechanics.js** - `BM`, shared FX/juice (dirt puffs, sparkles, pops).
 - **public/buildable-feel.js** - `Feel`, the shared Feel Kit (taps, celebration card).
 - **public/buildable-hud.js** - the one shared in-play info bar (no global).
-- **qa-antcity.mjs** - the headless robot: every mission is provably beatable.
+- **qa-antcity.mjs** - the headless robot (card AC2): a perfect player finishes all
+  ten missions, and the cartridge contract is checked with them. AC5 added a section for
+  the working ants, the guide and the swarm. AC7 put a small real DOM under it, so the
+  tutorial is played with the actual gestures it teaches, in a mouse profile and a touch
+  profile, and "never two hints on screen" is checked after every one of them.
+- **qa-antcity-shot.mjs** - the same game in real Chromium (card AC5): a real finger drag
+  and a real tap walk the guide, and it writes pictures to look at. Needs Playwright, and
+  skips loudly without it, so it is never mistaken for a check that ran.
 
 ## How to play
 
@@ -46,8 +54,129 @@ engine), so the QA robot can prove every mission is beatable.
    until a builder clears it. Nothing is lost, the colony just waits for you to help.
 
 There is no lose state and no game over. This is a keep-forever world, not a win-or-lose
-round. A wordless demo shows how to draw a first tunnel on first launch, and the **?**
-button replays it.
+round.
+
+## The game teaches itself (AC5)
+
+Nobody reads instructions, least of all a five year old. So the game explains itself while
+it is being played:
+
+- **A guided first minute.** On a brand new colony the queen walks the kid through the
+  three things the colony is made of, **one at a time**, and each step **waits** until the
+  kid really does it: drag in the dirt to dig, tap the grass to drop food, slide an ant to
+  a new job. A pointing mark shows the exact spot. Nothing to dismiss, nothing blocked, no
+  wall of text. The **?** button replays the whole thing.
+- **Always-on clarity.** Every control says what it is in a word (**Dig**, **Food**,
+  **Water**, **Jobs**), and the **goal strip** above the panel carries what the colony
+  wants next in kid words, the whole time. Whatever is slowing the colony down (hungry,
+  sleepy, flooded) takes the strip over, because that is what to go and fix.
+- **A gentle nudge.** Sit still for about fifteen seconds and one friendly bubble points at
+  the next thing to *do*. It never repeats what the strip is already saying, and it nudges
+  rather than nags.
+
+## Ants that mean it (AC5)
+
+Every drawn ant is doing something the colony is really doing:
+
+- **Pick a dig spot** and a nearby digger walks to it **through the existing tunnels**
+  (never through solid dirt), and digs with dirt puffs. The marker sits on the spot, and
+  brightens while an ant is actually working it.
+- **Drop a crumb** and a forager climbs up and out of the anthill, picks it up in the
+  carrying pose, and hauls it back down to storage.
+- Ants face the way they walk, hustle when they are on a job, hop when they finish one,
+  leave tiny footprints, and the queen bobs every time one of her eggs hatches.
+
+The counts-and-rates simulation stays the **only** source of truth. Nothing in the visible
+layer changes a number, so it is an honest animation on top of the colony, driven by the
+same fixed 1/60 step and the same seeded random. The QA robot still repeats exactly.
+
+**Swarm scale.** The ants are drawn small (about a third of a cell) and there are up to
+seventy of them on screen, so a growing colony reads as a lively swarm of little things
+rather than a handful of big ones. The drawn crowd is a *sample* taken from the part of the
+colony the camera is looking at, and it wears the same job mix the panel says. The one ant
+the guide is pointing at is drawn bigger with a soft halo, so it stays easy to follow.
+
+## The strategy layer (AC6)
+
+Ant City is a township for ants. Three things make it a game you think about rather
+than a game you watch:
+
+**Where you dig a room changes how well it works.** Storage near the top means quicker
+forager trips. A nursery beside the queen hatches eggs sooner. A den dug deep gives a
+better rest. A fungus garden close to home grows faster. When you tap a tunnel to build,
+each room tells you in kid words whether that spot is a good one, before you commit. The
+rules are **bonuses only** and live in `GAME_CONFIG.placement` as data: a plain spot earns
+nothing and costs nothing, so a colony built before any of this existed carries on exactly
+as it did.
+
+**The job slider is the main lever, and the colony answers back.** Push it all the way to
+diggers and the tunnels fly while the pantry drains. Push it to foragers and the food piles
+up while nothing gets built. The food readout says which way it is going, and the line over
+the bar says what your current mix is doing, in kid words. Rain now rewards a stocked
+pantry: with food put by the colony works straight through a flood, and with an empty one it
+only goes slower until a builder clears it. It still never takes anything away.
+
+**Production chains, which are real ant science.** Leaves grow on the meadow and a forager
+with no crumb to fetch goes and cuts one, then hauls it to the **Fungus Garden**, a room
+tended by your nursery ants that turns leaves into mushroom food. That makes nursery duty a
+real choice between eggs and mushrooms. Later a milestone brings an **aphid plant** to the
+meadow and the ants herd it for honeydew. The queen shares the true fact behind each one the
+first time it appears: leafcutter ants really do farm a mushroom garden rather than eat the
+leaves, and ants really do keep aphids like tiny cows. The chains are gentle. Nothing rots,
+nothing dies, and an unstaffed garden simply waits.
+
+The new room and both chain milestones live in `public/antcity/manifest.json`, so the recipe
+can add or retune them without touching the engine.
+
+## Clarity: see what you do, know what to do (AC7)
+
+AC5 and AC6 shipped and the robot was green, and the game still failed a human
+playthrough. Ten things were wrong and all ten were about the same thing: the game did
+not SHOW what it was doing, and it did not say clearly what to do next.
+
+- **Food is carried, never counted.** Every edible thing on the meadow is a real item in
+  a real place: a crumb the kid taps out, a berry the bush grew, a leaf, a drop of
+  honeydew, a drop of water. A forager claims one, walks out of the anthill, picks it up
+  (which is the moment the bush visibly loses that berry) and carries it home in its
+  mandibles. **The Food number moves on ARRIVAL and at no other moment.** A tap leaves a
+  crumb; it does not add food.
+- **ONE hint line.** There used to be two, a goal chip and a floating pill, and they
+  contradicted each other all the way through the tutorial. There is now exactly one
+  surface, `#coach`, and everything comes out of it in one order: the lesson step being
+  taught, then a message that just fired, then what is slowing the colony, then the
+  mission. A finished step's words vanish the instant the step is done.
+- **Only gestures that work are taught.** Step three used to say "slide the colour bar",
+  which did nothing at all with a mouse. It now teaches the plus button on a job card,
+  which cannot miss on any device, and the bar was fixed anyway: a press anywhere on it
+  takes hold of the nearest divider, on mouse and on touch.
+- **No unexplained modes.** Dig and Jobs were never modes (you dig by dragging in the
+  dirt, you set jobs on the strip), so those tabs are gone. What is left is **Build**,
+  **Food** and **Water**, and the lit one is what a tap on the meadow leaves behind. Each
+  one is a picture first — the crumb, the drop of water and the room are drawn on the
+  button as the same shapes the game really puts on the meadow, so a kid who cannot read
+  yet still knows what a tap will leave — with the word beside it for one who can. Drawn
+  SVG geometry, no glyphs. Water now goes somewhere you can see: its own meter.
+- **A needs panel.** Four slim always-on meters: food, water, rest, eggs. One that runs
+  low flags itself and hands the hint line a sentence about what to do.
+- **Build is a button.** Rooms were undiscoverable because the only way in was to tap a
+  tunnel and hope. Tap **Build**, pick a room, and every spot it could go glows on the
+  colony; tap one to put it there. A short second lesson teaches exactly that, the first
+  time a room is available (and never while the colony is hungry).
+- **Ants that go somewhere.** Every working ant walks to a marked target and animates the
+  work there: diggers to the drawn spot, foragers to the item, nursery ants to the eggs or
+  the mushroom garden, builders to the half-built room or the flooded tunnel. Every job in
+  progress wears a marker in its job colour. **An idle ant parks and stands still.**
+  Nothing wanders, a cell holds two ants at most and never a third, and nobody sits on the
+  queen.
+- **A slim panel.** The jobs panel was a permanent slab over the bottom half of the
+  screen, hiding the very dirt the tutorial was pointing at. It is a strip that opens on a
+  tap, and the engine measures the panel's REAL height every frame (it used to assume 132
+  pixels while the thing on screen was far taller).
+- **No level picker.** One colony, always yours: the tile opens the anthill.
+- **Drawn ants.** At a third of a cell the library sprite read as an orange blob, so the
+  ants are drawn: a clean silhouette with a dark outline, a job-coloured marker above, and
+  the carried item in its mandibles. The art ids still come from the manifest and still
+  pick the body colour, and the fallback path is untouched.
 
 ## The colony builder loop (grow it huge)
 

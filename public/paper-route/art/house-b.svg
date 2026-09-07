@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 170" width="200" height="170">
+  <title>Suburban house with a porch and a blue door</title>
+  <g>
+    <rect x="22" y="72" width="156" height="90" rx="4" fill="#fdf1e0"/>
+    <rect x="22" y="72" width="156" height="90" rx="4" fill="none" stroke="#e8d6bd" stroke-width="2"/>
+    <path d="M10 78 L100 24 L190 78 Z" fill="#7f9ec0"/>
+    <path d="M10 78 L100 24 L190 78 Z" fill="none" stroke="#65809e" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M100 24 L190 78 L176 78 L100 34 Z" fill="#94b0cd"/>
+    <rect x="82" y="106" width="34" height="56" rx="3" fill="#4d7fb5"/>
+    <circle cx="110" cy="136" r="3" fill="#f6d98a"/>
+    <path d="M62 106 h74 v8 h-74 z" fill="#efe0c8"/>
+    <rect x="64" y="106" width="6" height="56" fill="#efe0c8"/>
+    <rect x="130" y="106" width="6" height="56" fill="#efe0c8"/>
+    <rect x="34" y="94" width="30" height="26" rx="3" fill="#cfe2ee"/>
+    <rect x="34" y="94" width="30" height="26" rx="3" fill="none" stroke="#ffffff" stroke-width="4"/>
+    <rect x="140" y="94" width="30" height="26" rx="3" fill="#cfe2ee"/>
+    <rect x="140" y="94" width="30" height="26" rx="3" fill="none" stroke="#ffffff" stroke-width="4"/>
+    <rect x="22" y="152" width="156" height="10" fill="#ecdcc4"/>
+  </g>
+</svg>

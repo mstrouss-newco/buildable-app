@@ -1,17 +1,84 @@
-# Game Mechanics Library
+# Game Mechanics Library — and THE RECIPE BOOK
 
-A catalog of **reusable, tested gameplay primitives** that the game generator
-(`api/generate-game.js`) draws on so every generated game is assembled from proven
-mechanics instead of being improvised from scratch.
+Two things live in this file, and the first one is the one you probably want.
 
-These patterns were extracted from a finished, shipped game (*Riley's Garden* at
-croctot.com/riley) and re-expressed here in an engine-neutral way. They are written
-to be implemented in **Phaser 3**, but the *design* is portable to any 2D engine.
+**1. The recipe book (Session CB2) — how a game gets CHANGED.** A kid's game is a
+manifest played by an engine we already ship. When a kid says "make it harder" or
+"put it at night", nothing hand-writes a new manifest: a NAMED RECIPE makes the
+edit. See section 0 below.
 
-> **Why this exists:** the original generator prompt just asked for a bare
-> "run and jump over gaps" game — no enemies, no power-ups, no win condition, no
-> difficulty design. That is why early generated games felt thin. This library gives
-> the generator a vocabulary of real mechanics to compose.
+**2. The mechanics catalog — how an engine gets BUILT.** The rest of this file is a
+catalog of reusable gameplay primitives (movement patterns, win conditions,
+difficulty curves, FX, turn shells, tower-defense and physics mechanics) pulled out
+of games we have finished. It is a reference for someone writing or extending an
+ENGINE.
+
+> **A correction, kept on purpose.** This file used to open by telling the reader it
+> was a vocabulary for `api/generate-game.js` to compose Phaser 3 games from. That
+> generator is dead: we do not generate engine code any more, because generated
+> engine code is how you ship a game nobody can play. We ship engines, and an AI
+> assembles a MANIFEST for one. The catalog below is still true and still useful —
+> read it as design notes for engine authors, not as instructions to a code
+> generator, and ignore the Phaser framing where it survives in the older sections.
+
+---
+
+## 0. The recipe book — the only way an AI changes a kid's game
+
+Three layers, each one a fence around the one above it:
+
+| Layer | Where it lives | What it decides |
+|-------|----------------|-----------------|
+| **The sheet** | `public/<engine>/cobuild.json` | What this engine can do AT ALL: every art slot and the themes it takes, every dial with its range and a plain-English label, the shape a level may take, the feel presets, the rules it really fires, and a list of what it can NEVER do. |
+| **The recipes** | `public/buildable-recipes.js` | The named edits. Each takes `(manifest, params, sheet)` and returns a NEW manifest. Deterministic, non-mutating, and clamped to the sheet's own limits. |
+| **The rules** | `public/buildable-mechanics.js` (`BM.rules`) | Layer two: `rules:[{when,do,params}]` on a manifest. Six moments, eight actions, nothing else. |
+
+### The recipes
+
+| Recipe | What it does | Works on |
+|--------|--------------|----------|
+| `rename` | New name for the game | all four |
+| `swapHero` | Change who you play as | Breaker, Sling Squad |
+| `swapWorld` | Change where it happens | Breaker, Sling Squad, Sky Flyer |
+| `recolor` | New signature colour | all four |
+| `moreCollectibles` / `fewerCollectibles` | More or fewer coins to collect (on Sky Flyer, the coin goal) | all four |
+| `harder` / `easier` | Every level one step along the 1-5 ramp | all four |
+| `addBoss` / `removeBoss` | A named boss on the last level | Castle Guard |
+| `nightMode` / `dayMode` | Night or day | Breaker, Sky Flyer |
+| `zoomier` / `calmer` | The whole game faster or calmer (`feel.pace`) | all four |
+| `addLevel` / `removeLevel` | One more level, or one fewer | all four |
+| `mathGate` | Ask a question before the next level unlocks | all four |
+| `voiceLine` | Say something out loud at a moment | all four |
+
+Asking an engine for a recipe it does not have is an **honest no with a reason**,
+never a silent no-op — that is what lets the AI offer the nearest thing instead of
+pretending. `BuildableRecipes.apply(id, manifest, params, sheet)` returns either
+`{ ok:true, manifest }` or `{ ok:false, error, nearest }`.
+
+### The rules vocabulary (layer two)
+
+**Moments:** `onLevelStart`, `onCollect`, `onHit`, `onLand`, `onWin`, `everyNSeconds`.
+**Actions:** `playSound`, `sayLine`, `showText`, `spawn`, `speedUp`, `slowDown`,
+`addPoints`, `loseItem`.
+
+```json
+"rules": [ { "when": "onCollect", "do": "sayLine", "params": { "text": "Yum!" } } ]
+```
+
+An engine adopts it in two lines — `BM.rules.make(manifest, host)` once, then
+`RULES.fire("onCollect", ctx)` where that moment already happens, plus
+`RULES.tick(dt)` once a frame. Sky Flyer and Sling Squad are wired. The engine's
+SHEET, not this list, decides which moments it really fires; a rule naming anything
+else is rejected by strict validation rather than quietly ignored.
+
+### The gate at the end
+
+Nothing above is trusted on its own. `api/kid-game.js` validates every kid game in
+STRICT mode against its sheet, and then the robot (`qa/kid-game-robot.mjs`, reached
+through `api/kid-game-check.js`) PLAYS every level headless and answers
+beatable / not-beatable / too-long. A game the robot cannot finish is refused, with
+an easier variant offered when one works. `qa-recipes.mjs` and `qa-rules.mjs` hold
+all of it to its word on every build.
 
 ---
 

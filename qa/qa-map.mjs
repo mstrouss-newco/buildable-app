@@ -36,6 +36,7 @@ export const GAME_QA = {
   stringmatch: "qa-stringmatch.mjs",
   snakes: "qa-snakes.mjs",
   tumble: "qa-tumble.mjs",
+  "paper-route": "qa-paper-route.mjs",
 };
 
 export const hasRobot = (game) => Object.prototype.hasOwnProperty.call(GAME_QA, game);

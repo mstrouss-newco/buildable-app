@@ -17,6 +17,10 @@
 // POST { op:'report', card, text } -> a finished session's plain-language write-up
 // GET ?scope=report&n=0            -> read one stored report
 // POST { op:'queueStatus', status } -> the runner reporting waiting/running/done/stopped
+// --- runs, built on the planner's Run builder (card RB1) ---
+// GET ?scope=runs                  -> the newest few runs, ready one first
+// POST { op:'saveRun', sessions, settings, startAt } -> save ONE ready run
+// POST { op:'cancelRun', id }      -> cancel a run that has not started
 // Tester adds pass source:'tester' + author; tester edit/delete pass author so
 // PostgREST filters restrict them to their OWN feedback rows (edit-your-own).
 // Uses the service key server-side (like log-game-event / play-creation), so no
@@ -109,6 +113,14 @@ export default async function handler(req, res) {
         const n = Math.max(0, parseInt((/(?:^|&)n=(\d+)/.exec(_qs) || [])[1] || "0", 10));
         const rep = (d.reports || [])[n] || null;
         return res.status(200).json({ ok: true, report: rep });
+      }
+      // The runs the Run builder has saved. Small list: the page only ever shows
+      // the one that is waiting plus a little history.
+      if (/(?:^|&)scope=runs(?:&|$)/.test(_qs)) {
+        const r = await fetch(`${URL}/rest/v1/planner_runs?select=*&order=id.desc&limit=6`, { headers: H });
+        if (!r.ok) { const d = await r.text().catch(() => ""); return res.status(200).json({ ok: false, hint: "run db/create-planner-runs.sql", detail: d.slice(0, 160) }); }
+        const runs = await r.json();
+        return res.status(200).json({ ok: true, runs });
       }
       const scope = /(?:^|&)scope=tester(?:&|$)/.test(_qs) ? "tester" : "";
       const tFilter = scope === "tester" ? "select=*&source=eq.tester&order=created_at.asc" : "select=*&order=created_at.asc";
@@ -349,6 +361,90 @@ export default async function handler(req, res) {
         const r = await fetch(`${URL}/rest/v1/planner_lanes?lane=eq.${encodeURIComponent(lane)}`, { method: "PATCH", headers: H, body: JSON.stringify(fields) });
         if (!r.ok) { const t = await r.text().catch(() => ""); return res.status(200).json({ ok: false, detail: t.slice(0, 160) }); }
         return res.status(200).json({ ok: true });
+      }
+
+      // ---- runs (the Run builder, card RB1) ---------------------------------
+      // A run is an ORDERED list of build sessions plus the settings that say how
+      // they should be worked. The planner page only SAVES one; nothing executes
+      // from the page. Each session is an array of card ids — two or more ids in
+      // one session is the GROUPED law in AGENTS.md, done as a single session.
+      //
+      // Card ids are validated against the live roadmap here, not on the page, so
+      // a stale phone tab can never save a run pointing at cards that no longer
+      // exist. Only ONE run may be waiting or running at a time: a second saved run
+      // would race the first for the same cards.
+      if (op === "saveRun") {
+        const raw = Array.isArray(b.sessions) ? b.sessions : [];
+        if (!raw.length) return res.status(400).json({ ok: false, error: "pick at least one card" });
+        if (raw.length > 20) return res.status(400).json({ ok: false, error: "a run holds at most 20 sessions" });
+
+        const d = await readMeta();
+        const cards = cardsOf(d);
+        if (!cards) return res.status(200).json({ ok: false, error: "no roadmap in planner_meta" });
+        const known = new Set(cards.map((c) => c.id));
+
+        const seen = new Set();
+        const sessions = [];
+        for (const grp of raw) {
+          const ids = (Array.isArray(grp) ? grp : [grp]).map((x) => clip(x, 20).trim()).filter(Boolean);
+          if (!ids.length) return res.status(400).json({ ok: false, error: "a session with no cards in it" });
+          if (ids.length > 6) return res.status(400).json({ ok: false, error: "at most 6 cards in one session" });
+          for (const id of ids) {
+            if (!known.has(id)) return res.status(200).json({ ok: false, error: "card id not found: " + id });
+            if (seen.has(id)) return res.status(400).json({ ok: false, error: "card " + id + " is in the run twice" });
+            seen.add(id);
+          }
+          sessions.push(ids);
+        }
+
+        const st = b.settings || {};
+        const hs = st.hardStop || {};
+        const hsKind = ["none", "hours", "clock"].includes(hs.kind) ? hs.kind : "none";
+        const settings = {
+          ship: st.ship !== false,                       // false = park the whole run on one branch
+          carryOn: st.carryOn !== false,                  // false = stop when a card needs Mike
+          stopAfterFailures: Math.min(9, Math.max(1, parseInt(st.stopAfterFailures, 10) || 2)),
+          hardStop: hsKind === "hours" ? { kind: "hours", hours: Math.min(24, Math.max(1, parseInt(hs.hours, 10) || 6)) }
+                  : hsKind === "clock" ? { kind: "clock", clock: clip(hs.clock, 5) }
+                  : { kind: "none" },
+        };
+
+        let start_at = null;
+        if (b.startAt) {
+          const t = new Date(b.startAt);
+          if (isNaN(t.getTime())) return res.status(400).json({ ok: false, error: "start time not understood" });
+          start_at = t.toISOString();
+        }
+
+        const live = await fetch(`${URL}/rest/v1/planner_runs?select=id,status&status=in.(ready,running)&limit=1`, { headers: H });
+        if (live.ok) {
+          const rows = await live.json();
+          if (rows.length) return res.status(200).json({ ok: false, error: "a run is already " + rows[0].status + ". Cancel it first.", runId: rows[0].id });
+        }
+
+        const r = await fetch(`${URL}/rest/v1/planner_runs`, {
+          method: "POST", headers: { ...H, Prefer: "return=representation" },
+          body: JSON.stringify({ status: "ready", sessions, settings, start_at }),
+        });
+        if (!r.ok) { const t = await r.text().catch(() => ""); return res.status(200).json({ ok: false, hint: "run db/create-planner-runs.sql", detail: t.slice(0, 160) }); }
+        const rows = await r.json();
+        return res.status(200).json({ ok: true, run: rows[0] });
+      }
+
+      // op:'cancelRun' — Mike changing his mind before a runner picks it up. Only a
+      // run that has not started can be cancelled from the page; a running one is
+      // stopped by the runner itself, so the two can never fight over the row.
+      if (op === "cancelRun") {
+        const id = parseInt(b.id, 10);
+        if (!id) return res.status(400).json({ ok: false, error: "id required" });
+        const r = await fetch(`${URL}/rest/v1/planner_runs?id=eq.${id}&status=eq.ready`, {
+          method: "PATCH", headers: { ...H, Prefer: "return=representation" },
+          body: JSON.stringify({ status: "cancelled", finished_at: new Date().toISOString() }),
+        });
+        if (!r.ok) { const t = await r.text().catch(() => ""); return res.status(200).json({ ok: false, detail: t.slice(0, 160) }); }
+        const rows = await r.json();
+        if (!rows.length) return res.status(200).json({ ok: false, error: "that run has already started or is gone" });
+        return res.status(200).json({ ok: true, id });
       }
 
       // op:'addCard' — add a card to an existing phase. Refuses a duplicate id and

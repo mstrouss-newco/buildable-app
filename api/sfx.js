@@ -116,6 +116,16 @@ const SOUNDS = {
   sky_deliver: "Short happy two-note drop-off chime with a soft cushioned thud, a parcel landing safely where it belongs, warm and satisfying, single hit, no music, no voices",
   sky_mission: "Short warm cheerful job-well-done fanfare, a gentle rising three-note flourish with a soft sparkle tail, finishing a delivery round, kind and encouraging, no voices",
 
+  // Card PB1 (Paper Route). The delivery moments themselves are the shared FL5
+  // clips above — a bag refill is sky_pickup, a paper in the mailbox is
+  // sky_deliver, the finished street is sky_mission. These three are the ones
+  // only this engine makes, so the company library grows by exactly what is new.
+  pr_throw:  "Short light paper whoosh, a rolled newspaper thrown through the air with a soft flutter of pages, quick and satisfying, single hit, no music, no voices",
+  pr_clunk:  "Short soft cartoon bump against a plastic bin, a gentle hollow clunk with a small wobble, harmless and friendly, never harsh, single hit, no music, no voices",
+  pr_streak: "Short bright rising three-note chime with a sparkle tail, a run of perfect deliveries in a row, proud and encouraging, single hit, no music, no voices",
+  pr_turbo:  "Short punchy bike surge, a rising airy whoosh with a bright little click at the front, landing a jump and accelerating away clean, energetic and friendly, single hit, no music, no voices",
+  pr_jingle: "Gentle nostalgic ice cream van chime, a simple music-box melody of a few soft bell notes drifting down a quiet street, warm and a little distant, no voices",
+
   // ---- Sling Squad one-shots (slingshot launcher; per BUILDING-A-GAME "new engine = create new sounds") ----
   sling_stretch: "Short soft stretchy elastic rubber-band pull and creak, a slingshot being drawn back, single hit, no music, no voices",
   sling_release: "Short bouncy cartoon slingshot twang and boing as an elastic snaps forward and launches, playful, single hit, no music, no voices",
@@ -352,6 +362,19 @@ const SOUNDS = {
   // ---- SHARED CORE one-shots (canonical bare names) — punchy & satisfying, warm
   // not shrill. These replace the tiny synth fallbacks in buildable-audio.js so NO
   // game ever plays a beep. Any game can use them by their bare event name.
+  // ---- Hop Heroes (public/play.html) — warm, low and rounded on purpose ----
+  hop_jump:   "Very short soft airy cloth whoosh of a small child hopping upward, gentle breathy lift with no tone, warm and quiet, single hit, absolutely no metallic ring, no beep, no music, no voices",
+  hop_land:   "Very short deep soft muffled thump of small shoes landing on soft earth, low and rounded like a padded footfall, warm and quiet, absolutely no scrape, no gravel, no hiss, no metallic ring, single hit, no music, no voices",
+  hop_coin:   "Very short warm rounded wooden marimba note, one soft mellow bloop like a small mallet on a wooden bar, gentle and quiet, single hit, absolutely no metallic ring, no bright bling, no arcade beep, no music, no voices",
+  hop_coinrun:"Short warm rising run of three soft wooden marimba notes, mellow and rounded, gentle, no metallic ring, no bright bling, no music, no voices",
+  hop_star:   "Short warm gentle glass chime bloom, one soft rounded shimmer opening up, mellow and calm, not piercing, not hissy, single hit, no music, no voices",
+  hop_power:  "Short warm rising glow, a soft rounded swell like a gentle bell pad lifting up, mellow and calm, not piercing, single hit, no music, no voices",
+  hop_bounce: "Short soft rubbery low boing, a gentle springy cartoon bounce with a rounded low body, warm and quiet, single hit, no metallic ring, no music, no voices",
+  hop_bonk:   "Very short soft hollow wooden knock, one gentle rounded tap on a wooden box, warm and dry, single hit, no metallic ring, no music, no voices",
+  hop_stomp:  "Very short low rounded muffled boof of landing on a soft cushion, deep and warm and gentle, absolutely no splash, no splat, no hiss, no high frequencies, single hit, no music, no voices",
+  hop_hurt:   "Short soft low cartoon stumble, a gentle downward wooden bump, sympathetic and mild, never harsh or shrill, single hit, no music, no voices",
+  hop_flag:   "Short warm gentle fanfare on soft rounded horns and a low bell, cosy and encouraging, calm not blaring, no metallic edge, no music bed, no voices",
+  hop_win:    "Warm gentle celebration on soft marimba and a low rounded bell, cosy and happy, calm and unhurried, never shrill or piercing, no voices",
   select:    "A single short soft wooden click, like a smooth marble tapping a wooden block one time, dry and clean, no reverb, no music, no voices",
   win:       "A short cheerful triumphant fanfare on warm brass and glockenspiel, three quick rising notes ending on a bright happy chord, celebratory, no voices",
   lose:      "A short funny cartoon fail sound, a comic descending slide-whistle sliding down to a soft tuba blat, playful and goofy, no voices",
@@ -414,6 +437,15 @@ const SOUNDS = {
   practice_go:      "Short bright cheerful ready-steady-go start beep, friendly and light, single hit, no music, no voices",
   practice_time:    "Short soft gentle chime marking the end of a round, calm and friendly, never alarming, single hit, no music, no voices",
   practice_best:    "Happy short celebratory sparkle fanfare for a new personal best, warm and proud, no voices",
+
+  // ---- Ant City (card AC4). A calm colony under a sunny meadow: every sound is
+  // small, warm and close, the size of an ant. Nothing here may sound alarming —
+  // the rain cue included, because rain in this game is a pause, not a danger.
+  antcity_dig:   "Short soft crumbly dig into dry sandy soil, a tiny scoop of loose earth with a light grainy patter, close and warm, single hit, no music, no voices",
+  antcity_march: "A few quick tiny ant footsteps pattering along a tunnel, soft skittery taps on packed earth, light and busy, short, no music, no voices",
+  antcity_hatch: "Short gentle warm chime with a soft papery crackle, a tiny egg opening and something new arriving, cosy and happy, single hit, no music, no voices",
+  antcity_munch: "Short soft tiny nibble crunch, a very small creature eating a crumb, light and cute, single hit, no music, no voices",
+  antcity_rain:  "Short soft patter of raindrops arriving on soil with a gentle low rumble far away, calm and cosy, never alarming, no music, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -424,6 +456,8 @@ const DURATIONS = {
   mm_guitar_electric:1.1, mm_guitar_acoustic:1.1, mm_guitar_twangy:1.1, mm_guitar_bass:1.1,
   mm_strings_violin:1.2, mm_strings_cello:1.2, mm_strings_harp:1.2, mm_strings_orchestra:1.3,
   mm_sing_boy:1.2, mm_sing_girl:1.2, mm_sing_group:1.3, mm_sing_both:1.3, mm_sing_robot:1.2,
+  hop_jump:0.5, hop_land:0.5, hop_coin:0.5, hop_coinrun:0.7, hop_star:0.8, hop_power:0.8,
+  hop_bounce:0.5, hop_bonk:0.5, hop_stomp:0.5, hop_hurt:0.6, hop_flag:1.4, hop_win:1.8,
   practice_right:0.5, practice_oops:0.5, practice_new:0.7, practice_bird:0.6, practice_flock:1.8,
   practice_place:0.6, practice_go:0.5, practice_time:0.8, practice_best:1.4,
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,
@@ -452,6 +486,11 @@ const DURATIONS = {
   fart:1.0, boom:1.2, boing:0.5, burp:0.8, honk:0.6, tada:1.2, laser:0.5, ding:0.5,
   giggle:0.9, roar:1.0, robot:0.8, splat:0.5, cash:0.7, drumroll:1.3, gong:1.4,
   frog:0.6, moo:1.0, rooster:1.2, vroom:1.0, sneeze:0.8, partypop:1.0,
+  // Paper Route (PB1) — its own three one-shots, all clear of the 0.5s floor.
+  pr_throw:0.6, pr_clunk:0.5, pr_streak:1.0, pr_turbo:0.8, pr_jingle:2.4,
+  // Ant City (AC4) — one-shots, every one comfortably over the 0.5s floor that
+  // /api/sfx enforces (under it the generator refuses and the sound is silently gone).
+  antcity_dig:0.6, antcity_march:1.2, antcity_hatch:1.0, antcity_munch:0.6, antcity_rain:1.6,
   buzzer:0.7, sadtrombone:1.4, squeak:0.5, airhorn:0.9, bonk:0.5, slidewhistle:0.7,
   meow:0.7, woof:0.5, quack:0.5, cheer:1.4,
   art_crayon:0.5, art_marker:0.5, art_paint:0.5, art_pencil:0.5, art_chalk:0.5, art_spray:0.5,

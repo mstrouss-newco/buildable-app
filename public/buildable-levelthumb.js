@@ -452,6 +452,50 @@
     },
 
     // MAHJONG — a stacked tile pyramid
+    // ---- hops: a side-on slice of a Hop Heroes world. Sky, far hills, a run of
+    // ground broken by one hole, a coin arc over it, a bonk block, a pipe and the
+    // finish flag — so a locked card still tells you what the world looks like.
+    hops: function(g, d){
+      var sky   = d.sky   || ["#bcdfff","#dff0d6"],
+          grass = d.grass || "#6b9b4a",
+          top   = d.top   || "#8fc46a",
+          dirt  = d.dirt  || "#5a4332",
+          leaf  = d.leaf  || shade(grass, 22),
+          gy    = 88;
+      grad(g, sky[0], sky[1] || shade(sky[0], 24));
+      g.fillStyle = shade(sky[1] || sky[0], -14);                  // far hills
+      for (var h = 0; h < 5; h++) { var hx2 = h * 74 - 20;
+        g.beginPath(); g.moveTo(hx2, gy); g.lineTo(hx2 + 37, gy - 28 - (h % 2) * 9);
+        g.lineTo(hx2 + 74, gy); g.closePath(); g.fill(); }
+      g.fillStyle = shade(grass, -6);                              // three round trees
+      [[42, 62, 21], [152, 58, 18], [252, 63, 20]].forEach(function (t) {
+        g.fillStyle = shade(dirt, 26); g.fillRect(t[0] - 3, t[1], 6, gy - t[1]);
+        disc(g, t[0], t[1], t[2], leaf);
+        disc(g, t[0] - t[2] * 0.3, t[1] - t[2] * 0.3, t[2] * 0.42, shade(leaf, 22)); });
+      var hole = [168, 206];                                       // the ground, with one hole in it
+      [[0, hole[0]], [hole[1], CW]].forEach(function (seg) {
+        g.fillStyle = dirt;  g.fillRect(seg[0], gy + 9, seg[1] - seg[0], CH - gy);
+        g.fillStyle = grass; g.fillRect(seg[0], gy, seg[1] - seg[0], 11);
+        g.fillStyle = top;   g.fillRect(seg[0], gy, seg[1] - seg[0], 4); });
+      g.fillStyle = shade(dirt, -34); g.fillRect(hole[0], gy, hole[1] - hole[0], CH - gy);
+      g.fillStyle = shade(dirt, 14);
+      g.fillRect(hole[0], gy, 4, CH - gy); g.fillRect(hole[1] - 4, gy, 4, CH - gy);
+      for (var c = 0; c < 5; c++) {                                // the coin arc over the hole
+        var u = (c + 0.5) / 5, cx2 = 158 + u * 58, cy2 = gy - 18 - Math.sin(u * Math.PI) * 22;
+        disc(g, cx2, cy2, 6, "#e0a81c"); disc(g, cx2, cy2, 4.4, "#ffd23f");
+        disc(g, cx2 - 1.2, cy2 - 1.4, 1.6, "#fff6c8"); }
+      g.fillStyle = "#d8a63c"; rr(g, 98, gy - 40, 20, 20, 4); g.fill();   // a question block
+      g.fillStyle = "#f2c74e"; rr(g, 100, gy - 38, 16, 16, 3); g.fill();
+      g.fillStyle = "#8a5f1c"; g.fillRect(106, gy - 35, 4, 7); g.fillRect(106, gy - 26, 4, 3);
+      g.fillStyle = "#1d6b52"; rr(g, 56, gy - 24, 22, 24, 3); g.fill();   // a pipe
+      g.fillStyle = "#2f9e77"; rr(g, 59, gy - 22, 11, 22, 2); g.fill();
+      g.fillStyle = "#155b45"; rr(g, 52, gy - 28, 30, 9, 3); g.fill();
+      g.fillStyle = shade(dirt, 18); rr(g, 268, gy - 44, 5, 44, 2); g.fill();  // the finish flag
+      disc(g, 270, gy - 46, 6, "#ffd23f");
+      g.fillStyle = "#ff8f4a"; g.beginPath(); g.moveTo(273, gy - 42);
+      g.lineTo(296, gy - 35); g.lineTo(273, gy - 28); g.closePath(); g.fill();
+    },
+
     tiles: function(g, d){ grad(g, "#1c3b2e", "#0e2018");
       var layers = d.layers || [[6,4],[4,3]]; var tileFace = d.face || "#f3ead2", edge = d.edge || "#cdbf9a";
       var maxC=0, maxR=0; layers.forEach(function(l){ maxC=Math.max(maxC,l[0]); maxR=Math.max(maxR,l[1]); });

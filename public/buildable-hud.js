@@ -15,6 +15,8 @@
 //     { text:"Score 40" }                -> one tinted panel
 //     { text:"Sunny", soft:"Level 1/6" } -> main text + lighter secondary text
 //     { hearts:3 }                        -> a row of 3 hearts (drawn art, no emoji)
+//     { coin:"6 / 98" }                   -> a gold coin followed by the count
+//     { stars:{ got:1, of:3 } }           -> a row of stars, the earned ones filled
 //
 //  mount() sticks an invisible overlay onto the canvas and keeps it lined up as
 //  the window resizes, so the chips always sit on the play area — never drift.
@@ -33,7 +35,8 @@
 '}',
 '.hud{position:absolute;top:18px;left:20px;right:20px;display:flex;',
 '  justify-content:space-between;align-items:flex-start;z-index:5;pointer-events:none;}',
-'.hud-group{display:flex;align-items:center;gap:var(--hud-gap);}',
+'.hud-group{display:flex;align-items:center;gap:var(--hud-gap);min-width:0;}',
+'.hud-group:first-child{overflow:hidden;}',
 '.hud-chip{display:inline-flex;align-items:center;gap:12px;color:var(--hud-text);',
 '  font-family:var(--hud-font);white-space:nowrap;',   /* keep each chip on ONE line so it never grows tall onto the play area */
 '  font-weight:700;font-size:15px;line-height:1;padding:9px 16px;border-radius:var(--hud-radius);',
@@ -43,12 +46,16 @@
 '.hud-chip .hud-soft{font-weight:600;opacity:0.92;}',
 '.hud-hearts{display:inline-flex;gap:5px;}',
 '.hud-heart{width:15px;height:15px;display:inline-block;}',
+'.hud-coin{width:16px;height:16px;display:inline-block;margin-right:-4px;}',
+'.hud-stars{display:inline-flex;gap:4px;}',
+'.hud-star{width:15px;height:15px;display:inline-block;}',
 '/* phones: shrink the bar so both groups fit on one line and stay in the top strip */',
 '@media (max-width:560px){',
 '  .hud{top:10px;left:10px;right:10px;--hud-gap:6px;}',
 '  .hud-chip{font-size:12.5px;gap:8px;padding:7px 11px;}',
-'  .hud-group:first-child .hud-chip{max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+'  .hud-group:first-child .hud-chip{max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
 '  .hud-heart{width:13px;height:13px;}',
+'  .hud-coin{width:14px;height:14px;}  .hud-star{width:13px;height:13px;}',
 '}',
 '/* inside the app shell: leave room for the shell Home (left) + Sound/Menu/Help (right) */',
 '.hud.hud-inshell{left:96px;right:64px;}',
@@ -79,6 +86,18 @@
       '<path fill="#ff5c8a" d="M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11z"/></svg>';
   }
 
+  function coinSVG() {
+    return '<svg class="hud-coin" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="10" fill="#e0a520"/>' +
+      '<circle cx="12" cy="12" r="8" fill="#ffd23f"/>' +
+      '<ellipse cx="9" cy="8.5" rx="2.6" ry="1.7" fill="#fff6c8" opacity="0.85" transform="rotate(-30 9 8.5)"/>' +
+      '</svg>';
+  }
+  function starSVG(filled) {
+    var pts = '12,2.6 14.6,9.2 21.6,9.6 16.2,14.1 18,20.9 12,17.1 6,20.9 7.8,14.1 2.4,9.6 9.4,9.2';
+    return '<svg class="hud-star" viewBox="0 0 24 24" aria-hidden="true"><polygon points="' + pts + '" fill="' +
+      (filled ? '#ffd23f' : 'rgba(255,255,255,0.28)') + '"/></svg>';
+  }
   function esc(t) {
     return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -91,9 +110,16 @@
       for (var i = 0; i < item.hearts; i++) hs += heartSVG();
       return '<div class="hud-chip"><span class="hud-hearts">' + hs + '</span></div>';
     }
-    var inner = esc(item.text != null ? item.text : '');
+    var inner = '';
+    if (item.coin != null) inner += coinSVG() + ' ' + esc(item.coin);
+    if (item.text != null && item.text !== '') inner += (inner ? ' ' : '') + esc(item.text);
     if (item.soft != null && item.soft !== '') {
       inner += ' <span class="hud-soft">' + esc(item.soft) + '</span>';
+    }
+    if (item.stars && typeof item.stars.of === 'number') {
+      var ss = '';
+      for (var j = 0; j < item.stars.of; j++) ss += starSVG(j < (item.stars.got || 0));
+      inner += (inner ? ' ' : '') + '<span class="hud-stars">' + ss + '</span>';
     }
     if (typeof item.heart === 'number') {   // compact lives: one heart + a count (scales to any number)
       inner += ' <span class="hud-hearts">' + heartSVG() + '</span><span class="hud-soft" style="margin-left:3px">' + item.heart + '</span>';
@@ -117,7 +143,7 @@
   }
 
   var BuildableHUD = {
-    version: '1.1.0',
+    version: '1.2.0',
     // Tint the whole HUD with the game's signature color (from its manifest `color`).
     // ONE call restyles every chip's outline; falls back to neutral if never called.
     setAccent: function (color) {

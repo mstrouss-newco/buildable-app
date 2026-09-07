@@ -46,15 +46,32 @@ vm.runInContext(scripts, sandbox, { filename:'play.html-engine' });
 const BK = sandbox.BK_GAME || (sandbox.window && sandbox.window.BK_GAME);
 if(!BK){ console.error('FAIL: BK_GAME not exposed'); process.exit(2); }
 
-// how many levels?
-const cfg = sandbox.GAME_CONFIG || (sandbox.window && sandbox.window.GAME_CONFIG);
-const nLevels = (cfg && cfg.levels && cfg.levels.length) || 1;
-let allWin = true;
+// How many levels? GAME_CONFIG is a const inside the engine, so it is NOT a property of
+// the sandbox and reading it here silently gave 1 — which is why four worlds could have
+// shipped with only the first one ever simulated. Ask the engine instead.
+const nLevels = (BK.levelCount && BK.levelCount())
+  || ((sandbox.GAME_CONFIG || (sandbox.window && sandbox.window.GAME_CONFIG) || {}).levels || []).length
+  || 1;
+// Two things have to hold for every level. (1) A perfect player wins it — the
+// clearability guarantee buildLevel exists to provide. (2) At least 60% of the level's
+// coins are reachable WITHOUT leaving the floor, because the bot never climbs: that is
+// the HH3 promise that the rewards sit on the path a kid actually runs, rather than
+// almost entirely on platforms a ground-running kid walks straight past.
+// (3) The perfect player finishes UNHURT. Winning on the last heart means the level has
+// spots even a flawless run cannot handle, which is one bad roll away from unclearable.
+const COIN_FLOOR_PCT = 60;
+let ok = true;
 for(let i=0;i<nLevels;i++){
-  const r = BK.sim(i, 12000);
-  const ok = r.result==='win';
-  allWin = allWin && ok;
-  console.log(`${ok?'PASS':'FAIL'}  level ${i}  result=${r.result}  frames=${r.frames}  coins=${r.coins}`);
+  const r = BK.sim(i, 20000);
+  const won = r.result==='win';
+  const unhurt = r.hearts === 3;
+  const [got, of_] = String(r.coins).split('/').map(Number);
+  const pct = of_ ? Math.round(got*100/of_) : 0;
+  const coinsOk = pct >= COIN_FLOOR_PCT;
+  ok = ok && won && coinsOk && unhurt;
+  console.log(`${won?'PASS':'FAIL'}  level ${i}  result=${r.result}  frames=${r.frames} (~${(r.frames/60)|0}s)`);
+  console.log(`${unhurt?'PASS':'FAIL'}  level ${i}  perfect player finishes unhurt  hearts=${r.hearts}/3`);
+  console.log(`${coinsOk?'PASS':'FAIL'}  level ${i}  coins on the ground path ${got}/${of_} = ${pct}%  (need ${COIN_FLOOR_PCT}%)`);
 }
-console.log(allWin ? 'ALL LEVELS WIN ✓' : 'SOME LEVELS FAILED ✗');
-process.exit(allWin?0:1);
+console.log(ok ? 'ALL LEVELS WIN, UNHURT, COINS ON THE GROUND PATH ✓' : 'SOME LEVELS FAILED ✗');
+process.exit(ok?0:1);
