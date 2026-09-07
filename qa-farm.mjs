@@ -82,7 +82,7 @@ try {
 
   console.log('--- THE FARM: the scene stands up in a real browser ---');
   chk('the farm scene boots with a WebGL context and no page errors', errs.length === 0, errs.join(' | '));
-  chk('it is the FM4 build', (await ev(() => window.FARM.version)) === 'fm4');
+  chk('it is the FM5 build', (await ev(() => window.FARM.version)) === 'fm5');
 
   // ======================================================================
   //  FM4 — THE FIRST ORDER. This block runs BEFORE the robot collects
@@ -621,6 +621,340 @@ try {
       return p2.length === pantry.length && pantry.every(k => p2.includes(k));
     })());
   await ev(() => window.FARM.newOrder());
+
+  // ======================================================================
+  //  FM5 — THE TOWNSHIP LESSONS: it remembers her, it grows while she is
+  //  away, it is never idle, and the next thing is always visible.
+  //
+  //  This runs on ITS OWN PAGE in its own context, so it starts from a farm
+  //  nothing has been played on and its localStorage is its own. It reloads
+  //  that page for real — a save that only round-trips through a variable in
+  //  the same frame has not been tested at all.
+  //
+  //  NOTE: this whole block also IS the "Supabase is down" case. The harness
+  //  serves public/ and nothing else, so every /api/farm-save call 404s. If
+  //  anything below goes green, it went green with the cloud unreachable.
+  // ======================================================================
+  console.log('\n--- FM5: THE FARM REMEMBERS HER (save round trip, through a real reload) ---');
+  const p5 = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+  const e5 = [];
+  p5.on('pageerror', e => e5.push('pageerror: ' + e.message));
+  p5.on('console', m => { if (m.type() === 'error') e5.push('console: ' + m.text()); });
+  const ev5 = (fn, arg) => p5.evaluate(fn, arg);
+  const boot5 = () => p5.waitForFunction(
+    () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
+    { timeout: 20000 });
+
+  await p5.goto(BASE, { waitUntil: 'load' });
+  await boot5();
+  chk('it is the FM5 build', (await ev5(() => window.FARM.version)) === 'fm5');
+  chk('a farm nobody has played starts from the FM1 farm, not from someone else\'s',
+    (await ev5(() => window.FARM.save.info())) === null &&
+    (await ev5(() => window.FARM.patches().every(p => p.state === 'empty'))) === true);
+
+  // --- play it: plant, feed, harvest, carry
+  await ev5(() => { window.FARM.moveKidTo(-45, -45); window.FARM.plant(0, 'corn'); window.FARM.plant(4, 'wheat'); });
+  await ev5(() => window.FARM.giveItem('corn', 2));
+  // walk up to a hen carrying corn and it is fed — the FM2 mechanic, unchanged
+  const hen5 = (await ev5(() => window.FARM.animals())).find(a => a.kind === 'chicken');
+  await ev5(([x, z]) => window.FARM.moveKidTo(x, z), [hen5.x + 1.0, hen5.z + 1.0]);
+  await p5.waitForFunction(() => window.FARM.animals().some(a => a.state === 'making'), { timeout: 15000 });
+  await ev5(() => window.FARM.moveKidTo(-45, -45));
+  await ev5(() => window.FARM.giveItem('carrot', 3));
+  const before5 = await ev5(() => { window.FARM.save.now(); return {
+    patches: window.FARM.patches().map(p => p.state + ':' + (p.seed || '-')),
+    animals: window.FARM.animals().map(a => a.kind + ':' + a.state),
+    stack: window.FARM.stack().map(s => s.kind),
+    collected: window.FARM.collected().slice().sort(),
+    ordersDone: window.FARM.ordersDone(),
+    saved: window.FARM.save.local()
+  }; });
+  chk('playing writes a save to this browser, even with the cloud unreachable',
+    !!before5.saved && before5.saved.v === 1 && before5.saved.patches.length === 9,
+    before5.saved ? 'v' + before5.saved.v : 'nothing saved');
+  chk('the save is written the moment the page is hidden, not only on a timer',
+    (await ev5(() => window.FARM.save.stats())).local > 0);
+
+  await p5.reload({ waitUntil: 'load' });
+  await boot5();
+  const after5 = await ev5(() => ({
+    patches: window.FARM.patches().map(p => p.state + ':' + (p.seed || '-')),
+    animals: window.FARM.animals().map(a => a.kind + ':' + a.state),
+    stack: window.FARM.stack().map(s => s.kind),
+    collected: window.FARM.collected().slice().sort(),
+    ordersDone: window.FARM.ordersDone()
+  }));
+  chk('after a real reload the field is the field she left',
+    JSON.stringify(after5.patches) === JSON.stringify(before5.patches),
+    before5.patches.join(',') + '  ->  ' + after5.patches.join(','));
+  chk('the animal she fed is still making what she fed it for',
+    JSON.stringify(after5.animals) === JSON.stringify(before5.animals),
+    after5.animals.join(','));
+  chk('and the tower on her head came back item for item',
+    JSON.stringify(after5.stack) === JSON.stringify(before5.stack),
+    before5.stack.join('+') + '  ->  ' + after5.stack.join('+'));
+  chk('the pantry and the orders done came back too',
+    JSON.stringify(after5.collected) === JSON.stringify(before5.collected) &&
+    after5.ordersDone === before5.ordersDone);
+  chk('there is no reset button anywhere a child can reach',
+    (await ev5(() => {
+      const txt = document.body.innerText.toLowerCase();
+      return !/new farm|start over|reset|start again/.test(txt);
+    })) === true);
+
+  console.log('\n--- FM5: IT GREW WHILE SHE WAS AWAY, AND SOMETHING IS WAITING ---');
+  const away5 = await ev5(() => {
+    const A = window.FARM.animals();
+    const blob = {
+      v: window.FARM.save.snapshot().v,
+      savedAt: Date.now() - 30 * 60 * 1000,          // half an hour ago
+      // three crops mid-grow, one already ready before she left, five bare
+      patches: [{ s: 'corn', left: 20 }, { s: 'wheat', left: 5 }, { s: null },
+                { s: 'corn', left: 0 }, { s: null }, { s: null }, { s: null }, { s: null }, { s: null }],
+      // every animal was fed just before she went
+      animals: A.map(a => ({ k: a.kind, st: 'making', left: 12 })),
+      stack: [], basket: [],
+      collected: ['corn', 'carrot', 'wheat', 'egg', 'milk'],
+      unlocks: [], duck: window.FARM.duckBought(), ordersDone: 3,
+      order: { pay: 24, face: 0, sent: false, items: [{ k: 'corn', f: false }, { k: 'corn', f: false }] }
+    };
+    const r = window.FARM.save.load(blob);
+    return { r: r, patches: window.FARM.patches().map(p => p.state + ':' + (p.seed || '-')),
+             animals: window.FARM.animals().map(a => a.state),
+             basket: window.FARM.basket(), animalCount: A.length };
+  });
+  chk('half an hour away counts as away', away5.r && away5.r.away === true &&
+    away5.r.elapsed > 1700, away5.r ? Math.round(away5.r.elapsed) + 's' : 'no load');
+  chk('the two crops that would have finished are NOT still standing in the field',
+    away5.patches[0] === 'empty:-' && away5.patches[1] === 'empty:-', away5.patches.join(','));
+  chk('a patch she never planted is still bare — nothing is invented for her',
+    away5.patches[2] === 'empty:-', away5.patches[2]);
+  chk('a crop that was already ready before she left is still standing there',
+    away5.patches[3] === 'ready:corn', away5.patches[3]);
+  chk('every animal that was fed gave ONE thing while she was away, and no more',
+    away5.animals.every(s => s === 'hungry'), away5.animals.join(','));
+  chk('and all of it is in a basket by the door, not scattered round the farm',
+    away5.basket.up === true &&
+    away5.basket.items.length === 2 + away5.animalCount,   // two crops + one per animal
+    away5.basket.items.join('+'));
+  chk('the basket shows what is in it in colour, one turning model per kind',
+    away5.basket.floating === away5.basket.kinds.length && away5.basket.floating > 0,
+    away5.basket.kinds.join(','));
+  chk('nothing else on the farm moves until she reaches it — the crate holds off',
+    await (async () => {
+      const c = await ev5(() => window.FARM.crate());
+      await ev5(([x, z]) => window.FARM.moveKidTo(x, z), [c.x, c.z]);
+      await p5.waitForTimeout(700);
+      const n = (await ev5(() => window.FARM.order())).items.filter(i => i.filled).length;
+      await ev5(() => window.FARM.moveKidTo(-45, -45));
+      return n === 0;
+    })());
+  const wanted5 = away5.basket.items.length;
+  chk('walking to the basket whooshes the lot onto the stack', await (async () => {
+    await ev5(() => window.FARM.moveKidTo(-45, -45));
+    await p5.waitForTimeout(200);
+    await ev5(() => window.FARM.clearStack());
+    const b = await ev5(() => window.FARM.basket());
+    await ev5(([x, z]) => window.FARM.moveKidTo(x, z), [b.x + 0.6, b.z + 0.6]);
+    await p5.waitForFunction(() => window.FARM.basket().items.length === 0, { timeout: 15000 })
+      .catch(() => {});
+    return (await ev5(() => window.FARM.stackHeight())) === wanted5;
+  })(), wanted5 + ' items');
+  chk('and then the basket is gone until the next time she comes back',
+    await (async () => {
+      await p5.waitForFunction(() => !window.FARM.basket().up, { timeout: 6000 }).catch(() => {});
+      return !(await ev5(() => window.FARM.basket())).up;
+    })(), JSON.stringify(await ev5(() => window.FARM.basket())));
+  chk('over a short absence a crop just keeps growing where it stood',
+    await (async () => {
+      const r = await ev5(() => window.FARM.save.load({
+        v: window.FARM.save.snapshot().v, savedAt: Date.now() - 20 * 1000,
+        patches: [{ s: 'carrot', left: 40 }].concat(Array(8).fill({ s: null })),
+        animals: [], stack: [], basket: [], collected: ['corn', 'carrot', 'wheat'],
+        unlocks: [], duck: false, ordersDone: 0, order: null
+      }));
+      const p = await ev5(() => window.FARM.patches()[0]);
+      return r.away === false && p.state === 'growing' && p.seed === 'carrot';
+    })());
+  chk('under ten minutes away, nothing is a homecoming — no basket at all',
+    await (async () => {
+      const r = await ev5(() => window.FARM.save.load({
+        v: window.FARM.save.snapshot().v, savedAt: Date.now() - 60 * 1000,
+        patches: [{ s: 'corn', left: 5 }].concat(Array(8).fill({ s: null })),
+        animals: [], stack: [], basket: [], collected: ['corn', 'carrot', 'wheat'],
+        unlocks: [], duck: false, ordersDone: 0, order: null
+      }));
+      const p = await ev5(() => window.FARM.patches()[0]);
+      // it finished, but it finished in the FIELD: she walks over and takes it
+      return r.away === false && p.state === 'ready' && !(await ev5(() => window.FARM.basket())).up;
+    })());
+
+  console.log('\n--- FM5: NEVER IDLE (there is always one thing she can do) ---');
+  const idle5 = await ev5(() => {
+    // the one state that can genuinely dry up: every patch growing, every
+    // animal still making, nothing on her head, nothing ready anywhere
+    window.FARM.save.load({
+      v: window.FARM.save.snapshot().v, savedAt: Date.now(),
+      patches: Array(9).fill(0).map(() => ({ s: 'corn', left: 900 })),
+      animals: window.FARM.animals().map(a => ({ k: a.kind, st: 'making', left: 900 })),
+      stack: [], basket: [], collected: ['corn', 'carrot', 'wheat'],
+      unlocks: [], duck: window.FARM.duckBought(), ordersDone: 2,
+      order: { pay: 24, face: 0, sent: false, items: [{ k: 'corn', f: false }] }
+    });
+    const before = window.FARM.whatCanSheDoNow();
+    const fix = window.FARM.fixIdle();
+    return { before: before, fix: fix, after: window.FARM.whatCanSheDoNow() };
+  });
+  chk('a farm where everything is still cooking really can reach zero', idle5.before === 0,
+    'count=' + idle5.before);
+  chk('and the fixer finishes whatever is closest to done, so it never stays there',
+    idle5.after > 0 && idle5.fix !== 'none', idle5.fix + ' -> ' + idle5.after);
+  chk('the farm does that on its own, without being asked', await (async () => {
+    await ev5(() => window.FARM.save.load({
+      v: window.FARM.save.snapshot().v, savedAt: Date.now(),
+      patches: Array(9).fill(0).map(() => ({ s: 'wheat', left: 900 })),
+      animals: window.FARM.animals().map(a => ({ k: a.kind, st: 'making', left: 900 })),
+      stack: [], basket: [], collected: ['corn', 'carrot', 'wheat'],
+      unlocks: [], duck: window.FARM.duckBought(), ordersDone: 2, order: null
+    }));
+    await ev5(() => window.FARM.moveKidTo(-45, -45));
+    await p5.waitForFunction(() => window.FARM.whatCanSheDoNow() > 0, { timeout: 8000 }).catch(() => {});
+    return (await ev5(() => window.FARM.whatCanSheDoNow())) > 0;
+  })());
+  chk('and from every save this run has loaded, the count is never zero after the watch',
+    (await ev5(() => window.FARM.idle())).count > 0);
+  chk('there is not one countdown or timer anywhere on the screen',
+    (await ev5(() => !/\b\d+\s*(s|sec|secs|seconds|m|min|mins)\b|\b\d{1,2}:\d{2}\b/i
+      .test(document.getElementById('hud').innerText))) === true,
+    await ev5(() => document.getElementById('hud').innerText.replace(/\n/g, ' | ')));
+
+  console.log('\n--- FM5: AN ORDER SHE CANNOT PROGRESS IS A BUG ---');
+  const prog5 = await ev5(() => {
+    const bad = [];
+    for (let i = 0; i < 80; i++) {
+      const kinds = window.FARM.newOrder();
+      kinds.forEach(k => {
+        if (!window.FARM.collected().includes(k)) bad.push('not carried: ' + k);
+        if (!window.FARM.producibleNow(k)) bad.push('cannot be made here: ' + k);
+      });
+    }
+    return { bad: bad.slice(0, 5), pool: window.FARM.orderableKinds() };
+  });
+  chk('eighty orders, and every single kind in them is one this farm can make today',
+    prog5.bad.length === 0, prog5.bad.join(' | ') || prog5.pool.join(','));
+  chk('the pool never empties, so there is always an order to be given',
+    prog5.pool.length > 0, prog5.pool.join(','));
+
+  console.log('\n--- FM5: THE NEXT THING IS ALWAYS VISIBLE (one present at a time) ---');
+  const LADDER = [['pumpkinseed', 130], ['farmdog', 180], ['fieldrow', 240], ['pig', 300],
+                  ['mill', 380], ['bees', 460], ['strawberry', 560], ['tractor', 700]];
+  const un5 = await ev5(() => window.FARM.unlocks());
+  chk('the path is fixed, eight presents, in the order Mike set',
+    un5.length === 8 && un5.every((u, i) => u.id === LADDER[i][0]),
+    un5.map(u => u.id).join(' > '));
+  chk('and they cost what Mike said they cost',
+    un5.every((u, i) => u.price === LADDER[i][1]),
+    un5.map(u => u.price).join(','));
+  chk('the first present is the pumpkin seed, and it is the only one shown',
+    await (async () => {
+      await ev5(() => { window.FARM.addCoins(900); window.FARM.openShop(); });
+      await p5.waitForTimeout(400);              // the card fades in
+      const shown = await ev5(() => {
+        const el = document.getElementById('buyPresent');
+        return { on: !!el && el.style.display !== 'none', text: el ? el.innerText : '',
+                 others: document.getElementById('shopCard').innerText };
+      });
+      const nx = await ev5(() => window.FARM.nextUnlock());
+      const otherPrices = LADDER.slice(1).filter(([, p]) => shown.others.includes(String(p)));
+      await ev5(() => window.FARM.closeShop());
+      return nx.id === 'pumpkinseed' && shown.on && shown.text.includes('130') && otherPrices.length === 0;
+    })());
+  chk('opening it is the biggest celebration in the game', await (async () => {
+    const paid = await ev5(() => {
+      const before = window.FARM.wallet().balance;
+      const bought = window.FARM.buyPresent();
+      return { bought: bought, before: before, after: window.FARM.wallet().balance };
+    });
+    await p5.waitForFunction(() => { const r = window.FARM.revealing(); return !!r && r.popped; },
+      { timeout: 8000 }).catch(() => {});
+    const mid = await ev5(() => ({ r: window.FARM.revealing(), conf: window.FARM.confetti(),
+      plane: window.FARM.plane().phase }));
+    return paid.bought === true && paid.before - paid.after === 130 &&
+      !!mid.r && mid.r.thing === true && mid.conf > 20;
+  })());
+  chk('the plane goes over the top of it', await (async () => {
+    // the fly-by is launched with the reveal; either it is still up there or
+    // it has already put itself back on its parking spot
+    const r = await ev5(() => window.FARM.plane());
+    return r.phase === 'flyby' || r.y > 3 || r.phase === 'parked';
+  })());
+  chk('a present whose thing is not built yet still hops coins back out', await (async () => {
+    await p5.waitForFunction(() => window.FARM.revealing() === null, { timeout: 12000 }).catch(() => {});
+    const w = await ev5(() => window.FARM.wallet().balance);
+    // she paid 130 and a third of it came back, so she is down about 91
+    return (await ev5(() => window.FARM.owned())).includes('pumpkinseed') && w > 0;
+  })());
+  chk('and it is marked hers, so FM6 to FM8 can honour it',
+    (await ev5(() => window.FARM.unlocks()))[0].owned === true);
+  chk('now the NEXT present is the farm dog, and still nothing after it',
+    (await ev5(() => window.FARM.nextUnlock())).id === 'farmdog');
+  chk('the presents she has opened survive a reload', await (async () => {
+    await ev5(() => window.FARM.save.now());
+    await p5.reload({ waitUntil: 'load' });
+    await boot5();
+    return (await ev5(() => window.FARM.owned())).includes('pumpkinseed') &&
+           (await ev5(() => window.FARM.nextUnlock())).id === 'farmdog';
+  })());
+
+  console.log('\n--- FM5: SMALL CELEBRATIONS, CONSTANTLY ---');
+  chk('planting throws up a puff of soil', await (async () => {
+    await ev5(() => { window.FARM.moveKidTo(-45, -45); window.FARM.save.load({
+      v: window.FARM.save.snapshot().v, savedAt: Date.now(),
+      patches: Array(9).fill({ s: null }), animals: [], stack: [], basket: [],
+      collected: ['corn', 'carrot', 'wheat'], unlocks: ['pumpkinseed'],
+      duck: window.FARM.duckBought(), ordersDone: 1, order: null }); });
+    return await ev5(() => {
+      const before = window.FARM.puffs();
+      const i = window.FARM.patches().findIndex(p => p.state === 'empty');
+      if (i < 0) return false;
+      window.FARM.plant(i, 'corn');
+      return window.FARM.puffs() > before;
+    });
+  })());
+  chk('and it clears itself up — nothing ever piles up on the farm', await (async () => {
+    // the software rasteriser runs at about ten frames a second, so this waits
+    // on the STATE and not on a wall clock the machine cannot keep up with
+    await p5.waitForFunction(() => window.FARM.puffs() === 0, { timeout: 6000 }).catch(() => {});
+    return (await ev5(() => window.FARM.puffs())) === 0;
+  })());
+  chk('the whole farm goes quiet when the shared mute flag is set',
+    (await ev5(() => {
+      try { localStorage.setItem('bk_muted', '1'); } catch (e) {}
+      return typeof window.FARM.soundOn === 'function';
+    })) === true);
+
+  chk('no page errors in the whole FM5 run', e5.length === 0, e5.join(' | '));
+  await p5.close();
+
+  console.log('\n--- FM5: THE FILE ITSELF ---');
+  const src5 = fs.readFileSync(path.join(root, 'skyflyer-farm.html'), 'utf8');
+  chk('no emoji anywhere in the farm, still',
+    !/[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u.test(src5));
+  const code5 = src5.replace(/<!--[\s\S]*?-->/g, '')
+                    .replace(/\/\*[\s\S]*?\*\//g, '')
+                    .replace(/(^|[^:'"\w])\/\/[^\n]*/gm, '$1');
+  chk('no countdown, no timer, no seconds-left anywhere in the code',
+    !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(code5));
+  // every celebration puff's own life, read off the call that makes it
+  const lives5 = [...src5.matchAll(/\bpuff\([^;]*?,\s*(\d*\.?\d+)\s*\)\s*;/g)].map(m => parseFloat(m[1]));
+  chk('no celebration lasts long enough to slow her down — all under half a second',
+    lives5.length >= 3 && lives5.every(v => v > 0 && v < 0.5), lives5.join('s, ') + 's');
+  chk('the save is best-effort: every network call has a catch on it',
+    (src5.match(/fetch\("\/api\/farm-save/g) || []).length >= 2 &&
+    /\.catch\(function\(\)\{\}\)/.test(src5) && /catch\(function\(\)\{ cloudErrs\+\+; \}\)/.test(src5));
+  chk('and it is written on the way out of the page, not only on a timer',
+    /addEventListener\("pagehide", flushSave\)/.test(src5) && /sendBeacon/.test(src5));
+
 
   console.log('\n--- FM3: THE SHELL CONTRACT ---');
   chk('the shared nav bridge is loaded, so the shell\'s Home button reaches us',

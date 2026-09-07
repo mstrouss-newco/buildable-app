@@ -1,0 +1,118 @@
+// Picture gate for THE FARM (LOOK RULE 19): render the real farm in the real
+// engine and take the shots Mike judges, because he judges pictures and not
+// descriptions.
+//
+// FM5's four: the welcome-back basket with what is in it floating above, the
+// wrapped present in the shop, the reveal mid-confetti, and the shop at phone
+// width. Written to qa/shots/ .
+//
+// Run:  node qa-farm-shot.mjs .
+// Same rig as qa-farm.mjs: a real chromium on the software rasteriser, over a
+// tiny static server, because the scene fetches a glb and file:// will not do.
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+
+const dir = process.argv[2] || '.';
+const root = path.resolve(dir, 'public');
+const outDir = path.resolve(dir, 'qa', 'shots');
+let ok = true;
+const chk = (name, cond, extra = '') => {
+  console.log((cond ? 'PASS' : 'FAIL') + '  ' + name + (extra ? '  ::  ' + extra : ''));
+  if (!cond) ok = false;
+};
+
+let chromium = null;
+for (const spec of ['playwright', '/opt/node22/lib/node_modules/playwright/index.js']) {
+  try { chromium = createRequire(import.meta.url)(spec).chromium; break; } catch (e) { /* keep trying */ }
+}
+if (!chromium) {
+  console.log('FAIL  the farm camera could run  ::  playwright not found — `npm i --no-save playwright`');
+  console.log('\nSOME CHECKS FAILED');
+  process.exit(1);
+}
+
+const TYPES = { '.html':'text/html', '.js':'text/javascript', '.glb':'model/gltf-binary',
+                '.json':'application/json', '.png':'image/png', '.css':'text/css' };
+const server = http.createServer((req, res) => {
+  const rel = decodeURIComponent(req.url.split('?')[0]);
+  const file = path.join(root, path.normalize(rel).replace(/^(\.\.[/\\])+/, ''));
+  if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    res.writeHead(404); res.end('no'); return;
+  }
+  res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+  fs.createReadStream(file).pipe(res);
+});
+await new Promise(r => server.listen(0, '127.0.0.1', r));
+const BASE = 'http://127.0.0.1:' + server.address().port + '/skyflyer-farm.html';
+
+fs.mkdirSync(outDir, { recursive: true });
+const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
+const shot = async (page, name) => {
+  const file = path.join(outDir, name + '.png');
+  await page.screenshot({ path: file });
+  chk('shot: ' + name, fs.existsSync(file) && fs.statSync(file).size > 8000,
+    fs.existsSync(file) ? Math.round(fs.statSync(file).size / 1024) + 'KB' : 'missing');
+};
+const ready = (p) => p.waitForFunction(
+  () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
+  { timeout: 25000 });
+
+try {
+  // ---------------------------------------------------- 1. the basket, tablet
+  const page = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+  await page.goto(BASE, { waitUntil: 'load' });
+  await ready(page);
+  await page.evaluate(() => {
+    window.FARM.save.load({
+      v: window.FARM.save.snapshot().v, savedAt: Date.now() - 40 * 60 * 1000,
+      patches: [{ s: 'corn', left: 12 }, { s: 'wheat', left: 8 }, { s: 'carrot', left: 6 }]
+        .concat(Array(6).fill({ s: null })),
+      animals: window.FARM.animals().map(a => ({ k: a.kind, st: 'making', left: 9 })),
+      stack: [], basket: [], collected: ['corn', 'carrot', 'wheat', 'egg', 'milk'],
+      unlocks: [], duck: false, ordersDone: 4, order: null
+    });
+    const b = window.FARM.basket();
+    window.FARM.moveKidTo(b.x + 0.3, b.z + 3.5);      // walking up to it, not on it
+  });
+  await page.waitForTimeout(1400);
+  await shot(page, 'fm5-welcome-basket');
+
+  // ------------------------------------------- 2. the present, in the shop
+  await page.evaluate(() => { window.FARM.addCoins(600); window.FARM.openShop(); });
+  await page.waitForTimeout(700);
+  await shot(page, 'fm5-shop-present');
+
+  // ---------------------------------------- 3. the reveal, mid-confetti
+  await page.evaluate(() => { window.FARM.closeShop(); window.FARM.moveKidTo(-8, 0); });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => window.FARM.buyPresent());
+  await page.waitForFunction(() => { const r = window.FARM.revealing();
+    return !!r && r.popped && window.FARM.confetti() > 10; }, { timeout: 12000 }).catch(() => {});
+  await page.waitForTimeout(250);
+  const mid = await page.evaluate(() => ({ conf: window.FARM.confetti(),
+    r: window.FARM.revealing(), plane: window.FARM.plane() }));
+  chk('the reveal really is mid-confetti when the picture is taken',
+    mid.conf > 10 && !!mid.r, mid.conf + ' pieces');
+  await shot(page, 'fm5-present-reveal');
+  await page.close();
+
+  // ------------------------------------------- 4. the shop at phone width
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await phone.goto(BASE, { waitUntil: 'load' });
+  await ready(phone);
+  await phone.evaluate(() => { window.FARM.addCoins(600); window.FARM.openShop(); });
+  await phone.waitForTimeout(800);
+  await shot(phone, 'fm5-shop-phone');
+  await phone.close();
+} catch (e) {
+  chk('the farm camera completed its run', false, e.message);
+} finally {
+  await browser.close();
+  server.close();
+}
+
+console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
+process.exit(ok ? 0 : 1);

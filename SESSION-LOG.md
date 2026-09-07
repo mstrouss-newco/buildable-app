@@ -1,3 +1,138 @@
+## 2026-09-07 (FM5): the farm remembers her, grows while she is away, and always has a next thing
+
+**Phase FM, card FM5.** Mike's kids love Township, and the reason is that Township
+is a place they own that keeps changing and is waiting for them when they come back.
+The farm forgot everything on reload, so nothing else in the plan could stick. Four
+things landed, and they are all one idea. Touched `public/skyflyer-farm.html`,
+`api/farm-save.js` (new), `db/create-farm-save.sql` (new), `src/BuildableKids.jsx`,
+`qa-farm.mjs`, `qa-farm-shot.mjs` (new), `qa-skyflyer.mjs`.
+
+### Step 1 — it remembers her
+Every patch, every animal, the tower on her head, the pantry (`COLLECTED`), the live
+order and its progress, orders done, the duck, and the presents she has opened all go
+into one JSON blob, one row per kid, in a new `farm_saves` table through a new
+`/api/farm-save`. **The migration was written AND applied** in this session
+(`apply_migration create_farm_save`, verified with `list_tables`), so the table exists
+before the feature ships.
+
+Timers are stored as **seconds left**, never as a wall-clock stamp, so a device with a
+wrong clock or a tab left open overnight cannot poison a save. The one wall-clock
+number is `savedAt`, and it is only ever read to work out how long she has been gone.
+
+Best-effort and never blocking: local first, cloud after, and every failure path is
+silent to the kid. A signature of everything worth saving is checked once a second and
+a change schedules a debounced write, which beats sprinkling a save call through twenty
+places and forgetting the twenty-first. `pagehide` and a hidden tab flush through
+`navigator.sendBeacon`, the only thing a browser promises to finish on the way out.
+One real bug found by the robot and fixed: the watcher must not write **before** the
+save has been read, or a slow model load can save an empty farm over a good one.
+
+**There is no reset a child can reach.** The scene wipe exists only so a newer cloud
+save can replace a just-loaded local one in the first second, before anything has been
+touched, and nothing on screen calls it. No grown-up reset was added: there was no
+existing grown-up gate inside the farm to hang one on, and the card said only if one
+already exists.
+
+### Step 2 — it grew while she was away, and something is waiting
+On load a deterministic catch-up finishes what was started. It is capped by its own
+shape rather than by an arbitrary limit: a field cannot be more than fully ready, and a
+fed animal gives one thing and then waits to be fed again.
+
+If she has been gone more than **ten minutes** and anything finished while she was out,
+none of it is scattered round the farm — it is in a **basket by the door**, with what
+is in it turning over the rim in colour, one model per kind, the same language the
+order card and the crate already speak. Walk to it and the lot whooshes onto the stack
+on the FM3 unload treatment: one at a time, rapid fire, each note a shade higher.
+**Nothing else on the farm moves until she reaches it** — the crate holds its unload —
+so the first ten seconds of every visit are a reward for coming back.
+
+Two things the picture gate caught. The basket first sat 2.98 units from the crate,
+inside its own 3.0 reach, so a kid walking to the crate emptied it on the way past
+without ever seeing it; it moved south. And the basket itself first rendered as a stack
+of pancakes and then as a plant pot before it became a basket: straight sides, a proper
+weave, and a handle stretched tall on purpose because at its natural height it vanished
+into the lip from the game's overhead camera.
+
+Waits are unchanged and still under a minute. Away-time only finishes what was started.
+
+### Step 3 — never idle
+`whatCanSheDoNow()` counts ready crops, loose produce, hungry animals she has the feed
+for, empty patches (planting is never gated — the free-seed floor is still there), the
+basket, and an order she can move along this second. If that would ever be zero the
+farm fixes it before she notices, and it never invents anything: it finishes whatever
+is already closest to done. The robot proves the zero really is reachable (every patch
+growing, every animal still making, nothing on her head) and that it never stays there.
+
+A second bug the robot found: the first fixer rewound a clock and let the main loop
+notice next frame, which left the count at zero for exactly the gap the rule exists to
+close. It now does the work itself, through one shared `makeReady()` so the loop and
+the fixer can never disagree about what ready looks like.
+
+The order picker got one more gate on top of FM4's: carried once is necessary but no
+longer sufficient. A kind must ALSO be something the farm can put in her hands today.
+Eighty rolled orders are checked against that every run.
+
+**No timers on screen, still.** QA greps the code with its comments stripped out, so a
+comment saying there is no countdown cannot make the countdown check go green.
+
+### Step 4 — the next thing is always visible
+A fixed ladder of eight presents, one shown at a time in the shop as a wrapped box with
+its price under it, and nothing at all shown about what comes after. **Mike's prices,
+chosen 2026-09-07:**
+
+| # | present | price | roughly |
+|---|---------|-------|---------|
+| 1 | pumpkin seed | 130 | about four early deliveries |
+| 2 | farm dog | 180 | three |
+| 3 | second field row | 240 | four |
+| 4 | pig | 300 | five |
+| 5 | mill | 380 | six |
+| 6 | bees | 460 | seven |
+| 7 | strawberry seed | 560 | eight |
+| 8 | tractor | 700 | ten |
+
+Under the FM4 economy an early order pays about 25 coins and a later one about 55.
+
+**Six of the eight are not built yet** (FM6 to FM8 build them). Mike chose, over a full
+refund and over hiding them: she pays the price, the whole reveal plays, the unlock is
+marked hers so a later phase honours it, and **a third of the coins hop back out** of
+the box. A full refund would let all eight be opened in one sitting; hiding them would
+leave no ladder at all.
+
+The reveal is the biggest celebration in the game and the only thing allowed to take
+three seconds: the box lands, shakes, the lid flips away spinning, confetti covers the
+screen, the plane crosses the sky over the top, and the thing hops out. The duck FM3
+built stays in the shop underneath the present until she has it — a thing that already
+works is never taken away to make room for a new idea.
+
+### Step 5 — small celebrations, constantly
+A puff of soil on planting, a chime the instant a crop becomes takeable (once, never
+again), a puff of hearts over a fed animal, a sparkle and a bounce when an egg lands.
+All through the shared Feel Kit, all silent under `bk_muted`, and every one of them
+under half a second — QA reads each puff's life off the call that makes it.
+
+### The picture gate (LOOK RULE 19)
+Four shots rendered in the real engine and sent to Mike before the push: the basket with
+its contents floating over it, the wrapped present in the shop, the reveal mid-confetti
+with 64 pieces in the air, and the shop at phone width. `qa-farm-shot.mjs` is a new
+harness so a later session takes the same four without inventing a rig.
+
+### QA
+`qa-farm.mjs` is **147 checks, all green**, with a whole new FM5 block that plays on its
+own page in its own storage and **reloads it for real** — a save that only round-trips
+through a variable in the same frame has not been tested. The whole FM5 block also IS
+the Supabase-down case: the harness serves `public/` and nothing else, so every
+`/api/farm-save` call 404s and every check went green with the cloud unreachable.
+`qa-skyflyer.mjs` carries 25 new static FM5 assertions. `node qa-all.mjs` green.
+
+### What Mike should know
+- **Row Level Security is off on `farm_saves`**, like several other tables in this
+  project. Turning it on without policies would lock the farm out of its own data, so
+  nothing was changed. The statement is `ALTER TABLE public.farm_saves ENABLE ROW LEVEL
+  SECURITY;` and it needs policies written with it. Mike's call.
+- A guest with no kid signed in saves to that browser only. That is by design and it is
+  what the shell's other games do.
+
 ## 2026-09-07 (FM4): the farm's playtest bugs, and a wish list you can read
 
 **Phase FM, card FM4.** Everything here came out of one playtest: Mike's daughter on a
