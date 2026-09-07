@@ -28,7 +28,11 @@ engine), so the QA robot can prove every mission is beatable.
 - **public/buildable-feel.js** - `Feel`, the shared Feel Kit (taps, celebration card).
 - **public/buildable-hud.js** - the one shared in-play info bar (no global).
 - **qa-antcity.mjs** - the headless robot (card AC2): a perfect player finishes all
-  ten missions, and the cartridge contract is checked with them.
+  ten missions, and the cartridge contract is checked with them. AC5 added a section for
+  the working ants, the guide and the swarm.
+- **qa-antcity-shot.mjs** - the same game in real Chromium (card AC5): a real finger drag
+  and a real tap walk the guide, and it writes pictures to look at. Needs Playwright, and
+  skips loudly without it, so it is never mistaken for a check that ran.
 
 ## How to play
 
@@ -48,8 +52,47 @@ engine), so the QA robot can prove every mission is beatable.
    until a builder clears it. Nothing is lost, the colony just waits for you to help.
 
 There is no lose state and no game over. This is a keep-forever world, not a win-or-lose
-round. A wordless demo shows how to draw a first tunnel on first launch, and the **?**
-button replays it.
+round.
+
+## The game teaches itself (AC5)
+
+Nobody reads instructions, least of all a five year old. So the game explains itself while
+it is being played:
+
+- **A guided first minute.** On a brand new colony the queen walks the kid through the
+  three things the colony is made of, **one at a time**, and each step **waits** until the
+  kid really does it: drag in the dirt to dig, tap the grass to drop food, slide an ant to
+  a new job. A pointing mark shows the exact spot. Nothing to dismiss, nothing blocked, no
+  wall of text. The **?** button replays the whole thing.
+- **Always-on clarity.** Every control says what it is in a word (**Dig**, **Food**,
+  **Water**, **Jobs**), and the **goal strip** above the panel carries what the colony
+  wants next in kid words, the whole time. Whatever is slowing the colony down (hungry,
+  sleepy, flooded) takes the strip over, because that is what to go and fix.
+- **A gentle nudge.** Sit still for about fifteen seconds and one friendly bubble points at
+  the next thing to *do*. It never repeats what the strip is already saying, and it nudges
+  rather than nags.
+
+## Ants that mean it (AC5)
+
+Every drawn ant is doing something the colony is really doing:
+
+- **Pick a dig spot** and a nearby digger walks to it **through the existing tunnels**
+  (never through solid dirt), and digs with dirt puffs. The marker sits on the spot, and
+  brightens while an ant is actually working it.
+- **Drop a crumb** and a forager climbs up and out of the anthill, picks it up in the
+  carrying pose, and hauls it back down to storage.
+- Ants face the way they walk, hustle when they are on a job, hop when they finish one,
+  leave tiny footprints, and the queen bobs every time one of her eggs hatches.
+
+The counts-and-rates simulation stays the **only** source of truth. Nothing in the visible
+layer changes a number, so it is an honest animation on top of the colony, driven by the
+same fixed 1/60 step and the same seeded random. The QA robot still repeats exactly.
+
+**Swarm scale.** The ants are drawn small (about a third of a cell) and there are up to
+seventy of them on screen, so a growing colony reads as a lively swarm of little things
+rather than a handful of big ones. The drawn crowd is a *sample* taken from the part of the
+colony the camera is looking at, and it wears the same job mix the panel says. The one ant
+the guide is pointing at is drawn bigger with a soft halo, so it stays easy to follow.
 
 ## The colony builder loop (grow it huge)
 

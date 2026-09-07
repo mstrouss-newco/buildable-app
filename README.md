@@ -6,7 +6,52 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
-<<<<<<< HEAD
+## AC5 — Ant City: ants that mean it, a game that teaches itself, and a real swarm (September 6 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs`, new `qa-antcity-shot.mjs`, `antcity-README.md`.
+Phase **AC**, card **AC5**, branch `claude/ac5-planner-launch-u3ciu2`.
+
+Mike's playtest after AC1, AC2 and AC4: kinda cool but not delightful, the ants do not move
+intentionally, and he was completely clueless how to play. Three parts, one session.
+
+**Intentional ants.** The drawn ants used to wander at random, which is exactly why the
+colony read as scenery. Now every one of them is doing something the colony is really doing.
+Pick a dig spot and a nearby digger walks to it through the existing tunnels (a real
+breadth-first route, never through solid dirt, and no route means it does not take the job),
+then digs it with dirt puffs while the marker on the spot brightens. Drop a crumb and a
+forager climbs up and out of the anthill, picks it up in the carrying pose, and hauls it
+back down to storage. Ants face the way they walk, hustle when on a job, hop when they
+finish one, leave tiny footprints, and the queen bobs at every hatch. The counts-and-rates
+simulation stays the ONLY source of truth: nothing in the visible layer changes a number,
+and it runs on the same fixed 1/60 step and the same seeded random, so the robot repeats
+exactly.
+
+**The game explains itself.** A new colony opens into a guided first minute driven by the
+queen: three steps, one at a time, each WAITING until the kid really does it (drag in the
+dirt, tap the grass, slide an ant to a new job). A pointing mark shows the spot, the control
+being taught glows, and nothing is blocked or has to be dismissed. Alongside it, always-on
+clarity: every control now says what it is in a word (Dig, Food, Water, Jobs), and a goal
+strip above the panel carries what the colony wants next in kid words the whole time,
+handing over to whatever is slowing the colony down when there is one. Fifteen seconds idle
+brings one friendly bubble pointing at the next thing to do, never repeating the strip. The
+? button replays the guide.
+
+**Swarm scale.** Ants drawn at 0.30 of a cell instead of 0.44, up to seventy on screen
+instead of twenty six. The drawn crowd is a sample taken from the rows the camera is looking
+at, so a shaft a hundred levels deep no longer leaves the view empty, and it wears the job
+mix the panel says. The ant the guide points at is bigger with a soft halo.
+
+`qa-antcity.mjs` gained an AC5 section (a digger takes the drawn spot, a forager carries a
+crumb home, no ant ever stands in solid dirt, the guide advances only on the real action).
+New `qa-antcity-shot.mjs` drives it in real Chromium with a real drag and tap and writes
+pictures. `node qa-all.mjs` green. Also fixed: a window reporting no size used to turn the
+grid into NaN, which never mattered until the ants started reading the geometry.
+
+Not done: the carrying and digging worker poses live at `/api/asset-studio`, which only
+exists on the deployed site, so they were never loaded for real here (the drawn ants stand
+in, as designed). AC3 is still open.
+
+---
+
 ## AC4 — Ant City gets its own sounds, a meadow loop, and the last of its art (September 6 2026)
 `api/sfx.js`, `api/library-music.js`, `public/antcity-engine.html`, `public/antcity/art/` (8 new
 files), `qa-antcity.mjs`. Phase **AC**, card **AC4**. Taken out of order, ahead of AC3, because
@@ -46,7 +91,7 @@ into existence; if one comes back 503 the prompt or the duration needs a nudge, 
 in the game breaks meanwhile.
 
 ---
-=======
+
 ## CB4 — the grown-up studio: shelves, games a month, the share sheet, house rules, real signup (September 6 2026)
 `db/create-cobuild-plans.sql` (written AND applied), `api/cobuild-billing.js`,
 `api/cobuild-rules.js`, `api/cobuild-poster.js`, `api/cobuild-lead.js`,
@@ -209,7 +254,9 @@ recipe, and nothing is kept until a robot has played it.
    the source. `node qa-all.mjs` green: 48 harnesses.
 
 No database change: the `robot` column CB1 created is the one the verdict lands in.
->>>>>>> origin/main
+
+---
+
 ## Hop Heroes: four worlds, a cast, and the shared Feel Kit (HH4 + HH5, September 6 2026)
 `public/play.html`, `qa/sim-node.mjs`, `qa-hopheroes.mjs`, `qa-hopheroes-shot.mjs`.
 Phase **HH**, cards **HH4 + HH5**, branch `claude/hop-heroes-mario-feel-safrvp`.

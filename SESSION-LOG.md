@@ -1,3 +1,66 @@
+## 2026-09-06 — AC5: ants that mean it, a game that teaches itself, and a real swarm
+
+**The complaint this fixes.** Your playtest after AC1, AC2 and AC4: kinda cool but not
+delightful, the ants do not move intentionally, and you were completely clueless how to
+play. Three parts, one session.
+
+**Part 1: intentional ants.** The drawn ants used to wander at random, which is exactly why
+the colony read as scenery. Now every one of them is doing something the colony is really
+doing. Pick a dig spot and a nearby digger walks to it through the existing tunnels (never
+through solid dirt, it finds a real route or does not take the job), then digs it with dirt
+puffs while the marker on the spot brightens. Drop a crumb and a forager climbs up and out
+of the anthill, picks it up in the carrying pose, and hauls it back down to storage. Ants
+face the way they walk, hustle when they are on a job, hop when they finish one, leave tiny
+footprints, and the queen bobs every time one of her eggs hatches. The counts-and-rates
+simulation stays the only source of truth: nothing in the visible layer changes a number,
+and it runs on the same fixed 1/60 step and the same seeded random, so the robot still
+repeats exactly.
+
+**Part 2: the game explains itself.** A brand new colony opens into a guided first minute
+driven by the queen. Three steps, one at a time, and each one WAITS until the kid really
+does it: drag in the dirt to dig, tap the grass to drop food, slide an ant to a new job. A
+pointing mark shows the exact spot, the control being taught glows, and nothing is ever
+blocked or has to be dismissed. Alongside it, always-on clarity: every control now says
+what it is in a word (Dig, Food, Water, Jobs), and a goal strip above the panel carries
+what the colony wants next in kid words the whole time, handing over to whatever is slowing
+the colony down when there is one. Sit still for about fifteen seconds and one friendly
+bubble points at the next thing to do, never repeating what the strip already says. The ?
+button replays the guide from the start.
+
+**Part 3: swarm scale.** Ants are drawn at 0.30 of a cell instead of 0.44, and up to
+seventy are on screen instead of twenty six, so a growing colony reads as a lively swarm of
+little things. The drawn crowd is a sample taken from the part of the colony the camera is
+looking at, so a shaft a hundred levels deep no longer leaves the view empty, and it wears
+the same job mix the panel says. The ant the guide is pointing at is drawn bigger with a
+soft halo so it stays easy to follow.
+
+**Checked.** `qa-antcity.mjs` gained an AC5 section: a digger really takes the drawn spot as
+a job, a forager really goes out and carries a crumb home, no visible ant is ever standing
+in solid dirt, the guide advances only on the real action and never on time passing, and
+the goal line always says something. New `qa-antcity-shot.mjs` drives the game in real
+Chromium with a real finger drag and a real tap, proves the same things through the DOM,
+and writes pictures. `node qa-all.mjs` green.
+
+**One small fix along the way.** A window that reports no size (a headless run, a hidden
+iframe) used to turn the whole grid into NaN. It never mattered before because nothing read
+the pixel geometry; the walking ants do, so `resize` now falls back to a sane size.
+
+**Two calls I made for you.**
+1. **Dig and Jobs are labels, not modes.** The card asks for buttons labelled Dig, Food and
+   Jobs. Dragging in the dirt still digs exactly as it always did, and Dig and Jobs point at
+   the thing they name rather than switching the game into a mode. Nothing a kid could
+   already do stopped working. Water kept its own button so dropping water still works.
+2. **The forager always carries its crumb home.** The simulation banks a crumb faster than an
+   ant can walk to it, so by the time the ant arrives the number has often already moved.
+   The ant carries it anyway: it is the ant that went and got that crumb, and the trip home
+   is the honest picture of it.
+
+**Not done, and honest about it.** The two worker poses the ants use (carrying, digging)
+live at `/api/asset-studio`, which only exists on the deployed site. This session cannot
+reach buildablekids.com, so the poses were never loaded for real; locally they 404 and the
+drawn ants stand in, which is the designed fallback. AC3 (real per-kid saving and away-time
+growth) is still open and untouched.
+
 ## 2026-09-06 — AC4: Ant City's sounds, its meadow loop, and the last of its art
 
 **Shipped.** Five created sounds named in `api/sfx.js` (digging, marching feet, a hatch

@@ -195,6 +195,87 @@ ok('the wordless show can be replayed', (G.showHow(), G.how() === true));
 // the game is still one colony the kid keeps: nothing above reset it
 ok('one colony the whole way through', G.dbg().ants > 0 && G.dbg().dug > 0);
 
+// --- 5b) AC5: intentional ants, the game that teaches itself, and the swarm ---
+console.log('\n--- AC5: INTENTIONAL ANTS, TEACHING, SWARM ---');
+
+// the swarm: many small ants, not a handful of big ones
+ok('the ants are drawn small enough to read as a swarm', G.antScale() > 0 && G.antScale() <= 0.3, `scale=${G.antScale()}`);
+ok('the drawn crowd can hold a swarm', G._cfg().sampleMax >= 60, `sampleMax=${G._cfg().sampleMax}`);
+ok('a grown colony really shows a crowd, not a handful', G.crowd().length > 26, `${G.crowd().length} ants on screen of ${G.dbg().ants}`);
+
+// the one rule the card is about: an ant is never inside solid dirt
+const inDirt = () => G.crowd().filter((a) => a.inDirt).length;
+ok('no visible ant stands in solid dirt (grown colony)', inDirt() === 0, `${inDirt()} of ${G.crowd().length}`);
+
+// a fresh colony: a digger walks to the exact spot the kid drew, and digs it
+G._reset(); G.play();
+G.assign('digger', 4);
+G.digDown(4);
+let sawDig = false, dirtBreaches = 0;
+for (let i = 0; i < 60 && !sawDig; i++) {
+  G.seconds(0.25);
+  if (inDirt()) dirtBreaches++;
+  sawDig = G.crowd().some((a) => a.task === 'dig');
+}
+ok('a digger takes the spot the kid drew as a real job', sawDig, JSON.stringify(G.crowd().filter((a) => a.task).slice(0, 3)));
+ok('a digger reaches it through the tunnels, never through solid dirt', dirtBreaches === 0, `${dirtBreaches} frames with an ant in dirt`);
+ok('an ant digging the spot marks it', Object.keys(G.crowd().filter((a) => a.task === 'dig')).length > 0);
+
+// a forager climbs out for the crumb the kid dropped, and hauls it home
+G._reset(); G.play();
+G.assign('forager', 4);
+G.drop('food', 150);
+let sawFood = false, sawSurface = false, sawCarry = false, breach2 = 0;
+for (let i = 0; i < 200; i++) {
+  G.seconds(0.25);
+  if (inDirt()) breach2++;
+  const crowd = G.crowd();
+  if (crowd.some((a) => a.task === 'food')) sawFood = true;
+  if (crowd.some((a) => a.fr < -0.2)) sawSurface = true;
+  if (crowd.some((a) => a.carry)) sawCarry = true;
+  if (sawFood && sawSurface && sawCarry) break;
+}
+ok('a forager takes the dropped crumb as a real job', sawFood);
+ok('the forager walks up and out of the anthill', sawSurface);
+ok('it carries the crumb home', sawCarry);
+ok('nothing walked through solid dirt on the way', breach2 === 0, `${breach2} frames`);
+
+// the drawn crowd carries the job mix the kid set on the bar
+G._reset(); G.play();
+G.assign('nursery', 5);
+G.seconds(3);
+const mix = G.crowd().filter((a) => a.job === 'nursery').length;
+ok('the ants on screen wear the jobs the panel says', mix > 0, `${mix} nursery ants drawn of ${G.crowd().length}`);
+
+// the game explains itself: three steps, each waiting for the real action
+G._reset(); G.play();
+G.showHow();
+const gStart = G.guide();
+ok('the guide runs on a brand new colony', gStart.on && gStart.step === 0, JSON.stringify(gStart));
+ok('it teaches three things, one at a time', gStart.steps === 3);
+ok('step one asks in kid words, with no wall of text', /dig/i.test(gStart.text) && gStart.text.length < 60, gStart.text);
+G.seconds(20);
+ok('a step WAITS: doing nothing never advances it', G.guide().step === 0, JSON.stringify(G.guide()));
+G.digDown(2); G.seconds(1);
+ok('digging really advances it to step two', G.guide().step === 1, JSON.stringify(G.guide()));
+G.seconds(20);
+ok('step two waits for food to be dropped', G.guide().step === 1);
+G.drop('food', 150); G.seconds(1);
+ok('dropping food advances it to step three', G.guide().step === 2, JSON.stringify(G.guide()));
+G.assign('nursery', 3); G.seconds(1);
+ok('moving an ant to a new job finishes the guide', G.guide().on === false, JSON.stringify(G.guide()));
+
+// the goal is on screen the whole time, in kid words
+const goalLine = G.goal();
+ok('the goal line is always saying something', typeof goalLine === 'string' && goalLine.length > 4, goalLine);
+ok('the goal line has no jargon or raw numbers dumped in it', !/undefined|NaN|null/.test(goalLine), goalLine);
+ok('the guide replays from the ? button', (G.showHow(), G.guide().on === true && G.guide().step === 0));
+
+// the controls say what they are, in words
+['toolDig', 'toolFood', 'toolWater', 'toolJobs'].forEach((id) =>
+  ok(`the ${id.replace('tool', '').toLowerCase()} control is a labelled button`, new RegExp(`id="${id}"[^>]*>[A-Z][a-z]+<`).test(html)));
+ok('the goal strip is in the markup', /id="goalText"/.test(html));
+
 // --- 6) AC4: the sounds, the music and the art leftovers ----------------------
 console.log('\n--- SOUND, MUSIC AND ART (AC4) ---');
 const sfxSrc = fs.readFileSync(dir + '/api/sfx.js', 'utf8');

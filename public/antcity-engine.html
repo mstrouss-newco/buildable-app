@@ -39,8 +39,18 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   .job button{width:26px;height:24px;border:none;border-radius:8px;background:rgba(255,255,255,.20);color:#fff;font-size:15px;font-weight:800;line-height:1;cursor:pointer;}
   .job button:active{background:rgba(255,255,255,.34);}
   #tools{display:flex;gap:6px;margin-top:7px;align-items:center;}
-  .tool{flex:1 1 0;border:none;border-radius:12px;padding:9px 6px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
+  .tool{flex:1 1 0;border:none;border-radius:12px;padding:9px 4px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
   .tool.on{background:#ffd166;box-shadow:0 0 0 3px rgba(255,209,102,.35);}
+
+  /* ---- AC5: the game says what it wants, in kid words, all the time ---- */
+  #goal{display:flex;align-items:center;gap:8px;margin:0 3px 7px;color:#ffe9c2;font-size:13px;font-weight:800;line-height:1.25;text-shadow:0 1px 3px rgba(0,0,0,.65);}
+  #goal .qd{flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#b0553f;position:relative;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.45);}
+  #goal .qd:after{content:"";position:absolute;left:5px;top:8px;width:4px;height:4px;border-radius:50%;background:#fff8ec;box-shadow:8px 0 0 #fff8ec;}
+  #goal.teach{color:#fff6e0;}
+  #barLabel{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 4px;color:#ffe9c2;font-size:11px;font-weight:800;letter-spacing:.3px;opacity:.85;}
+  #bar.pulse{box-shadow:0 0 0 3px rgba(255,209,102,.9),inset 0 2px 6px rgba(0,0,0,.35);}
+  .tool.pulse{animation:tpulse 1s ease-in-out infinite;}
+  @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.8);}}
   #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);white-space:nowrap;
         background:rgba(20,12,4,.86);color:#ffe9c2;font-size:13px;font-weight:700;padding:7px 14px;border-radius:999px;opacity:0;transition:opacity .25s;}
   #hint.show{opacity:1;}
@@ -72,11 +82,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   <button id="helpBtn" class="selfbtn">?</button>
   <div id="panel" class="hidden">
     <div id="hint"></div>
+    <div id="goal"><span class="qd"></span><span id="goalText">Grow your colony</span></div>
+    <div id="barLabel"><span>Jobs</span><span id="barAnts">6 ants</span></div>
     <div id="bar"></div>
     <div id="jobs"></div>
     <div id="tools">
-      <button class="tool on" id="toolFood" type="button">Drop food</button>
-      <button class="tool" id="toolWater" type="button">Drop water</button>
+      <button class="tool" id="toolDig" type="button">Dig</button>
+      <button class="tool on" id="toolFood" type="button">Food</button>
+      <button class="tool" id="toolWater" type="button">Water</button>
+      <button class="tool" id="toolJobs" type="button">Jobs</button>
     </div>
   </div>
   <div id="build"><div id="buildCard"><h2>Build a room</h2><div id="roomList"></div><button id="buildCancel" type="button">Not now</button></div></div>
@@ -147,7 +161,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     startAnts: 6,
     startFood: 12,
     startWater: 8,
-    sampleMax: 26,            // most ants drawn at once, however big the colony gets
+    sampleMax: 70,            // AC5: a swarm of little ants, not a handful of big ones
+    antScale: 0.30,           // ant size as a share of one cell: small enough to read as a swarm,
+                              // big enough that one ant is still an ant on a phone
 
     dig:     { perAntPerSec: 0.55 },   // cells opened per digger per second
     forage:  { perAntPerSec: 0.85 },   // food/water units carried down per forager per second
@@ -224,6 +240,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // ======================================================================
   var ART_FILES = {
     "antcity/ant/classic-v1":     "/antcity/art/ant-classic.svg",
+    // AC5: the two poses an ant on a job is actually in, from the live library
+    "antcity/ant/carrying-v1":    "/api/asset-studio?asset=ant_city/worker_ants/meadow/carrying_normal",
+    "antcity/ant/digging-v1":     "/api/asset-studio?asset=ant_city/worker_ants/meadow/digging_normal",
     "antcity/ant/ruby-v1":        "/antcity/art/ant-ruby.svg",
     "antcity/ant/emerald-v1":     "/antcity/art/ant-emerald.svg",
     "antcity/hero/queen-v1":      "/antcity/art/queen.svg",
@@ -271,7 +290,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var W = 0, H = 0, DPR = 1;
   function resize(){
     DPR = Math.min(window.devicePixelRatio||1, 2);
-    W = window.innerWidth; H = window.innerHeight;
+    W = window.innerWidth || 360; H = window.innerHeight || 640;
     CV.width = Math.floor(W*DPR); CV.height = Math.floor(H*DPR);
     X.setTransform(DPR,0,0,DPR,0,0);
     layout();
@@ -309,7 +328,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       layProg:0, hatchProg:0, deepest:g.startRow, difficulty:diff||3,
       queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0,
       // --- AC2: missions, milestones and the gentle setbacks ---
-      mission:0, done:{}, mBase:{}, freeBuild:false, hit:{},
+      mission:0, done:{}, mBase:{}, freeBuild:false, hit:{}, guided:false,
       carried:0, found:0, floods:0, floodT:0, rest:1
     };
     // the buried find for the last mission, waiting under the deep soil
@@ -435,6 +454,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         C.hatchProg -= 1; C.eggs--; C.ants++; C.born++;
         C.jobs.forager++;                                  // a new ant joins the foragers; the kid slides it anywhere
         spawnSample(); sfx("hatch");                       // the hatch chime
+        qReact = 0.9;                                      // the queen bobs at her new baby
       }
     }
 
@@ -453,6 +473,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     normalizeJobs();
     checkMission();
     walkSample(dt);
+    tickHow(dt); tickIdle(dt);
   }
   // One tunnel floods. Never the queen's chamber, never the entrance shaft, and
   // never the only way in, so the colony can always keep working somewhere.
@@ -486,38 +507,242 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(diff !== 0){ C.jobs.forager = Math.max(0, (C.jobs.forager|0) + diff); }
   }
 
-  // ---------- the ants you actually see (a lively sample, never the whole colony) ----------
+  // ======================================================================
+  //  The ants you actually see (AC5). They used to wander at random, which is
+  //  why the colony read as scenery. Now every drawn ant is DOING a thing the
+  //  colony is really doing: a digger walks THROUGH THE TUNNELS (never through
+  //  solid dirt) to the exact spot the kid drew and digs it, a forager climbs
+  //  out of the anthill, picks up the crumb the kid dropped and hauls it home.
+  //
+  //  The counts-and-rates simulation above stays the ONLY source of truth.
+  //  Nothing in here changes a number, so this is an honest animated layer on
+  //  top of it. It is fed by the same fixed 1/60 step and the same seeded
+  //  random, so a headless run still repeats exactly and QA still holds.
+  // ======================================================================
   function openCells(){ var out=[]; for(var k in C.cells){ var x=C.cells[k]; if(x.kind==="tunnel"||(x.kind==="room"&&x.done)) out.push(x); } return out; }
-  function spawnSample(){
-    if(C.sample.length >= GAME_CONFIG.sampleMax) return;
-    var cells = openCells(); if(!cells.length) return;
-    var s = cells[Math.floor(srand()*cells.length)];
-    C.sample.push({ c:s.c, r:s.r, tc:s.c, tr:s.r, p:0, job:JOBS[Math.floor(srand()*JOBS.length)].id,
-                    flip:srand()<0.5, bob:srand()*6, ox:(srand()-0.5)*0.5, oy:(srand()-0.5)*0.5 });
-  }
-  function walkSample(dt){
-    // keep the drawn crowd roughly in step with the real head count
-    var room = openCells().length * 2;
-    var want = Math.min(GAME_CONFIG.sampleMax, C.ants, Math.max(3, room));
-    while(C.sample.length < want) spawnSample();
-    while(C.sample.length > want) C.sample.pop();
-    var speed = 1.7 * tune().pace;
-    for(var i=0;i<C.sample.length;i++){
-      var a = C.sample[i];
-      a.p += speed * dt;
-      if(a.p >= 1){
-        a.p = 0; a.c = a.tc; a.r = a.tr;
-        var opts = [];
-        if(isOpen(a.c-1,a.r)) opts.push([a.c-1,a.r]);
-        if(isOpen(a.c+1,a.r)) opts.push([a.c+1,a.r]);
-        if(isOpen(a.c,a.r-1)) opts.push([a.c,a.r-1]);
-        if(isOpen(a.c,a.r+1)) opts.push([a.c,a.r+1]);
-        if(opts.length){ var pick = opts[Math.floor(srand()*opts.length)]; a.flip = pick[0] < a.c; a.tc = pick[0]; a.tr = pick[1]; }
+  var SURF_R = -0.92;                 // the row an ant stands on when it is up on the meadow
+
+  // a walkable route between two open cells. Solid dirt is never crossed: if
+  // there is no way through the tunnels yet, the ant simply does not take the job.
+  function routeTo(c0, r0, c1, r1){
+    if(c0 === c1 && r0 === r1) return [];
+    var start = key(c0,r0), goal = key(c1,r1), q = [start], seen = {}, prev = {}, head = 0, guard = 0;
+    seen[start] = 1;
+    while(head < q.length && guard++ < 1400){
+      var cur = q[head++], sp = cur.split(","), cc = +sp[0], rr = +sp[1];
+      var nb = [[cc-1,rr],[cc+1,rr],[cc,rr-1],[cc,rr+1]], i;
+      for(i=0;i<4;i++){
+        var nc = nb[i][0], nr = nb[i][1], kk = key(nc,nr);
+        if(seen[kk] || !isOpen(nc,nr)) continue;
+        seen[kk] = 1; prev[kk] = cur;
+        if(kk === goal){
+          var out = [], at = kk;
+          while(at && at !== start){ var pp = at.split(","); out.unshift({ fc:+pp[0], fr:+pp[1] }); at = prev[at]; }
+          return out;
+        }
+        q.push(kk);
       }
     }
+    return null;
   }
+  function openNeighbour(c, r){
+    var nb = [[c,r-1],[c-1,r],[c+1,r],[c,r+1]], i;
+    for(i=0;i<4;i++) if(isOpen(nb[i][0], nb[i][1])) return { c:nb[i][0], r:nb[i][1] };
+    return null;
+  }
+  // the mouth of the anthill: the top of the shaft, where every forager comes out
+  function entranceCell(){
+    if(isOpen(C.queen.c, 0)) return { c:C.queen.c, r:0 };
+    for(var k in C.cells){ var x = C.cells[k]; if(x.r === 0 && isOpen(x.c, 0)) return { c:x.c, r:0 }; }
+    return { c:C.queen.c, r:C.queen.r };
+  }
+  // where a crumb gets put down: a finished storage room, else the queen's chamber
+  function storeCell(){
+    for(var k in C.cells){ var x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "storage") return { c:x.c, r:x.r }; }
+    return { c:C.queen.c, r:C.queen.r };
+  }
+  function xToFc(x){
+    var fc = (x - OX)/Math.max(1, CS) - 0.5;
+    if(!isFinite(fc)) fc = C.queen.c;                    // no layout yet: aim at the anthill
+    return Math.max(0, Math.min(GAME_CONFIG.cols-1, fc));
+  }
+  function antCell(a){ return { c:Math.round(a.fc), r:Math.round(a.fr) }; }
+
+  // the rows on screen right now. The camera rides the dig face, so a colony a
+  // hundred levels deep must not leave the view empty while its ants mill about
+  // near the entrance: the drawn sample is a SAMPLE, so it is taken from here.
+  function viewBand(){
+    var rows = Math.floor((H - PANEL - SKY - CS*1.2) / Math.max(1, CS));
+    if(!isFinite(rows) || rows < 5) rows = 12;
+    var hi = C.deepest + 2;
+    return { lo:Math.max(0, hi - rows), hi:hi };
+  }
+  var bandPool = [];
+  function spawnSample(){
+    if(C.sample.length >= GAME_CONFIG.sampleMax) return;
+    var cells = bandPool.length ? bandPool : openCells(); if(!cells.length) return;
+    var s = cells[Math.floor(srand()*cells.length)];
+    C.sample.push({ fc:s.c, fr:s.r, job:"forager", wp:[], task:null, carry:false, state:"walk", t:0,
+                    cool:srand()*0.6, walked:0, flip:srand()<0.5, bob:srand()*6,
+                    ox:(srand()-0.5)*0.44, oy:(srand()-0.5)*0.30 });
+  }
+
+  // the drawn crowd carries the same job MIX the kid set on the bar, so what is
+  // on screen matches what the panel says. An ant already on a job is never yanked off it.
+  function reJob(){
+    var n = C.sample.length; if(!n) return;
+    var total = Math.max(1, C.ants), want = {}, have = {}, made = 0, i, j;
+    for(i=0;i<JOBS.length;i++){ var id0 = JOBS[i].id; want[id0] = Math.round(((C.jobs[id0]|0)/total) * n); have[id0] = 0; made += want[id0]; }
+    want.forager = Math.max(0, want.forager + (n - made));
+    for(i=0;i<n;i++){ if(C.sample[i].task) have[C.sample[i].job] = (have[C.sample[i].job]|0) + 1; }
+    for(i=0;i<n;i++){
+      var a = C.sample[i]; if(a.task) continue;
+      var pick = "forager";
+      for(j=0;j<JOBS.length;j++){ var id = JOBS[j].id; if((have[id]|0) < (want[id]|0)){ pick = id; break; } }
+      a.job = pick; have[pick] = (have[pick]|0) + 1;
+    }
+  }
+
+  function claimedCell(k){ var n=0,i; for(i=0;i<C.sample.length;i++){ var t=C.sample[i].task; if(t && t.k===k) n++; } return n; }
+  function claimedItem(it){ var n=0,i; for(i=0;i<C.sample.length;i++){ var t=C.sample[i].task; if(t && t.it===it) n++; } return n; }
+
+  // give one idle ant something real to do, or leave it wandering
+  function giveTask(a){
+    if(!C.plan.length && !C.surface.length) return false;
+    var i, here = antCell(a);
+    if(!isOpen(here.c, here.r)) return false;              // up on the meadow: it is already on a trip
+    if(a.job === "digger" && C.plan.length){
+      for(i=0;i<C.plan.length && i<4;i++){
+        var cell = C.cells[C.plan[i]];
+        if(!cell || cell.kind !== "plan" || !hasOpenNeighbour(cell.c, cell.r)) continue;
+        if(claimedCell(C.plan[i]) >= 2) continue;
+        var spot = openNeighbour(cell.c, cell.r); if(!spot) continue;
+        var route = routeTo(here.c, here.r, spot.c, spot.r); if(!route) continue;
+        a.task = { kind:"dig", k:C.plan[i], c:cell.c, r:cell.r };
+        a.wp = route; a.state = "walk";
+        return true;
+      }
+    }
+    if(a.job === "forager" && C.surface.length){
+      for(i=0;i<C.surface.length;i++){
+        var it = C.surface[i];
+        if(claimedItem(it) >= 2) continue;
+        var en = entranceCell();
+        var r2 = routeTo(here.c, here.r, en.c, en.r); if(!r2) continue;
+        a.task = { kind:"food", it:it, phase:"out" };
+        a.wp = r2.concat([{ fc:en.c, fr:SURF_R }, { fc:xToFc(it.x), fr:SURF_R }]);
+        a.state = "walk";
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function wander(a){
+    var h = antCell(a), nb = [[h.c-1,h.r],[h.c+1,h.r],[h.c,h.r-1],[h.c,h.r+1]], opts = [], i;
+    for(i=0;i<4;i++) if(isOpen(nb[i][0], nb[i][1])) opts.push({ fc:nb[i][0], fr:nb[i][1] });
+    if(!opts.length){
+      if(!isOpen(h.c, h.r)){                                // stranded (a trip was cut short): walk it home
+        var cs = openCells(); if(cs.length){ var s2 = cs[Math.floor(srand()*cs.length)]; a.fc = s2.c; a.fr = s2.r; }
+      }
+      return;
+    }
+    var pick = opts[Math.floor(srand()*opts.length)];
+    if(Math.abs(pick.fc - a.fc) > 0.02) a.flip = pick.fc < a.fc;
+    a.wp = [pick];
+  }
+
+  // standing still and doing the job: digging the spot, or picking a crumb up
+  function tickWork(a, dt){
+    a.t += dt;
+    if(a.task.kind === "dig"){
+      var cell = C.cells[a.task.k];
+      if(!cell || cell.kind !== "plan"){                    // the simulation opened it: a happy little hop
+        a.task = null; a.state = "hop"; a.t = 0.45; return;
+      }
+      if(a.t > 0.34){ a.t = 0; puff(a.task.c, a.task.r); }  // dirt puffs while the digging happens
+      a.flip = a.task.c < a.fc;
+      return;
+    }
+    if(a.task.kind === "food"){
+      if(a.task.phase === "out"){
+        if(a.t < 0.3) return;                               // a beat to get hold of it
+        // it carries the crumb it came out for. The simulation may have banked that
+        // crumb already (it counts faster than an ant can walk), but this is the ant
+        // that went and got it, so the trip home is the honest picture of it.
+        a.carry = true;
+        var en = entranceCell(), st = storeCell();
+        var back = routeTo(en.c, en.r, st.c, st.r) || [];
+        a.task.phase = "home"; a.state = "walk"; a.t = 0;
+        a.wp = [{ fc:en.c, fr:SURF_R }, { fc:en.c, fr:en.r }].concat(back);
+        return;
+      }
+      if(a.t > 0.3){ a.carry = false; a.task = null; a.state = "hop"; a.t = 0.45; }
+      return;
+    }
+    a.task = null; a.state = "walk";
+  }
+
+  var starAnt = null;                 // the one ant the guide is pointing at (drawn bigger)
+  var digHot = {};                    // plan cells with an ant actually digging them right now
+  var qReact = 0;                     // the queen bobs when an egg hatches
+
+  function walkSample(dt){
+    // keep the drawn crowd roughly in step with the real head count, and keep it
+    // in the part of the colony that is on screen
+    var all = openCells(), b = viewBand(), j;
+    bandPool = [];
+    for(j=0;j<all.length;j++) if(all[j].r >= b.lo && all[j].r <= b.hi) bandPool.push(all[j]);
+    var room = (bandPool.length ? bandPool.length : all.length) * 4;
+    var want = Math.min(GAME_CONFIG.sampleMax, C.ants, Math.max(4, room));
+    while(C.sample.length < want) spawnSample();
+    while(C.sample.length > want) C.sample.pop();
+    reJob();
+    if(qReact > 0) qReact = Math.max(0, qReact - dt);
+    var pace = tune().pace, grants = 0, moves = 0, i;
+    for(i=0;i<C.sample.length;i++){
+      var a = C.sample[i];
+      if(a.cool > 0) a.cool -= dt;                        // the look-for-work timer runs all the time
+      // an idle ant well outside the view is swapped for one inside it. They are a
+      // sample of a colony of hundreds, not named individuals, so nothing is lost.
+      if(!a.task && moves < 2 && bandPool.length && (a.fr < b.lo - 2 || a.fr > b.hi + 2)){
+        var s3 = bandPool[Math.floor(srand()*bandPool.length)];
+        a.fc = s3.c; a.fr = s3.r; a.wp = []; a.state = "walk"; moves++;
+      }
+      if(a.state === "hop"){ a.t -= dt; if(a.t <= 0) a.state = "walk"; continue; }
+      if(a.state === "work"){ tickWork(a, dt); continue; }
+      if(!a.wp.length){
+        if(a.task){ a.state = "work"; a.t = 0; continue; }
+        if(a.cool <= 0 && grants < 4){                      // a small budget per step keeps this cheap
+          if(giveTask(a)) grants++; else a.cool = 0.5 + srand()*0.9;
+        }
+        if(!a.wp.length && !a.task) wander(a);
+        continue;
+      }
+      var tgt = a.wp[0];
+      var sp = (a.task ? 3.0 : 1.5) * pace * dt;            // an ant on a job hustles
+      var dx = tgt.fc - a.fc, dy = tgt.fr - a.fr, d = Math.sqrt(dx*dx + dy*dy);
+      if(d <= sp || d < 0.0005){ a.fc = tgt.fc; a.fr = tgt.fr; a.wp.shift(); }
+      else { a.fc += dx/d*sp; a.fr += dy/d*sp; if(Math.abs(dx) > 0.02) a.flip = dx < 0; }
+      a.walked += sp;
+      if(a.walked > 0.75){ a.walked = 0; foot(a.fc, a.fr); }
+      if(!a.wp.length && a.task){ a.state = "work"; a.t = 0; }
+    }
+    // who is digging what, and which ant the guide should make easy to follow
+    digHot = {}; starAnt = null;
+    var wantKind = (guide.on && guide.step === 0) ? "dig" : ((guide.on && guide.step === 1) ? "food" : null);
+    for(i=0;i<C.sample.length;i++){
+      var b = C.sample[i], t3 = b.task;
+      if(t3 && t3.kind === "dig" && b.state === "work") digHot[t3.k] = 1;
+      if(wantKind && !starAnt && t3 && t3.kind === wantKind) starAnt = b;
+    }
+  }
+
   var puffs = [];
   function puff(c,r){ if(puffs.length > 30) puffs.shift(); puffs.push({ c:c, r:r, t:0 }); }
+  // tiny footprints, so a busy tunnel looks walked-in
+  var foots = [];
+  function foot(fc, fr){ if(foots.length > 44) foots.shift(); foots.push({ fc:fc, fr:fr, t:0 }); }
 
   // ======================================================================
   //  Missions (AC2). The ten tutorial missions come from the manifest and sit
@@ -597,7 +822,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var f = rain();
       C.mFlood = f ? key(f.c, f.r) : null;
     }
-    if(m) hint(missionLine());
+    syncGoal();
   }
   function checkMission(){
     if(C.freeBuild) return;
@@ -661,6 +886,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // ======================================================================
   function cellX(c){ return OX + c*CS; }
   function cellY(r){ return SKY + r*CS - camY; }
+  // the drawn ants live in fractional cell space so they can walk smoothly and
+  // step out onto the meadow. Above ground rides with the fixed meadow, not the camera.
+  function fcToX(fc){ return OX + (fc+0.5)*CS; }
+  function frToY(fr){ return fr < -0.2 ? (SKY + (fr+0.5)*CS) : (SKY + (fr+0.5)*CS - camY); }
   function draw(){
     layout();
     // camera follows the colony down as it deepens
@@ -671,6 +900,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     drawSky();
     drawSoil();
     drawCells();
+    drawFoots();
     drawSurfaceItems();
     drawAnts();
     drawPuffs();
@@ -729,7 +959,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var x = C.cells[k], px = cellX(x.c), py = cellY(x.r);
       if(py < SKY - CS*2 || py > H + CS) continue;                 // off screen
       if(x.kind === "plan"){
-        X.strokeStyle = "rgba(255,240,200,.85)"; X.lineWidth = 3; X.setLineDash([6,5]);
+        var hot = digHot[k] ? 1 : 0;                                  // an ant is on this spot right now
+        X.strokeStyle = hot ? "rgba(255,224,150,1)" : "rgba(255,240,200,.85)";
+        X.lineWidth = hot ? 4 : 3; X.setLineDash([6,5]);
         if(BR) { BR.rrect(X, px+3, py+3, CS-6, CS-6, 8); X.stroke(); } else X.strokeRect(px+3, py+3, CS-6, CS-6);
         X.setLineDash([]);
         if(x.dig > 0){ X.fillStyle = "rgba(255,240,200,.28)"; X.fillRect(px+4, py+CS-4-(CS-8)*x.dig, CS-8, (CS-8)*x.dig); }
@@ -766,7 +998,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
     // the queen sits in her chamber
     var q = C.queen, qx = cellX(q.c)+CS/2, qy = cellY(q.r)+CS/2;
-    if(IMG.queen) drawImg(IMG.queen, qx, qy, CS*0.86); else drawAntShape(qx, qy, CS*0.42, "#b0553f", false);
+    // AC5: she gives a little bob every time one of her eggs hatches
+    var qb = qReact > 0 ? Math.sin((0.9 - qReact) * 20) * CS * 0.10 * (qReact/0.9) : 0;
+    if(IMG.queen) drawImg(IMG.queen, qx, qy + qb, CS*0.86); else drawAntShape(qx, qy + qb, CS*0.42, "#b0553f", false);
   }
   function drawRoom(x, px, py){
     var def = GAME_CONFIG.rooms[x.room] || GAME_CONFIG.rooms.nursery;
@@ -802,19 +1036,46 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       else { X.fillStyle = "#d9a05b"; X.beginPath(); X.arc(it.x, y, 7, 0, 7); X.fill(); }
     }
   }
+  function drawFoots(){
+    for(var i=foots.length-1;i>=0;i--){
+      var f = foots[i]; f.t += STEP*0.55;
+      if(f.t >= 1){ foots.splice(i,1); continue; }
+      var fx = fcToX(f.fc), fy = frToY(f.fr) + CS*0.20;
+      if(fy < -CS || fy > H + CS) continue;
+      X.globalAlpha = (1 - f.t) * 0.30; X.fillStyle = "#2b1d10";
+      X.beginPath(); X.arc(fx - CS*0.045, fy, CS*0.022, 0, 7); X.fill();
+      X.beginPath(); X.arc(fx + CS*0.045, fy, CS*0.022, 0, 7); X.fill();
+      X.globalAlpha = 1;
+    }
+  }
   function drawAnts(){
+    var base = GAME_CONFIG.antScale || 0.26;
     for(var i=0;i<C.sample.length;i++){
       var a = C.sample[i];
-      var x0 = cellX(a.c)+CS/2, y0 = cellY(a.r)+CS/2;
-      var x1 = cellX(a.tc)+CS/2, y1 = cellY(a.tr)+CS/2;
-      var px = x0 + (x1-x0)*a.p + a.ox*CS, py = y0 + (y1-y0)*a.p + a.oy*CS;
-      if(py < SKY - CS || py > H + CS) continue;
-      var bob = Math.sin((C.t*7) + a.bob) * CS*0.03;
-      if(IMG.ant) drawImg(IMG.ant, px, py+bob, CS*0.44, a.flip);
-      else drawAntShape(px, py+bob, CS*0.16, jobColor(a.job), a.flip);
-      // a small job dot so the kid can see who is who
+      var px = fcToX(a.fc) + a.ox*CS, py = frToY(a.fr) + a.oy*CS;
+      if(py < -CS || py > H + CS) continue;
+      var bob = Math.sin((C.t*9) + a.bob) * CS*0.022;
+      if(a.state === "hop") bob -= Math.sin(Math.max(0, Math.min(1, (0.45 - a.t)/0.45)) * Math.PI) * CS*0.28;
+      if(a.state === "work" && a.task && a.task.kind === "dig") bob += Math.sin(C.t*22) * CS*0.05;
+      var scale = base, star = (a === starAnt);
+      if(star) scale = base * 1.75;                       // the ant the guide is pointing at stays easy to follow
+      if(star){                                           // a soft halo, no words, no emoji
+        X.globalAlpha = 0.30 + 0.18*Math.sin(C.t*5); X.fillStyle = "#fff3d6";
+        X.beginPath(); X.arc(px, py+bob, CS*0.34, 0, 7); X.fill(); X.globalAlpha = 1;
+      }
+      var art = IMG.ant;
+      if(a.carry && IMG.antCarry && ART_IDS.ant === "antcity/ant/classic-v1") art = IMG.antCarry;
+      else if(a.state === "work" && a.task && a.task.kind === "dig" && IMG.antDig && ART_IDS.ant === "antcity/ant/classic-v1") art = IMG.antDig;
+      if(art) drawImg(art, px, py+bob, CS*scale, a.flip);
+      else drawAntShape(px, py+bob, CS*scale*0.40, jobColor(a.job), a.flip);
+      // a crumb on its back, when the art has no carrying pose of its own
+      if(a.carry && art === IMG.ant){
+        X.fillStyle = "#d9a05b";
+        X.beginPath(); X.arc(px + (a.flip ? CS*0.11 : -CS*0.11), py+bob - CS*0.13, CS*0.055, 0, 7); X.fill();
+      }
+      // a small job dot so the kid can still see who is who at this size
       X.fillStyle = jobColor(a.job);
-      X.beginPath(); X.arc(px + (a.flip?CS*0.14:-CS*0.14), py+bob-CS*0.18, CS*0.04, 0, 7); X.fill();
+      X.beginPath(); X.arc(px + (a.flip?CS*0.09:-CS*0.09), py+bob-CS*0.11, CS*0.028, 0, 7); X.fill();
     }
   }
   function jobColor(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i].color; return "#fff"; }
@@ -887,9 +1148,65 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var hintT = 0;
   function hint(msg){
     var el = $("hint"); if(!el) return;
-    el.textContent = msg; el.className = "show"; hintT = 3.2;
+    el.textContent = msg; el.className = "show"; hintT = 3.6;
   }
   function tickHint(dt){ if(hintT > 0){ hintT -= dt; if(hintT <= 0){ var el=$("hint"); if(el) el.className = ""; } } }
+
+  // AC5: the goal strip. What the colony wants next, in kid words, on screen the
+  // whole time. While the guide is running it carries the current teaching step.
+  var _goalTxt = "";
+  function nextNudge(){
+    if(guide.on){ var s = GUIDE[guide.step]; if(s) return s.text; }
+    return setbackNow() || missionLine();
+  }
+  // the idle bubble says what to DO, so it never just repeats the goal strip
+  function idleNudge(){
+    if(guide.on){ var s = GUIDE[guide.step]; if(s) return s.text; }
+    var sb = setbackNow(); if(sb) return sb;
+    var g = goalFor(currentMission());
+    if(!g) return "Drag in the dirt to dig deeper";
+    switch(g.type){
+      case "dug": case "found": return "Drag down in the brown dirt to dig";
+      case "food":  return "Tap the green grass to drop food";
+      case "room":  return "Tap one of your tunnels to build a room";
+      case "born": case "ants": return "Put more ants on Nursery to hatch eggs";
+      case "flood": return "Put more ants on Builders to clear the water";
+      default:      return "Drag in the dirt to dig deeper";
+    }
+  }
+  function syncGoal(){
+    var t = nextNudge();
+    if(t === _goalTxt) return;
+    _goalTxt = t;
+    var el = $("goalText"); if(el) el.textContent = t;
+    var host = $("goal"); if(host) host.className = guide.on ? "teach" : "";
+  }
+  // sit still for a while and one friendly bubble points at the next thing to do
+  var idleT = 0, idleNext = 15;
+  function bumpIdle(){ idleT = 0; idleNext = 15; }
+  function tickIdle(dt){
+    if(DEMO) return;
+    idleT += dt;
+    if(idleT < idleNext) return;
+    idleT = 0; idleNext = 25;                 // gentle: it nudges, it never nags
+    syncGoal();                               // know what the strip says before adding to it
+    var t = idleNudge();
+    if(t !== _goalTxt) hint(t);               // never say the same thing twice on one screen
+  }
+  // a short glow on one control, so a word button can point at the thing it names
+  var pulses = [];
+  function pulse(id, secs){
+    var el = $(id); if(!el || !el.classList) return;
+    el.classList.add("pulse"); pulses.push({ id:id, t:secs });
+  }
+  function tickPulse(dt){
+    for(var i=pulses.length-1;i>=0;i--){
+      pulses[i].t -= dt; if(pulses[i].t > 0) continue;
+      var el = $(pulses[i].id);
+      if(el && el.classList && !(guide.on && GUIDE[guide.step] && GUIDE[guide.step].hi === pulses[i].id)) el.classList.remove("pulse");
+      pulses.splice(i,1);
+    }
+  }
 
   function buildJobsUI(){
     var host = $("jobs"); if(!host || host.childElementCount) return;
@@ -920,6 +1237,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       C.jobs[job]--; C.jobs.forager = (C.jobs.forager|0) + 1;
     }
     if(Feel){ try{ Feel.tap(); }catch(e){} }
+    guide.moved = true; bumpIdle();
     syncJobsUI(); saveSoon();
   }
   var _jobsKey = "";
@@ -928,6 +1246,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(k === _jobsKey) return;                 // called every frame: only redraw on a real change
     _jobsKey = k;
     for(var i=0;i<JOBS.length;i++){ var el = $("ct_"+JOBS[i].id); if(el) el.textContent = C.jobs[JOBS[i].id]|0; }
+    var ct = $("barAnts"); if(ct) ct.textContent = C.ants + (C.ants === 1 ? " ant" : " ants");
     drawBar();
   }
   // the slide-to-assign bar: drag a divider to move ants between two jobs
@@ -962,7 +1281,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var pair = (C.jobs[a]|0) + (C.jobs[b]|0);
       var want = Math.round(pct(ev) * C.ants) - before;
       want = Math.max(0, Math.min(pair, want));
-      if(want !== (C.jobs[a]|0)){ C.jobs[a] = want; C.jobs[b] = pair - want; syncJobsUI(); saveSoon(); }
+      if(want !== (C.jobs[a]|0)){ C.jobs[a] = want; C.jobs[b] = pair - want; guide.moved = true; bumpIdle(); syncJobsUI(); saveSoon(); }
     });
     function end(){ dragging = -1; }
     bar.addEventListener("pointerup", end); bar.addEventListener("pointercancel", end);
@@ -970,9 +1289,18 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
   // drop tool (food or water)
   var TOOL = "food";
-  function setTool(t){ TOOL = t; $("toolFood").className = "tool" + (t==="food"?" on":""); $("toolWater").className = "tool" + (t==="water"?" on":""); }
-  $("toolFood").addEventListener("click", function(){ BA.unlock(); setTool("food"); });
-  $("toolWater").addEventListener("click", function(){ BA.unlock(); setTool("water"); });
+  function setTool(t){
+    TOOL = t;
+    var f = $("toolFood"), w = $("toolWater");
+    if(f && f.classList) f.classList[t === "food"  ? "add" : "remove"]("on");
+    if(w && w.classList) w.classList[t === "water" ? "add" : "remove"]("on");
+  }
+  // AC5: every control says what it is in a word. Dig and Jobs are not modes, they
+  // point at the thing they name, so nothing a kid could already do stops working.
+  $("toolDig").addEventListener("click", function(){ BA.unlock(); bumpIdle(); hint("Drag down in the brown dirt"); pulse("toolDig", 1.6); });
+  $("toolFood").addEventListener("click", function(){ BA.unlock(); bumpIdle(); setTool("food"); hint("Tap the green grass"); });
+  $("toolWater").addEventListener("click", function(){ BA.unlock(); bumpIdle(); setTool("water"); hint("Tap the green grass"); });
+  $("toolJobs").addEventListener("click", function(){ BA.unlock(); bumpIdle(); hint("Slide the colour bar to move ants"); pulse("bar", 1.6); });
 
   // ======================================================================
   //  Input — draw a tunnel path, drop food up top, tap a tunnel to build
@@ -997,8 +1325,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   CV.addEventListener("pointerdown", function(ev){
     if(state !== "play" || DEMO || paused) return;
-    BA.unlock();
-    if(how.on){ endHow(); }
+    BA.unlock(); bumpIdle();
     var g = cellFromEvent(ev); if(!g) return;
     if(g.surface){ dropSurface(TOOL, g.x); if(Feel){ try{ Feel.tap(); }catch(e){} } saveSoon(); return; }
     var here = cellAt(g.c, g.r);
@@ -1064,7 +1391,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface,
         mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
         carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
-        seen:C.seen, savedAt:Date.now()
+        seen:C.seen, guided:C.guided, savedAt:Date.now()
       }));
     }catch(e){}
   }
@@ -1080,7 +1407,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       col.mission = s.mission||0; col.done = s.done||{}; col.mBase = s.mBase||{};
       col.freeBuild = !!s.freeBuild; col.hit = s.hit||{}; col.carried = s.carried||0; col.mFlood = s.mFlood||null;
       col.found = s.found||0; col.floods = s.floods||0; col.rest = (s.rest==null?1:s.rest);
-      col.find = s.find || col.find; col.seen = !!s.seen;
+      col.find = s.find || col.find; col.seen = !!s.seen; col.guided = !!s.guided;
       return col;
     }catch(e){ return null; }
   }
@@ -1109,8 +1436,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
     if(DEMO) return;
     ensureMusic();
-    if(!C.seen){ C.seen = true; saveSoon(); showHow(); }      // first launch: show, don't tell
-    else hint(currentMission() ? missionLine() : "Free build: keep growing");
+    syncGoal();
+    if(!C.guided){ C.seen = true; saveSoon(); showHow(); }    // first colony: teach it, one step at a time
   }
   var startScreen = null;
   function startCfg(){
@@ -1144,10 +1471,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var guard = 0;
       while(acc >= STEP && guard < 12){ step(); acc -= STEP; guard++; }
       if(acc > 0.5) acc = 0;
-      tickHint(dt); tickHow(dt); tickParty(dt);
+      tickHint(dt); tickParty(dt); tickPulse(dt);
       if(saveT > 0 && !DEMO){ saveT -= dt; if(saveT <= 0) saveNow(); }
       if(DEMO) demoStep(dt);
-      syncHud(); syncJobsUI();
+      syncHud(); syncJobsUI(); syncGoal();
     }
     if(C){ draw(); if(state === "play"){ drawHow(); drawParty(); } }
   }
@@ -1164,48 +1491,100 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
 
   // ======================================================================
-  //  The wordless show. On a first launch (and from the ? button) a hand moves
-  //  down the dirt and the cells it passes turn into a drawn path, so a kid who
-  //  cannot read still knows the one thing to do. No words, no emoji, and it
-  //  never blocks: the first tap on the screen ends it.
+  //  The guided first minute (AC5). The queen walks the kid through the three
+  //  things the colony is made of, ONE AT A TIME, and each step WAITS until the
+  //  kid really does it. No text walls, nothing to dismiss, and it never blocks
+  //  a tap: the pointing mark is drawn on the canvas, the words sit in the goal
+  //  strip that is on screen anyway. The ? button replays it from the start.
   // ======================================================================
-  var how = { on:false, t:0, path:[] };
-  function showHow(){
-    how.on = true; how.t = 0; how.path = [];
-    var c = C.queen.c, r = C.deepest + 1, i;
-    for(i=0;i<4;i++) how.path.push({ c:c, r:r+i });
+  var GUIDE = [
+    { text:"Drag down in the brown dirt to dig a tunnel", hi:"toolDig",
+      spot:function(){ return digSpot(); },
+      done:function(){ return C.plan.length > 0 || (C.dug - guide.base.dug) > 0; } },
+    { text:"Now tap the green grass to drop some food", hi:"toolFood",
+      spot:function(){ return { fc:GAME_CONFIG.cols*0.26, fr:SURF_R }; },
+      done:function(){ return C.surface.length > guide.base.surf; } },
+    { text:"Slide the colour bar to give an ant a new job", hi:"bar",
+      spot:null,
+      done:function(){ return guide.moved; } }
+  ];
+  // where to point for "dig here": just under the dig face when that is on screen,
+  // otherwise out sideways from a tunnel that is. The ? button gets used most on a
+  // colony that has already grown, and it must never point off the bottom of the world.
+  function digSpot(){
+    // "on screen" means clear of the HUD at the top and of the panel and its bubble
+    // at the bottom, not merely inside the canvas
+    var down = { fc:C.queen.c, fr:C.deepest + 1, down:true }, y = frToY(down.fr);
+    if(!isFinite(y) || (y > SKY + CS && y < H - PANEL - CS*2.4)) return down;
+    // top of the view downwards, so the mark lands where the kid is looking rather
+    // than tucked against the panel
+    var b = viewBand(), r, c, d, yy, lim = Math.min(b.hi, C.deepest);
+    for(r = b.lo; r <= lim; r++){
+      if(!isOpen(C.queen.c, r)) continue;
+      yy = frToY(r);
+      if(isFinite(yy) && (yy < SKY + CS || yy > H - PANEL - CS*2.4)) continue;
+      for(d = 0; d < 2; d++){
+        c = C.queen.c + (d ? -1 : 1);
+        if(c < 0 || c >= GAME_CONFIG.cols) continue;
+        if(!cellAt(c, r)) return { fc:c, fr:r, down:false };
+      }
+    }
+    return down;
   }
-  function endHow(){ how.on = false; }
+  var guide = { on:false, step:0, t:0, base:{ dug:0, surf:0 }, moved:false };
+  var how = { on:false };            // the shell and the QA robot still ask for it by this name
+
+  function showHow(){
+    guide.on = true; guide.step = 0; guide.t = 0; guide.moved = false;
+    guide.base = { dug:C.dug, surf:C.surface.length };
+    how.on = true; setGuideHi(); bumpIdle();
+  }
+  function endHow(){ guide.on = false; how.on = false; setGuideHi(); }
   function tickHow(dt){
-    if(!how.on) return;
-    how.t += dt;
-    if(how.t > 3.4){ endHow(); return; }
+    if(!guide.on) return;
+    guide.t += dt;
+    var s = GUIDE[guide.step];
+    if(!s){ endHow(); return; }
+    if(guide.t < 0.5 || !s.done()) return;
+    guide.step++; guide.t = 0; guide.moved = false;
+    guide.base = { dug:C.dug, surf:C.surface.length };
+    if(Feel){ try{ Feel.tap(); }catch(e){} }
+    if(guide.step >= GUIDE.length){
+      endHow(); C.guided = true; saveSoon();
+      hint("You have got it. Now keep growing your colony.");
+    } else setGuideHi();
+  }
+  // the one control this step is about gets a soft pulse; everything else is left alone
+  function setGuideHi(){
+    var ids = ["toolDig","toolFood","toolWater","toolJobs","bar"], i;
+    for(i=0;i<ids.length;i++){ var e = $(ids[i]); if(e && e.classList) e.classList.remove("pulse"); }
+    if(!guide.on) return;
+    var s = GUIDE[guide.step];
+    if(s && s.hi){ var e2 = $(s.hi); if(e2 && e2.classList) e2.classList.add("pulse"); }
   }
   function drawHow(){
-    if(!how.on || !how.path.length) return;
-    var span = 2.6, p = Math.max(0, Math.min(1, (how.t - 0.4) / span));
-    var at = p * (how.path.length - 1), idx = Math.floor(at), fr = at - idx;
-    var a = how.path[Math.min(idx, how.path.length-1)], b = how.path[Math.min(idx+1, how.path.length-1)];
-    var x = cellX(a.c) + CS/2 + (cellX(b.c) - cellX(a.c)) * fr;
-    var y = cellY(a.r) + CS/2 + (cellY(b.r) - cellY(a.r)) * fr;
-    // where the tunnel is headed, so the shape of the idea is on screen at once
-    X.strokeStyle = "rgba(255,240,200,.5)"; X.lineWidth = 2.5; X.setLineDash([5,5]);
-    for(var i=0;i<how.path.length;i++){
-      var cc = how.path[i], cxp = cellX(cc.c), cyp = cellY(cc.r);
-      if(BR){ BR.rrect(X, cxp+4, cyp+4, CS-8, CS-8, 8); X.stroke(); } else X.strokeRect(cxp+4, cyp+4, CS-8, CS-8);
+    if(!guide.on) return;
+    var s = GUIDE[guide.step]; if(!s || !s.spot) return;
+    var p = s.spot(), x = fcToX(p.fc), y = frToY(p.fr);
+    if(guide.step === 0 && p.down){
+      // where the tunnel is headed, so the shape of the idea is on screen at once
+      X.strokeStyle = "rgba(255,240,200,.5)"; X.lineWidth = 2.5; X.setLineDash([5,5]);
+      for(var i=0;i<4;i++){
+        var cxp = cellX(C.queen.c), cyp = cellY(C.deepest + 1 + i);
+        if(BR){ BR.rrect(X, cxp+4, cyp+4, CS-8, CS-8, 8); X.stroke(); } else X.strokeRect(cxp+4, cyp+4, CS-8, CS-8);
+      }
+      X.setLineDash([]);
+      var slide = Math.min(1, (guide.t % 2.8) / 1.9);            // the mark drags down, over and over
+      y = frToY(C.deepest + 1 + slide*3);
+      X.strokeStyle = "rgba(255,240,200,.8)"; X.lineWidth = Math.max(4, CS*0.28); X.lineCap = "round";
+      X.beginPath(); X.moveTo(fcToX(C.queen.c), frToY(C.deepest + 1)); X.lineTo(x, y); X.stroke();
     }
-    X.setLineDash([]);
-    // the trail the hand has covered so far
-    X.strokeStyle = "rgba(255,240,200,.8)"; X.lineWidth = Math.max(4, CS*0.28); X.lineCap = "round";
-    X.beginPath();
-    X.moveTo(cellX(how.path[0].c)+CS/2, cellY(how.path[0].r)+CS/2);
-    X.lineTo(x, y); X.stroke();
     // the touch itself: a soft ring under a solid dot, the same mark a finger makes
     // on every touchscreen. Drawn, so it needs no art and says nothing in words.
     handDot(x, y);
   }
   function handDot(x,y){
-    var pulse = 0.75 + 0.25*Math.sin(how.t*6);
+    var pulse = 0.75 + 0.25*Math.sin(guide.t*6);
     X.strokeStyle = "rgba(255,255,255,.55)"; X.lineWidth = 3;
     X.beginPath(); X.arc(x, y, CS*0.42*pulse, 0, 7); X.stroke();
     X.fillStyle = "rgba(255,255,255,.92)"; X.beginPath(); X.arc(x, y, CS*0.2, 0, 7); X.fill();
@@ -1241,6 +1620,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // ======================================================================
   var ART_IDS = {
     ant:"antcity/ant/classic-v1", queen:"antcity/hero/queen-v1", soil:"antcity/soil/sandy-v1",
+    antCarry:"antcity/ant/carrying-v1", antDig:"antcity/ant/digging-v1",
     egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1", find:"antcity/prop/buried-find-v1",
     surface:"antcity/surface/meadow-v1", rainSurface:"antcity/surface/meadow-rain-v1",
     flood:"antcity/prop/flood-v1", colony:"antcity/prop/colony-v1", loading:"antcity/loading/v1",
@@ -1342,6 +1722,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     find: function(){ return C.find ? { c:C.find.c, r:C.find.r, gone:!!C.find.gone } : null; },
     how: function(){ return how.on; },
     showHow: showHow,
+    // --- AC5: the visible ants, the guide and the goal line ---
+    crowd: function(){ return C.sample.map(function(a){
+      return { fc:Math.round(a.fc*100)/100, fr:Math.round(a.fr*100)/100, job:a.job, state:a.state,
+               task:a.task ? a.task.kind : null, phase:(a.task && a.task.phase) || null, carry:!!a.carry,
+               inDirt:(a.fr > -0.2 && !isOpen(Math.round(a.fc), Math.round(a.fr))) }; }); },
+    guide: function(){ return { on:guide.on, step:guide.step, steps:GUIDE.length,
+                                text:(GUIDE[guide.step] || {}).text || "" }; },
+    goal: function(){ syncGoal(); return _goalTxt; },
+    antScale: function(){ return GAME_CONFIG.antScale; },
     dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
                               jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
                               dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
