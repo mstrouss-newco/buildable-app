@@ -66,7 +66,7 @@
         x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
         life: rnd(lf[0], lf[1]), max: lf[1], col,
         r: opts.r || 3, gravity: opts.gravity || 0, drag: opts.drag != null ? opts.drag : 4.5,
-        tex: opts.tex || null, add: !!opts.additive, rot: opts.tex ? Math.random() * TAU : 0
+        tex: opts.tex || null, add: !!opts.additive, raw: !!opts.raw, rot: opts.tex ? Math.random() * TAU : 0
       });
     }
   };
@@ -89,7 +89,7 @@
       const a = Math.max(0, Math.min(1, p.life / (p.max || 0.5)));
       const im = p.tex && BM.tex[p.tex];
       if (im && (im.naturalWidth || im.width)) {
-        const t = tintedTex(im, p.col || "#fff");
+        const t = p.raw ? im : tintedTex(im, p.col || "#fff");
         if (t) { ctx.save(); ctx.globalAlpha = a; if (p.add) ctx.globalCompositeOperation = "lighter";
           const s = (p.r || 3) * 4; ctx.translate(p.x, p.y); if (p.rot) ctx.rotate(p.rot); ctx.drawImage(t, -s / 2, -s / 2, s, s);
           ctx.restore(); continue; }
@@ -164,6 +164,43 @@
     BM.flash(fx, opts.flashCol || col, opts.flash != null ? opts.flash : (big ? 0.3 : 0.18));
     BM.shake(fx, opts.shake != null ? opts.shake : (big ? 0.4 : 0.12));
     if (opts.pop) BM.pop(fx.pops, x, y, opts.pop, opts.popCol || col);
+    if (typeof opts.sfx === "function") opts.sfx();
+    else if (opts.sfx && g.BuildableAudio) g.BuildableAudio.sfx(opts.sfx);
+  };
+
+  // ---- BLAST: the big, bright, kid-safe explosion --------------------------
+  // BM.explode tints every layer one flat colour, so a big one reads as a
+  // coloured blob. A blast layers the FX pack instead: a flare core drawn in its
+  // OWN colours, a shockwave ring, a spray of stars and sparks, and a few soft
+  // puffs drifting off it. No fire and no debris — things pop, they do not burn.
+  //   BM.blast(fx, x, y, "#ffd23f", { size: 1.4, sfx: "boom" })
+  BM.blast = function (fx, x, y, col, opts) {
+    if (!fx) return;
+    opts = opts || {}; const z = opts.size || 1; col = col || "#ffe27a";
+    if (BM.hasTex("boom")) {
+      // core: the cartoon explosion puff in its OWN colours (orange heart, grey
+      // rim), the shape a four-year-old reads as "it popped"
+      fx.parts.push({ x, y, vx: 0, vy: 0, life: 0.34, max: 0.34, col: "#fff",
+        r: 15 * z, drag: 0, gravity: 0, tex: "boom", add: false, raw: true, rot: 0 });
+      for (let i = 0; i < 3; i++) {
+        const a = Math.random() * TAU, d = 11 * z;
+        fx.parts.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70,
+          life: 0.4, max: 0.4, col: "#fff", r: 9 * z, drag: 3, gravity: 0, tex: "boom", add: false, raw: true, rot: Math.random() * TAU });
+      }
+      if (BM.hasTex("puff")) BM.burst(fx.parts, x, y, "#fff", Math.round(4 * z), { tex: "puff", raw: true, spd: [40, 150], life: [0.5, 0.9], r: 10 * z, drag: 2.4 });
+      BM.burst(fx.parts, x, y, col, Math.round(10 * z), { tex: "star", additive: true, spd: [150, 430], life: [0.32, 0.62], r: 6 * z, drag: 4.5 });
+      BM.burst(fx.parts, x, y, "#ffffff", Math.round(12 * z), { tex: "spark", additive: true, spd: [190, 520], life: [0.24, 0.5], r: 4.5 * z, drag: 5.5 });
+    } else if (BM.hasTex("spark")) {
+      fx.parts.push({ x, y, vx: 0, vy: 0, life: 0.22, max: 0.22, col: col,
+        r: 15 * z, drag: 0, gravity: 0, tex: "glow", add: true, rot: 0 });
+      BM.burst(fx.parts, x, y, col, Math.round(11 * z), { tex: "star", additive: true, spd: [130, 420], life: [0.32, 0.62], r: 6 * z, drag: 4.5 });
+      BM.burst(fx.parts, x, y, "#ffffff", Math.round(13 * z), { tex: "spark", additive: true, spd: [180, 520], life: [0.24, 0.5], r: 4.5 * z, drag: 5.5 });
+    } else {
+      BM.burst(fx.parts, x, y, col, Math.round(22 * z), { spd: [90, 380], life: [0.3, 0.6], r: 4 * z });
+    }
+    BM.ring(fx, x, y, 120 * z, col);
+    BM.flash(fx, opts.flashCol || col, opts.flash != null ? opts.flash : 0.22 * z);
+    BM.shake(fx, opts.shake != null ? opts.shake : 0.22 * z);
     if (typeof opts.sfx === "function") opts.sfx();
     else if (opts.sfx && g.BuildableAudio) g.BuildableAudio.sfx(opts.sfx);
   };

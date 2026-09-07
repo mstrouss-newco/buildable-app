@@ -7,7 +7,7 @@
     "note": "dark world",
     "label": "survival",
     "file": "public/tile-shots/survival.png",
-    "kb": 635
+    "kb": 685
   },
   {
     "id": "survival",
@@ -17,7 +17,7 @@
     "note": "dark world",
     "label": "survival-nowash",
     "file": "public/tile-shots/survival-nowash.png",
-    "kb": 536
+    "kb": 587
   },
   {
     "id": "castleguard",
@@ -27,7 +27,7 @@
     "note": "bright world",
     "label": "castleguard",
     "file": "public/tile-shots/castleguard.png",
-    "kb": 248
+    "kb": 309
   },
   {
     "id": "castleguard",
@@ -37,6 +37,6 @@
     "note": "bright world",
     "label": "castleguard-nowash",
     "file": "public/tile-shots/castleguard-nowash.png",
-    "kb": 209
+    "kb": 271
   }
 ]
