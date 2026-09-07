@@ -11,7 +11,7 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Buildable Runner — engine</title>
+<title>Hop Heroes</title>
 <style>
   html,body{margin:0;height:100%;overflow:hidden;touch-action:none;font-family:'Fredoka',-apple-system,sans-serif;
     background:linear-gradient(#cfeaff 0%,#dff0d6 55%,#eef6dc 100%)}   /* the sky continues past the canvas, so a portrait phone never shows black bars */
@@ -77,6 +77,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 <div id="hint">Move with the arrows · JUMP to hop · reach the flag</div>
 <script src="buildable-wincard.js"></script>
 <script src="buildable-startscreen.js"></script>
+<script src="buildable-levelthumb.js"></script>
 <script src="buildable-renders.js"></script>
 <script src="buildable-audio.js"></script>
 <script src="buildable-mechanics.js"></script>
@@ -620,6 +621,17 @@ const menuEl = document.getElementById('menu');
 const heroPick = document.getElementById('heroPick');
 let screen=null;
 
+// LP rule: a level card is never a flat block of colour. Each world paints a little
+// side-on slice of itself — its own sky, ground and dirt — through the shared thumb
+// painter, so the picker looks like four places rather than four swatches.
+function thumbFor(lv){
+  const BLT = (typeof window!=="undefined") && window.BuildableLevelThumb;
+  if(!BLT || !BLT.make) return "";
+  const lk = (GAME_CONFIG.looks||{})[lv.world] || DEFAULT_LOOK;
+  try{ return BLT.make("hops", { sky:[lk.sky[0], lk.sky[2]||lk.sky[1]], grass:lk.ground,
+                                 top:lk.groundTop, dirt:lk.dirt }, lv.world) || ""; }
+  catch(e){ return ""; }
+}
 function starsBanked(){ let n=0; for(const k in SAVE.stars) n+=SAVE.stars[k]|0; return n; }
 function screenSpec(){
   const h=heroInfo();
@@ -631,7 +643,7 @@ function screenSpec(){
     hero: { name:h.name, img:heroUrl(h.slug),
             progressText: SAVE.cleared+" of "+LEVELS.length+" worlds cleared" },
     levels: LEVELS.map((lv,i)=>({
-      n: i+1, name: lv.name, color: (GAME_CONFIG.looks[lv.world]||{}).ground,
+      n: i+1, name: lv.name, color: (GAME_CONFIG.looks[lv.world]||{}).ground, img: thumbFor(lv),
       stars: SAVE.stars[i]|0, maxStars: 3,
       state: i<SAVE.cleared ? "done" : (i===SAVE.cleared ? "next" : "locked"),
     })),
@@ -921,17 +933,41 @@ function drawPiece(im, sx, baseY, h, flip){ const w=h*(im.naturalWidth/im.natura
 function drawTopPiece(im, sx, h, flip){ const w=h*(im.naturalWidth/im.naturalHeight); ctx.save(); ctx.translate(sx,0); if(flip)ctx.scale(-1,1); ctx.drawImage(im,-w/2,-12,w,h); ctx.restore(); }
 function star5(cx,cy,r){ ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5; const rr=i%2?r*0.45:r; ctx.lineTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);} ctx.closePath(); ctx.fill(); }
 function drawDeco(x,baseY,d){ const s=d.s||1; if(d.kind==='bush'){ ctx.fillStyle="rgba(38,64,32,0.9)"; ctx.beginPath();ctx.arc(x,baseY,24*s,Math.PI,0);ctx.arc(x+16*s,baseY,17*s,Math.PI,0);ctx.arc(x-16*s,baseY,17*s,Math.PI,0);ctx.closePath();ctx.fill(); } else { ctx.strokeStyle="rgba(38,64,32,0.85)"; ctx.lineWidth=3; for(let b=-2;b<=2;b++){ ctx.beginPath();ctx.moveTo(x+b*5,baseY);ctx.quadraticCurveTo(x+b*5+b*2,baseY-16*s,x+b*6,baseY-26*s);ctx.stroke(); } } }
+// A power-up has to look like a PRIZE. Bare coloured discs read as dots of paint that
+// had gone wrong. Now: a warm halo, a thick white capsule ring, a soft inner shine and
+// a sparkle, so it reads as something worth jumping for from right across the screen.
 function drawPU(x,y,kind,r){ r=r||15; const col={shield:"#4aa3ff",magnet:"#e0566f",spring:"#5fc46a",star:"#ffd23f",heart:"#e0566f"}[kind]||"#fff";
-  ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath();ctx.arc(x,y+2,r+2,0,7);ctx.fill();
-  ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
-  ctx.fillStyle=col; ctx.beginPath();ctx.arc(x,y,r-3,0,7);ctx.fill();
+  const tw=0.82+0.18*Math.sin(Date.now()/260+x);
+  ctx.save();
+  { const hl=ctx.createRadialGradient(x,y,r*0.4,x,y,r*2.1);               // halo
+    hl.addColorStop(0,"rgba(255,255,255,"+(0.34*tw).toFixed(3)+")");
+    hl.addColorStop(0.55,"rgba(255,255,255,"+(0.12*tw).toFixed(3)+")");
+    hl.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=hl; ctx.beginPath();ctx.arc(x,y,r*2.1,0,7);ctx.fill(); }
+  ctx.fillStyle="rgba(0,0,0,.20)"; ctx.beginPath();ctx.arc(x,y+3,r+3,0,7);ctx.fill();
+  ctx.fillStyle="#fff"; ctx.beginPath();ctx.arc(x,y,r+3,0,7);ctx.fill();  // the white capsule ring
+  ctx.fillStyle="rgba(0,0,0,.10)"; ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
+  ctx.fillStyle=col; ctx.beginPath();ctx.arc(x,y,r-1,0,7);ctx.fill();
+  { const sh=ctx.createLinearGradient(0,y-r,0,y+r);                       // inner shine
+    sh.addColorStop(0,"rgba(255,255,255,.45)"); sh.addColorStop(0.55,"rgba(255,255,255,0)");
+    ctx.fillStyle=sh; ctx.beginPath();ctx.arc(x,y,r-1,0,7);ctx.fill(); }
+  ctx.restore();
   ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineWidth=Math.max(2,r/6);
   if(kind==="shield"){ ctx.beginPath();ctx.moveTo(x,y-r*0.5);ctx.lineTo(x+r*0.5,y-r*0.2);ctx.lineTo(x+r*0.5,y+r*0.15);ctx.quadraticCurveTo(x,y+r*0.7,x,y+r*0.7);ctx.quadraticCurveTo(x,y+r*0.7,x-r*0.5,y+r*0.15);ctx.lineTo(x-r*0.5,y-r*0.2);ctx.closePath();ctx.fill(); }
   else if(kind==="star"){ star5(x,y,r*0.62); }
   else if(kind==="spring"){ ctx.beginPath();ctx.moveTo(x-r*0.45,y+r*0.12);ctx.lineTo(x,y-r*0.5);ctx.lineTo(x+r*0.45,y+r*0.12);ctx.stroke(); ctx.beginPath();ctx.moveTo(x-r*0.45,y+r*0.45);ctx.lineTo(x,y-r*0.12);ctx.lineTo(x+r*0.45,y+r*0.45);ctx.stroke(); }
   else if(kind==="magnet"){ ctx.lineWidth=Math.max(3,r/3); ctx.beginPath();ctx.arc(x,y-r*0.1,r*0.45,Math.PI,0,false);ctx.stroke(); ctx.beginPath();ctx.moveTo(x-r*0.45,y-r*0.1);ctx.lineTo(x-r*0.45,y+r*0.45);ctx.moveTo(x+r*0.45,y-r*0.1);ctx.lineTo(x+r*0.45,y+r*0.45);ctx.stroke(); }
   else if(kind==="heart"){ heart(x,y-r*0.3,r*0.5); }
+  ctx.fillStyle="rgba(255,255,255,"+(0.55+0.45*Math.sin(Date.now()/200+x)).toFixed(3)+")";
+  ctx.beginPath(); ctx.ellipse(x-r*0.52,y-r*0.62,r*0.24,r*0.13,-0.7,0,7); ctx.fill();
 }
+// Darken or lighten one of the world's own colours, so every shadow and highlight
+// stays in the same family as the palette instead of drifting to black or white.
+function shadeHex(c,amt){ c=(c||"#5a4332")+""; if(c[0]==="#")c=c.slice(1);
+  if(c.length===3)c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  const n=parseInt(c,16)||0; const cl=v=>Math.max(0,Math.min(255,Math.round(v)));
+  const r=cl((n>>16&255)+amt), g=cl((n>>8&255)+amt), b=cl((n&255)+amt);
+  return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 function heart(x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*0.3);ctx.bezierCurveTo(x,y,x-s,y,x-s,y+s*0.35);ctx.bezierCurveTo(x-s,y+s*0.7,x,y+s*0.9,x,y+s*1.15);ctx.bezierCurveTo(x,y+s*0.9,x+s,y+s*0.7,x+s,y+s*0.35);ctx.bezierCurveTo(x+s,y,x,y,x,y+s*0.3);ctx.closePath();ctx.fill();}
 function draw(){
   const LK=worldLook();
@@ -996,12 +1032,26 @@ function draw(){
   // side, and a shadow lip under each edge. Drawn BEFORE the ground band so the band
   // always finishes the edge cleanly.
   for(const pt of pitsOf(L)){ const sx=pt.x0-camX, ex=pt.x1-camX; if(ex<-60||sx>W+60)continue; const pw=ex-sx;
-    const sh=ctx.createLinearGradient(0,GROUND_Y,0,GROUND_Y+120);
-    sh.addColorStop(0,"#241811"); sh.addColorStop(0.45,"#120c07"); sh.addColorStop(1,"#070403");
-    ctx.fillStyle=sh; ctx.fillRect(sx,GROUND_Y,pw,H+260-GROUND_Y);   // a hole is DARK, much darker than the dirt beside it
-    const wall=Math.min(9,pw*0.16);                        // the two dirt walls facing into the hole
-    ctx.fillStyle="#6b4d34"; ctx.fillRect(sx,GROUND_Y,wall,120); ctx.fillRect(ex-wall,GROUND_Y,wall,120);
-    ctx.fillStyle="rgba(0,0,0,.55)"; ctx.fillRect(sx+wall,GROUND_Y,4,120); ctx.fillRect(ex-wall-4,GROUND_Y,4,120);
+    // The shaft is DIRT in shadow, not ink. Pure black read as a printing fault against
+    // the watercolour, so the gradient stays inside the world's own dirt hue and only
+    // ever gets as dark as a deep earth brown. Depth comes from the walls, not the fill.
+    const dk=shadeHex(P.dirt,-46), dk2=shadeHex(P.dirt,-74), lit=shadeHex(P.dirt,16);
+    const sh=ctx.createLinearGradient(0,GROUND_Y,0,GROUND_Y+150);
+    sh.addColorStop(0,dk); sh.addColorStop(0.55,dk2); sh.addColorStop(1,dk2);
+    ctx.fillStyle=sh; ctx.fillRect(sx,GROUND_Y,pw,H+260-GROUND_Y);
+    { const side=ctx.createLinearGradient(sx,0,ex,0);       // the walls curve away into the hole
+      side.addColorStop(0,"rgba(0,0,0,0)"); side.addColorStop(0.5,"rgba(0,0,0,.30)"); side.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=side; ctx.fillRect(sx,GROUND_Y,pw,H+260-GROUND_Y); }
+    const wall=Math.max(7,Math.min(13,pw*0.17));           // the two lit dirt walls facing into the hole
+    const deep=H+240-GROUND_Y;
+    ctx.fillStyle=lit; ctx.fillRect(sx,GROUND_Y,wall,deep); ctx.fillRect(ex-wall,GROUND_Y,wall,deep);
+    ctx.fillStyle="rgba(0,0,0,.22)"; ctx.fillRect(sx,GROUND_Y,wall,deep); ctx.fillRect(ex-wall,GROUND_Y,wall,deep);
+    ctx.fillStyle=shadeHex(P.dirt,34);                     // a bright edge on each wall so the mouth is crisp
+    ctx.fillRect(sx,GROUND_Y,3,deep); ctx.fillRect(ex-3,GROUND_Y,3,deep);
+    { ctx.fillStyle="rgba(0,0,0,.16)";                     // stones bedded in the wall, on a fixed world grid
+      for(let d=18; d<deep; d+=27){ const j=((pt.x0+d)*0.021)%1;
+        ctx.beginPath(); ctx.ellipse(sx+wall*0.55, GROUND_Y+d+j*9, 3.2, 2.1, 0,0,7); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ex-wall*0.55, GROUND_Y+d+12-j*9, 3.2, 2.1, 0,0,7); ctx.fill(); } }
     { const lip=ctx.createLinearGradient(0,GROUND_Y-2,0,GROUND_Y+34);   // shadow lip fading down the shaft
       lip.addColorStop(0,"rgba(0,0,0,.60)"); lip.addColorStop(1,"rgba(0,0,0,0)");
       ctx.fillStyle=lip; ctx.fillRect(sx,GROUND_Y-2,pw,36); }
@@ -1018,7 +1068,22 @@ function draw(){
     ctx.fillStyle="rgba(255,255,255,.20)"; ctx.fillRect(sx,g.y,gw,2);
     ctx.fillStyle="rgba(0,0,0,.10)";                         // pebbles, on a fixed world grid so they never crawl
     for(let px=Math.floor((g.x0)/70)*70; px<g.x1; px+=70){ const sxp=px-camX; if(sxp<-20||sxp>W+20)continue;
-      const j=(px*0.013)%1; ctx.beginPath(); ctx.ellipse(sxp+j*40, g.y+34+j*44, 7, 4, 0,0,7); ctx.fill(); } }
+      const j=(px*0.013)%1; ctx.beginPath(); ctx.ellipse(sxp+j*40, g.y+34+j*44, 7, 4, 0,0,7); ctx.fill(); }
+    // Grass tufts standing up off the cap, and soil bands under it. Without these the
+    // play surface was a flat plastic stripe under hand-painted trees.
+    ctx.fillStyle=shadeHex(P.dirt,-16);
+    for(let py=g.y+30; py<g.y+150; py+=38){ ctx.globalAlpha=0.5; ctx.fillRect(sx,py,gw,9); }
+    ctx.globalAlpha=1;
+    for(let px=Math.floor(g.x0/34)*34; px<g.x1; px+=34){ const sxp=px-camX; if(sxp<-14||sxp>W+14)continue;
+      const j=(px*0.0197)%1, k=(px*0.0431)%1, h=3.5+j*j*9, lean=(k-0.5)*8;
+      ctx.fillStyle = k<0.5 ? P.groundTop : shadeHex(P.ground,18);
+      ctx.beginPath(); ctx.moveTo(sxp-2.1,g.y+2); ctx.quadraticCurveTo(sxp+lean*0.5,g.y-h*0.6,sxp+lean,g.y-h);
+      ctx.quadraticCurveTo(sxp+lean*0.4,g.y-h*0.45,sxp+2.1,g.y+2); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle="rgba(255,255,255,.14)";                   // a few pale blades catching the light
+    for(let px=Math.floor(g.x0/97)*97; px<g.x1; px+=97){ const sxp=px-camX; if(sxp<-14||sxp>W+14)continue;
+      const j=(px*0.0311)%1; ctx.beginPath(); ctx.moveTo(sxp-1.6,g.y+2);
+      ctx.quadraticCurveTo(sxp+2,g.y-9,sxp+3+j*3,g.y-15-j*5);
+      ctx.quadraticCurveTo(sxp+1.5,g.y-8,sxp+1.6,g.y+2); ctx.closePath(); ctx.fill(); } }
   // HH3 PIPES — the stand-on marker at the mouth of every run zone: safe ground here,
   // something to jump just after. Deep teal with a dark rim so it can never be mistaken
   // for the grass or a bush.
@@ -1059,10 +1124,30 @@ function draw(){
   for(const bp of L.bounces){ const x=bp.x-camX; if(x+bp.w<-30||x>W+30)continue; const sq=bp.t>0?(bp.t/10):0; if(bp.t>0)bp.t--; const im=propImg("spring"); if(im){ const bw=bp.w+16, bh=48*(1-sq*0.3); ctx.drawImage(im, x-8, (bp.y+14)-bh+sq*6, bw, bh); } else { ctx.fillStyle="#3bbf95"; rrect(x, bp.y+sq*8, bp.w, 16-sq*6, 8);ctx.fill(); ctx.fillStyle="rgba(255,255,255,.35)"; rrect(x+5, bp.y+2+sq*8, bp.w-10, 5, 4);ctx.fill(); } }
   // swinging vines (bonus toy, over solid ground)
   for(const sw of L.swings){ const ax=sw.ax-camX; if(ax<-70||ax>W+70)continue; const bx=ax+Math.sin(sw.ang)*sw.len, by=sw.ay+Math.cos(sw.ang)*sw.len;
-    ctx.lineCap="round"; ctx.strokeStyle="#5a7d3a"; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(ax,sw.ay); ctx.quadraticCurveTo((ax+bx)/2,(sw.ay+by)/2,bx,by); ctx.stroke();
-    ctx.strokeStyle="#86b65a"; ctx.lineWidth=2.5; ctx.stroke(); ctx.lineCap="butt";
-    ctx.fillStyle="#6ea03f"; ctx.beginPath(); ctx.arc(bx,by,11,0,7); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.2)"; ctx.beginPath(); ctx.arc(bx-3,by-3,4,0,7); ctx.fill();
-    ctx.fillStyle="#4f7a32"; ctx.beginPath(); ctx.ellipse(ax,sw.ay,9,5,0,0,7); ctx.fill();
+    // A living vine, not a green stick: a twisted stem with leaf pairs down its length,
+    // a knot where it is tied on, and a hand loop at the bottom that says "grab me".
+    const mx=(ax+bx)/2, my=(sw.ay+by)/2, pt2=(u)=>{ const iu=1-u;
+      return [iu*iu*ax+2*iu*u*mx+u*u*bx, iu*iu*sw.ay+2*iu*u*my+u*u*by]; };
+    ctx.lineCap="round";
+    ctx.strokeStyle="rgba(40,60,26,.28)"; ctx.lineWidth=8;                 // soft shadow behind the stem
+    ctx.beginPath(); ctx.moveTo(ax+2,sw.ay+2); ctx.quadraticCurveTo(mx+2,my+2,bx+2,by+2); ctx.stroke();
+    ctx.strokeStyle="#4a6b2c"; ctx.lineWidth=6.5;
+    ctx.beginPath(); ctx.moveTo(ax,sw.ay); ctx.quadraticCurveTo(mx,my,bx,by); ctx.stroke();
+    ctx.strokeStyle="#82ac52"; ctx.lineWidth=2.6;                          // the lit side of the stem
+    ctx.beginPath(); ctx.moveTo(ax-1,sw.ay); ctx.quadraticCurveTo(mx-1.4,my,bx-1,by); ctx.stroke();
+    ctx.lineCap="butt";
+    for(let i=1;i<=5;i++){                                                 // leaf pairs, alternating sides
+      const [lx,ly]=pt2(i/6), sgn=(i%2)?1:-1, ang=Math.atan2(by-sw.ay,bx-ax);
+      for(const s2 of [sgn,-sgn*0.55]){
+        ctx.save(); ctx.translate(lx,ly); ctx.rotate(ang+s2*1.05);
+        ctx.fillStyle = s2>0 ? "#7fae4e" : "#5e8c37";
+        ctx.beginPath(); ctx.ellipse(0,-9*Math.sign(s2||1),5.4,9.5,0,0,7); ctx.fill();
+        ctx.restore(); } }
+    ctx.strokeStyle="#4a6b2c"; ctx.lineWidth=5;                            // the hand loop at the bottom
+    ctx.beginPath(); ctx.ellipse(bx,by+5,10,12,0,0,7); ctx.stroke();
+    ctx.strokeStyle="#82ac52"; ctx.lineWidth=1.8; ctx.beginPath(); ctx.ellipse(bx-1,by+4,10,12,0,0,7); ctx.stroke();
+    ctx.fillStyle="#3f5c26"; ctx.beginPath(); ctx.ellipse(ax,sw.ay+1,11,7,0,0,7); ctx.fill();   // the knot
+    ctx.fillStyle="#5e8c37"; ctx.beginPath(); ctx.ellipse(ax,sw.ay-1,9,5.4,0,0,7); ctx.fill();
   }
   // coins
   // HH2 coins: bigger, gold rather than orange, with a rim and a moving shine so they
@@ -1106,7 +1191,7 @@ function draw(){
   // low barriers (slide under)
   for(const b of L.lowBars){ const x=b.x-camX; if(x<-40||x>W+40)continue; const im=propImg("vines"); if(im){ const h=GROUND_Y+240, w=72; ctx.drawImage(im, x-w/2, -240, w, h); } else { ctx.fillStyle=P.obstacle; rrect(x-22,-250,44,GROUND_Y+214,12); ctx.fill(); ctx.fillStyle="rgba(255,255,255,.18)"; rrect(x-22,-250,12,GROUND_Y+214,12); ctx.fill(); ctx.fillStyle=P.obstacle; ctx.beginPath();ctx.moveTo(x-30,GROUND_Y-36);ctx.lineTo(x+30,GROUND_Y-36);ctx.lineTo(x,GROUND_Y-18);ctx.closePath();ctx.fill(); } }
   // power-ups (floating bonus pickups)
-  for(const u of L.powerups){ if(u.got)continue; const x=u.x-camX; if(x<-30||x>W+30)continue; drawPU(x, u.y+Math.sin(Date.now()/300+u.x)*4, u.kind, 15); }
+  for(const u of L.powerups){ if(u.got)continue; const x=u.x-camX; if(x<-30||x>W+30)continue; drawPU(x, u.y+Math.sin(Date.now()/300+u.x)*5, u.kind, 20); }
   // friendly end-of-level boss — themed world art if available, else a drawn blob
   if(L.boss){ const b=L.boss, x=b.x-camX; if(x>-180&&x<W+180){ const happy=b.defeated;
     const bob=Math.sin(t*3)*4 - (b.hit>0?7:0) + (happy?-Math.abs(Math.sin(t*6))*7:0);
@@ -1139,15 +1224,34 @@ function draw(){
       const POLE_H=210, top=GROUND_Y-POLE_H;
       const slide = poleT>0 ? Math.min(1, poleT/POLE_SLIDE) : 0;
       const flagY = top+18 + slide*(POLE_H-72);
-      ctx.fillStyle="rgba(0,0,0,.16)"; ctx.beginPath(); ctx.ellipse(fx,GROUND_Y+4,26,7,0,0,7); ctx.fill();
-      ctx.fillStyle="#4a3a26"; rrect(fx-18,GROUND_Y-16,36,18,5); ctx.fill();              // the plinth
-      ctx.fillStyle="#8a6a45"; rrect(fx-4,top,8,POLE_H,4); ctx.fill();                    // the pole
-      ctx.fillStyle="rgba(255,255,255,.30)"; ctx.fillRect(fx-2,top+4,2.5,POLE_H-10);
-      ctx.fillStyle=P.flag; ctx.beginPath(); ctx.arc(fx,top,11,0,7); ctx.fill();          // the ball on top
-      ctx.fillStyle="#fff3b0"; ctx.beginPath(); ctx.arc(fx-3,top-3,4,0,7); ctx.fill();
-      ctx.fillStyle=P.flag;                                                               // the flag itself
-      ctx.beginPath(); ctx.moveTo(fx+3,flagY); ctx.lineTo(fx+58,flagY+15); ctx.lineTo(fx+3,flagY+30); ctx.closePath(); ctx.fill();
-      ctx.fillStyle="rgba(255,255,255,.35)"; ctx.beginPath(); ctx.moveTo(fx+3,flagY); ctx.lineTo(fx+34,flagY+8); ctx.lineTo(fx+3,flagY+13); ctx.closePath(); ctx.fill();
+      // The finish is the payoff for a two minute run, so it gets built like one: a stone
+      // base with steps, a ribboned pole, a gold star finial and a banner that ripples.
+      const wv=Date.now()/260;
+      ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(fx,GROUND_Y+5,40,9,0,0,7); ctx.fill();
+      ctx.fillStyle="#8d8377"; rrect(fx-30,GROUND_Y-12,60,16,6); ctx.fill();              // the base, lower step
+      ctx.fillStyle="#a89d8e"; rrect(fx-30,GROUND_Y-14,60,6,3); ctx.fill();
+      ctx.fillStyle="#7a7166"; rrect(fx-21,GROUND_Y-26,42,15,5); ctx.fill();              // upper step
+      ctx.fillStyle="#9c9184"; rrect(fx-21,GROUND_Y-28,42,6,3); ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.22)"; ctx.fillRect(fx-17,GROUND_Y-25,34,2);
+      ctx.fillStyle="#7e6244"; rrect(fx-5,top,10,POLE_H-18,5); ctx.fill();                // the pole
+      ctx.fillStyle="#a3835c"; rrect(fx-5,top,5,POLE_H-18,5); ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.34)"; ctx.fillRect(fx-3,top+6,2.5,POLE_H-32);
+      ctx.fillStyle="rgba(255,255,255,.20)";                                              // ribbon bands up the pole
+      for(let by2=top+26; by2<GROUND_Y-30; by2+=34) ctx.fillRect(fx-5,by2,10,4);
+      ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath(); ctx.arc(fx+2,top+2,12,0,7); ctx.fill();
+      ctx.fillStyle=P.flag; ctx.beginPath(); ctx.arc(fx,top,12,0,7); ctx.fill();          // the gold finial
+      ctx.fillStyle="#fff3b0"; star5(fx,top,7.5);
+      { ctx.save();                                                                       // the banner, rippling
+        ctx.fillStyle=P.flag; ctx.beginPath(); ctx.moveTo(fx,flagY);
+        for(let i=0;i<=10;i++){ const u=i/10; ctx.lineTo(fx+u*66, flagY+Math.sin(wv+u*3.1)*4*u); }
+        for(let i=10;i>=0;i--){ const u=i/10; ctx.lineTo(fx+u*66, flagY+30+Math.sin(wv+u*3.1+0.5)*5*u); }
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle="rgba(255,255,255,.38)"; ctx.beginPath(); ctx.moveTo(fx+2,flagY+3);
+        for(let i=0;i<=10;i++){ const u=i/10; ctx.lineTo(fx+2+u*42, flagY+3+Math.sin(wv+u*3.1)*3*u); }
+        for(let i=10;i>=0;i--){ const u=i/10; ctx.lineTo(fx+2+u*42, flagY+13+Math.sin(wv+u*3.1+0.5)*3.6*u); }
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle="rgba(0,0,0,.16)"; ctx.fillRect(fx,flagY,5,30);                       // where it wraps the pole
+        ctx.restore(); }
       if(poleT>0 && poleT<=POLE_SLIDE){                                                   // sparkles on the way down
         for(let i=0;i<4;i++){ const a=t*5+i*1.6; ctx.fillStyle="rgba(255,232,130,.8)";
           ctx.beginPath(); ctx.arc(fx+Math.cos(a)*(16+4*Math.sin(t*3+i)), flagY+18+Math.sin(a)*13, 2.6,0,7); ctx.fill(); }
