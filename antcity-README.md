@@ -178,6 +178,40 @@ not SHOW what it was doing, and it did not say clearly what to do next.
   the carried item in its mandibles. The art ids still come from the manifest and still
   pick the body colour, and the fallback path is untouched.
 
+## One smart bar, and a Build menu made of pictures (AC8)
+
+AC7 made the game honest. AC8 makes it readable by somebody who cannot read. The rule
+for every element on screen: **information is bars, icons, pictures and countable things;
+words are tiny labels only.**
+
+The bottom stack was a row of words (FOOD WATER REST EGGS) over a row of word buttons.
+It is now **one slim bar** with three parts:
+
+- **Left, the meters.** Four little vertical bars with a picture on each: a green apple
+  for food, a blue drop for water, a pink moon for rest, a gold egg for eggs. The one
+  that is running out **wiggles and wears a small red tag**, so the thing that needs the
+  player is the thing that moves.
+- **Middle, what is in your hand.** One big button carrying the tool itself — a shovel, an
+  apple, a drop, a hammer — its name, and two or three words saying where to use it
+  ("drag in the dirt", "tap the grass"). This is the fix for the oldest confusion in the
+  game: what a tap will do is now stated on screen at all times, and the tool really
+  decides. A tap in the wrong place is never silent; it says which picture to swap to.
+- **Right, the toolbox.** A round button that opens a sheet of four picture cards and
+  hides again the moment one is picked. The guide teaches this, because it is the one new
+  thing to learn: tap the round button, then pick the apple.
+
+The **jobs strip** stays collapsed at the very bottom and opens on a tap, exactly as AC7
+left it.
+
+**The Build menu is pictures.** Four cards in a 2x2 grid, each a little scene of what the
+room does: eggs in a pink room, a pile of berries, an ant asleep under a Zz, mushrooms
+growing. What a room costs is **a row of apples you count**, not a number to read. A room
+you cannot afford yet goes grey and its apples flash. Closing is a big orange X.
+
+Everything AC7 built is untouched underneath: one hint line, food that only arrives when
+an ant carries it in, ants that walk to marked targets and stand still when idle, straight
+into the colony with no picker.
+
 ## The colony builder loop (grow it huge)
 
 Ant City is a kid-simple colony builder. The feel is a friendly ant version of a

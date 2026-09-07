@@ -42,26 +42,61 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   #coach.teach{color:#fff6e0;}
   #coachText{flex:1 1 auto;}
 
-  /* ---- the needs panel: what the colony has, at a glance, always ---- */
-  #needs{display:flex;gap:6px;margin:0 2px 5px;}
-  .need{flex:1 1 0;display:flex;flex-direction:column;gap:2px;}
-  .need .nl{font-size:9px;font-weight:800;letter-spacing:.4px;color:#ffe9c2;opacity:.85;text-transform:uppercase;}
-  .need .mtr{display:block;height:7px;border-radius:4px;background:rgba(0,0,0,.38);overflow:hidden;}
-  .need .mtr i{display:block;height:100%;width:0%;border-radius:4px;background:#e9c46a;transition:width .3s;}
-  .need.low .nl{color:#ffd166;}
-  .need.low .mtr{box-shadow:0 0 0 2px rgba(255,209,102,.55);}
+  /* ---- AC8: ONE smart bar. Meters, what is in your hand, the toolbox. ----
+         Every part of it is a picture: the meters are bars with icons, the middle
+         button IS the tool you are holding, and the round button opens a sheet of
+         picture cards. Words are tiny labels on top of pictures, never the message. */
+  #smart{display:flex;align-items:stretch;gap:8px;margin:0 2px 6px;}
 
-  /* ---- the three things a tap can do. The lit one is what the meadow tap drops. ---- */
-  #acts{display:flex;gap:6px;margin:0 2px 5px;}
-  /* AC7b: the three actions are PICTURES first. A five year old should know what a
-     tap will leave on the meadow without reading the word under it, and the picture
-     is the same thing the game really draws there: a crumb, a drop, a room. */
-  .tool{flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:7px;
-        border:none;border-radius:12px;padding:7px 4px;font-family:inherit;font-size:13px;font-weight:800;color:#4a2f10;background:#f3d9a8;cursor:pointer;}
-  .tool .ic{flex:0 0 24px;width:24px;height:24px;display:block;}
-  .tool.on{background:#ffd166;box-shadow:0 0 0 3px rgba(255,209,102,.35);}
-  .tool.pulse{animation:tpulse 1s ease-in-out infinite;}
-  @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.8);}}
+  /* the meter cluster: four little vertical bars. A low one wiggles and flags itself. */
+  #meters{flex:0 0 auto;display:flex;gap:5px;align-items:flex-end;}
+  .mt{position:relative;width:16px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .mt .bar{position:relative;display:block;width:11px;height:28px;border-radius:6px;background:rgba(0,0,0,.42);
+           box-shadow:inset 0 1px 2px rgba(0,0,0,.5);overflow:hidden;}
+  .mt .bar i{position:absolute;left:0;right:0;bottom:0;height:0%;border-radius:6px;transition:height .3s;}
+  #mtr_food .bar i{background:#63b34a;}
+  #mtr_water .bar i{background:#62b6f2;}
+  #mtr_rest .bar i{background:#f2a2c0;}
+  #mtr_eggs .bar i{background:#e9c46a;}
+  .mt .mic{width:15px;height:15px;display:block;}
+  .mt .tag{display:none;position:absolute;top:-6px;right:-4px;min-width:13px;height:13px;line-height:13px;
+           border-radius:7px;background:#e24b4b;color:#fff;font-size:10px;font-weight:800;text-align:center;
+           box-shadow:0 1px 3px rgba(0,0,0,.45);}
+  .mt.low .tag{display:block;}
+  .mt.low{animation:wig .9s ease-in-out infinite;}
+  @keyframes wig{0%,100%{transform:translateX(0);}25%{transform:translateX(-2px);}75%{transform:translateX(2px);}}
+
+  /* the middle: what is in your hand right now, and in two or three words what to do with it */
+  #actMain{flex:1 1 auto;display:flex;align-items:center;gap:9px;border:none;border-radius:14px;
+           padding:7px 10px;background:#ffd166;box-shadow:0 2px 0 rgba(0,0,0,.18);
+           font-family:inherit;color:#4a2f10;cursor:pointer;text-align:left;min-width:0;}
+  #actMain .ic{display:none;flex:0 0 30px;width:30px;height:30px;}
+  #actMain.t-dig .ic-dig,#actMain.t-food .ic-food,#actMain.t-water .ic-water,#actMain.t-build .ic-build{display:block;}
+  #actMain .at{min-width:0;display:flex;flex-direction:column;line-height:1.15;}
+  #actName{font-size:15px;font-weight:800;}
+  #actHint{font-size:11px;font-weight:700;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #actMain.pulse{animation:tpulse 1s ease-in-out infinite;}
+
+  /* the toolbox button, and the sheet of picture cards it opens */
+  #actSwap{flex:0 0 46px;width:46px;height:46px;align-self:center;border:none;border-radius:50%;
+           background:#f3d9a8;box-shadow:0 2px 0 rgba(0,0,0,.18);cursor:pointer;padding:0;
+           display:flex;align-items:center;justify-content:center;}
+  #actSwap svg{width:26px;height:26px;display:block;}
+  #actSwap.pulse{animation:tpulse 1s ease-in-out infinite;}
+  /* the toolbox sits in the bottom stack, above the bar it changes, so the one hint
+     line is never covered and the measured panel height still keeps the dirt clear */
+  #sheet{display:none;margin:0 2px 6px;}
+  #sheet.open{display:block;}
+  #sheetCard{padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+             background:#fff8ec;border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  .toolcard{border:none;border-radius:16px;background:#f0e0c6;padding:9px 4px 7px;cursor:pointer;font-family:inherit;
+            display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .toolcard .tic{width:34px;height:34px;display:block;}
+  .toolcard span{font-size:12px;font-weight:800;color:#4a2f10;}
+  .toolcard.on{background:#ffd166;box-shadow:0 0 0 3px rgba(233,162,59,.5);}
+  .toolcard.pulse{animation:tpulse 1s ease-in-out infinite;}
+
+  @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.9);}}
 
   /* ---- the jobs strip: slim by default, opens on a tap ---- */
   #stripRow{display:flex;align-items:center;gap:8px;margin:0 2px;}
@@ -86,20 +121,30 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   .job button:active{background:rgba(255,255,255,.34);}
   .job button.pulse{animation:tpulse 1s ease-in-out infinite;}
 
-  .room .sp{display:block;font-size:11px;font-weight:800;margin-top:2px;color:#3f7a3a;}
-  .room .sp.meh{color:#8a7350;font-weight:700;}
 
   /* ---- build a room popup ---- */
+  /* ---- AC8: the build menu is PICTURES. Each card shows what the room does, and
+         what it costs is a row of apples you can count, not a number to read. ---- */
   #build{position:absolute;inset:0;z-index:12;display:none;align-items:center;justify-content:center;background:rgba(20,12,4,.5);}
-  #buildCard{background:#fff8ec;border-radius:20px;padding:16px 18px;width:min(340px,86vw);box-shadow:0 14px 40px rgba(0,0,0,.4);}
-  #buildCard h2{margin:0 0 10px;font-size:19px;color:#4a2f10;}
-  .room{display:flex;align-items:center;gap:10px;width:100%;border:none;background:#f0e0c6;border-radius:14px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-family:inherit;text-align:left;}
-  .room:disabled{opacity:.45;}
-  .room .sw{flex:0 0 32px;height:32px;border-radius:9px;background:#e9c46a;}
-  .room .rt{flex:1 1 auto;}
-  .room .rn{display:block;font-size:15px;font-weight:800;color:#4a2f10;}
-  .room .rd{display:block;font-size:12px;color:#7a5a30;}
-  #buildCancel{width:100%;border:none;background:#e9a23b;color:#3a2600;font-weight:800;font-size:15px;padding:10px;border-radius:12px;cursor:pointer;font-family:inherit;}
+  #buildCard{background:#fff8ec;border-radius:22px;padding:12px;width:min(360px,92vw);box-shadow:0 14px 40px rgba(0,0,0,.4);}
+  #buildTop{display:flex;align-items:center;gap:10px;margin:0 2px 10px;}
+  #buildCard h2{margin:0;flex:1 1 auto;font-size:19px;color:#4a2f10;}
+  #buildCancel{flex:0 0 44px;width:44px;height:44px;border:none;border-radius:50%;background:#e9a23b;cursor:pointer;
+               padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 rgba(0,0,0,.18);}
+  #buildCancel svg{width:26px;height:26px;display:block;}
+  #roomList{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .room{display:flex;flex-direction:column;align-items:center;gap:5px;border:none;background:#f0e0c6;border-radius:16px;
+        padding:9px 6px 8px;cursor:pointer;font-family:inherit;text-align:center;}
+  .room .pic{display:block;width:100%;}
+  .room .pic svg{width:76px;height:60px;display:block;margin:0 auto;}
+  .room .rn{display:block;font-size:13px;font-weight:800;color:#4a2f10;line-height:1.1;}
+  .room .cost{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:104px;}
+  .room .cost svg{width:11px;height:11px;display:block;}
+  .room .sp{display:block;font-size:10px;font-weight:800;line-height:1.15;color:#3f7a3a;}
+  .room .sp.meh{color:#8a7350;font-weight:700;}
+  .room.cant{opacity:.55;}
+  .room.cant .cost{animation:apflash 1s ease-in-out infinite;}
+  @keyframes apflash{0%,100%{opacity:1;}50%{opacity:.25;}}
 
   /* the engine's own standalone buttons — the shared nav bridge hides these in-app */
   .selfbtn{position:absolute;z-index:9;border:none;border-radius:999px;background:rgba(20,12,4,.55);color:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:8px 14px;cursor:pointer;}
@@ -117,16 +162,26 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   <button id="helpBtn" class="selfbtn">?</button>
   <div id="panel" class="hidden">
     <div id="coach" data-hint="1"><span class="qd"></span><span id="coachText">Grow your colony</span></div>
-    <div id="needs">
-      <div class="need" id="need_food"><span class="nl">Food</span><span class="mtr"><i id="mt_food"></i></span></div>
-      <div class="need" id="need_water"><span class="nl">Water</span><span class="mtr"><i id="mt_water"></i></span></div>
-      <div class="need" id="need_rest"><span class="nl">Rest</span><span class="mtr"><i id="mt_rest"></i></span></div>
-      <div class="need" id="need_eggs"><span class="nl">Eggs</span><span class="mtr"><i id="mt_eggs"></i></span></div>
-    </div>
-    <div id="acts">
-      <button class="tool" id="toolBuild" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="15" rx="4.5" fill="#e9c46a" stroke="#8a5a2b" stroke-width="2"/><path d="M9 20.5v-4a3 3 0 0 1 6 0v4z" fill="#6b431c"/></svg><span>Build</span></button>
-      <button class="tool on" id="toolFood" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="12.5" r="7" fill="#d9a05b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="17" cy="15.5" r="4.2" fill="#c98b4b" stroke="#8a5a2b" stroke-width="1.6"/><circle cx="8" cy="10" r="1.7" fill="#f0c48f"/></svg><span>Food</span></button>
-      <button class="tool" id="toolWater" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><span>Water</span></button>
+    <!-- the toolbox: four picture cards, and it hides the moment one is picked.
+         It lives INSIDE the bottom stack, so it can never cover the one hint line. -->
+    <div id="sheet"><div id="sheetCard">
+      <button class="toolcard" id="tool_dig" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v9h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/><path d="M8.5 2h7v2.6h-7z" fill="#8a5a2b"/><path d="M7.6 11h8.8v4.4a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span>Dig</span></button>
+      <button class="toolcard" id="tool_food" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4S5.4 16 5.4 11c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/><path d="M12 7.4V4" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 5.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg><span>Food</span></button>
+      <button class="toolcard" id="tool_water" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><span>Water</span></button>
+      <button class="toolcard" id="tool_build" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 9.6l3.8 3.8-6.1 6.1a2.7 2.7 0 0 1-3.8-3.8z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.5"/><path d="M12.4 3.2l8.4 4.2-2.6 4.2-8.4-4.2z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span>Build</span></button>
+    </div></div>
+    <!-- AC8: ONE smart bar. Meters on the left, what is in your hand in the middle,
+         the toolbox on the right. Everything here is a picture first: a player who
+         cannot read a word still knows what the colony has and what a tap will do. -->
+    <div id="smart">
+      <div id="meters">
+        <div class="mt" id="mtr_food"><span class="bar"><i id="fill_food"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5c1.3-1.4 4.4-1.1 4.4 2.4 0 3.3-2.1 6.3-4.4 6.3S3.6 10.7 3.6 7.4C3.6 3.9 6.7 3.6 8 5z" fill="#63b34a"/><path d="M8 5V2.6" stroke="#3f7a2f" stroke-width="1.3" stroke-linecap="round"/></svg><span class="tag">!</span></div>
+        <div class="mt" id="mtr_water"><span class="bar"><i id="fill_water"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6c2.8 4 4.4 6.1 4.4 8.1a4.4 4.4 0 0 1-8.8 0c0-2 1.6-4.1 4.4-8.1z" fill="#62b6f2"/></svg><span class="tag">!</span></div>
+        <div class="mt" id="mtr_rest"><span class="bar"><i id="fill_rest"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M12.6 9.8A5.4 5.4 0 0 1 6.2 3.4a5.4 5.4 0 1 0 6.4 6.4z" fill="#f2a2c0"/></svg><span class="tag">!</span></div>
+        <div class="mt" id="mtr_eggs"><span class="bar"><i id="fill_eggs"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="9" rx="4.2" ry="5.4" fill="#e9c46a"/></svg><span class="tag">!</span></div>
+      </div>
+      <button id="actMain" class="t-dig" type="button"><svg class="ic ic-dig" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v9h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/><path d="M8.5 2h7v2.6h-7z" fill="#8a5a2b"/><path d="M7.6 11h8.8v4.4a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><svg class="ic ic-food" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4S5.4 16 5.4 11c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/><path d="M12 7.4V4" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 5.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg><svg class="ic ic-water" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><svg class="ic ic-build" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 9.6l3.8 3.8-6.1 6.1a2.7 2.7 0 0 1-3.8-3.8z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.5"/><path d="M12.4 3.2l8.4 4.2-2.6 4.2-8.4-4.2z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span class="at"><span id="actName">Dig</span><span id="actHint">drag in the dirt</span></span></button>
+      <button id="actSwap" type="button" aria-label="Change tool"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2.5" fill="#8a5a2b"/><rect x="13" y="3" width="8" height="8" rx="2.5" fill="#63b34a"/><rect x="3" y="13" width="8" height="8" rx="2.5" fill="#62b6f2"/><rect x="13" y="13" width="8" height="8" rx="2.5" fill="#cfd6dc"/></svg></button>
     </div>
     <div id="jobsStrip">
       <div id="stripRow">
@@ -139,7 +194,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       </div>
     </div>
   </div>
-  <div id="build"><div id="buildCard"><h2 id="buildHead">Build a room</h2><div id="roomList"></div><button id="buildCancel" type="button">Not now</button></div></div>
+  <div id="build"><div id="buildCard"><div id="buildTop"><h2 id="buildHead">Build a room</h2><button id="buildCancel" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="#3a2600" stroke-width="4" stroke-linecap="round"/></svg></button></div><div id="roomList"></div></div></div>
   <div id="start"></div>
 </div>
 
@@ -1788,9 +1843,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(i=0;i<NEEDS.length;i++){ v[i] = Math.max(0, Math.min(1, NEEDS[i].val() || 0)); k += Math.round(v[i]*20) + "|"; }
     if(k === _needKey) return;
     _needKey = k;
+    // AC8: four little vertical bars. The one that is running out wiggles and wears a
+    // red tag, so a player who cannot read a word still sees which one needs them.
     for(i=0;i<NEEDS.length;i++){
-      var n = NEEDS[i], bar = $("mt_"+n.id), box = $("need_"+n.id);
-      if(bar && bar.style) bar.style.width = Math.round(v[i]*100) + "%";
+      var n = NEEDS[i], fill = $("fill_"+n.id), box = $("mtr_"+n.id);
+      if(fill && fill.style) fill.style.height = Math.round(v[i]*100) + "%";
       if(box && box.classList) box.classList[(n.low >= 0 && v[i] < n.low) ? "add" : "remove"]("low");
     }
   }
@@ -1805,8 +1862,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(!g) return "Drag in the dirt to dig deeper";
     switch(g.type){
       case "dug": case "found": return "Drag down in the brown dirt to dig";
-      case "food":  return "Tap the green grass to drop food";
-      case "room":  return "Tap Build to make a room for your ants";
+      case "food":  return TOOL === "food" ? "Tap the green grass to drop food"
+                                          : "Tap the round button and pick the apple";
+      case "room":  return TOOL === "build" ? "Tap a room, then a glowing spot"
+                                           : "Pick the hammer to build a room";
       case "born": case "ants": return "Tap plus on Nursery so more eggs hatch";
       case "flood": return "Tap plus on Builders to clear the water";
       default:      return "Drag in the dirt to dig deeper";
@@ -1831,7 +1890,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(var i=pulses.length-1;i>=0;i--){
       pulses[i].t -= dt; if(pulses[i].t > 0) continue;
       var el = $(pulses[i].id), st = stepNow();
-      if(el && el.classList && !(guide.on && st && st.hi === pulses[i].id)) el.classList.remove("pulse");
+      var lit = st && (typeof st.hi === "function" ? st.hi() : st.hi);
+      if(el && el.classList && !(guide.on && lit === pulses[i].id)) el.classList.remove("pulse");
       pulses.splice(i,1);
     }
   }
@@ -1959,22 +2019,69 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   })();
 
   // ======================================================================
-  //  The three things a tap can do (AC7). The old Dig/Food/Water/Jobs tabs were
-  //  modes that did not look like modes: Food stayed lit while digging worked
-  //  anyway. Dig and Jobs are not modes at all — you dig by dragging in the dirt
-  //  and you set jobs on the strip — so they are gone. What is left is Build, and
-  //  the choice of what a tap on the meadow leaves behind. The lit one is it.
+  //  What is in your hand (AC8). AC7 had three word buttons and a fourth verb
+  //  (digging) that no button owned, so what a tap would do was never actually
+  //  stated. There is one big button now and it IS the tool: its picture is the
+  //  tool, its two words say what to do with it, and the round button beside it
+  //  opens a sheet of picture cards to swap. Nothing is a hidden mode any more.
   // ======================================================================
-  var TOOL = "food";
-  function setTool(t){
+  var TOOLS = {
+    dig:   { name:"Dig",   hint:"drag in the dirt" },
+    food:  { name:"Food",  hint:"tap the grass" },
+    water: { name:"Water", hint:"tap the grass" },
+    build: { name:"Build", hint:"tap to choose" }
+  };
+  var TOOL_ORDER = ["dig","food","water","build"];
+  var TOOL = "dig";                       // a new colony starts with the shovel out
+  function setTool(t, quiet){
+    if(!TOOLS[t]) t = "dig";
+    if(t !== "build") cancelPlacing(true);
     TOOL = t;
-    var f = $("toolFood"), w = $("toolWater");
-    if(f && f.classList) f.classList[t === "food"  ? "add" : "remove"]("on");
-    if(w && w.classList) w.classList[t === "water" ? "add" : "remove"]("on");
+    var main = $("actMain");
+    if(main){
+      if(main.classList){ TOOL_ORDER.forEach(function(k){ main.classList.remove("t-"+k); }); main.classList.add("t-"+t); }
+      var nm = $("actName"), hn = $("actHint");
+      if(nm) nm.textContent = TOOLS[t].name;
+      if(hn) hn.textContent = TOOLS[t].hint;
+    }
+    TOOL_ORDER.forEach(function(k){
+      var c = $("tool_"+k); if(c && c.classList) c.classList[k === t ? "add" : "remove"]("on");
+    });
+    closeSheet();
+    guide.swapped = true;
+    if(t === "build" && !quiet) openRoomPicker(null);     // the hammer's job IS choosing a room
+    saveSoon();
   }
-  $("toolFood").addEventListener("click", function(){ BA.unlock(); bumpIdle(); cancelPlacing(); setTool("food"); hint("Tap the green grass to leave a crumb"); });
-  $("toolWater").addEventListener("click", function(){ BA.unlock(); bumpIdle(); cancelPlacing(); setTool("water"); hint("Tap the green grass to leave a drop of water"); });
-  $("toolBuild").addEventListener("click", function(){ BA.unlock(); bumpIdle(); if(placing) cancelPlacing(); else openRoomPicker(null); });
+  var sheetOpen = false;
+  function openSheet(){
+    if(DEMO) return;
+    sheetOpen = true;
+    var el = $("sheet"); if(el && el.classList) el.classList.add("open");
+    setGuideHi();
+  }
+  function closeSheet(){
+    sheetOpen = false;
+    var el = $("sheet"); if(el && el.classList) el.classList.remove("open");
+  }
+  $("actSwap").addEventListener("click", function(){
+    BA.unlock(); bumpIdle();
+    if(sheetOpen) closeSheet(); else openSheet();
+  });
+  // the big button is the tool itself: with the hammer out it opens the rooms, and
+  // with anything else it says again, in its own words, where to use it
+  $("actMain").addEventListener("click", function(){
+    BA.unlock(); bumpIdle();
+    if(TOOL === "build"){ openRoomPicker(null); return; }
+    hint(TOOL === "dig" ? "Drag down in the brown dirt" : "Tap the green grass up top");
+  });
+  TOOL_ORDER.forEach(function(k){
+    var c = $("tool_"+k); if(!c) return;
+    c.addEventListener("click", function(){ BA.unlock(); bumpIdle(); setTool(k); });
+  });
+  // tapping the dark behind the sheet puts it away without changing anything
+  $("sheet").addEventListener("click", function(ev){
+    if(ev && ev.target && ev.target.id === "sheet") closeSheet();
+  });
   $("jobsToggle").addEventListener("click", function(){ BA.unlock(); bumpIdle(); setJobsOpen(!jobsOpen); });
 
   // ======================================================================
@@ -2001,9 +2108,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     C.plan.push(key(c,r));
     return true;
   }
+  // AC8: the tool in your hand decides what a tap means, and the big button has been
+  // saying which tool that is the whole time. A tap in the wrong place is never
+  // silent: it says, in a few words, which picture to swap to.
   function onDown(ev){
     if(state !== "play" || DEMO || paused) return;
     BA.unlock(); bumpIdle();
+    if(sheetOpen) closeSheet();
     var g = cellFromEvent(ev); if(!g) return;
     // placing a room: the glowing spots are the only thing a tap means right now
     if(placing){
@@ -2013,13 +2124,16 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       return;
     }
     if(g.surface){
+      if(TOOL !== "food" && TOOL !== "water"){ hint("Hold the apple or the drop first"); return; }
       var it = dropSurface(TOOL, g.x, true);          // a crumb you can SEE, worth nothing until it is carried in
       if(Feel){ try{ Feel.tap(); }catch(e){} }
       if(it && !jobCount("forager")) hint("Put an ant on Foragers so somebody fetches it");
       saveSoon(); return;
     }
+    if(TOOL === "build"){ openRoomPicker(cellAt(g.c, g.r) && cellAt(g.c, g.r).kind === "tunnel" ? { c:g.c, r:g.r } : null); return; }
+    if(TOOL !== "dig"){ hint("Hold the shovel to dig here"); return; }
     var here = cellAt(g.c, g.r);
-    if(here && (here.kind === "tunnel")){ drag = { mode:"tap", c:g.c, r:g.r }; return; }
+    if(here && (here.kind === "tunnel")){ hint("Hold the hammer to build here"); return; }
     if(here) return;                                    // a planned or built cell: nothing to do
     if(planCell(g.c, g.r)){ drag = { mode:"dig" }; if(Feel){ try{ Feel.tap(); }catch(e){} } }
     else { hint("Start your tunnel next to one you already have"); }
@@ -2031,7 +2145,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     planCell(g.c, g.r);
   }
   function onUp(){
-    if(drag && drag.mode === "tap") openRoomPicker({ c:drag.c, r:drag.r });
     if(drag) saveSoon();
     drag = null;
   }
@@ -2064,9 +2177,34 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(i=0;i<ks.length;i++) if(roomUnlocked(ks[i])) return true;
     return false;
   }
+  // ======================================================================
+  //  AC8: the build menu is PICTURES. Each card is a little scene of what the room
+  //  does — eggs in a pink room, a pile of berries, an ant asleep, mushrooms — and
+  //  what it costs is a row of apples you count, not a number you read. A room you
+  //  cannot afford yet goes grey and its apples flash. Closing is a big orange X.
+  // ======================================================================
+  var ROOM_ART = {
+    nursery: '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#f2a2c0"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#f7c2d6"/>' +
+      '<ellipse cx="27" cy="35" rx="7" ry="9" fill="#fff8ec" stroke="#c9748f" stroke-width="2"/><ellipse cx="41" cy="33" rx="7" ry="9" fill="#fff8ec" stroke="#c9748f" stroke-width="2"/><ellipse cx="54" cy="36" rx="6" ry="8" fill="#fff8ec" stroke="#c9748f" stroke-width="2"/></svg>',
+    storage: '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#e9c46a"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#f2d998"/>' +
+      '<circle cx="30" cy="40" r="8" fill="#d2405a"/><circle cx="46" cy="40" r="8" fill="#d2405a"/><circle cx="38" cy="28" r="8" fill="#d2405a"/><circle cx="35" cy="25" r="2.4" fill="#e8697f"/><circle cx="27" cy="37" r="2.4" fill="#e8697f"/></svg>',
+    den:     '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#9ad2f2"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#c4e6fa"/>' +
+      '<ellipse cx="30" cy="40" rx="13" ry="8" fill="#c9853c" stroke="#6b431c" stroke-width="2"/><circle cx="44" cy="37" r="7" fill="#c9853c" stroke="#6b431c" stroke-width="2"/><circle cx="46" cy="36" r="1.6" fill="#3a2600"/>' +
+      '<text x="52" y="26" font-family="Baloo 2,Nunito,sans-serif" font-size="15" font-weight="800" fill="#3a6b8a">Zz</text></svg>',
+    fungus:  '<svg viewBox="0 0 76 60" aria-hidden="true"><rect x="4" y="8" width="68" height="46" rx="12" fill="#cbbd85"/><rect x="10" y="14" width="56" height="34" rx="9" fill="#ded3ab"/>' +
+      '<rect x="24" y="34" width="6" height="12" rx="3" fill="#f6f1e2"/><path d="M16 35a11 8 0 0 1 22 0z" fill="#e2685f"/><circle cx="22" cy="31" r="2.2" fill="#fff4ea"/><circle cx="31" cy="30" r="1.8" fill="#fff4ea"/>' +
+      '<rect x="47" y="38" width="5" height="9" rx="2.5" fill="#f6f1e2"/><path d="M41 39a9 6 0 0 1 17 0z" fill="#e2685f"/><circle cx="50" cy="35" r="1.7" fill="#fff4ea"/></svg>'
+  };
+  var APPLE_SVG = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 3.4c1-1 3.3-.8 3.3 1.8 0 2.5-1.6 4.7-3.3 4.7S2.7 7.7 2.7 5.2C2.7 2.6 5 2.4 6 3.4z" fill="#63b34a"/><path d="M6 3.4V1.6" stroke="#3f7a2f" stroke-width="1" stroke-linecap="round"/></svg>';
+  function costApples(n){
+    var out = "", i, show = Math.min(12, Math.max(1, n|0));
+    for(i=0;i<show;i++) out += APPLE_SVG;
+    return out;
+  }
   function openRoomPicker(cell){
     if(DEMO) return;
     cancelPlacing(true);
+    closeSheet();
     pickCell = cell || null;
     var list = $("roomList"); if(!list) return;
     list.innerHTML = "";
@@ -2077,27 +2215,27 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var def = GAME_CONFIG.rooms[id], can = C.food >= def.food;
       made++;
       var b = document.createElement("button");
-      b.className = "room"; b.type = "button"; b.id = "room_" + id;
-      if(!can) b.disabled = true;
-      var sw = document.createElement("span");
-      sw.className = "sw"; if(sw.style) sw.style.background = def.color;
-      var txt = document.createElement("span"); txt.className = "rt";
+      b.className = "room" + (can ? "" : " cant"); b.type = "button"; b.id = "room_" + id;
+      var pic = document.createElement("span");
+      pic.className = "pic"; pic.innerHTML = ROOM_ART[id] || ROOM_ART.storage;
       var rn = document.createElement("span"); rn.className = "rn"; rn.textContent = def.name;
-      var rd = document.createElement("span"); rd.className = "rd";
-      rd.textContent = def.desc + " · " + def.food + " food" + (can ? "" : " · not enough food yet");
-      txt.appendChild(rn); txt.appendChild(rd);
+      var cost = document.createElement("span");
+      cost.className = "cost"; cost.innerHTML = costApples(def.food);
+      b.appendChild(pic); b.appendChild(rn); b.appendChild(cost);
       if(pickCell){                                  // AC6: where you dig it matters, in kid words
         var good = goodSpot(id, pickCell.c, pickCell.r), sp = document.createElement("span");
         sp.className = "sp" + (good ? "" : " meh"); sp.textContent = spotLine(id, pickCell.c, pickCell.r);
-        txt.appendChild(sp);
+        b.appendChild(sp);
       }
-      b.appendChild(sw); b.appendChild(txt);
-      b.addEventListener("click", function(){ if(can) chooseRoom(id); });
+      b.addEventListener("click", function(){
+        if(!can){ hint("Bring home more food first"); return; }
+        chooseRoom(id);
+      });
       list.appendChild(b);
     });
     if(!made){
       var none = document.createElement("div");
-      none.className = "rd"; none.textContent = "Your ants have not learned a room yet. Keep growing.";
+      none.className = "rn"; none.textContent = "Your ants have not learned a room yet. Keep growing.";
       list.appendChild(none);
     }
     var host = $("build"); if(host && host.style) host.style.display = "flex";
@@ -2113,10 +2251,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     closeBuild();
     if(pickCell){ startRoom(id, pickCell.c, pickCell.r); pickCell = null; return; }
     placing = { room:id };
-    // only ONE action is lit at a time: while a room is looking for its spot, a tap
-    // means "put it here", not "leave a crumb"
-    var tb = $("toolBuild"); if(tb && tb.classList) tb.classList.add("on");
-    ["toolFood","toolWater"].forEach(function(k){ var e = $(k); if(e && e.classList) e.classList.remove("on"); });
+    // the hammer is what is in your hand while the room looks for its spot, and the
+    // big button says so, so a tap can only mean "put it here"
+    if(TOOL !== "build") setTool("build", true);
+    var hn = $("actHint"); if(hn) hn.textContent = "tap a glowing spot";
     var nm = (GAME_CONFIG.rooms[id] || {}).name || "room";
     hint(buildSpots().length
       ? ("Tap a glowing spot to put your " + nm.toLowerCase() + " there")
@@ -2125,8 +2263,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function cancelPlacing(quiet){
     if(!placing) return;
     placing = null;
-    var tb = $("toolBuild"); if(tb && tb.classList) tb.classList.remove("on");
-    setTool(TOOL);                                   // the drop button lights up again
+    var hn = $("actHint"); if(hn && TOOLS[TOOL]) hn.textContent = TOOLS[TOOL].hint;
     if(!quiet) hint("No room this time");
   }
   $("buildCancel").addEventListener("click", function(){ BA.unlock(); pickCell = null; closeBuild(); });
@@ -2232,6 +2369,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update();
     if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
     setJobsOpen(false);
+    setTool("dig", true);                // every colony opens with the shovel in hand
     syncNeeds();
     if(DEMO) return;
     ensureMusic();
@@ -2285,17 +2423,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       { text:"Drag down in the brown dirt to dig a tunnel", hi:null,
         spot:function(){ return digSpot(); },
         done:function(){ return C.plan.length > 0 || (C.dug - guide.base.dug) > 0; } },
-      { text:"Now tap the green grass to drop some food", hi:"toolFood",
+      // AC8: swapping what is in your hand is the one thing the new bar asks a kid
+      // to learn, so the guide teaches it, and the glow follows them into the sheet.
+      { text:"Tap the round button, then pick the apple",
+        hi:function(){ return sheetOpen ? "tool_food" : "actSwap"; }, spot:null,
+        done:function(){ return TOOL === "food"; } },
+      { text:"Now tap the green grass to drop some food", hi:"actMain",
         spot:function(){ return { fc:GAME_CONFIG.cols*0.26, fr:SURF_R }; },
         done:function(){ return (C.tapped|0) > (guide.base.tapped|0); } },
-      // AC7: the old step three taught sliding the colour bar, which did nothing on
+      // AC7: the old last step taught sliding the colour bar, which did nothing on
       // a mouse. A tap on the plus button cannot miss, on any device.
       { text:"Tap the plus on Foragers to give an ant that job", hi:"job_forager_up", open:true,
         spot:null,
         done:function(){ return guide.moved; } }
     ],
     build: [
-      { text:"Your ants can have rooms now. Tap Build.", hi:"toolBuild", spot:null,
+      { text:"Your ants can have rooms now. Pick the hammer.",
+        hi:function(){ return sheetOpen ? "tool_build" : "actSwap"; }, spot:null,
         done:function(){ return guide.opened; } },
       { text:"Pick a room, then tap a glowing spot to put it there", hi:null, spot:null,
         done:function(){ return guide.built; } }
@@ -2323,7 +2467,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     return down;
   }
   var guide = { on:false, lesson:"intro", step:0, t:0, base:{ dug:0, tapped:0 },
-                moved:false, opened:false, built:false };
+                moved:false, opened:false, built:false, swapped:false };
   var openedForLesson = false;      // the job cards were opened BY a lesson, not by the kid
   var how = { on:false };            // the shell and the QA robot still ask for it by this name
   function stepNow(){ var L = LESSONS[guide.lesson]; return L ? L[guide.step] : null; }
@@ -2332,7 +2476,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function startLesson(name){
     if(!LESSONS[name]) return;
     guide.on = true; guide.lesson = name; guide.step = 0; guide.t = 0;
-    guide.moved = false; guide.opened = false; guide.built = false;
+    guide.moved = false; guide.opened = false; guide.built = false; guide.swapped = false;
     guide.base = { dug:C.dug, tapped:C.tapped|0 };
     how.on = true;
     clearMsg();                       // one surface: the lesson owns it while it runs
@@ -2356,10 +2500,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(teachCool > 0) teachCool = Math.max(0, teachCool - dt);
     if(!guide.on){ maybeTeachBuild(); return; }
     guide.t += dt;
+    var st0 = stepNow();
+    if(st0 && typeof st0.hi === "function") setGuideHi();     // the glow follows the sheet
     var st = stepNow();
     if(!st){ endHow(); return; }
     if(guide.t < 0.5 || !st.done()) return;
-    guide.step++; guide.t = 0; guide.moved = false; guide.opened = false; guide.built = false;
+    guide.step++; guide.t = 0; guide.moved = false; guide.opened = false; guide.built = false; guide.swapped = false;
     guide.base = { dug:C.dug, tapped:C.tapped|0 };
     if(Feel){ try{ Feel.tap(); }catch(e){} }
     if(guide.step >= lessonLen()){
@@ -2374,12 +2520,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   // the one control this step is about gets a soft pulse; everything else is left alone
   function setGuideHi(){
-    var ids = ["toolBuild","toolFood","toolWater","bar","jobsToggle","job_forager_up","job_digger_up","job_nursery_up","job_builder_up"], i;
+    var ids = ["actMain","actSwap","tool_dig","tool_food","tool_water","tool_build","bar","jobsToggle",
+               "job_forager_up","job_digger_up","job_nursery_up","job_builder_up"], i;
     for(i=0;i<ids.length;i++){ var e = $(ids[i]); if(e && e.classList) e.classList.remove("pulse"); }
     if(!guide.on) return;
     var st = stepNow(); if(!st) return;
     if(st.open && !jobsOpen){ setJobsOpen(true); openedForLesson = true; }   // a step about the job cards opens them
-    if(st.hi){ var e2 = $(st.hi); if(e2 && e2.classList) e2.classList.add("pulse"); }
+    // the glow can move mid-step: tap the round button and it follows you into the sheet
+    var want = typeof st.hi === "function" ? st.hi() : st.hi;
+    if(want){ var e2 = $(want); if(e2 && e2.classList) e2.classList.add("pulse"); }
   }
   function drawHow(){
     if(!guide.on) return;
@@ -2600,6 +2749,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     items: function(){ return C.surface.map(function(it){
       return { kind:it.kind, x:Math.round(itemX(it)), n:it.n, give:it.give, held:!!it.held, claimed:!!it.claim }; }); },
     spots: function(){ return buildSpots(); },
+    tool: function(){ return TOOL; },
+    sheetOpen: function(){ return sheetOpen; },
+    tools: function(){ return TOOL_ORDER.slice(); },
+    setToolByName: function(t){ setTool(t, true); return TOOL; },
     queen: function(){ return { c:C.queen.c, r:C.queen.r }; },
     geom: function(){ layout(); return { cs:CS, ox:OX, sky:SKY, panel:PANEL, w:W, h:H, camY:Math.round(camY) }; },
     placing: function(){ return placing ? placing.room : null; },

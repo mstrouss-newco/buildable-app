@@ -88,6 +88,23 @@ check('the jobs panel is a slim strip, not half the screen', panelBox.height < 8
   `${Math.round(panelBox.height)}px of 860`);
 await page.screenshot({ path: path.join(OUT, 'antcity-1-guide-dig.png') });
 
+// AC8 says phone width first: the smart bar has to fit a small phone with nothing
+// spilling off the side and the hint line still readable above it.
+await page.setViewportSize({ width: 360, height: 640 });
+await page.waitForTimeout(500);
+const spill = await page.evaluate(() => ({
+  w: document.documentElement.scrollWidth,
+  bar: document.getElementById('smart').getBoundingClientRect(),
+  panel: document.getElementById('panel').getBoundingClientRect(),
+}));
+check('nothing spills off the side of a small phone', spill.w <= 360, `${spill.w}px wide`);
+check('the smart bar fits across a small phone', spill.bar.width <= 360 && spill.bar.width > 200, `${Math.round(spill.bar.width)}px`);
+check('and the whole bottom stack stays out of the way on a small phone',
+  spill.panel.height < 640 * 0.32, `${Math.round(spill.panel.height)}px of 640`);
+await page.screenshot({ path: path.join(OUT, 'antcity-1b-small-phone.png') });
+await page.setViewportSize({ width: 420, height: 860 });
+await page.waitForTimeout(400);
+
 // step one for real: drag down in the dirt with a finger, not through the API
 const box = await page.locator('#cv').boundingBox();
 const geo = await page.evaluate(() => ANTCITY_GAME._cfg());
@@ -103,11 +120,28 @@ await watchHints('after the drag');
 check('the finished step is gone, and only the new one is up', (await hintsUp()).length === 1, JSON.stringify(await hintsUp()));
 await page.screenshot({ path: path.join(OUT, 'antcity-2-guide-food.png') });
 
-// step two: tap the grass
+// step two, exactly as taught: tap the round button, then pick the apple. AC8 put
+// the tool you are holding on screen, so this is the one new thing a kid learns.
+check('the colony opens with the shovel in hand', (await page.evaluate(() => ANTCITY_GAME.tool())) === 'dig');
+await page.locator('#actSwap').click();
+await page.waitForTimeout(300);
+check('the round button opens the toolbox', await page.locator('#tool_food').isVisible());
+await page.screenshot({ path: path.join(OUT, 'antcity-2b-toolbox.png') });
+await page.locator('#tool_food').click();
+await page.waitForTimeout(500);
+check('picking the apple puts it in your hand and puts the toolbox away',
+  (await page.evaluate(() => ANTCITY_GAME.tool())) === 'food' && !(await page.locator('#tool_food').isVisible()));
+check('the big button says what is in your hand',
+  (await page.textContent('#actName')).trim() === 'Food' && /grass/i.test(await page.textContent('#actHint')));
+await watchHints('after the swap');
+const gSwap = await page.evaluate(() => ANTCITY_GAME.guide());
+check('swapping really moves the guide on', gSwap.step === 2, JSON.stringify(gSwap));
+
+// step three: tap the grass, now that the apple is in hand
 await page.mouse.click(box.x + box.width * 0.3, box.y + sky - 45);
 await page.waitForTimeout(900);
 const g2 = await page.evaluate(() => ANTCITY_GAME.guide());
-check('tapping the grass really moves it on again', g2.step === 2, JSON.stringify(g2));
+check('tapping the grass really moves it on again', g2.step === 3, JSON.stringify(g2));
 await watchHints('after the tap');
 check('a tap on the grass leaves a crumb you can see',
   (await page.evaluate(() => ANTCITY_GAME.items())).some((i) => i.kind === 'crumb'));
@@ -122,7 +156,7 @@ check('a tap on the grass leaves a crumb you can see',
     (b2.food - b1.food) <= (b2.carried - b1.carried) + 0.001, `food +${(b2.food - b1.food).toFixed(2)}, carried +${(b2.carried - b1.carried).toFixed(2)}`);
 }
 
-// step three, exactly as taught: tap the plus on Foragers. The old step taught
+// step four, exactly as taught: tap the plus on Foragers. The old step taught
 // dragging the colour bar, which did nothing at all with a mouse.
 check('the step that teaches the job cards opens them', await page.locator('#job_forager_up').isVisible());
 await page.locator('#job_forager_up').click();
@@ -192,9 +226,18 @@ await page.evaluate(() => {
   for (let i = 0; i < 20; i++) { ANTCITY_GAME.drop('food', 120); ANTCITY_GAME.assign('forager', 4); ANTCITY_GAME.seconds(6); }
 });
 await page.waitForTimeout(1200);
-await page.locator('#toolBuild').click();
-await page.waitForTimeout(300);
-check('the Build button opens the room cards', await page.locator('#roomList').isVisible());
+await page.locator('#actSwap').click();
+await page.waitForTimeout(250);
+await page.locator('#tool_build').click();
+await page.waitForTimeout(400);
+check('picking the hammer opens the room cards', await page.locator('#roomList').isVisible());
+// AC8: every room is a picture of what it does, and its cost is apples you can count
+const nurseryPics = await page.locator('#room_nursery .pic svg').count();
+const nurseryApples = await page.locator('#room_nursery .cost svg').count();
+check('each room card is a picture', nurseryPics === 1, `${nurseryPics} pictures`);
+check('and its cost is a row of apples to count', nurseryApples === 6, `${nurseryApples} apples for a 6-food room`);
+check('the menu closes with a drawn X, not a word',
+  (await page.locator('#buildCancel svg').count()) === 1);
 await page.screenshot({ path: path.join(OUT, 'antcity-8-build-cards.png') });
 await page.locator('#room_nursery').click();
 await page.waitForTimeout(500);
@@ -222,7 +265,14 @@ await page.evaluate(() => {
 // the camera eases back up from the deep swarm colony above, so give it time to
 // settle before clicking a row, or the tap lands on solid dirt
 await page.waitForTimeout(2200);
-// tap a shallow tunnel: storage there is the good spot
+// hold the hammer, put the menu away, then tap a shallow tunnel: the cards come
+// back for THAT spot, and storage there is the good spot
+await page.locator('#actSwap').click();
+await page.waitForTimeout(250);
+await page.locator('#tool_build').click();
+await page.waitForTimeout(350);
+await page.locator('#buildCancel').click();
+await page.waitForTimeout(250);
 const geo2 = await page.evaluate(() => ANTCITY_GAME._cfg());
 const cw2 = box.width / geo2.cols;
 await page.mouse.click(box.x + box.width / 2, box.y + sky + 1.5 * cw2);
