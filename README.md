@@ -4137,6 +4137,23 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-07 (Sky Flyer: the endless splashing noise)
+
+Mike: "on skflyer, there is a splashing sound that just goes the whole time."
+Two throttles in `public/skyflyer-engine.html` were both firing on a loop:
+
+- **The FL13 fish reaction** (`reactFishStep`) spawns a jumping fish behind the
+  plane every ~0.8s of low flight over water, and the islands world is mostly
+  water at the default 22-unit cruise, so its 0.6s sound gate let `sky_splash`
+  play about once a second for the entire flight. The jumps are unchanged; now
+  only ~35% of them make a sound, never closer than 7s apart, at a lower volume.
+- **The sea-skim splash** in `stepSim` fired every 0.9s while the plane was
+  pinned to the y=3 floor. Gap raised to 3s and dropped to vol 0.3.
+
+Net: a splash is a surprise again (roughly twice a minute) instead of a bed of
+noise. No visual change: spray, wakes and fish arcs all still fire at their old
+rate.
+
 ## Session log — 2026-09-06 (RB1: a Run builder in the planner)
 
 The Roadmap tab gains **Build a run**: tick the cards you want worked, drag or arrow them

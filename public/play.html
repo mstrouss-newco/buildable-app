@@ -587,9 +587,12 @@ function buildScene(L, idx){
   const r2=mulberry(33000+idx*7);
   for(let x=-1000; x<we+1600; x+= 140+r2()*150){ const t=r2(); S.near.push({x, piece: t<0.4?"bush_a":t<0.7?"bush_b":"mushroom", s:0.5+r2()*0.45, flip:r2()<0.5, ph:r2()*6.28}); }
   const r3=mulberry(44000+idx*7);
-  for(let x=-1000; x<we+1600; x+= 600+r3()*320){ S.fore.push({x, piece:"fern", s:0.8+r3()*0.45, flip:r3()<0.5, ph:r3()*6.28}); }
+  // Closer together than before. With one or two ferns on screen at a time, a single
+  // one arriving was the most conspicuous thing in the frame; a continuous fringe reads
+  // as scenery instead of as an event.
+  for(let x=-1000; x<we+1600; x+= 330+r3()*190){ S.fore.push({x, piece:"fern", s:0.8+r3()*0.45, flip:r3()<0.5, ph:r3()*6.28}); }
   const r4=mulberry(55000+idx*7);
-  for(let x=-1000; x<we+1600; x+= 360+r4()*240){ S.top.push({x, piece:"canopy", s:0.9+r4()*0.5, flip:r4()<0.5}); }
+  for(let x=-1000; x<we+1600; x+= 240+r4()*160){ S.top.push({x, piece:"canopy", s:0.9+r4()*0.5, flip:r4()<0.5}); }
   const r5=mulberry(66000+idx*7);
   for(let i=0;i<48;i++){ S.flies.push({x:r5()*we, y:60+r5()*(GROUND_Y-50), ph:r5()*6.28, sp:0.4+r5()*0.8}); }
   return S;
@@ -1067,7 +1070,11 @@ function hexA(hex,a){ const h=String(hex||"#ffffff").replace("#",""); const n=pa
 function rrect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function pieceImg(nm){ const im=ART.pc[nm]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 function drawPiece(im, sx, baseY, h, flip){ const w=h*(im.naturalWidth/im.naturalHeight); ctx.save(); ctx.translate(sx,0); if(flip)ctx.scale(-1,1); ctx.drawImage(im,-w/2,baseY-h,w,h); ctx.restore(); }
-function drawTopPiece(im, sx, h, flip){ const w=h*(im.naturalWidth/im.naturalHeight); ctx.save(); ctx.translate(sx,0); if(flip)ctx.scale(-1,1); ctx.drawImage(im,-w/2,-12,w,h); ctx.restore(); }
+// Anchored at -46, not -12. At -12 the top of the leaf art sat almost exactly on the
+// top edge of the frame, so the canopy read as a picture with a straight line cut
+// across it. Hung higher, only the tips reach into the view, which is what a canopy
+// overhead actually looks like.
+function drawTopPiece(im, sx, h, flip){ const w=h*(im.naturalWidth/im.naturalHeight); ctx.save(); ctx.translate(sx,0); if(flip)ctx.scale(-1,1); ctx.drawImage(im,-w/2,-46,w,h); ctx.restore(); }
 function star5(cx,cy,r){ ctx.beginPath(); for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5; const rr=i%2?r*0.45:r; ctx.lineTo(cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);} ctx.closePath(); ctx.fill(); }
 function drawDeco(x,baseY,d){ const s=d.s||1; if(d.kind==='bush'){ ctx.fillStyle="rgba(38,64,32,0.9)"; ctx.beginPath();ctx.arc(x,baseY,24*s,Math.PI,0);ctx.arc(x+16*s,baseY,17*s,Math.PI,0);ctx.arc(x-16*s,baseY,17*s,Math.PI,0);ctx.closePath();ctx.fill(); } else { ctx.strokeStyle="rgba(38,64,32,0.85)"; ctx.lineWidth=3; for(let b=-2;b<=2;b++){ ctx.beginPath();ctx.moveTo(x+b*5,baseY);ctx.quadraticCurveTo(x+b*5+b*2,baseY-16*s,x+b*6,baseY-26*s);ctx.stroke(); } } }
 // A power-up has to look like a PRIZE. Bare coloured discs read as dots of paint that
@@ -1158,9 +1165,15 @@ function draw(){
   // HH2: a mid tree is SKIPPED when its trunk would stand over a hole — that is the bug
   // where trunks grew straight through the pits and made a gap look like solid ground.
   ctx.save();
-  for(const m of SC.mid){ const sx=m.x-camX*0.4 + Math.sin(t*0.5+m.ph)*3; if(sx<-260||sx>W+260)continue;
+  for(const m of SC.mid){ const sx=m.x-camX*0.4 + Math.sin(t*0.5+m.ph)*3;
     if(groundUnder(m.x)==null) continue;
-    const im=pieceImg(m.piece); if(im) drawPiece(im, sx, GROUND_Y+26, 300*m.s, m.flip); }
+    const im=pieceImg(m.piece); if(!im) continue;
+    // Cull on the sprite's REAL half-width. A fixed +/-260 guess is narrower than the
+    // biggest tree here (300*1.45 tall on square art = 217 half-width before the art's
+    // own margins), so a tall tree could wink out with part of itself still on screen.
+    const h=300*m.s, halfW=h*(im.naturalWidth/im.naturalHeight)/2 + 20;
+    if(sx+halfW<0 || sx-halfW>W) continue;
+    drawPiece(im, sx, GROUND_Y+26, h, m.flip); }
   ctx.restore();
   // a thin sky-coloured veil over the mid layer: it pushes the trees back behind the
   // play lane so the hero, the platforms and the pit edges are the sharpest things on screen
@@ -1168,9 +1181,12 @@ function draw(){
     vg.addColorStop(0,hexA(c4[1],0.34)); vg.addColorStop(0.62,hexA(c4[2],0.30)); vg.addColorStop(1,hexA(c4[3],0.16));
     ctx.fillStyle=vg; ctx.fillRect(0,-200,W,GROUND_Y+230); }
   // LAYER 4 — near bushes / mushrooms (parallax 0.66)
-  for(const nr of SC.near){ const sx=nr.x-camX*0.66 + Math.sin(t*0.8+nr.ph)*2; if(sx<-160||sx>W+160)continue;
+  for(const nr of SC.near){ const sx=nr.x-camX*0.66 + Math.sin(t*0.8+nr.ph)*2;
     if(groundUnder(nr.x)==null)continue;                 // never a bush hanging over a hole
-    const im=pieceImg(nr.piece); if(im) drawPiece(im, sx, GROUND_Y+16, 150*nr.s, nr.flip); }
+    const im=pieceImg(nr.piece); if(!im)continue;
+    const h=150*nr.s, halfW=h*(im.naturalWidth/im.naturalHeight)/2 + 16;
+    if(sx+halfW<0 || sx-halfW>W) continue;
+    drawPiece(im, sx, GROUND_Y+16, h, nr.flip); }
   // fireflies drifting in the air
   for(const f of SC.flies){ const sx=((f.x-camX*0.8)%W+W)%W; const y=f.y-skyPad()*(f.ph/6.28)+Math.sin(t*f.sp+f.ph)*16; const a=0.3+0.4*Math.abs(Math.sin(t*1.6*f.sp+f.ph)); ctx.fillStyle="rgba(255,242,170,"+(a*0.25).toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,6,0,7);ctx.fill(); ctx.fillStyle="rgba(255,244,180,"+a.toFixed(2)+")"; ctx.beginPath();ctx.arc(sx,y,2.3,0,7);ctx.fill(); }
   // HH2 PITS — a hole has to look like a hole: a dark shaft, a dirt wall down each
@@ -1431,14 +1447,33 @@ function draw(){
   // the screen rather than the world so a climbing camera cannot open a gap at the top.
   { const sc=L.scene||{fore:[],top:[]};
     ctx.save(); ctx.translate(0,-camY);
-    const EDGE=Math.min(190, W*0.20);
+    // How visible a piece is, given how far it has come in from the side. 1 at the
+    // outer edge of the view, easing to 0 across FADE pixels as it nears the lane,
+    // and easing back to 0 again as it leaves the view entirely.
+    const ease=u=>{ u=Math.max(0,Math.min(1,u)); return u*u*(3-2*u); };
+    function sideAlpha(sx, keep, fade){
+      const fromEdge = Math.min(sx, W-sx);                    // distance in from the nearer side
+      return ease((keep+fade-fromEdge)/fade);                 // 1 out at the edge, 0 at the lane
+    }
+    const FERN_KEEP=Math.min(150, W*0.16), FERN_FADE=170;
     for(const fo of sc.fore){ const sx=fo.x-camX*1.25 + Math.sin(t2()*0.7+fo.ph)*6;
-      if(sx>EDGE && sx<W-EDGE) continue;                      // never over the play lane
-      if(sx<-200||sx>W+200)continue; if(groundUnder(fo.x)==null)continue;
-      const im=pieceImg("fern"); if(im){ ctx.globalAlpha=0.92; drawPiece(im, sx, H+28, 230*fo.s, fo.flip); ctx.globalAlpha=1; } }
+      if(groundUnder(fo.x)==null)continue;
+      const im=pieceImg("fern"); if(!im)continue;
+      const h=230*fo.s, halfW=h*(im.naturalWidth/im.naturalHeight)/2;
+      const lane=sideAlpha(sx, FERN_KEEP, FERN_FADE);          // fades before it reaches the lane
+      const edge=ease((sx+halfW+40)/120) * ease((W+halfW+40-sx)/120);   // fades at the view edges
+      const a=0.92*lane*edge; if(a<=0.004) continue;
+      ctx.globalAlpha=a; drawPiece(im, sx, H+28, h, fo.flip); ctx.globalAlpha=1; }
+    const TOP_KEEP=W*0.22, TOP_FADE=W*0.16;
     for(const tp of sc.top){ const sx=tp.x-camX*1.12;
-      if(sx>W*0.30 && sx<W*0.70) continue;                    // corners only
-      if(sx<-260||sx>W+260)continue; const im=pieceImg("canopy"); if(im) drawTopPiece(im, sx, 165*tp.s, tp.flip); }
+      const im=pieceImg("canopy"); if(!im)continue;
+      const h=190*tp.s, halfW=h*(im.naturalWidth/im.naturalHeight)/2;
+      const lane=sideAlpha(sx, TOP_KEEP, TOP_FADE);
+      const edge=ease((sx+halfW+40)/140) * ease((W+halfW+40-sx)/140);
+      const a=lane*edge; if(a<=0.004) continue;
+      // Hung well above the frame so what you see is leaf TIPS reaching in, never the
+      // art sliced off by a straight line along the top of the screen.
+      ctx.globalAlpha=a; drawTopPiece(im, sx, h, tp.flip); ctx.globalAlpha=1; }
     ctx.restore();
   }
   // landing dust
