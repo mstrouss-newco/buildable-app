@@ -645,9 +645,7 @@ function step(dt) {
 function poofBaddie(b, p) {
   b.poof = 0.45;
   S.coins += (b.kind.reward != null ? b.kind.reward : GAME_CONFIG.econ.perPoof);
-  if (BM && BM.blast) BM.blast(fx, p.x, p.y, "#ffe08a", { size: 1.15 });
-  else if (BM) { BM.explode(fx, p.x, p.y, "#cfd8c0", { n: 16 }); }
-  if (BM) BM.pop(fx.pops, p.x, p.y, "poof!", "#cfd8c0");
+  if (BM) { BM.explode(fx, p.x, p.y, "#ffe08a", { n: 16, pop: "poof!" }); }
   if (BM) BM.pop(fx.pops, p.x, p.y - 18, "+" + (b.kind.reward || GAME_CONFIG.econ.perPoof), "#ffe08a");
   sfx("poof"); sfx("coin", { vol: 0.6 });
 }
@@ -1191,11 +1189,13 @@ function cgShotFocus() {
   cgShotF = { x: (g.x + c.x) / 2, y: (g.y + c.y) / 2 };
   return cgShotF;
 }
-/* The FX pack was never registered here, so every poof fell back to plain
-   coloured dots. Same Kenney CC0 textures the other engines use. */
+/* The FX pack was never registered here, so every poof, spark and burst in the
+   whole game fell back to plain coloured dots. Same Kenney CC0 textures the
+   other engines already use — no new art, and it fixes normal play, not just
+   the tile photo. */
 try { if (BM && BM.useTextures) BM.useTextures({ glow:"/fx/circle_05.png", spark:"/fx/star_01.png",
   star:"/fx/star_07.png", ring:"/fx/circle_01.png", smoke:"/fx/smoke_05.png",
-  boom:"/fx/explode4.png", puff:"/fx/explode7.png", muzzle:"/fx/light_03.png", magic:"/fx/magic_05.png" }); } catch (e) {}
+  muzzle:"/fx/light_03.png", magic:"/fx/magic_05.png" }); } catch (e) {}
 function cgShotColor() { try { const m = window.BUILDABLE_MANIFEST; if (m && m.color) return m.color; } catch (e) {} return "#2E8B57"; }
 function cgShotStart() {
   cgHideStart();
@@ -1221,7 +1221,7 @@ function cgShotSpawnBaddie() {
 function cgShotPose() {
   if (!S) return;
   // a whole column of goblins on the road, not a token three
-  const picks = [0.46, 0.53, 0.60, 0.67, 0.74, 0.81, 0.88, 0.94].map(f => S.W.total * f);
+  const picks = [0.50, 0.58, 0.65, 0.72, 0.80, 0.88, 0.95].map(f => S.W.total * f);
   while (S.baddies.length < picks.length) cgShotSpawnBaddie();
   S.baddies.length = picks.length;
   S.baddies.forEach((b, i) => { b.dist = picks[i]; b.hp = b.max; b.poof = 0; b.hit = 0; b.gone = false; });
@@ -1241,17 +1241,8 @@ function cgShotPose() {
   });
   S.bombs.length = 0;
   S.tutSlot = -1;                       // no tutorial hand, no glowing "tap here"
-  // three goblins poofing right now, in the game's own blast (no pop word, and
-  // no screen flash or shake: motion cues only muddy a still picture)
-  if (BM && BM.blast) {
-    const popped = [1, 4, 6];
-    popped.forEach((i, k) => { const b = S.baddies[i]; if (!b) return;
-      const p = pointAtRaw(S.W.segs, S.W.total, b.dist);
-      BM.blast(fx, p.x, p.y - 18, "#ffe08a", { size: 1.25 - k * 0.2, flash: 0, shake: 0 }); });
-    // and those three are GONE — the blast is where they were, not painted over
-    // a goblin still walking
-    S.baddies = S.baddies.filter((b, i) => popped.indexOf(i) < 0);
-  }
+  // No poof staged for the photo: a burst frozen mid-air reads as a white smear
+  // rather than a sparkle. It stays in the game, where it moves.
   shotPosed = true;
 }
 function cgShotTick(dt) {

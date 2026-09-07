@@ -49,20 +49,21 @@ out: a second lightning arc and a nova shockwave ring read as white ropes and a
 geometric circle rather than as action, and a big particle explosion covered the foe
 it was meant to be killing.
 
-**Third pass: real explosions.** Mike asked for explosions and offered to make art. No
-new art was needed — the shared FX library already had a nine-frame cartoon explosion
-(`public/fx/explode0-8.png`, Kenney CC0) that no game had ever used. So rather than
-paint a bang into the photo, both games got a real one: `BM.blast` in
-`buildable-mechanics.js`, a layered pop with the explosion puff drawn in its OWN colours
-(the existing `BM.explode` tints every layer one flat colour, which is why a big one read
-as a coloured blob), plus a shockwave ring and a spray of stars and sparks. It is wired
-into Survival's `killEnemy` and Castle Guard's `poofBaddie`, so it happens in play, not
-only in the picture. `BM.drawParticles` learned a `raw` flag for untinted textures, which
-is what makes that possible. Castle Guard turned out never to have called
-`BM.useTextures` at all, so every one of its effects had been falling back to plain
-coloured dots — now fixed. In the shots the blasts sit in the gaps where a foe just was,
-never painted over one that is still coming at you, and the screen flash and shake are
-turned off for the photo since both are motion cues that only muddy a still frame.
+**Third pass: explosions tried, and taken back out.** Mike asked for explosions, and the
+shared FX library turned out to already hold a nine-frame cartoon explosion
+(`public/fx/explode0-8.png`, Kenney CC0) that no game had ever used. Both games got a real
+`BM.blast` built from it, wired into their kill moments so the picture would not be
+dressed up rather than honest. Mike judged the result bad and it was reverted in full:
+`BM.blast`, the `raw` particle flag and both call sites are gone, and the shots are back
+to the second pass. Recorded so TS1-TS3 do not try it again — a big cartoon fireball is
+not this product's look, even when the art is free and already in the library.
+
+**What survived, because it was a real bug.** Castle Guard had never called
+`BM.useTextures` at all, so every poof, spark and burst in the whole game had been falling
+back to plain coloured dots since it shipped. It now registers the same Kenney pack as the
+other engines (checked in a real browser: five of five textures load), and `poofBaddie`
+tints its poof gold instead of `#cfd8c0`, a pale grey-green that was invisible against
+grass. That is a fix to normal play. Nothing is staged in the photo.
 
 **Open for Mike, on `/tile-shots`.** Wash or no wash. Real screenshot or the AI
 painting. Both variants are on the page.

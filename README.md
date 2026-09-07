@@ -46,15 +46,15 @@ Effects that did not survive: a second lightning arc and a nova ring, which read
 white ropes and a geometric circle, and a particle explosion big enough to hide the
 foe underneath it.
 
-**Real explosions, not painted-on ones.** `BM.blast` in `buildable-mechanics.js` is a
-layered cartoon pop built from `public/fx/explode0-8.png` — nine-frame Kenney CC0
-explosion art that had sat unused in the shared library since June. The puff is drawn in
-its own colours (`BM.drawParticles` learned a `raw` flag for that), because the older
-`BM.explode` tints every layer one flat colour and a big one reads as a blob. It is wired
-into Survival's `killEnemy` and Castle Guard's `poofBaddie`, so the games really do this
-now and the tile is not dressed up. Castle Guard had never called `BM.useTextures`, so
-all of its effects had been falling back to plain coloured dots; it now registers the
-same FX pack as the other engines.
+**Explosions were tried and rejected.** The shared FX library holds a nine-frame cartoon
+explosion (`public/fx/explode0-8.png`, Kenney CC0) that no game has ever used. A real
+`BM.blast` was built from it and wired into both games' kill moments; Mike judged it wrong
+for the product and it was reverted in full. Do not reach for it again in TS1-TS3.
+
+**Castle Guard's effects were genuinely broken.** It had never called `BM.useTextures`, so
+every poof, spark and burst in the game fell back to plain coloured dots. It now registers
+the same pack as the other engines, and `poofBaddie` tints gold instead of a pale
+grey-green that was invisible on grass. A fix to normal play, not to the photo.
 
 **Two findings for the rollout.** The wash reads well on Space Survival (purple over
 a sunset sky) and all but disappears on Castle Guard (green over grass), so wash
