@@ -98,7 +98,65 @@ try {
   await shot(page, 'fm5-present-reveal');
   await page.close();
 
-  // ------------------------------------------- 4. the shop at phone width
+  // ---------------------------------- 4. FM6: the dog, the pumpkin, the row
+  const fm6 = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+  await fm6.goto(BASE, { waitUntil: 'load' });
+  await ready(fm6);
+  await fm6.evaluate(() => {
+    window.FARM.givePresent('pumpkinseed');
+    window.FARM.givePresent('farmdog');
+    window.FARM.givePresent('fieldrow');
+    // a field with pumpkins in it, including two in the new fourth row
+    ['pumpkin', 'corn', 'pumpkin', 'carrot', 'pumpkin', 'wheat',
+     'corn', 'pumpkin', 'carrot', 'pumpkin', 'pumpkin', 'corn']
+      .forEach((k, i) => window.FARM.plant(i, k));
+    window.FARM.advanceTime(80);
+    window.FARM.moveKidTo(0, 12);      // south of the field, looking up it
+  });
+  // the dog trots, so he needs a moment to catch her up before the shutter
+  await fm6.waitForFunction(() => {
+    const d = window.FARM.dog(), k = window.FARM.kid();
+    return d.there && Math.hypot(d.x - k.x, d.z - k.z) < 3.2;
+  }, { timeout: 20000 }).catch(() => {});
+  await fm6.waitForTimeout(900);
+  await shot(fm6, 'fm6-field-and-dog');
+
+  // the seed pop-up, now four across
+  await fm6.evaluate(() => window.FARM.openSeedPicker(4));
+  await fm6.waitForTimeout(500);
+  await shot(fm6, 'fm6-seed-picker');
+  await fm6.evaluate(() => window.FARM.closeSeedPicker());
+
+  // the dog carrying something home to her
+  const fetched = await fm6.evaluate(() => {
+    window.FARM.moveKidTo(0, 16);   // well clear of the fence, so his trip home is in the open
+    window.FARM.ageReady();
+    return window.FARM.dog().there;
+  });
+  await fm6.waitForFunction(() => window.FARM.dog().carry !== null, { timeout: 25000 }).catch(() => {});
+  // and then wait until he is most of the way BACK to her, or the picture is a
+  // dog somewhere off the top of the screen and shows nothing at all
+  await fm6.waitForFunction(() => {
+    const d = window.FARM.dog(), k = window.FARM.kid();
+    return d.carry !== null && Math.hypot(d.x - k.x, d.z - k.z) < 5.2;
+  }, { timeout: 25000 }).catch(() => {});
+  chk('the dog really is carrying something when the picture is taken',
+    fetched === true && (await fm6.evaluate(() => window.FARM.dog().carry)) !== null,
+    String(await fm6.evaluate(() => window.FARM.dog().carry)));
+  await shot(fm6, 'fm6-dog-fetching');
+  await fm6.close();
+
+  // the seed pop-up at phone width, where four buttons have to go two by two
+  const seedPhone = await browser.newPage({ viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await seedPhone.goto(BASE, { waitUntil: 'load' });
+  await ready(seedPhone);
+  await seedPhone.evaluate(() => { window.FARM.givePresent('pumpkinseed'); window.FARM.openSeedPicker(4); });
+  await seedPhone.waitForTimeout(600);
+  await shot(seedPhone, 'fm6-seed-picker-phone');
+  await seedPhone.close();
+
+  // ------------------------------------------- 5. the shop at phone width
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await phone.goto(BASE, { waitUntil: 'load' });

@@ -82,7 +82,7 @@ try {
 
   console.log('--- THE FARM: the scene stands up in a real browser ---');
   chk('the farm scene boots with a WebGL context and no page errors', errs.length === 0, errs.join(' | '));
-  chk('it is the FM5 build', (await ev(() => window.FARM.version)) === 'fm5');
+  chk('it is the FM6 build', (await ev(() => window.FARM.version)) === 'fm6');
 
   // ======================================================================
   //  FM4 — THE FIRST ORDER. This block runs BEFORE the robot collects
@@ -647,7 +647,7 @@ try {
 
   await p5.goto(BASE, { waitUntil: 'load' });
   await boot5();
-  chk('it is the FM5 build', (await ev5(() => window.FARM.version)) === 'fm5');
+  chk('it is the FM6 build', (await ev5(() => window.FARM.version)) === 'fm6');
   chk('a farm nobody has played starts from the FM1 farm, not from someone else\'s',
     (await ev5(() => window.FARM.save.info())) === null &&
     (await ev5(() => window.FARM.patches().every(p => p.state === 'empty'))) === true);
@@ -954,6 +954,185 @@ try {
     /\.catch\(function\(\)\{\}\)/.test(src5) && /catch\(function\(\)\{ cloudErrs\+\+; \}\)/.test(src5));
   chk('and it is written on the way out of the page, not only on a timer',
     /addEventListener\("pagehide", flushSave\)/.test(src5) && /sendBeacon/.test(src5));
+
+
+  // ======================================================================
+  //  FM6 — THE FIRST THREE PRESENTS, BUILT FOR REAL.
+  //
+  //  Its own page in its own storage again, so it starts from a farm with no
+  //  presents opened. The pumpkin is bought THROUGH THE SHOP, coins and all,
+  //  because "the box gives you the thing" is the whole point of the ladder
+  //  and a test that calls applyUnlock directly would never have checked it.
+  // ======================================================================
+  console.log('\n--- FM6: BEFORE ANY PRESENT IS OPENED ---');
+  const p6 = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+  const e6 = [];
+  p6.on('pageerror', e => e6.push('pageerror: ' + e.message));
+  p6.on('console', m => { if (m.type() === 'error') e6.push('console: ' + m.text()); });
+  const ev6 = (fn, arg) => p6.evaluate(fn, arg);
+  const boot6 = () => p6.waitForFunction(
+    () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
+    { timeout: 20000 });
+
+  await p6.goto(BASE, { waitUntil: 'load' });
+  await boot6();
+  chk('it is the FM6 build', (await ev6(() => window.FARM.version)) === 'fm6');
+  const seeds0 = await ev6(() => window.FARM.seedsOffered());
+  chk('the seed pop-up offers the three starters and nothing else',
+    seeds0.length === 3 && ['corn', 'carrot', 'wheat'].every(k => seeds0.includes(k)), seeds0.join(','));
+  chk('the pop-up on screen shows exactly those three buttons',
+    JSON.stringify(await ev6(() => window.FARM.seedRow())) === JSON.stringify(seeds0));
+  chk('the field is three rows of three', (await ev6(() => window.FARM.fieldRows())) === 3 &&
+    (await ev6(() => window.FARM.patches().length)) === 9);
+  chk('there is no dog', (await ev6(() => window.FARM.dog())).there === false);
+  chk('the pumpkin exists in the recipes but the farm cannot make one yet',
+    (await ev6(() => !!window.FARM.cropRecipes().pumpkin)) === true &&
+    (await ev6(() => window.FARM.producibleNow('pumpkin'))) === false);
+  chk('so no order can ever name a pumpkin before the present is opened',
+    await (async () => {
+      const bad = await ev6(() => {
+        // put it in the pantry by force, which is the harshest version of this:
+        // even CARRIED once, it must not be asked for while there is no seed
+        window.FARM.giveItem('pumpkin', 1);
+        window.FARM.clearStack();
+        const out = [];
+        for (let i = 0; i < 60; i++) window.FARM.newOrder().forEach(k => { if (k === 'pumpkin') out.push(k); });
+        return out;
+      });
+      return bad.length === 0;
+    })());
+
+  console.log('\n--- FM6: THE PUMPKIN SEED, BOUGHT THROUGH THE SHOP FOR REAL COINS ---');
+  const buy6 = await ev6(() => {
+    window.FARM.addCoins(1500);
+    const before = window.FARM.wallet().balance;
+    const bought = window.FARM.buyPresent();
+    return { bought, before };
+  });
+  await p6.waitForFunction(() => { const r = window.FARM.revealing(); return !!r && r.popped; },
+    { timeout: 10000 }).catch(() => {});
+  const rev6 = await ev6(() => ({ r: window.FARM.revealing(), conf: window.FARM.confetti() }));
+  chk('opening it plays the full reveal', buy6.bought === true && !!rev6.r && rev6.r.thing === true &&
+    rev6.conf > 20, rev6.conf + ' pieces of confetti');
+  await p6.waitForFunction(() => window.FARM.revealing() === null, { timeout: 12000 }).catch(() => {});
+  const after6 = await ev6(() => ({ bal: window.FARM.wallet().balance, seeds: window.FARM.seedsOffered(),
+    row: window.FARM.seedRow(), next: window.FARM.nextUnlock() }));
+  chk('and a present with a REAL thing in it hands over the thing, not coins back',
+    buy6.before - after6.bal === 130, 'paid ' + (buy6.before - after6.bal));
+  chk('the pumpkin is now something she can plant',
+    after6.seeds.includes('pumpkin') && after6.row.includes('pumpkin'), after6.row.join(','));
+  chk('the pop-up grew to four buttons and did not lose the other three',
+    after6.row.length === 4 && ['corn', 'carrot', 'wheat'].every(k => after6.row.includes(k)));
+  chk('and the shop has moved on to the farm dog', after6.next.id === 'farmdog');
+  chk('a pumpkin still grows in well under a minute, like everything else',
+    (await ev6(() => window.FARM.cropRecipes().pumpkin.growSec)) < 60,
+    (await ev6(() => window.FARM.cropRecipes().pumpkin.growSec)) + 's');
+  chk('it is the dearest seed and the most an order can ask for, at the same number',
+    await (async () => {
+      const e = await ev6(() => window.FARM.economy());
+      return e.seedPrices.pumpkin === 10 && e.itemValues.pumpkin === 10 &&
+        Math.max(...Object.values(e.itemValues)) === 10;
+    })());
+  chk('she can plant one, grow it and carry it, and then the crate may ask for one',
+    await (async () => {
+      await ev6(() => { window.FARM.moveKidTo(-45, -45); window.FARM.clearStack();
+        window.FARM.resetCollected(); window.FARM.plant(0, 'pumpkin'); window.FARM.advanceTime(80); });
+      await p6.waitForFunction(() => window.FARM.patches()[0].state === 'ready', { timeout: 8000 });
+      const P = await ev6(() => window.FARM.patches()[0]);
+      await ev6(([x, z]) => window.FARM.moveKidTo(x, z), [P.x, P.z]);
+      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'pumpkin'), { timeout: 8000 })
+        .catch(() => {});
+      return (await ev6(() => window.FARM.collected())).includes('pumpkin') &&
+             (await ev6(() => window.FARM.producibleNow('pumpkin'))) === true;
+    })());
+
+  console.log('\n--- FM6: THE SECOND FIELD ROW ---');
+  const before6 = await ev6(() => window.FARM.patches().map(p => p.x + ',' + p.z));
+  const area0 = await ev6(() => window.FARM.fieldArea());
+  const row6 = await ev6(() => {
+    window.FARM.moveKidTo(-45, -45);
+    window.FARM.givePresent('fieldrow');
+    return { rows: window.FARM.fieldRows(), n: window.FARM.patches().length,
+             pos: window.FARM.patches().map(p => p.x + ',' + p.z),
+             area: window.FARM.fieldArea(), blockers: window.FARM.fieldBlockers() };
+  });
+  chk('the field goes from nine patches to twelve', row6.rows === 4 && row6.n === 12, row6.n + ' patches');
+  chk('and NOT ONE crop she already planted moved an inch',
+    JSON.stringify(row6.pos.slice(0, 9)) === JSON.stringify(before6),
+    before6.join(' | ').slice(0, 90));
+  chk('the new row is to the SOUTH of the old three',
+    row6.pos.slice(9).every(s => +s.split(',')[1] > Math.max(...before6.map(b => +b.split(',')[1]))));
+  chk('the fence came down and went back up around the bigger field',
+    row6.area.halfZ > area0.halfZ && row6.area.cz > area0.cz && row6.blockers > 0,
+    'halfZ ' + area0.halfZ + ' -> ' + row6.area.halfZ);
+  chk('and it still has exactly ONE gate, on the same side',
+    row6.area.side === area0.side && row6.area.side === 'W');
+  chk('the coop and the cow pen were not disturbed by any of that',
+    (await ev6(() => window.FARM.areas().length)) === 3);
+  chk('a line into the new row through the rails is blocked, and the gate is clear',
+    await (async () => {
+      const a = row6.area, p = row6.pos[10].split(',').map(Number);
+      const throughRail = await ev6(([x1, z1, x2, z2]) => window.FARM.lineClear(x1, z1, x2, z2),
+        [p[0], a.cz + a.halfZ + 3, p[0], p[1]]);
+      const throughGate = await ev6(([gx, gz, x2, z2]) => window.FARM.lineClear(gx, gz, x2, z2),
+        [a.gate.x - 1.6, a.gate.z, a.gate.x + 1.2, a.gate.z]);
+      return throughRail === false && throughGate === true;
+    })());
+
+  console.log('\n--- FM6: THE FARM DOG, WHO TIDIES UP AND DOES NOT PLAY FOR HER ---');
+  await ev6(() => { window.FARM.moveKidTo(0, -14); window.FARM.clearStack();
+    window.FARM.givePresent('farmdog'); });     // he appears where she is
+  const dog0 = await ev6(() => window.FARM.dog());
+  chk('the present puts a dog on the farm', dog0.there === true);
+  chk('he trots slower than she runs, so she can always beat him to it',
+    dog0.speed < 6.4, dog0.speed + ' against her 6.4');
+  chk('he waits ten seconds and seven paces before he bothers with anything',
+    dog0.patience >= 10 && dog0.minAway >= 7, dog0.patience + 's / ' + dog0.minAway + ' units');
+  chk('a crop that has JUST become ready is hers, and he leaves it alone',
+    await (async () => {
+      await ev6(() => { window.FARM.plant(0, 'corn'); window.FARM.advanceTime(80); });
+      await p6.waitForFunction(() => window.FARM.patches()[0].state === 'ready', { timeout: 8000 });
+      await p6.waitForTimeout(1600);
+      const d = await ev6(() => window.FARM.dog());
+      return d.state === 'follow' && d.carry === null;
+    })());
+  chk('but one she walked away from and forgot, he fetches and brings to her',
+    await (async () => {
+      await ev6(() => window.FARM.ageReady());
+      await p6.waitForFunction(() => window.FARM.dog().state === 'toItem', { timeout: 8000 })
+        .catch(() => {});
+      const went = (await ev6(() => window.FARM.dog())).state;
+      // a round trip on the software rasteriser: eleven units out at 4.6 a
+      // second, and eleven back, so this waits on the STACK and not a clock
+      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'corn'), { timeout: 40000 })
+        .catch(() => {});
+      const st = await ev6(() => window.FARM.stack());
+      const d = await ev6(() => window.FARM.dog());
+      return went === 'toItem' && st.some(s => s.kind === 'corn') && d.carry === null;
+    })());
+  chk('and the patch he cleared is empty and ready to be planted again',
+    (await ev6(() => window.FARM.patches()[0].state)) === 'empty');
+  chk('he carries one thing at a time, so he can never empty the farm at once',
+    (await ev6(() => window.FARM.dog())).carry === null);
+
+  console.log('\n--- FM6: AND ALL THREE COME BACK AFTER A RELOAD ---');
+  await ev6(() => { window.FARM.moveKidTo(-45, -45); window.FARM.save.now(); });
+  await p6.reload({ waitUntil: 'load' });
+  await boot6();
+  const back6 = await ev6(() => ({ owned: window.FARM.owned(), seeds: window.FARM.seedsOffered(),
+    rows: window.FARM.fieldRows(), n: window.FARM.patches().length,
+    dog: window.FARM.dog().there, area: window.FARM.fieldArea() }));
+  chk('the presents she opened are still hers', back6.owned.includes('pumpkinseed') &&
+    back6.owned.includes('farmdog') && back6.owned.includes('fieldrow'), back6.owned.join(','));
+  chk('the pumpkin seed is still in the pop-up', back6.seeds.includes('pumpkin'));
+  chk('the field is still twelve patches inside the bigger fence',
+    back6.rows === 4 && back6.n === 12 && back6.area.halfZ > area0.halfZ);
+  chk('and the dog is still there', back6.dog === true);
+  chk('the whole farm is saved with the row in it, not rebuilt back to nine',
+    (await ev6(() => window.FARM.save.local().patches.length)) === 12);
+
+  chk('no page errors in the whole FM6 run', e6.length === 0, e6.join(' | '));
+  await p6.close();
 
 
   console.log('\n--- FM3: THE SHELL CONTRACT ---');
