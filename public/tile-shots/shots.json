@@ -5,38 +5,8 @@
     "url": "/survival-engine.html",
     "imgId": "survival",
     "note": "dark world",
-    "label": "survival",
-    "file": "public/tile-shots/survival.png",
-    "kb": 634
-  },
-  {
-    "id": "survival",
-    "name": "Space Survival",
-    "url": "/survival-engine.html",
-    "imgId": "survival",
-    "note": "dark world",
-    "label": "survival-nowash",
-    "file": "public/tile-shots/survival-nowash.png",
-    "kb": 534
-  },
-  {
-    "id": "castleguard",
-    "name": "Castle Guard",
-    "url": "/castle-guard.html",
-    "imgId": "castleguard",
-    "note": "bright world",
-    "label": "castleguard",
-    "file": "public/tile-shots/castleguard.png",
-    "kb": 253
-  },
-  {
-    "id": "castleguard",
-    "name": "Castle Guard",
-    "url": "/castle-guard.html",
-    "imgId": "castleguard",
-    "note": "bright world",
-    "label": "castleguard-nowash",
-    "file": "public/tile-shots/castleguard-nowash.png",
-    "kb": 214
+    "label": "survival-z2.9",
+    "file": "public/tile-shots/survival-z2.9.png",
+    "kb": 614
   }
 ]

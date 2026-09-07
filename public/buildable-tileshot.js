@@ -33,6 +33,8 @@
 
   var on = q.get("tileshot") === "1";
   var washOn = q.get("wash") !== "0";
+  var zRaw = q.get("zoom");
+  var zoom = (zRaw != null && zRaw !== "" && !isNaN(+zRaw)) ? Math.max(1, Math.min(6, +zRaw)) : null;
   var lvlRaw = q.get("shotlevel");
   var level = (lvlRaw != null && lvlRaw !== "" && !isNaN(+lvlRaw)) ? Math.max(0, Math.floor(+lvlRaw)) : 0;
 
@@ -110,6 +112,6 @@
     ready();
   }
 
-  window.BuildableTileShot = { on: on, washOn: washOn, level: level, wash: wash,
+  window.BuildableTileShot = { on: on, washOn: washOn, level: level, zoom: zoom, wash: wash,
     camera: camera, hideChrome: hideChrome, ready: ready, finish: finish };
 })();

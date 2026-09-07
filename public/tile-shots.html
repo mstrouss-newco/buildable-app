@@ -42,6 +42,31 @@
   .note h3{margin:0 0 6px;font-size:16px}
   .note ul{margin:8px 0 0;padding-left:20px}
   .note li{margin:4px 0}
+
+  /* --- At real size: an exact copy of the Play grid card (PlayGridCard in
+         src/BuildableKids.jsx). Same radius, border, shadow, 4:3 picture,
+         colour dot, Fredoka name and uppercase category. The widths below are
+         the real ones: the Play page caps at 940px and lays out 4 columns with
+         a 12px gap on desktop, 720/3 on a tablet, and 2 columns inside a phone
+         screen. So a tile picture is 226 wide on a laptop and 175 on a phone —
+         the whole reason this section exists. --- */
+  .sizes{display:flex;flex-wrap:wrap;gap:34px;margin-top:6px}
+  .band h4{margin:0 0 3px;font-size:14px}
+  .band .px{margin:0 0 12px;color:var(--soft);font-size:12px}
+  .band .row{display:flex;gap:12px}
+  .pgc{border-radius:18px;border:1px solid rgba(58,46,77,0.10);background:#fff;
+       overflow:hidden;box-shadow:0 8px 22px rgba(58,46,77,0.09);text-align:left}
+  .pgc .art{position:relative;width:100%;aspect-ratio:4/3;display:block}
+  .pgc .art img{width:100%;height:100%;object-fit:cover;display:block}
+  .pgc .meta{padding:9px 11px 12px;color:#3A2E4D;
+             font-family:"Nunito",system-ui,-apple-system,sans-serif}
+  .pgc .top{display:flex;align-items:center;gap:7px}
+  .pgc .sw{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  .pgc .nm{font-family:Fredoka,"Nunito",system-ui,sans-serif;font-size:15px;font-weight:700;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pgc .cat{font-size:11px;font-weight:700;color:#8B84A0;margin-top:3px;
+            text-transform:uppercase;letter-spacing:.3px}
+  .playbg{background:#FFF8EE;border:1px solid var(--line);border-radius:18px;padding:20px}
   footer{max-width:1120px;margin:0 auto;padding:0 22px 60px;color:var(--soft);font-size:13px}
 </style>
 
@@ -53,6 +78,22 @@
 </header>
 
 <main>
+  <section class="game">
+    <h2>At real size</h2>
+    <p class="sub">The actual Play grid card, at the actual widths a kid sees. Everything here
+    is copied from the real card: the rounded white tile, the 4:3 picture, the colour dot, the
+    name and the category line. Only the picture behind it would change.</p>
+    <div class="playbg">
+      <div class="sizes"><div class="band"><h4>Laptop</h4><p class="px">4 across, page capped at 940px &mdash; picture 226 x 170 pixels</p><div class="row"><div class="pgc" style="width:226px"><span class="art"><img src="/tile-shots/survival.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#8A6BFF"></span><div class="nm">Survival</div></div><div class="cat">Action</div></div></div><div class="pgc" style="width:226px"><span class="art"><img src="/tile-shots/castleguard.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#2E8B57"></span><div class="nm">Castle Guard</div></div><div class="cat">Strategy</div></div></div></div></div><div class="band"><h4>Tablet</h4><p class="px">3 across, page capped at 720px &mdash; picture 232 x 174 pixels</p><div class="row"><div class="pgc" style="width:232px"><span class="art"><img src="/tile-shots/survival.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#8A6BFF"></span><div class="nm">Survival</div></div><div class="cat">Action</div></div></div><div class="pgc" style="width:232px"><span class="art"><img src="/tile-shots/castleguard.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#2E8B57"></span><div class="nm">Castle Guard</div></div><div class="cat">Strategy</div></div></div></div></div><div class="band"><h4>Phone</h4><p class="px">2 across inside a 390px screen &mdash; picture 175 x 131 pixels</p><div class="row"><div class="pgc" style="width:175px"><span class="art"><img src="/tile-shots/survival.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#8A6BFF"></span><div class="nm">Survival</div></div><div class="cat">Action</div></div></div><div class="pgc" style="width:175px"><span class="art"><img src="/tile-shots/castleguard.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#2E8B57"></span><div class="nm">Castle Guard</div></div><div class="cat">Strategy</div></div></div></div></div><div class="band"><h4>Survival, cropped tighter</h4><p class="px">Laptop size. Left is the crop above, right is closer in</p><div class="row"><div class="pgc" style="width:226px"><span class="art"><img src="/tile-shots/survival.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#8A6BFF"></span><div class="nm">Survival</div></div><div class="cat">Action</div></div></div><div class="pgc" style="width:226px"><span class="art"><img src="/tile-shots/survival-z2.9.png" alt=""></span><div class="meta"><div class="top"><span class="sw" style="background:#8A6BFF"></span><div class="nm">Survival</div></div><div class="cat">Action</div></div></div></div></div></div>
+    </div>
+    <div class="astile">
+      <p>A tile picture is 226 pixels wide on a laptop and 175 on a phone. Castle Guard survives
+      the shrink: castle, road, little figures. Survival mostly reads as a pretty sky, because
+      the hero is one small thing in a wide frame. The last row is the same shot cropped closer,
+      to see whether that fixes it.</p>
+    </div>
+  </section>
+
   <section class="game">
     <h2>Space Survival</h2>
     <p class="sub">The dark world. Sunset sky, the jetpack hero mid-fight, six foes closing in, a volley of sparkles in the air, a lightning zap connecting, coins spilling.</p>

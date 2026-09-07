@@ -65,6 +65,24 @@ other engines (checked in a real browser: five of five textures load), and `poof
 tints its poof gold instead of `#cfd8c0`, a pale grey-green that was invisible against
 grass. That is a fix to normal play. Nothing is staged in the photo.
 
+**Fourth pass: what a tile actually is.** The contact sheet was showing the pictures far
+bigger than any kid will see them. The real Play card is `PlayGridCard` in
+`src/BuildableKids.jsx`: a white tile on the cream page with a 4:3 picture, a colour dot,
+the name in Fredoka 15 and the category in 11px uppercase. The page caps at 940px and lays
+out four columns with a 12px gap, so a tile picture is **226 x 170 on a laptop**, 232 x 174
+on a tablet, and **175 x 131 on a phone**. `/tile-shots` now opens with an exact copy of
+that card at all three widths. Castle Guard survives the shrink — castle, road, little
+figures all still read. Survival does not: at 226px the hero is one small thing in a wide
+sky and the picture reads as scenery. `?zoom=` was added to photo mode and
+`--zoom` to the camera so a tighter crop can be tried without editing a game, and a
+`survival-z2.9` variant sits on the page beside the default. Worth carrying into TS1-TS3:
+judge every shot at 226px, never at full size.
+
+**One mismatch to settle.** Survival's signature colour is `#8A6BFF` in `GAME_CATALOG`
+(the dot beside its name) but `#7C4DFF` in `public/survival/manifest.json`, which is what
+the wash uses. Two purples, close but not the same. Whichever Mike prefers, the two should
+agree before TS1.
+
 **Open for Mike, on `/tile-shots`.** Wash or no wash. Real screenshot or the AI
 painting. Both variants are on the page.
 

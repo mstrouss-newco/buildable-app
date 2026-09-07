@@ -1180,7 +1180,7 @@ function cgDemoStart() {
 /*  Tower defence has no coin on the field, so the sparkle burst is the  */
 /*  treat — flagged for Mike on the contact sheet.                       */
 /* ===================================================================== */
-const CG_SHOT_Z = 1.45;
+const CG_SHOT_Z = (TS && TS.zoom) || 1.45;
 let cgShotF = null;
 function cgShotFocus() {
   if (cgShotF) return cgShotF;

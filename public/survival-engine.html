@@ -828,7 +828,7 @@ function survShotStart(){
 // The recipe is written in SCREEN fractions, but the pose has to happen in world
 // units under the shot camera's zoom. These two turn one into the other, so
 // "hero at 0.34 across" means exactly that in the finished picture.
-var SHOT_Z=2.0, SHOT_T=0;
+var SHOT_Z=(TS&&TS.zoom)||2.0, SHOT_T=0;
 function sxw(f){ return W/2 + (f-0.5)*W/SHOT_Z; }
 function syw(f){ return H/2 + (f-0.5)*H/SHOT_Z; }
 function survShotPose(){

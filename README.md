@@ -56,6 +56,13 @@ every poof, spark and burst in the game fell back to plain coloured dots. It now
 the same pack as the other engines, and `poofBaddie` tints gold instead of a pale
 grey-green that was invisible on grass. A fix to normal play, not to the photo.
 
+**A tile is small: judge every shot at 226px.** The real Play card is `PlayGridCard` in
+`src/BuildableKids.jsx` — a 4:3 picture on a white tile, four columns inside a 940px page,
+so the picture is 226 x 170 on a laptop and 175 x 131 on a phone. `/tile-shots` opens with
+an exact copy of that card at all three widths. Castle Guard survives the shrink; Survival
+at full size reads as scenery, so `?zoom=` (photo mode) and `--zoom` (camera) were added to
+try a tighter crop without editing a game.
+
 **Two findings for the rollout.** The wash reads well on Space Survival (purple over
 a sunset sky) and all but disappears on Castle Guard (green over grass), so wash
 strength is a per-game question, not one setting. And tower defence has no coin on

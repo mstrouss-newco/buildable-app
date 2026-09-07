@@ -84,7 +84,10 @@ let failed = 0;
 
 for (const g of GAMES) {
   if (only.length && !only.includes(g.id)) continue;
-  const variants = flag('--no-wash') ? [['', ''], ['-nowash', '&wash=0']] : [['', '']];
+  const z = opt('--zoom', null);
+  let variants = [['', '']];
+  if (flag('--no-wash')) variants = [['', ''], ['-nowash', '&wash=0']];
+  if (z) variants = [['-z' + z, '&zoom=' + z]];          // a tighter crop, saved beside the default
   for (const [suffix, extra] of variants) {
     const label = g.id + suffix;
     const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: SCALE });
