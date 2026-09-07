@@ -1,3 +1,49 @@
+## 2026-09-07 - AC6: the strategy layer, and real ant science as mechanics
+
+Ant City becomes a township for ants. Three pillars, one session, as Mike approved.
+
+**Where you dig a room now matters.** Storage near the top means quicker forager trips,
+a nursery beside the queen hatches eggs sooner, a den dug deep gives a better rest, and a
+fungus garden close to home grows faster. Tap a tunnel to build and every room tells you in
+kid words whether that spot is a good one, in green when it is, before you commit. The rules
+are data in the recipe and they are bonuses only: a plain spot earns nothing and costs
+nothing, so every colony that already exists carries on exactly as it did.
+
+**The job slider is now the lever, and the colony answers back.** The food readout says
+which way food is going, and a line over the bar says what the current mix is doing: tunnels
+flying while food drops, food piling up while nothing moves, or nobody clearing the water
+during a flood. Rain rewards a stocked pantry, which is the one real reward for planning
+ahead: with food put by the colony works straight through a flood, and with an empty one it
+only goes slower until a builder clears it. It still takes nothing, ever.
+
+**Production chains, which are real ant science.** Leaves grow on the meadow, and a forager
+with no crumb left to fetch walks out, cuts one and hauls it to the new Fungus Garden room,
+where nursery ants turn leaves into mushroom food. That makes nursery duty a genuine choice
+between eggs and mushrooms. A milestone later brings an aphid plant to the meadow and the
+ants herd it for honeydew. The queen shares the true fact behind each the first time it
+appears. Nothing rots, nothing dies, and an unstaffed garden simply waits.
+
+**Checked.** qa-antcity.mjs gained an AC6 section: a good spot really speeds its room up and
+a plain one never costs anything, all diggers really does dig faster while all foragers
+really does pile food up, a stocked colony keeps working through rain and a flood still
+takes nothing, foragers really cut leaves, an unstaffed garden waits without eating them, a
+staffed one makes mushroom food, and the herd gives a trickle rather than a food machine.
+qa-antcity-shot.mjs proves the same in real Chromium and photographs the build popup and the
+meadow. node qa-all.mjs green.
+
+**Two calls I made for you.**
+1. **The garden is tended by nursery ants, not a fifth job.** The card wants the four-job
+   slider to stay the main lever, so adding a fifth would have worked against pillar two.
+   Nursery ants already tend things, and splitting them between eggs and mushrooms is a real
+   trade-off you can feel on the bar.
+2. **The new room and both chain milestones live in the manifest.** The engine keeps its own
+   values as the fallback and merges whatever the manifest says over the top, so a future
+   room needs a recipe change and not an engine change.
+
+**Art.** Four new drawn vectors: the cut leaf, the mushroom garden chamber, the aphid host
+plant and a honeydew drop, each with the usual drawn fallback behind it. AI-pipeline
+upgrades stay a follow-up, per ANTCITY-ASSET-PLAN.md.
+
 ## 2026-09-06 — RB1: a Run builder in the planner
 
 **What it is.** The Roadmap tab has a **Build a run** button. It opens a sheet where Mike

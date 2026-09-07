@@ -6,6 +6,34 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## AC6 - Ant City's strategy layer: layout, felt job trade-offs, and real ant chains (September 7 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/` (4 new
+files), `qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`, `ANTCITY-ASSET-PLAN.md`.
+Phase **AC**, card **AC6**, branch `claude/ac5-planner-launch-u3ciu2`.
+
+**Layout matters.** Storage near the top means quicker forager trips, a nursery beside the
+queen hatches eggs sooner, a den dug deep rests better, a fungus garden close to home grows
+faster. The build popup names the good spot in kid words, in green, before the kid commits.
+The rules are data in `GAME_CONFIG.placement` and they are bonuses ONLY: a plain spot earns
+nothing and costs nothing, so every existing colony is untouched.
+
+**Job trade-offs you can feel.** The food chip says up or down, and a line over the job bar
+says what the mix is doing (tunnels flying while food drops, food piling up while nothing
+moves, nobody clearing the water). Rain now rewards a stocked pantry: with food put by the
+colony works straight through a flood, with an empty one it only slows. It still takes
+nothing, ever.
+
+**Production chains.** Leaves grow on the meadow and a forager with no crumb to fetch cuts
+one and hauls it, visibly, to the new Fungus Garden, where nursery ants turn leaves into
+mushroom food (so nursery duty is a real choice between eggs and mushrooms). A milestone
+brings an aphid plant and honeydew herding. The queen shares the true leafcutter and aphid
+facts the first time each appears. Nothing rots, nothing dies, an unstaffed garden waits.
+
+The new room and both chain milestones live in the manifest, merged over the engine's own
+fallback values, so a future room is a recipe change rather than an engine change. Four new
+drawn vectors ship with it. `qa-antcity.mjs` gained an AC6 section and `qa-antcity-shot.mjs`
+proves the same in real Chromium. `node qa-all.mjs` green.
+
 ## AC5 — Ant City: ants that mean it, a game that teaches itself, and a real swarm (September 6 2026)
 `public/antcity-engine.html`, `qa-antcity.mjs`, new `qa-antcity-shot.mjs`, `antcity-README.md`.
 Phase **AC**, card **AC5**, branch `claude/ac5-planner-launch-u3ciu2`.

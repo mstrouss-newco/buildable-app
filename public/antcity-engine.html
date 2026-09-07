@@ -47,13 +47,19 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   #goal .qd{flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#b0553f;position:relative;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.45);}
   #goal .qd:after{content:"";position:absolute;left:5px;top:8px;width:4px;height:4px;border-radius:50%;background:#fff8ec;box-shadow:8px 0 0 #fff8ec;}
   #goal.teach{color:#fff6e0;}
-  #barLabel{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 4px;color:#ffe9c2;font-size:11px;font-weight:800;letter-spacing:.3px;opacity:.85;}
+  #barLabel{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 4px 4px;color:#ffe9c2;font-size:11px;font-weight:800;letter-spacing:.3px;opacity:.85;}
+  #barMix{flex:1 1 auto;text-align:center;font-weight:700;opacity:.92;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #barAnts{flex:0 0 auto;}
   #bar.pulse{box-shadow:0 0 0 3px rgba(255,209,102,.9),inset 0 2px 6px rgba(0,0,0,.35);}
   .tool.pulse{animation:tpulse 1s ease-in-out infinite;}
   @keyframes tpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,0);}50%{box-shadow:0 0 0 4px rgba(255,209,102,.8);}}
   #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);white-space:nowrap;
         background:rgba(20,12,4,.86);color:#ffe9c2;font-size:13px;font-weight:700;padding:7px 14px;border-radius:999px;opacity:0;transition:opacity .25s;}
   #hint.show{opacity:1;}
+  /* a real ant fact is longer than a nudge, so it gets to wrap */
+  #hint.long{white-space:normal;max-width:min(320px,84vw);text-align:center;line-height:1.35;}
+  .room .sp{display:block;font-size:11px;font-weight:800;margin-top:2px;color:#3f7a3a;}
+  .room .sp.meh{color:#8a7350;font-weight:700;}
 
   /* ---- build a room popup ---- */
   #build{position:absolute;inset:0;z-index:12;display:none;align-items:center;justify-content:center;background:rgba(20,12,4,.5);}
@@ -83,7 +89,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   <div id="panel" class="hidden">
     <div id="hint"></div>
     <div id="goal"><span class="qd"></span><span id="goalText">Grow your colony</span></div>
-    <div id="barLabel"><span>Jobs</span><span id="barAnts">6 ants</span></div>
+    <div id="barLabel"><span>Jobs</span><span id="barMix">A steady, balanced crew</span><span id="barAnts">6 ants</span></div>
     <div id="bar"></div>
     <div id="jobs"></div>
     <div id="tools">
@@ -93,7 +99,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       <button class="tool" id="toolJobs" type="button">Jobs</button>
     </div>
   </div>
-  <div id="build"><div id="buildCard"><h2>Build a room</h2><div id="roomList"></div><button id="buildCancel" type="button">Not now</button></div></div>
+  <div id="build"><div id="buildCard"><h2 id="buildHead">Build a room</h2><div id="roomList"></div><button id="buildCancel" type="button">Not now</button></div></div>
   <div id="start"></div>
 </div>
 
@@ -177,9 +183,33 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     denMax: 3,
 
     rooms: {
-      nursery: { name:"Nursery",     desc:"Eggs are tended here",   food:6, color:"#f2a2c0" },
-      storage: { name:"Storage",     desc:"Holds more food",        food:8, color:"#e9c46a" },
-      den:     { name:"Resting Den", desc:"Tired ants recover",     food:8, color:"#9ad2f2" }
+      nursery: { name:"Nursery",       desc:"Eggs are tended here",       food:6,  color:"#f2a2c0" },
+      storage: { name:"Storage",       desc:"Holds more food",            food:8,  color:"#e9c46a" },
+      den:     { name:"Resting Den",   desc:"Tired ants recover",         food:8,  color:"#9ad2f2" },
+      fungus:  { name:"Fungus Garden", desc:"Nursery ants grow mushrooms", food:10, color:"#cbbd85" }
+    },
+
+    // ---- AC6 pillar 1: WHERE you dig a room changes how well it works ---------
+    //  Data, not code: a rule is a test + what it speeds up + the line the kid
+    //  reads while choosing. BONUSES ONLY. A plain spot simply earns nothing, so
+    //  a colony built before this existed keeps working exactly as it did.
+    placement: {
+      storage: { test:"shallow", n:4,  mul:0.35, yes:"Right by the door: quicker trips",  no:"Storage works here. Nearer the top is quicker." },
+      nursery: { test:"queen",   n:2,  mul:0.40, yes:"Right by the queen: eggs sooner",   no:"A nursery works here. Beside the queen is faster." },
+      den:     { test:"deep",    n:8,  mul:0.50, yes:"Deep and quiet: a better rest",     no:"A den works here. Deeper down is quieter." },
+      fungus:  { test:"queen",   n:3,  mul:0.30, yes:"Close to home: mushrooms grow fast", no:"A garden works here. Nearer the queen grows faster." }
+    },
+
+    // ---- AC6 pillar 3: the production chains (real leafcutter and aphid science) ----
+    chain: {
+      leafGrowPerSec: 0.30,      // the meadow puts out new leaves on its own
+      leafMax: 12,               // how many are ever waiting to be cut at once
+      leafCarryShare: 0.6,       // a forager with no crumb to fetch cuts leaves instead
+      leafStore: 40,             // how many cut leaves the colony can hold
+      fungusPerAntPerSec: 0.22,  // leaves turned into mushroom food per nursery ant
+      fungusFoodPerLeaf: 1.5,    // mushrooms are worth more than the leaf that fed them
+      aphidPerSec: 0.16,         // honeydew the herd gives once it is unlocked
+      aphidMax: 8                // drops waiting on the plant
     },
 
     // ---- missions (AC2) ----------------------------------------------------
@@ -200,10 +230,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     },
     // which mission opens each room type (index into the mission list). A room the
     // kid has not met yet is not offered; nothing is ever taken away again.
-    roomUnlock: { nursery:2, storage:5, den:8 },
+    roomUnlock: { nursery:2, storage:5, den:8, fungus:99 },
     // free rewards that never block building
     milestones: [
       { id:"deep-5",  type:"deep", n:5,  coins:20, unlock:"storage" },
+      { id:"leaves-20", type:"leaves", n:20, coins:20, unlock:"fungus",
+        fact:"Leafcutter ants do not eat the leaves. They feed them to a mushroom garden and eat the mushrooms." },
+      { id:"aphids",  type:"ants", n:20, coins:20, aphids:true,
+        fact:"Ants really do keep aphids like tiny cows, and drink the sweet honeydew they make." },
       { id:"ants-50", type:"ants", n:50, coins:25, unlock:"den" }
     ],
     // gentle setbacks: they pause work, they never take anything away
@@ -212,7 +246,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       floodClearPerAntPerSec: 0.12,   // a few seconds of a builder's time, long enough to notice
       restDrainPerSec: 0.007,    // the colony gets tired slowly
       restPerDenPerSec: 0.030,   // a resting den brings it back
-      sleepyRate: 0.45           // how much slower a sleepy colony works
+      sleepyRate: 0.45,          // how much slower a sleepy colony works
+      // AC6: rain still only PAUSES. A colony with food put by keeps working
+      // straight through it; an empty one just goes slower until it is cleared.
+      stockedFood: 12,
+      floodRate: 0.7
     },
     findRow: 11,                 // how deep the buried find is buried
 
@@ -251,6 +289,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     "antcity/prop/storage-v1":    "/antcity/art/room-storage.svg",
     "antcity/prop/den-v1":        "/antcity/art/room-den.svg",
     "antcity/prop/crumb-v1":      "/antcity/art/crumb.svg",
+    // AC6: the production chain pieces
+    "antcity/prop/leaf-v1":       "/antcity/art/leaf.svg",
+    "antcity/prop/fungus-v1":     "/antcity/art/room-fungus.svg",
+    "antcity/prop/aphid-plant-v1":"/antcity/art/aphid-plant.svg",
+    "antcity/prop/honeydew-v1":   "/antcity/art/honeydew.svg",
     "antcity/prop/buried-find-v1":"/antcity/art/buried-find.svg",
     "antcity/soil/sandy-v1":      "/antcity/art/soil-tile.svg",
     "antcity/soil/deep-v1":       "/antcity/art/soil-deep.svg",
@@ -329,7 +372,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       queen:{ c:Math.floor(g.cols/2), r:g.startRow }, born:0, dug:0, rooms:0, t:0,
       // --- AC2: missions, milestones and the gentle setbacks ---
       mission:0, done:{}, mBase:{}, freeBuild:false, hit:{}, guided:false,
-      carried:0, found:0, floods:0, floodT:0, rest:1
+      carried:0, found:0, floods:0, floodT:0, rest:1,
+      // --- AC6: the production chains ---
+      leaves:0, leavesCut:0, leafReady:3, aphids:false, dew:0, dewGot:0, mush:0
     };
     // the buried find for the last mission, waiting under the deep soil
     col.find = { c:Math.floor(g.cols/2) + 2, r:g.findRow };
@@ -342,6 +387,36 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   function tune(){ return GAME_CONFIG.difficulty[Math.max(0,Math.min(4,(C.difficulty|0)-1))] || GAME_CONFIG.difficulty[2]; }
 
+  // ======================================================================
+  //  AC6 pillar 1: WHERE a room is dug changes how well it works. Every rule
+  //  is a BONUS. A plain spot earns nothing and costs nothing, so a colony
+  //  built before any of this existed carries on exactly as it did.
+  // ======================================================================
+  function goodSpot(id, c, r){
+    var p = GAME_CONFIG.placement[id]; if(!p) return false;
+    if(p.test === "shallow") return r <= p.n;
+    if(p.test === "deep")    return r >= p.n;
+    if(p.test === "queen")   return (Math.abs(c - C.queen.c) + Math.abs(r - C.queen.r)) <= p.n;
+    return false;
+  }
+  function spotLine(id, c, r){
+    var p = GAME_CONFIG.placement[id]; if(!p) return "";
+    return goodSpot(id, c, r) ? p.yes : p.no;
+  }
+  // how much better this room type is doing thanks to where the kid dug them
+  function roomMul(id){
+    var p = GAME_CONFIG.placement[id]; if(!p) return 1;
+    var n = 0;
+    for(var k in C.cells){
+      var x = C.cells[k];
+      if(x.kind === "room" && x.done && x.room === id && (x.good || goodSpot(id, x.c, x.r))) n++;
+    }
+    return Math.min(2.5, 1 + n * p.mul);
+  }
+  // how much of the nursery crew is on mushroom duty instead of eggs. A garden
+  // with no leaves waiting takes nobody: it just sits there.
+  function gardenShare(){ return (roomCount("fungus") > 0 && C.leaves > 0.01) ? 0.5 : 0; }
+
   // capacities grow with the rooms the kid builds
   function roomCount(kind){ var n=0; for(var k in C.cells){ var x=C.cells[k]; if(x.kind==="room" && x.done && x.room===kind) n++; } return n; }
   function foodCap(){ return GAME_CONFIG.capacity.foodBase + roomCount("storage")*GAME_CONFIG.capacity.foodPerStorage; }
@@ -351,14 +426,19 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var dens = Math.min(GAME_CONFIG.denMax, roomCount("den"));
     var hungry = (C.food <= 0) ? GAME_CONFIG.hungryRate : 1;
     var sleepy = (C.rest <= 0) ? GAME_CONFIG.setback.sleepyRate : 1;
-    return tune().pace * (1 + dens*GAME_CONFIG.denBonus) * hungry * sleepy;
+    // AC6: rain only bites a colony with an empty pantry. Ants with food put by
+    // work straight through it. It still only PAUSES, it never takes anything.
+    var wet = (floodCount() && C.food < GAME_CONFIG.setback.stockedFood) ? GAME_CONFIG.setback.floodRate : 1;
+    return tune().pace * (1 + dens*GAME_CONFIG.denBonus) * hungry * sleepy * wet;
   }
   // what is slowing the colony right now, in the kid's words. Never a failure,
   // always a thing they can go and fix.
   function setbackNow(){
     if(C.food <= 0)  return "Your ants are hungry. Drop food up on the meadow.";
     if(C.rest <= 0)  return "Your ants are sleepy. Build a resting den.";
-    if(floodCount())  return "Rain flooded a tunnel. Builders are clearing it.";
+    if(floodCount())  return C.food >= GAME_CONFIG.setback.stockedFood
+      ? "Rain flooded a tunnel. Your store keeps the ants going."
+      : "Rain flooded a tunnel. Drop food to keep them going.";
     return null;
   }
   function floodCount(){ var n=0; for(var k in C.cells){ if(C.cells[k].flooded) n++; } return n; }
@@ -409,13 +489,43 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
 
     // --- foragers carry the surface food and water down
-    var carry = jobCount("forager") * g.forage.perAntPerSec * pace * dt;
+    var carry = jobCount("forager") * g.forage.perAntPerSec * pace * roomMul("storage") * dt;
     while(carry > 0 && C.surface.length){
       var it = C.surface[0], take2 = Math.min(it.amount, carry);
       it.amount -= take2; carry -= take2;
       if(it.kind === "water") C.water = Math.min(waterCap(), C.water + take2);
       else { C.food = Math.min(foodCap(), C.food + take2); C.carried += take2; }
       if(it.amount <= 0.001){ C.surface.shift(); sfx("munch"); }      // a crumb is home
+    }
+
+    // --- AC6: the meadow keeps growing leaves, and a forager with no crumb left
+    //     to fetch goes and cuts one. The kid's own food always comes first.
+    var ch = g.chain;
+    C.leafReady = Math.min(ch.leafMax, C.leafReady + ch.leafGrowPerSec * dt);
+    if(carry > 0 && C.leafReady > 0 && C.leaves < ch.leafStore){
+      var cut = Math.min(carry * ch.leafCarryShare, C.leafReady, ch.leafStore - C.leaves);
+      if(cut > 0){ C.leafReady -= cut; C.leaves += cut; C.leavesCut += cut; }
+    }
+    // --- the aphid herd, once the kid has met it. Ants really do keep aphids and
+    //     drink the honeydew, so it is a slow sweet trickle, never a food machine.
+    if(C.aphids){
+      C.dew = Math.min(ch.aphidMax, C.dew + ch.aphidPerSec * dt);
+      if(carry > 0 && C.dew > 0){
+        var sip = Math.min(carry * 0.5, C.dew, Math.max(0, foodCap() - C.food));
+        if(sip > 0){ C.dew -= sip; C.food += sip; C.carried += sip; C.dewGot += sip; }
+      }
+    }
+    // --- the fungus garden: nursery ants feed cut leaves to the mushrooms and the
+    //     colony eats those. An unstaffed garden simply waits. Nothing ever rots.
+    if(roomCount("fungus") > 0 && C.leaves > 0){
+      var crew = jobCount("nursery") * gardenShare();
+      var grow = crew * ch.fungusPerAntPerSec * pace * roomMul("fungus") * dt;
+      var used = Math.min(grow, C.leaves);
+      if(used > 0){
+        C.leaves -= used;
+        var made = Math.min(used * ch.fungusFoodPerLeaf, Math.max(0, foodCap() - C.food));
+        C.food += made; C.mush += made;
+      }
     }
 
     // --- builders clear a flooded tunnel FIRST: it blocks the colony, so it is
@@ -448,7 +558,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       while(C.layProg >= 1 && C.eggs < eggCap()){ C.layProg -= 1; C.eggs++; C.food = Math.max(0, C.food - g.nursery.eggFood); }
     }
     if(C.eggs > 0){
-      var tend = jobCount("nursery") * g.nursery.hatchPerAntPerSec * pace * dt * ((C.food > 0 && C.water > 0) ? 1 : 0.3);
+      var tend = jobCount("nursery") * (1 - gardenShare()) * g.nursery.hatchPerAntPerSec
+                 * pace * roomMul("nursery") * dt * ((C.food > 0 && C.water > 0) ? 1 : 0.3);
       C.hatchProg += tend;
       while(C.hatchProg >= 1 && C.eggs > 0){
         C.hatchProg -= 1; C.eggs--; C.ants++; C.born++;
@@ -464,13 +575,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
     // --- tiredness: it creeps in slowly, and a resting den brings it back
     var dens2 = Math.min(g.denMax, roomCount("den"));
-    C.rest = Math.max(0, Math.min(1, C.rest - g.setback.restDrainPerSec*dt + dens2*g.setback.restPerDenPerSec*dt));
+    C.rest = Math.max(0, Math.min(1, C.rest - g.setback.restDrainPerSec*dt + dens2*g.setback.restPerDenPerSec*roomMul("den")*dt));
 
     // --- rain: every so often a tunnel floods and blocks the way through it
     C.floodT += dt * tune().setbacks;
     if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
 
     normalizeJobs();
+    foodTrend(dt);
     checkMission();
     walkSample(dt);
     tickHow(dt); tickIdle(dt);
@@ -493,7 +605,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(!pool.length) return null;
     var pick = pool[Math.floor(srand()*pool.length)];
     pick.flooded = true; pick.clear = 0; sfx("rain");
-    hint("Rain flooded a tunnel. Builders will clear it.");
+    hint(C.food >= GAME_CONFIG.setback.stockedFood
+      ? "Rain flooded a tunnel. Your food store keeps them going."
+      : "Rain flooded a tunnel. Builders will clear it.");
     return pick;
   }
   function hasOpenNeighbour(c,r){
@@ -561,6 +675,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(var k in C.cells){ var x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "storage") return { c:x.c, r:x.r }; }
     return { c:C.queen.c, r:C.queen.r };
   }
+  // AC6: a cut leaf goes to the mushroom garden, if the colony has one yet
+  function gardenCell(){
+    for(var k in C.cells){ var x = C.cells[k]; if(x.kind === "room" && x.done && x.room === "fungus") return { c:x.c, r:x.r }; }
+    return null;
+  }
+  function haulTarget(t){ return (t && t.leaf && gardenCell()) || storeCell(); }
+  function countTask(f){ var n=0,i; for(i=0;i<C.sample.length;i++){ if(f(C.sample[i].task)) n++; } return n; }
   function xToFc(x){
     var fc = (x - OX)/Math.max(1, CS) - 0.5;
     if(!isFinite(fc)) fc = C.queen.c;                    // no layout yet: aim at the anthill
@@ -635,6 +756,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         return true;
       }
     }
+    // AC6: nothing dropped to fetch, so the chain work shows up instead. A leaf is
+    // cut from the bush and hauled to the mushroom garden; honeydew comes off the
+    // aphid plant once the herd has been met. Both are real jobs, really walked.
+    if(a.job === "forager"){
+      var wantLeaf = C.leafReady > 0.5 && C.leaves < GAME_CONFIG.chain.leafStore && countTask(function(t){ return t && t.leaf; }) < 3;
+      var wantDew  = C.aphids && C.dew > 0.5 && countTask(function(t){ return t && t.dew; }) < 2;
+      if(wantLeaf || wantDew){
+        var en2 = entranceCell(), r4 = routeTo(here.c, here.r, en2.c, en2.r);
+        if(r4){
+          var leaf = wantLeaf;
+          a.task = { kind:"food", phase:"out", leaf:leaf, dew:!leaf };
+          a.wp = r4.concat([{ fc:en2.c, fr:SURF_R }, { fc:xToFc(plantX(leaf ? "leaf" : "aphid")), fr:SURF_R }]);
+          a.state = "walk";
+          return true;
+        }
+      }
+    }
     return false;
   }
 
@@ -671,7 +809,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         // crumb already (it counts faster than an ant can walk), but this is the ant
         // that went and got it, so the trip home is the honest picture of it.
         a.carry = true;
-        var en = entranceCell(), st = storeCell();
+        var en = entranceCell(), st = haulTarget(a.task);
         var back = routeTo(en.c, en.r, st.c, st.r) || [];
         a.task.phase = "home"; a.state = "walk"; a.t = 0;
         a.wp = [{ fc:en.c, fr:SURF_R }, { fc:en.c, fr:en.r }].concat(back);
@@ -848,14 +986,22 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var ms = GAME_CONFIG.milestones || [], i;
     for(i=0;i<ms.length;i++){
       var ml = ms[i]; if(C.hit[ml.id]) continue;
-      var have = ml.type === "ants" ? C.ants : C.deepest;
+      var have = ml.type === "ants" ? C.ants : (ml.type === "leaves" ? C.leavesCut : C.deepest);
       if(have < ml.n) continue;
       C.hit[ml.id] = true;
+      if(ml.aphids) C.aphids = true;                 // the herd arrives on the meadow
       award("antcity:milestone:" + ml.id, ml.coins);
-      celebrate(ml.type === "ants" ? (ml.n + " ants!") : ("Dug " + ml.n + " levels deep!"), ml.coins, ml.type === "ants");
+      celebrate(milestoneTitle(ml), ml.coins, ml.type === "ants");
       signal("cheer", { game:"antcity", milestone:ml.id });
+      if(ml.fact) say(ml.fact);                      // the queen shares the real ant science
       saveSoon();
     }
+  }
+  function milestoneTitle(ml){
+    if(ml.aphids)            return "You found aphids!";
+    if(ml.type === "leaves") return "Cut " + ml.n + " leaves!";
+    if(ml.type === "ants")   return ml.n + " ants!";
+    return "Dug " + ml.n + " levels deep!";
   }
   var coinsAwarded = [];
   function award(key, n){
@@ -901,6 +1047,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     drawSoil();
     drawCells();
     drawFoots();
+    drawPlants();
     drawSurfaceItems();
     drawAnts();
     drawPuffs();
@@ -1018,6 +1165,18 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       X.fillStyle = def.color;
       if(BR){ BR.rrect(X, px+4, py+4, CS-8, CS-8, 9); X.fill(); } else X.fillRect(px+4, py+4, CS-8, CS-8);
     }
+    if(x.room === "fungus"){
+      // how full the garden is right now, so a working chain is visible at a glance
+      var full = Math.max(0, Math.min(1, C.leaves / 8));
+      X.fillStyle = "rgba(232,220,174,.9)";
+      for(var f=0;f<3;f++){
+        if(f/3 >= full && f > 0) break;
+        var mx2 = px + CS*0.28 + f*CS*0.22, my2 = py + CS*0.74;
+        X.beginPath(); X.arc(mx2, my2 - CS*0.05, CS*0.08, Math.PI, 0); X.fill();
+        X.fillRect(mx2 - CS*0.02, my2 - CS*0.05, CS*0.04, CS*0.08);
+      }
+      return;
+    }
     if(x.room === "nursery" && C.eggs > 0){
       var show = Math.min(3, C.eggs), i;
       for(i=0;i<show;i++){
@@ -1025,6 +1184,37 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         if(IMG.egg) drawImg(IMG.egg, ex, ey, CS*0.26);
         else { X.fillStyle = "#fff3d6"; X.beginPath(); X.ellipse(ex, ey, CS*0.09, CS*0.12, 0, 0, 7); X.fill(); }
       }
+    }
+  }
+  // AC6: the two things growing on the meadow that the chains run on. The leaf
+  // bush is always there; the aphid plant only appears once the kid has met it.
+  function plantX(which){ return which === "leaf" ? Math.round(W*0.23) : Math.round(W*0.69); }
+  function drawPlants(){
+    var g = GAME_CONFIG.chain, base = SKY - 14;
+    // the leaf bush, fuller when there are leaves ready to cut
+    var lx = plantX("leaf"), n = Math.max(1, Math.round((C.leafReady / g.leafMax) * 4));
+    X.strokeStyle = "#4f9636"; X.lineWidth = 4; X.lineCap = "round";
+    X.beginPath(); X.moveTo(lx, base); X.lineTo(lx, base - 30); X.stroke();
+    for(var i=0;i<n;i++){
+      var side = (i % 2) ? 1 : -1, ly = base - 12 - i*7;
+      if(IMG.leaf) drawImg(IMG.leaf, lx + side*11, ly, 20, side < 0);
+      else { X.fillStyle = "#8ad05f"; X.beginPath(); X.ellipse(lx + side*11, ly, 9, 6, side*0.5, 0, 7); X.fill(); }
+    }
+    if(!C.aphids) return;
+    var ax = plantX("aphid");
+    if(IMG.aphid) drawImg(IMG.aphid, ax, base - 18, 46);
+    else {
+      X.strokeStyle = "#4f9636"; X.lineWidth = 4;
+      X.beginPath(); X.moveTo(ax, base); X.lineTo(ax, base - 32); X.stroke();
+      X.fillStyle = "#b6e07a";
+      for(var a=0;a<3;a++){ X.beginPath(); X.arc(ax + (a-1)*9, base - 16 - a*5, 5, 0, 7); X.fill(); }
+    }
+    // the honeydew waiting to be drunk
+    var drops = Math.min(3, Math.floor(C.dew));
+    for(var d=0;d<drops;d++){
+      var dx = ax - 14 + d*14, dy = base - 4;
+      if(IMG.honeydew) drawImg(IMG.honeydew, dx, dy, 14);
+      else { X.fillStyle = "#ffd166"; X.beginPath(); X.arc(dx, dy, 4, 0, 7); X.fill(); }
     }
   }
   function drawSurfaceItems(){
@@ -1068,10 +1258,16 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       else if(a.state === "work" && a.task && a.task.kind === "dig" && IMG.antDig && ART_IDS.ant === "antcity/ant/classic-v1") art = IMG.antDig;
       if(art) drawImg(art, px, py+bob, CS*scale, a.flip);
       else drawAntShape(px, py+bob, CS*scale*0.40, jobColor(a.job), a.flip);
-      // a crumb on its back, when the art has no carrying pose of its own
+      // what it is hauling, when the art has no carrying pose of its own
       if(a.carry && art === IMG.ant){
-        X.fillStyle = "#d9a05b";
-        X.beginPath(); X.arc(px + (a.flip ? CS*0.11 : -CS*0.11), py+bob - CS*0.13, CS*0.055, 0, 7); X.fill();
+        var hx = px + (a.flip ? CS*0.11 : -CS*0.11), hy = py+bob - CS*0.13;
+        if(a.task && a.task.leaf){
+          if(IMG.leaf) drawImg(IMG.leaf, hx, hy, CS*0.20, a.flip);
+          else { X.fillStyle = "#8ad05f"; X.beginPath(); X.ellipse(hx, hy, CS*0.07, CS*0.045, 0, 0, 7); X.fill(); }
+        } else {
+          X.fillStyle = "#d9a05b";
+          X.beginPath(); X.arc(hx, hy, CS*0.055, 0, 7); X.fill();
+        }
       }
       // a small job dot so the kid can still see who is who at this size
       X.fillStyle = jobColor(a.job);
@@ -1138,11 +1334,37 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var _hud = null;
   function HUD(){ try{ return _hud || (_hud = window.BuildableHUD.mount(CV)); }catch(e){ return { set:function(){}, show:function(){}, hide:function(){} }; } }
   try{ if(window.BuildableHUD && window.BuildableHUD.setAccent) window.BuildableHUD.setAccent(ACCENT); }catch(e){}
+  // AC6 pillar 2: the readouts have to trend HONESTLY, or the job slider is just
+  // a slider. Food says which way it is going; the line over the bar says what the
+  // mix the kid chose is actually doing to the colony, in kid words.
+  var _foodWas = -1, _foodTrend = "", _trendT = 0;
+  function foodTrend(dt){
+    _trendT += dt || 0;
+    if(_trendT < 0.8) return _foodTrend;
+    _trendT = 0;
+    if(_foodWas >= 0){
+      var d = C.food - _foodWas;
+      _foodTrend = d > 0.4 ? " up" : (d < -0.4 ? " down" : "");
+    }
+    _foodWas = C.food;
+    return _foodTrend;
+  }
+  function mixLine(){
+    var t = Math.max(1, C.ants), dig = (C.jobs.digger|0)/t, fo = (C.jobs.forager|0)/t,
+        nu = (C.jobs.nursery|0)/t, bu = (C.jobs.builder|0)/t;
+    var falling = _foodTrend === " down";
+    if(floodCount() && bu < 0.15) return "Nobody is clearing the water";
+    if(dig >= 0.5)  return falling ? "Tunnels are flying, food is dropping" : "Tunnels are flying";
+    if(fo  >= 0.5)  return "Food is piling up, little else is moving";
+    if(nu  >= 0.5)  return gardenShare() ? "Eggs and mushrooms are being tended" : "The nursery is busy";
+    if(bu  >= 0.5)  return "Rooms are going up fast";
+    return falling ? "A steady crew, but food is dropping" : "A steady, balanced crew";
+  }
   function syncHud(){
     var m = currentMission();
     HUD().set({
       left:  [{ text: m ? (m.name) : "Free build" }, { text:"Ants "+C.ants }],
-      right: [{ text:"Food "+Math.floor(C.food) }, { text:"Eggs "+C.eggs }]
+      right: [{ text:"Food "+Math.floor(C.food)+_foodTrend }, { text:"Eggs "+C.eggs }]
     });
   }
   var hintT = 0;
@@ -1151,6 +1373,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     el.textContent = msg; el.className = "show"; hintT = 3.6;
   }
   function tickHint(dt){ if(hintT > 0){ hintT -= dt; if(hintT <= 0){ var el=$("hint"); if(el) el.className = ""; } } }
+  // the queen sharing a true ant fact: longer than a nudge, so it wraps and lingers
+  function say(msg){
+    var el = $("hint"); if(!el) return;
+    el.textContent = msg; el.className = "show long"; hintT = 7.5;
+    signal("buddy", { game:"antcity", say:msg });
+    bumpIdle();
+  }
 
   // AC5: the goal strip. What the colony wants next, in kid words, on screen the
   // whole time. While the guide is running it carries the current teaching step.
@@ -1242,6 +1471,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   var _jobsKey = "";
   function syncJobsUI(){
+    var mx = $("barMix"); if(mx){ var ml = mixLine(); if(mx.textContent !== ml) mx.textContent = ml; }
     var k = C.ants + "|" + JOBS.map(function(j){ return C.jobs[j.id]|0; }).join(",");
     if(k === _jobsKey) return;                 // called every frame: only redraw on a real change
     _jobsKey = k;
@@ -1352,13 +1582,17 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(DEMO) return;
     buildTarget = { c:c, r:r };
     var list = $("roomList"); list.innerHTML = "";
+    var head = $("buildHead"); if(head) head.textContent = "Build a room here";
     Object.keys(GAME_CONFIG.rooms).forEach(function(id){
       if(!roomUnlocked(id)) return;                 // not met yet: simply not offered
       var def = GAME_CONFIG.rooms[id], can = C.food >= def.food;
       var b = document.createElement("button");
       b.className = "room"; b.type = "button"; b.disabled = !can;
+      // AC6: where you dig it matters, so say so in kid words while they are choosing
+      var good = goodSpot(id, c, r), line = spotLine(id, c, r);
       b.innerHTML = '<svg width="34" height="34" viewBox="0 0 34 34"><rect x="3" y="3" width="28" height="28" rx="9" fill="'+def.color+'"/></svg>'+
-                    '<span><span class="rn">'+def.name+'</span><br><span class="rd">'+def.desc+' &middot; '+def.food+' food</span></span>';
+                    '<span><span class="rn">'+def.name+'</span><br><span class="rd">'+def.desc+' &middot; '+def.food+' food</span>'+
+                    (line ? '<span class="sp'+(good?'':' meh')+'">'+line+'</span>' : '')+'</span>';
       b.addEventListener("click", function(){ startRoom(id); });
       list.appendChild(b);
     });
@@ -1372,7 +1606,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var cell = cellAt(buildTarget.c, buildTarget.r); if(!cell || cell.kind !== "tunnel"){ closeBuild(); return; }
     C.food -= def.food;
     cell.kind = "room"; cell.room = id; cell.build = 0; cell.done = false;
-    closeBuild(); hint("Builders are on it"); saveSoon();
+    cell.good = goodSpot(id, cell.c, cell.r);
+    closeBuild();
+    hint(cell.good ? ("Builders are on it. " + GAME_CONFIG.placement[id].yes) : "Builders are on it");
+    saveSoon();
   }
 
   // ======================================================================
@@ -1391,6 +1628,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface,
         mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
         carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
+        leaves:C.leaves, leavesCut:C.leavesCut, leafReady:C.leafReady, aphids:C.aphids, dew:C.dew, dewGot:C.dewGot, mush:C.mush,
         seen:C.seen, guided:C.guided, savedAt:Date.now()
       }));
     }catch(e){}
@@ -1408,6 +1646,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       col.freeBuild = !!s.freeBuild; col.hit = s.hit||{}; col.carried = s.carried||0; col.mFlood = s.mFlood||null;
       col.found = s.found||0; col.floods = s.floods||0; col.rest = (s.rest==null?1:s.rest);
       col.find = s.find || col.find; col.seen = !!s.seen; col.guided = !!s.guided;
+      col.leaves = s.leaves||0; col.leavesCut = s.leavesCut||0; col.leafReady = (s.leafReady==null?3:s.leafReady);
+      col.aphids = !!s.aphids; col.dew = s.dew||0; col.dewGot = s.dewGot||0; col.mush = s.mush||0;
       return col;
     }catch(e){ return null; }
   }
@@ -1624,7 +1864,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1", find:"antcity/prop/buried-find-v1",
     surface:"antcity/surface/meadow-v1", rainSurface:"antcity/surface/meadow-rain-v1",
     flood:"antcity/prop/flood-v1", colony:"antcity/prop/colony-v1", loading:"antcity/loading/v1",
-    room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1"
+    room_nursery:"antcity/prop/nursery-v1", room_storage:"antcity/prop/storage-v1", room_den:"antcity/prop/den-v1",
+    room_fungus:"antcity/prop/fungus-v1", leaf:"antcity/prop/leaf-v1",
+    aphid:"antcity/prop/aphid-plant-v1", honeydew:"antcity/prop/honeydew-v1"
   };
   // The shell owns the kid's picks and hands the engine the option INDEX per slot
   // (?ant=1&meadow=0&dirt=1), the same tiny-param handoff Breaker and Sky Flyer use.
@@ -1646,6 +1888,30 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(parts.surface) ART_IDS.surface = parts.surface;
       if(m.art && m.art.loadingScreen) ART_IDS.loading = m.art.loadingScreen;
       if(m.art && m.art.hero) ART_IDS.queen = m.art.hero;
+      // AC6: rooms and the chain milestones are recipe, not engine. The manifest may
+      // add or retune either; anything it does not mention keeps the built-in value.
+      if(m.rooms && typeof m.rooms === "object"){
+        for(var rk in m.rooms){
+          var rd = m.rooms[rk] || {};
+          GAME_CONFIG.rooms[rk] = GAME_CONFIG.rooms[rk] || { name:rk, desc:"", food:8, color:"#e9c46a" };
+          if(rd.name) GAME_CONFIG.rooms[rk].name = rd.name;
+          if(rd.desc) GAME_CONFIG.rooms[rk].desc = rd.desc;
+          if(typeof rd.food === "number") GAME_CONFIG.rooms[rk].food = rd.food;
+          if(rd.color) GAME_CONFIG.rooms[rk].color = rd.color;
+          if(rd.asset) ART_IDS["room_"+rk] = rd.asset;
+        }
+      }
+      if(m.milestones && m.milestones.length){
+        var have = {}, mi;
+        for(mi=0;mi<GAME_CONFIG.milestones.length;mi++) have[GAME_CONFIG.milestones[mi].id] = mi;
+        m.milestones.forEach(function(ml){
+          if(!ml || !ml.id) return;
+          if(have[ml.id] != null){                       // the manifest wins on the numbers
+            var cur = GAME_CONFIG.milestones[have[ml.id]];
+            for(var f in ml) cur[f] = ml[f];
+          } else GAME_CONFIG.milestones.push(ml);
+        });
+      }
       if(m.levels && m.levels.length){
         MISSIONS = m.levels.map(function(l){ return { id:l.id, name:l.name, layout:l.layout, coins:l.coins || 10, difficulty:l.difficulty }; });
       }
@@ -1704,8 +1970,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     assign: function(job, n){ if(!(job in C.jobs)) return null; var d = (n|0) - (C.jobs[job]|0); for(var i=0;i<Math.abs(d);i++) moveAnt(job, d > 0 ? 1 : -1); return C.jobs[job]; },
     build: function(c, r, room){ var cell = cellAt(c, r); if(!cell || cell.kind !== "tunnel") return false;
       var def = GAME_CONFIG.rooms[room]; if(!def || C.food < def.food) return false;
-      C.food -= def.food; cell.kind = "room"; cell.room = room; cell.build = 0; cell.done = false; return true; },
-    rooms: function(){ return { nursery:roomCount("nursery"), storage:roomCount("storage"), den:roomCount("den") }; },
+      C.food -= def.food; cell.kind = "room"; cell.room = room; cell.build = 0; cell.done = false;
+      cell.good = goodSpot(room, c, r); return true; },
+    rooms: function(){ var o = {}; for(var k in GAME_CONFIG.rooms) o[k] = roomCount(k); return o; },
     // --- missions (AC2), for the robot and the shell ---
     missions: function(){ return MISSIONS.map(function(m){ return { id:m.id, name:m.name, layout:m.layout, coins:m.coins, done:!!C.done[m.id] }; }); },
     mission: function(){ var m = currentMission(); if(!m) return { free:true, line:missionLine() };
@@ -1731,17 +1998,31 @@ input,textarea{-webkit-user-select:text;user-select:text;}
                                 text:(GUIDE[guide.step] || {}).text || "" }; },
     goal: function(){ syncGoal(); return _goalTxt; },
     antScale: function(){ return GAME_CONFIG.antScale; },
+    // --- AC6: layout bonuses, the felt job mix, and the production chains ---
+    spot: function(id, c, r){ return { good:goodSpot(id, c, r), line:spotLine(id, c, r) }; },
+    bonus: function(id){ return roomMul(id); },
+    mix: function(){ return mixLine(); },
+    trend: function(){ return (_foodTrend || "").replace(" ", "") || "steady"; },
+    chain: function(){
+      var r1 = function(n){ return Math.round(n*100)/100; };
+      return { leaves:r1(C.leaves), ready:r1(C.leafReady), cut:r1(C.leavesCut), mush:r1(C.mush),
+               aphids:!!C.aphids, dew:r1(C.dew), dewGot:r1(C.dewGot), gardens:roomCount("fungus"), nurseryOnMushrooms:gardenShare(),
+               hauling:countTask(function(t){ return t && (t.leaf || t.dew); }) };
+    },
+    setAphids: function(on){ C.aphids = !!on; return C.aphids; },
     dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
                               jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
                               dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
                               mission:C.mission, free:!!C.freeBuild, carried:Math.round(C.carried*10)/10,
                               floods:C.floods, flooded:floodCount(), found:C.found, rest:Math.round(C.rest*100)/100,
+                              leaves:Math.round(C.leaves*10)/10, mush:Math.round(C.mush*10)/10, aphids:!!C.aphids,
                               coins:coinsAwarded.slice() }; },
     _cfg: function(){ return GAME_CONFIG; },
     _applyManifest: function(m){ applyManifest(m); loadAllArt(); },
     _art: function(){ var o = {}; for(var s in ART_IDS) o[s] = artUrl(ART_IDS[s]); return o; },
     _draw: function(){ try{ draw(); return "ok"; }catch(e){ return "ERR: " + (e && e.message || e); } },
     _save: saveNow,
+    _openAll: function(){ C.freeBuild = true; return true; },   // robot only: skip to free build
     _reset: function(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} newColony(3); }
   };
   try{ window.BUILDABLE_GAME = window.ANTCITY_GAME; }catch(e){}
