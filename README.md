@@ -6,6 +6,16 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## Paper Route: sticking the landing (September 7 2026)
+`public/paper-route-engine.html`, `api/sfx.js`, `qa-paper-route.mjs`. A late edit to the
+**PB1** card asked for a turbo when you stick a ramp landing, so ramps now pay twice: an
+air throw is still double coins, and a clean landing surges the bike for 1.9 seconds, more
+than a boost strip, with a "Nice landing!" card and a new `pr_turbo` sound. Landing on top
+of something gives the ordinary wobble and no prize; there is no crash path in the engine
+and never will be. The QA bot now steers onto ramps rather than round them, so both streets
+are proven with real jumps. 122 checks green, `qa-all` green, verified in real Chromium.
+Ref: SESSION-LOG.md same date.
+
 ## PB2 — Paper Route: gigs, the alive street, and Sunset Beach (September 7 2026)
 `public/paper-route-engine.html`, `public/paper-route/manifest.json`,
 `public/buildable-manifest.js`, `api/sfx.js`, `public/editor.html`, `qa/qa-map.mjs`,

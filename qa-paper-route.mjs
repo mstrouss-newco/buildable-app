@@ -183,6 +183,7 @@ runs.forEach((r, i) => {
   ok(`street ${i + 1}: every subscriber gets a paper`, !!r && r.delivered === r.subs && r.subs > 0, `${r && r.delivered}/${r && r.subs}`);
   ok(`street ${i + 1}: never runs the bag dry`, !!r && r.papers >= 0 && r.delivered <= streets[i].papers + 20, `papers left ${r && r.papers}`);
   ok(`street ${i + 1}: the bot also finishes both side jobs`, !!r && r.gigsDone === r.gigsTotal && r.gigsTotal === 2, `${r && r.gigsDone}/${r && r.gigsTotal}`);
+  ok(`street ${i + 1}: the ramps are reachable and the landings stick`, !!r && r.turbos > 0 && r.airThrows > 0, `${r && r.turbos} turbos, ${r && r.airThrows} air throws`);
   ok(`street ${i + 1}: the bot rides it in a kid-sized time`, !!r && r.seconds > 2 && r.seconds < 120, `${r && r.seconds && r.seconds.toFixed(1)}s`);
 });
 
@@ -248,6 +249,28 @@ ok('birds scatter rather than block', /a\.scatter = Math\.min\(1/.test(engine) &
 ok('a PERFECT route is what opens the next street', /perfect \|\| PREFS\.rides\[level\] >= 3/.test(engine));
 ok('nobody can be stuck behind it: three rides open it too', /rides\[level\] >= 3/.test(engine));
 
+// --- 5b2) sticking the landing: the ramp's turbo ---------------------------------
+console.log('\n--- RAMPS: stick the landing and the bike surges ---');
+ok('a clean landing is worth more than a boost strip', /TURBO_TIME = 1\.90/.test(code) && /run\.boost = Math\.max\(run\.boost, TURBO_TIME\)/.test(code));
+ok('the turbo fires the moment the air runs out', /if\(wasAir && run\.air <= 0\) stickLanding\(\)/.test(code));
+ok('landing on something wins nothing, and costs nothing extra', /if\(underWheels\(\)\) return;/.test(code));
+ok('a bad landing is not its own penalty (no separate crash path)', !/crash|wipeout|fell/i.test(code));
+// drive it: take a ramp on clear road and prove the turbo lands
+G.play(0, true);
+const ramp0 = streets[0].ramps[0];
+let turboSeen = null, airSeen = false;
+for (let i = 0; i < 60 * 120; i++) {
+  const d = G.dbg(); if (!d || d.done) break;
+  G.steer(ramp0.x);
+  G.step(1 / 60);
+  const e = G.dbg();
+  if (e.air > 0) airSeen = true;
+  if (airSeen && e.turbos > 0) { turboSeen = e; break; }
+}
+ok('riding up a ramp puts the rider in the air', airSeen);
+ok('landing clean really does hand out the turbo', !!turboSeen && turboSeen.turbos === 1, JSON.stringify(turboSeen && { turbos: turboSeen.turbos, boost: +turboSeen.boost.toFixed(2) }));
+ok('the turbo is a real speed boost, not a badge', !!turboSeen && turboSeen.boost > 1.3, `boost ${turboSeen && turboSeen.boost.toFixed(2)}s`);
+
 // --- 5c) PB2: photo mode for the picker tile (the TS rig's game half) -------------
 console.log('\n--- TILE SHOT: the engine stages its own real frame ---');
 ok('the engine answers ?tileshot=1', /tileshot["\']\)\s*===\s*["\']1["\']/.test(engine) || /_q\.get\("tileshot"\) === "1"/.test(engine));
@@ -303,7 +326,7 @@ ok('it mounts the shared start screen', /BS\.mount\(/.test(html));
 ok('it uses the ONE shared HUD', /BuildableHUD\.mount\(/.test(html) && /HUD\(\)\.set\(/.test(html));
 ok('it honours the shell pause/resume messages', /t === "pause"/.test(html) && /t === "resume"/.test(html));
 ok('it accepts a start message carrying a level', /t === "start"/.test(html));
-ok('sound comes from clips we created, routed through /api/sfx', /\/api\/sfx\?s=/.test(html) && /pr_throw/.test(html) && /pr_clunk/.test(html) && /pr_streak/.test(html) && /pr_jingle/.test(html));
+ok('sound comes from clips we created, routed through /api/sfx', /\/api\/sfx\?s=/.test(html) && /pr_throw/.test(html) && /pr_clunk/.test(html) && /pr_streak/.test(html) && /pr_jingle/.test(html) && /pr_turbo/.test(html));
 ok('the shared FL5 delivery sounds are reused, not re-made', /sky_pickup/.test(html) && /sky_deliver/.test(html));
 ok('no art is baked into the engine', !/<img/i.test(html) && !/\.(png|jpg|jpeg|webp)\b/i.test(engineSrc));
 ok('no emoji anywhere in the engine', !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/u.test(html));
@@ -325,8 +348,8 @@ ok('the editor save gate knows which robot play-tests it',
   /"paper-route": "qa-paper-route\.mjs"/.test(fs.readFileSync(dir + '/qa/qa-map.mjs', 'utf8')));
 const sfxSrc = fs.readFileSync(dir + '/api/sfx.js', 'utf8');
 ok('the three new sounds are registered with a prompt AND a duration',
-  ['pr_throw', 'pr_clunk', 'pr_streak', 'pr_jingle'].every((k) => new RegExp(`${k}:\\s*"`).test(sfxSrc) && new RegExp(`${k}:\\s*[0-9.]+`).test(sfxSrc)));
-const durs = ['pr_throw', 'pr_clunk', 'pr_streak', 'pr_jingle'].map((k) => parseFloat((sfxSrc.match(new RegExp(`${k}:\\s*([0-9.]+)`)) || [])[1]));
+  ['pr_throw', 'pr_clunk', 'pr_streak', 'pr_jingle', 'pr_turbo'].every((k) => new RegExp(`${k}:\\s*"`).test(sfxSrc) && new RegExp(`${k}:\\s*[0-9.]+`).test(sfxSrc)));
+const durs = ['pr_throw', 'pr_clunk', 'pr_streak', 'pr_jingle', 'pr_turbo'].map((k) => parseFloat((sfxSrc.match(new RegExp(`${k}:\\s*([0-9.]+)`)) || [])[1]));
 ok('every new sound clears the 0.5s ElevenLabs floor', durs.every((d) => d >= 0.5), durs.join(','));
 
 console.log('\n' + (fails ? `${fails} CHECK(S) FAILED` : 'ALL CHECKS PASSED'));

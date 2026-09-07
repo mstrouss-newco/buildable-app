@@ -92,6 +92,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     win:     "sky_mission",  // Feel.celebrate
     levelup: "sky_mission",
     gig:     "sky_mission",  // a side job finished
+    turbo:   "pr_turbo",     // you stick a ramp landing and the bike surges
     jingle:  "pr_jingle",    // the ice cream truck, heard before it is seen
     splash:  "splash",       // a sprinkler you ride through
     flutter: "rustle"        // birds lifting off the road
@@ -151,6 +152,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var HIT_Z = 26, HIT_X = 0.30, PICK_Z = 30, PICK_X = 0.34;
   var LANE = 0.90;                 // how far off centre the rider may ride
   var AIR_TIME = 0.95, BOOST_TIME = 1.30, SLOW_TIME = 0.50, WOBBLE_TIME = 0.60;
+  var TURBO_TIME = 1.90;             // sticking a ramp landing is worth more than a boost strip
   var MAILBOX_X = 1.12, HOUSE_X = 1.62;
   var GIG_Z = 90, GIG_X = 0.34;      // ride near that kerb, in a window a kid can hit
   var ALIVE_HIT_X = 0.32;
@@ -224,7 +226,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       flying: [], drops: [],
       delivered: 0, subs: 0, missed: 0, streak: 0, best: 0, coins: 0,
       gigsDone: 0, gigsTotal: 0, carrying: null, banner: null,
-      bumps: 0, airThrows: 0, done: false
+      bumps: 0, airThrows: 0, turbos: 0, done: false
     };
     (s.houses||[]).forEach(function(h, i){
       r.houses.push({ i:i, z: h.at*len, side: (h.side<0?-1:1), sub: !!h.sub, done:false, passed:false, light:0, wave:0 });
@@ -307,6 +309,28 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function award(key, n){ try{ if(BW && BW.awardOnce && !silent) BW.awardOnce("paper-route:"+key, n); }catch(e){} }
 
   function banner(text){ if(run) run.banner = { text:text, t:1.8 }; }
+  // STICKING THE LANDING. Come down off a ramp with clear road under the wheels and
+  // the bike surges, for longer than a boost strip gives, because you earned it. Come
+  // down on top of something and you get the ordinary wobble that thing would have
+  // given you anyway: landing badly is never its own punishment, there is simply no
+  // prize for it.
+  function underWheels(){
+    var i, o;
+    for(i=0;i<run.obstacles.length;i++){ o = run.obstacles[i];
+      if(!o.hit && Math.abs(o.z-run.z) < HIT_Z && Math.abs(o.x-run.x) < HIT_X) return true; }
+    for(i=0;i<run.alive.length;i++){ o = run.alive[i];
+      if(!o.hit && (o.kind === "car" || o.kind === "icecream")
+         && Math.abs(o.z-run.z) < HIT_Z && Math.abs(o.x-run.x) < ALIVE_HIT_X) return true; }
+    return false;
+  }
+  function stickLanding(){
+    if(underWheels()) return;
+    run.boost = Math.max(run.boost, TURBO_TIME);
+    run.turbos++;
+    banner("Nice landing!");
+    sfx("turbo");
+    try{ if(Feel && Feel.tap && !silent) Feel.tap(); }catch(e){}
+  }
   function bump(o){
     o.hit = true;
     run.bumps++;
@@ -324,7 +348,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     run.z += sp * dt;
     run.boost = Math.max(0, run.boost - dt);
     run.slow  = Math.max(0, run.slow  - dt);
+    var wasAir = run.air > 0;
     run.air   = Math.max(0, run.air   - dt);
+    if(wasAir && run.air <= 0) stickLanding();
     run.wobble= Math.max(0, run.wobble- dt);
     run.x += (run.targetX - run.x) * Math.min(1, dt*9);
     if(run.x < -LANE) run.x = -LANE; if(run.x > LANE) run.x = LANE;
@@ -518,7 +544,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var st = g.held ? g.dropoff : g.pickup;
       if(st.z > run.z - GIG_Z*0.5 && st.z - run.z < 420){ gigStop = st; break; }
     }
+    var ramp = null;
+    for(i=0;i<run.ramps.length;i++){ var rm = run.ramps[i];
+      if(!rm.used && rm.z > run.z && rm.z - run.z < 300){ ramp = rm; break; } }
     if(gigStop){ want = gigStop.side * (GIG_X + 0.30); }
+    else if(ramp){ want = ramp.x; }
     else if(bundle){ want = bundle.x; }
     else {
       var lanes = [-0.6,-0.3,0,0.3,0.6], bestLane = 0, bestClear = -1;
@@ -1030,7 +1060,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       return { z:run.z, x:run.x, len:run.len, papers:run.papers, delivered:run.delivered,
         subs:run.subs, missed:run.missed, streak:run.streak, best:run.best, coins:run.coins,
         gigsDone:run.gigsDone, gigsTotal:run.gigsTotal, carrying:(run.carrying?run.carrying.id:null),
-        alive:run.alive.length, bumps:run.bumps, airThrows:run.airThrows,
+        alive:run.alive.length, bumps:run.bumps, airThrows:run.airThrows, turbos:run.turbos,
         air:run.air, boost:run.boost, done:run.done };
     },
     // a perfect player rides the whole street; returns what it managed

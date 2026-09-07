@@ -1,3 +1,25 @@
+## 2026-09-07 — Sticking the landing: the ramp turbo (PB1 card edit)
+
+**Why this exists.** The PB1 card gained a line after PB1 shipped: ramps should give
+"a turbo speed boost when you stick the landing". That was not built, so it is built now.
+
+**Shipped.** Come down off a ramp with clear road under the wheels and the bike surges
+for 1.9 seconds, longer than a boost strip gives, because it was earned. A "Nice landing!"
+card flashes and a new sound, `pr_turbo`, plays. Come down on top of a bin or a car and
+you get the ordinary wobble that thing would have given you anyway: landing badly is never
+its own punishment, there is simply no prize for it.
+
+**The QA robot now takes ramps.** It used to ride round them, which meant nothing proved a
+ramp was reachable. It now steers onto one whenever there is no gig stop in front of it, so
+both streets are ridden with real jumps: three air throws and two or three turbos each,
+which also shortens a street to about 21 seconds and roughly doubles the coins.
+
+**Checked.** `qa-paper-route.mjs` is 122 checks and green, including a hand-driven ramp
+run that proves the turbo lands and is a real speed boost rather than a badge, plus a check
+that there is no separate crash path anywhere in the engine. `node qa-all.mjs` green. A
+real Chromium run on a portrait phone takes the ramp and lands the turbo with no console
+errors.
+
 ## 2026-09-07 — PB2: the gigs, the alive street, and Sunset Beach
 
 **Shipped.** Paper Route is finished. Four things landed.
