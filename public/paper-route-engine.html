@@ -228,6 +228,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var TURBO_TIME = 1.90;             // sticking a ramp landing is worth more than a boost strip
   var MAILBOX_X = 1.12, HOUSE_X = 1.62;
   var GIG_Z = 90, GIG_X = 0.34;      // ride near that kerb, in a window a kid can hit
+  var NUDGE_THROWS = 2;              // "Tap to throw!" retires after two landed papers
+  var GUIDE_GOLD = "#ffd23f";        // the one colour the guidance layer speaks in
   var ALIVE_HIT_X = 0.32;
 
   // ---------- canvas ----------
@@ -238,7 +240,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     W = window.innerWidth || 900; H = window.innerHeight || 600;
     try{ CV.width = Math.floor(W*DPR); CV.height = Math.floor(H*DPR); X.setTransform(DPR,0,0,DPR,0,0); }catch(e){}
   }
-  try{ window.addEventListener("resize", resize); }catch(e){}
+  // a turn of the phone can cross the narrow/wide line, so the bar is rebuilt too
+  try{ window.addEventListener("resize", function(){ resize(); try{ syncHud(); }catch(e){} }); }catch(e){}
   resize();
 
   // ---------- HUD (the ONE shared HUD — never hand-rolled) ----------
@@ -253,6 +256,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   if(!PREFS.cleared) PREFS.cleared = {};
   if(!PREFS.perfect) PREFS.perfect = {};
   if(PREFS.unlocked == null) PREFS.unlocked = 0;
+  // How many papers this kid has ever landed in a mailbox. The "Tap to throw!" nudge
+  // is shown until it reaches two, and then never again on this device.
+  if(PREFS.throws == null) PREFS.throws = 0;
 
   // ---------- state ----------
   var DEMO = false, DEEP_LVL = null, TILESHOT = false;
@@ -354,6 +360,20 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
     return best;
   }
+  // The NEXT red flag up the road: the nearest subscriber still owed a paper,
+  // whether or not it is in throw range yet. This is what the guidance arrow points
+  // at, so a kid always knows where the game wants them to look.
+  function nextSub(){
+    if(!run) return null;
+    var best = null;
+    for(var i=0;i<run.houses.length;i++){
+      var h = run.houses[i];
+      if(!h.sub || h.done) continue;
+      if(h.z < run.z - THROW_BEHIND) continue;
+      if(!best || h.z < best.z) best = h;
+    }
+    return best;
+  }
   function throwPaper(){
     if(!run || run.done || state !== "playing" || bkPaused) return false;
     var h = bestTarget();
@@ -375,6 +395,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(h && !h.done){
       h.done = true; h.light = 1; h.wave = 1.7;
       run.delivered++; run.streak++;
+      // two landed papers and the kid has understood the tap; the nudge retires
+      if(PREFS.throws < NUDGE_THROWS){ PREFS.throws++; savePrefs(); }
       if(run.streak > run.best) run.best = run.streak;
       var c = p.air ? 4 : 2;                          // an air throw is worth double
       run.coins += c;
@@ -521,15 +543,26 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(!silent){ HUD().show(); syncHud(); }
     try{ if(window.BuildableGameNav && window.BuildableGameNav.update) window.BuildableGameNav.update(); }catch(e){}
   }
+  // THE BAR HAS TO FIT THE PHONE. On a 320-430px phone the shell has already taken
+  // a column off each end for Home and Sound, so three word-labelled chips cannot
+  // fit and the coin count used to fall off the right edge. Below the phone width
+  // the chips become an icon plus a number, which a 4-year-old reads faster anyway,
+  // and the "carrying" chip drops out because the banner already says it.
+  function narrowHud(){ return (W || 900) < 620; }
   function syncHud(){
     if(silent || !run) return;
     var bal = 0; try{ bal = BW ? BW.balance() : 0; }catch(e){}
+    var tight = narrowHud();
     var left = [{ text: street.name }];
-    if(run.carrying) left.push({ text:"Carrying the "+run.carrying.cargo.name });
-    HUD().set({
-      left:  left,
-      right: [{ text:"Papers "+run.papers }, { text:"Delivered "+run.delivered+"/"+run.subs }, { text:"Coins "+bal }]
-    });
+    if(run.carrying && !tight) left.push({ text:"Carrying the "+run.carrying.cargo.name });
+    var right = tight
+      ? [{ glyph:"paper", text:String(run.papers) },
+         { glyph:"mailbox", text:run.delivered+"/"+run.subs },
+         { coin:String(bal) }]
+      : [{ text:"Papers "+run.papers },
+         { text:"Delivered "+run.delivered+"/"+run.subs },
+         { coin:String(bal) }];
+    HUD().set({ left:left, right:right });
   }
   function finish(){
     state = "over";
@@ -752,25 +785,41 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function drawMailbox(h, dz){
     var m = proj(dz, h.side*MAILBOX_X), ms = m.s;
     if(ms > 0.04){
-      // the soft ring says "now" — it lights up only while this mailbox is the one
-      // a tap would throw at, so a kid learns the timing without being told
-      if(h.sub && !h.done && h === aimed && !TILESHOT){
-        var pulse = 0.55 + 0.45*Math.sin((performance.now?performance.now():0)/180);
-        X.globalAlpha = 0.55*pulse; X.strokeStyle = ACCENT; X.lineWidth = Math.max(2, 5*ms);
-        X.beginPath(); X.arc(m.x, m.y-30*ms, 40*ms, 0, 6.28); X.stroke(); X.globalAlpha = 1;
-      }
       if(!stamp("mailbox", m.x, m.y, 86*ms)){
         X.fillStyle = "#6b7683"; X.fillRect(m.x-5*ms, m.y-34*ms, 10*ms, 34*ms);
         X.fillStyle = h.sub ? "#ffffff" : "#d8dee5"; roundRect(X, m.x-22*ms, m.y-62*ms, 44*ms, 28*ms, 11*ms); X.fill();
         X.strokeStyle = "#9aa5b1"; X.lineWidth = Math.max(1, 2*ms); roundRect(X, m.x-22*ms, m.y-62*ms, 44*ms, 28*ms, 11*ms); X.stroke();
       }
       if(h.sub){
-        // the flag is the thing a kid aims at, so it is its own slot and its own state
-        var fh = h.done ? 40*ms : 74*ms;
-        if(!stamp(h.done ? "flagDown" : "flagUp", m.x+24*ms, m.y-30*ms, fh)){
-          X.fillStyle = h.done ? "#7fbf6a" : "#e8443f";
-          if(h.done){ X.fillRect(m.x+18*ms, m.y-44*ms, 6*ms, 18*ms); }
-          else { X.fillRect(m.x+18*ms, m.y-92*ms, 6*ms, 32*ms); roundRect(X, m.x+22*ms, m.y-92*ms, 24*ms, 16*ms, 3*ms); X.fill(); }
+        // THE FLAG IS THE TARGET, so it is drawn big and loud rather than to scale.
+        // The one the guidance arrow is on gets bigger again, and every red flag sits
+        // on a pale halo and a dark outline so it never disappears into the house
+        // behind it. It is still its own art slot and its own state.
+        var isNext = (!h.done && h === guideHouse);
+        var fh = h.done ? 44*ms : (isNext ? 116*ms : 92*ms);
+        var fx0 = m.x + 24*ms, fy0 = m.y - 30*ms;
+        if(!h.done && !TILESHOT){
+          // the halo: a soft pale disc so red-on-brick still reads at a distance
+          X.save(); X.globalAlpha = 0.20; X.fillStyle = "#ffffff";
+          X.beginPath(); X.arc(fx0 + 6*ms, fy0 - fh*0.62, fh*0.38, 0, 6.28); X.fill(); X.restore();
+        }
+        if(!stamp(h.done ? "flagDown" : "flagUp", fx0, fy0, fh)){
+          if(h.done){
+            X.fillStyle = "#7fbf6a"; X.fillRect(m.x+18*ms, m.y-44*ms, 6*ms, 18*ms);
+          } else {
+            var pw = Math.max(2, (isNext ? 9 : 7)*ms);          // pole
+            var ph = fh * 0.44;
+            var bw = (isNext ? 42 : 34)*ms, bh = (isNext ? 28 : 23)*ms;
+            var top = fy0 - fh*0.86;
+            X.strokeStyle = "rgba(24,38,54,.9)"; X.lineWidth = Math.max(2, 3*ms);
+            X.fillStyle = "#e8443f";
+            X.fillRect(m.x+18*ms, top, pw, ph + fh*0.14);
+            X.strokeRect(m.x+18*ms, top, pw, ph + fh*0.14);
+            roundRect(X, m.x+18*ms+pw, top, bw, bh, 3*ms); X.fill();
+            roundRect(X, m.x+18*ms+pw, top, bw, bh, 3*ms); X.stroke();
+            X.fillStyle = "rgba(255,255,255,.55)";
+            X.fillRect(m.x+18*ms+pw+bw*0.16, top+bh*0.26, bw*0.5, bh*0.16);
+          }
         }
       }
     }
@@ -979,10 +1028,91 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.textAlign = "center"; X.textBaseline = "middle";
     X.fillText(run.streak + " in a row!", W/2, H*0.13 + 18);
   }
-  var aimed = null;
+  // ======================================================================
+  //  THE GUIDANCE LAYER (card PB-FIX). A four-year-old cannot be told the rules,
+  //  so the game points at what to do: a big bouncing arrow over the next red
+  //  flag, a gold ring round it once a tap would reach it, and a short "Tap to
+  //  throw!" until two papers have landed. It is an OVERLAY and nothing more —
+  //  no timer, no fail state, and the no-fail law is untouched.
+  // ======================================================================
+  function guidance(){
+    if(state !== "playing" || !run || run.done) return null;
+    var h = nextSub(); if(!h) return null;
+    var dz = h.z - run.z;
+    var m = proj(dz, h.side*MAILBOX_X);
+    var inRange = (h === bestTarget());
+    var t = (typeof performance !== "undefined" && performance.now) ? performance.now()/1000 : 0;
+    // the arrow never shrinks into the distance the way the street does: a far target
+    // still gets an arrow a small thumb can see
+    var as = Math.max(0.55, Math.min(1.05, m.s * 1.9));
+    var bob = Math.sin(t*4.6) * 9 * as;
+    var ax = Math.max(30, Math.min(W - 30, m.x));
+    // it floats clear ABOVE the raised flag, never on top of it: the flag is the
+    // thing a kid is meant to look at, the arrow only says which one
+    var ay = m.y - 150*m.s - 62*as - bob;
+    if(ay < 34*as + 8) ay = 34*as + 8;                  // never off the top of the phone
+    return {
+      house: h.i, side: h.side, dz: dz,
+      arrow: { x: ax, y: ay, size: 32*as },
+      ring: inRange ? { x: m.x, y: m.y - 30*m.s, r: Math.max(18, 44*m.s) } : null,
+      inRange: inRange,
+      nudge: (PREFS.throws < NUDGE_THROWS)
+    };
+  }
+  function drawArrow(a){
+    var w = a.size, hgt = a.size*1.15;
+    X.save(); X.translate(a.x, a.y);
+    // a dark edge under the yellow so it reads over a pale house or a bright sky
+    X.lineJoin = "round"; X.lineCap = "round";
+    X.beginPath();
+    X.moveTo(0, hgt);                     // the point, aimed down at the mailbox
+    X.lineTo(w, 0); X.lineTo(w*0.42, 0);
+    X.lineTo(w*0.42, -hgt*0.85); X.lineTo(-w*0.42, -hgt*0.85);
+    X.lineTo(-w*0.42, 0); X.lineTo(-w, 0);
+    X.closePath();
+    X.strokeStyle = "rgba(24,38,54,.85)"; X.lineWidth = Math.max(3, w*0.22); X.stroke();
+    X.fillStyle = GUIDE_GOLD; X.fill();
+    X.fillStyle = "rgba(255,255,255,.45)";
+    X.fillRect(-w*0.20, -hgt*0.72, w*0.16, hgt*0.62);
+    X.restore();
+  }
+  function drawGuidance(){
+    if(TILESHOT) return;
+    var g = guidance(); if(!g) return;
+    // the gold ring: "a tap right now lands it"
+    if(g.ring){
+      var pulse = 0.62 + 0.38*Math.sin(((typeof performance !== "undefined" && performance.now) ? performance.now() : 0)/150);
+      X.save();
+      X.strokeStyle = GUIDE_GOLD; X.globalAlpha = 0.9*pulse;
+      X.lineWidth = Math.max(3, g.ring.r*0.16);
+      X.beginPath(); X.arc(g.ring.x, g.ring.y, g.ring.r, 0, 6.28); X.stroke();
+      X.globalAlpha = 0.30*pulse;
+      X.lineWidth = Math.max(6, g.ring.r*0.34);
+      X.beginPath(); X.arc(g.ring.x, g.ring.y, g.ring.r*1.22, 0, 6.28); X.stroke();
+      X.restore();
+    }
+    drawArrow(g.arrow);
+    // the nudge: shown until two papers have landed, then gone for good. Not in the
+    // attract loop, where nobody is tapping.
+    if(g.nudge && !DEMO){
+      var bob2 = Math.sin(((typeof performance !== "undefined" && performance.now) ? performance.now() : 0)/260) * 3;
+      var ty = H*0.735 + bob2;
+      X.save();
+      X.font = "800 17px 'Baloo 2','Nunito',sans-serif";
+      X.textAlign = "center"; X.textBaseline = "middle";
+      var tw = X.measureText("Tap to throw!").width + 34;
+      X.fillStyle = "rgba(255,210,63,.95)"; roundRect(X, W/2 - tw/2, ty - 17, tw, 34, 17); X.fill();
+      X.strokeStyle = "rgba(24,38,54,.35)"; X.lineWidth = 2; roundRect(X, W/2 - tw/2, ty - 17, tw, 34, 17); X.stroke();
+      X.fillStyle = "#2b1e00"; X.fillText("Tap to throw!", W/2, ty + 1);
+      X.restore();
+    }
+  }
+
+  var guideHouse = null;
   function render(){
     if(!X) return;
-    aimed = (state === "playing" && run && !run.done) ? bestTarget() : null;
+    // the flag the arrow is over is drawn bigger, so drawMailbox needs to know it
+    guideHouse = (state === "playing" && run && !run.done) ? nextSub() : null;
     var sh = (fx && fx.shake) ? fx.shake : 0;
     X.save();
     if(TILESHOT){ X.translate(W*0.40, H*0.80); X.rotate(0.042); X.scale(1.20, 1.20); X.translate(-W*0.40, -H*0.80); }
@@ -1003,6 +1133,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       for(var i=0;i<items.length;i++){ if(items[i].z - run.z > -60 && items[i].z - run.z < 1900) items[i].f(items[i].o); }
       run.flying.forEach(drawFlying);
       drawRider();
+      drawGuidance();          // always on top: a house must never hide the arrow
       if(!TILESHOT){ drawStreak(); drawBanner(); }
       else drawShotWash();
     }
@@ -1180,6 +1311,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     steer: function(x){ if(run) run.targetX = Math.max(-LANE, Math.min(LANE, x)); },
     throwPaper: throwPaper,
     paused: function(){ return bkPaused; },
+    // the guidance layer, as data: the SAME call the renderer draws from, so a
+    // robot can prove the arrow and the ring really point at the next red flag
+    guide: guidance,
+    _nudgeThrows: function(){ return { need:NUDGE_THROWS, done:PREFS.throws }; },
+    _resetNudge: function(){ PREFS.throws = 0; savePrefs(); },
     dbg: function(){
       if(!run) return null;
       return { z:run.z, x:run.x, len:run.len, papers:run.papers, delivered:run.delivered,

@@ -6,6 +6,47 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## PB-FIX — Paper Route: a bar that fits the phone, and a game that points (September 7 2026)
+
+Mike played the shipped game on his phone and hit two things that made it unclear. Both
+are fixed, and neither touched the look.
+
+**The top bar overflowed the phone.** The four chips (Maple Street, Papers, Delivered,
+Coins) did not fit 390px once the app shell had taken a column off each end for Home and
+Sound, so the coin count was cut off the right edge and the street name was clipped on the
+left. This is the shared `buildable-hud.js`, so the fix is shared too: the numbers group
+now never shrinks and never clips, it wins the space fight and stays right-aligned so the
+last chip is always whole, and the title is the thing that gets trimmed instead. There is
+a new small-phone tier below 430px, and the shared HUD learned an icon-plus-number chip
+(drawn geometry, no emoji), so on a phone Paper Route shows a paper icon and 12, a mailbox
+icon and 0/6, and the gold coin and the balance. Measured, not guessed: at 320, 390 and
+430 CSS pixels, standalone and inside the shell's iframe, everything sits on one row and
+the whole coin count is on screen.
+
+**Nothing told a four-year-old what to do.** The game now points. A big bouncing yellow
+arrow floats above the next undelivered subscriber mailbox, clear of the flag rather than
+over it, and retargets as each paper lands. A pulsing gold ring wraps that mailbox once it
+is inside throw range, so the tap timing teaches itself. A short "Tap to throw!" sits above
+the rider until two papers have landed, then never appears again on that device. And the
+red flags, which read small and far, are drawn deliberately out of scale: the target flag
+is biggest, every raised flag gets a dark edge and a pale halo, so it never disappears into
+the house behind it. These are overlays only. No timers, no fail states, the no-fail law
+is untouched.
+
+**QA.** `qa-paper-route.mjs` now rides the whole street frame by frame and proves the arrow
+exists on every frame a red flag is still owed, never points behind the rider, never leaves
+the screen, and that the gold ring appears exactly when a tap would reach the box. It also
+proves the nudge retires at the second landed paper and stays retired. The bar itself needs
+real CSS layout at a real phone width, so it gets its own browser harness,
+`qa-paper-route-hud.mjs`, modelled on `qa-skyflyer-hud.mjs`: it serves `public/` itself,
+opens the engine in Chromium at 320/390/430 both standalone and in an iframe, and measures
+every chip against the canvas. It is kept separate on purpose, because a harness containing
+the word "playwright" is skipped by `qa-all.mjs` unless `--with-browser` is passed, and
+folding it into `qa-paper-route.mjs` would have dropped the whole game out of the default
+gate.
+
+The `soon: true` gate on the tile is untouched.
+
 ## PB3 — Paper Route: real art on the street (September 7 2026)
 `public/paper-route/art/` (16 new files), `public/paper-route-engine.html`,
 `public/paper-route/manifest.json`, `public/buildable-manifest.js`,
