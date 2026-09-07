@@ -362,14 +362,14 @@ const SOUNDS = {
   // game ever plays a beep. Any game can use them by their bare event name.
   // ---- Hop Heroes (public/play.html) — warm, low and rounded on purpose ----
   hop_jump:   "Very short soft airy cloth whoosh of a small child hopping upward, gentle breathy lift with no tone, warm and quiet, single hit, absolutely no metallic ring, no beep, no music, no voices",
-  hop_land:   "Very short soft cushioned landing on grass, a gentle low muffled thud with a tiny scuff, warm and rounded, single hit, no metallic ring, no music, no voices",
+  hop_land:   "Very short deep soft muffled thump of small shoes landing on soft earth, low and rounded like a padded footfall, warm and quiet, absolutely no scrape, no gravel, no hiss, no metallic ring, single hit, no music, no voices",
   hop_coin:   "Very short warm rounded wooden marimba note, one soft mellow bloop like a small mallet on a wooden bar, gentle and quiet, single hit, absolutely no metallic ring, no bright bling, no arcade beep, no music, no voices",
   hop_coinrun:"Short warm rising run of three soft wooden marimba notes, mellow and rounded, gentle, no metallic ring, no bright bling, no music, no voices",
   hop_star:   "Short warm gentle glass chime bloom, one soft rounded shimmer opening up, mellow and calm, not piercing, not hissy, single hit, no music, no voices",
   hop_power:  "Short warm rising glow, a soft rounded swell like a gentle bell pad lifting up, mellow and calm, not piercing, single hit, no music, no voices",
   hop_bounce: "Short soft rubbery low boing, a gentle springy cartoon bounce with a rounded low body, warm and quiet, single hit, no metallic ring, no music, no voices",
   hop_bonk:   "Very short soft hollow wooden knock, one gentle rounded tap on a wooden box, warm and dry, single hit, no metallic ring, no music, no voices",
-  hop_stomp:  "Very short soft squishy cartoon squash, a gentle rounded plop landing on something soft, warm and friendly not gross, single hit, no music, no voices",
+  hop_stomp:  "Very short low rounded muffled boof of landing on a soft cushion, deep and warm and gentle, absolutely no splash, no splat, no hiss, no high frequencies, single hit, no music, no voices",
   hop_hurt:   "Short soft low cartoon stumble, a gentle downward wooden bump, sympathetic and mild, never harsh or shrill, single hit, no music, no voices",
   hop_flag:   "Short warm gentle fanfare on soft rounded horns and a low bell, cosy and encouraging, calm not blaring, no metallic edge, no music bed, no voices",
   hop_win:    "Warm gentle celebration on soft marimba and a low rounded bell, cosy and happy, calm and unhurried, never shrill or piercing, no voices",

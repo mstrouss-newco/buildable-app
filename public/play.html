@@ -217,17 +217,14 @@ try{ if(window.BuildableAudio) window.BuildableAudio.configure({ sfxBase:"/api/s
 // synth (a bare 190Hz sine) because nothing in the shared palette fitted it.
 const PALETTE={ jump:"select", coin:"coin", star:"levelup", power:"powerup", bounce:"shoot",
                 hurt:"hurt", win:"win", land:"pop", bonk:"pop", stomp:"hit", coinrun:"collect" };
-// Per-event gain. A sound that fires 290 times a level cannot sit at the same level as
-// one that fires once, however nice it is on its own — that is most of what "abrasive"
-// meant here. Coins and jumps are pushed well down; the flag and the win stay up.
-const VOL={ coin:0.34, jump:0.42, land:0.40, bounce:0.62, bonk:0.5, stomp:0.6,
-            hurt:0.7, star:0.8, power:0.8, win:1, coinrun:0.5 };
+// No per-call gain here on purpose. The loudest sound in the game is the coin, and the
+// coin is played from INSIDE the Feel Kit (coinBurst), which never sees an option object
+// from this file — so a gain passed here would quietly miss the one sound that needed
+// it most. SFX_PEAKS above does the job one layer down, where every path goes through.
 function S(name, opt){
   if(!soundOn) return;
   const pal=PALETTE[name];
-  if(FEEL && pal){
-    try{ const v=VOL[name]; FEEL.sfx(pal, v==null ? opt : Object.assign({ volume:v }, opt||{})); return; }catch(e){}
-  }
+  if(FEEL && pal){ try{ FEEL.sfx(pal, opt); return; }catch(e){} }
   if(SFX[name]) SFX[name]();
 }
 // world x,y -> where it is on screen right now, so a burst lands on the thing it came from
