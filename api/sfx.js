@@ -360,6 +360,19 @@ const SOUNDS = {
   // ---- SHARED CORE one-shots (canonical bare names) — punchy & satisfying, warm
   // not shrill. These replace the tiny synth fallbacks in buildable-audio.js so NO
   // game ever plays a beep. Any game can use them by their bare event name.
+  // ---- Hop Heroes (public/play.html) — warm, low and rounded on purpose ----
+  hop_jump:   "Very short soft airy cloth whoosh of a small child hopping upward, gentle breathy lift with no tone, warm and quiet, single hit, absolutely no metallic ring, no beep, no music, no voices",
+  hop_land:   "Very short soft cushioned landing on grass, a gentle low muffled thud with a tiny scuff, warm and rounded, single hit, no metallic ring, no music, no voices",
+  hop_coin:   "Very short warm rounded wooden marimba note, one soft mellow bloop like a small mallet on a wooden bar, gentle and quiet, single hit, absolutely no metallic ring, no bright bling, no arcade beep, no music, no voices",
+  hop_coinrun:"Short warm rising run of three soft wooden marimba notes, mellow and rounded, gentle, no metallic ring, no bright bling, no music, no voices",
+  hop_star:   "Short warm gentle glass chime bloom, one soft rounded shimmer opening up, mellow and calm, not piercing, not hissy, single hit, no music, no voices",
+  hop_power:  "Short warm rising glow, a soft rounded swell like a gentle bell pad lifting up, mellow and calm, not piercing, single hit, no music, no voices",
+  hop_bounce: "Short soft rubbery low boing, a gentle springy cartoon bounce with a rounded low body, warm and quiet, single hit, no metallic ring, no music, no voices",
+  hop_bonk:   "Very short soft hollow wooden knock, one gentle rounded tap on a wooden box, warm and dry, single hit, no metallic ring, no music, no voices",
+  hop_stomp:  "Very short soft squishy cartoon squash, a gentle rounded plop landing on something soft, warm and friendly not gross, single hit, no music, no voices",
+  hop_hurt:   "Short soft low cartoon stumble, a gentle downward wooden bump, sympathetic and mild, never harsh or shrill, single hit, no music, no voices",
+  hop_flag:   "Short warm gentle fanfare on soft rounded horns and a low bell, cosy and encouraging, calm not blaring, no metallic edge, no music bed, no voices",
+  hop_win:    "Warm gentle celebration on soft marimba and a low rounded bell, cosy and happy, calm and unhurried, never shrill or piercing, no voices",
   select:    "A single short soft wooden click, like a smooth marble tapping a wooden block one time, dry and clean, no reverb, no music, no voices",
   win:       "A short cheerful triumphant fanfare on warm brass and glockenspiel, three quick rising notes ending on a bright happy chord, celebratory, no voices",
   lose:      "A short funny cartoon fail sound, a comic descending slide-whistle sliding down to a soft tuba blat, playful and goofy, no voices",
@@ -441,6 +454,8 @@ const DURATIONS = {
   mm_guitar_electric:1.1, mm_guitar_acoustic:1.1, mm_guitar_twangy:1.1, mm_guitar_bass:1.1,
   mm_strings_violin:1.2, mm_strings_cello:1.2, mm_strings_harp:1.2, mm_strings_orchestra:1.3,
   mm_sing_boy:1.2, mm_sing_girl:1.2, mm_sing_group:1.3, mm_sing_both:1.3, mm_sing_robot:1.2,
+  hop_jump:0.5, hop_land:0.5, hop_coin:0.5, hop_coinrun:0.7, hop_star:0.8, hop_power:0.8,
+  hop_bounce:0.5, hop_bonk:0.5, hop_stomp:0.5, hop_hurt:0.6, hop_flag:1.4, hop_win:1.8,
   practice_right:0.5, practice_oops:0.5, practice_new:0.7, practice_bird:0.6, practice_flock:1.8,
   practice_place:0.6, practice_go:0.5, practice_time:0.8, practice_best:1.4,
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,

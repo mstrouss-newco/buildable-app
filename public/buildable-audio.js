@@ -163,7 +163,8 @@
       // when they don't (tier still owns the coin-combo scale below).
       const rate = (opt && typeof opt.rate === "number" && opt.rate > 0) ? opt.rate
                    : (name === "coin" ? (tier>=3?1.16:tier>=2?1.08:1.0) : 1.0);
-      playBuf(b, rate, VOL[name]||1, CUTOFF[name]);
+      const vol = (opt && typeof opt.volume === "number") ? opt.volume : (VOL[name]||1);
+      playBuf(b, rate, vol, CUTOFF[name]);
     }
     else { synth(name, opt); if (key) load(key); }   // real sound not ready -> synth now, fetch for next time
   };
