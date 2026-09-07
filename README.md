@@ -6,6 +6,33 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## PB3 — Paper Route: real art on the street (September 7 2026)
+`public/paper-route/art/` (16 new files), `public/paper-route-engine.html`,
+`public/paper-route/manifest.json`, `public/buildable-manifest.js`,
+`db/seed-paper-route-art.sql`, `qa-paper-route.mjs`. Phase **PB**, card **PB3**.
+
+Every visible piece of the street became a **slot** pointing at an asset id, resolved to a
+URL at load time and fetched then, with its old drawn geometry kept underneath. Whole-game
+art comes from the manifest's `art` block and a street may override any slot in its own
+`parts.art`, so re-skinning a street is a manifest edit. Sixteen hand-drawn vectors: two
+houses, a tree, a bush, the mailbox with its flag up and down as separate pieces (the flag
+is what a kid aims at), the rider from behind, the bin, the cone, the car, the ice cream
+van, a rolled paper, a bundle, the badge and a loading screen. The lawns were the emptiest
+thing on screen, so a tree or a bush now grows between each pair of houses, derived from
+the houses themselves, which means a new street gets its gardens for free.
+
+The pieces that can never be a picture, because the perspective generates them every frame,
+are named in `DRAWN_ART` (road, sky, ramps, boost strips, sprinklers) so a missing file is
+never confused with a deliberate drawing.
+
+**Registered in the shared library.** `db/seed-paper-route-art.sql` was written AND applied
+in-session through the Supabase MCP, verified at 16 rows, tagged town/suburb plus beach,
+forest or meadow where they suit it, so any project can reuse a house or a tree.
+
+**A real bug this caught:** once the house art loaded, the mailbox stopped drawing, because
+the picture path returned before reaching it. There is now a check pinned to exactly that.
+141 checks green, `qa-all` green, verified in real Chromium. Ref: SESSION-LOG.md same date.
+
 ## Paper Route: sticking the landing (September 7 2026)
 `public/paper-route-engine.html`, `api/sfx.js`, `qa-paper-route.mjs`. A late edit to the
 **PB1** card asked for a turbo when you stick a ramp landing, so ramps now pay twice: an

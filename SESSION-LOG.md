@@ -1,3 +1,44 @@
+## 2026-09-07 — PB3: real art on the street
+
+**Shipped.** Paper Route was drawn geometry from top to bottom. It now has an art set,
+and it kept every drawing.
+
+**Slots first, art second.** Every visible piece of the street is a slot pointing at an
+asset id, resolved to a URL at load time and fetched then, never a path baked into a draw
+call. That is the cartridge art rule, and it is what makes "give this street different
+houses" a manifest edit and nothing else. Whole-game art comes from the manifest's `art`
+block; a street may override any slot in its own `parts.art`, which is how Sunset Beach
+could get its own houses without a line of code.
+
+**The set.** Sixteen hand-drawn vectors in `public/paper-route/art/`: two houses, a street
+tree, a flowering bush, the mailbox, its flag up and down as separate pieces because the
+flag is the thing a kid aims at, the rider and bike from behind, the bin, the cone, the
+car, the ice cream van, a rolled paper, a tied bundle, the badge and a loading screen. The
+lawns were the emptiest thing on screen, so every street now grows a tree or a bush between
+each pair of houses, worked out from the houses themselves, which means a new street gets
+its gardens for free.
+
+**Everything still falls back.** Each slot draws its picture if it loaded and its old
+geometry if it did not. A missing file, a slow network or an outage just looks like the
+game did yesterday. The pieces that cannot be a picture at all, because they are generated
+from the perspective every frame, are named in `DRAWN_ART` so "no picture" can be told
+apart from "forgotten": the road, the sky, the ramps, the boost strips and the sprinklers.
+
+**The set is in the shared library.** `db/seed-paper-route-art.sql`, written AND applied
+in-session through the Supabase MCP, verified at 16 rows. Every piece is tagged
+town and suburb, and the ones that suit it also beach, forest or meadow, so the next
+project can ask for a house or a tree without knowing Paper Route exists.
+
+**One real bug this caught.** Once the house art loaded, the mailbox stopped drawing
+entirely, because the picture path returned before reaching it. The harness now has a check
+pinned to exactly that, so it cannot come back.
+
+**Checked.** `qa-paper-route.mjs` is 141 checks and green: every slot resolves, every
+resolved file is really on disk, every file the engine loads is in the seed, every piece
+keeps a drawn fallback, and no emoji or untitled file in the set. `node qa-all.mjs` green.
+A real Chromium run on a portrait phone rides Maple Street and Sunset Beach with the art
+in place and no console errors, and the tile frame stages with it.
+
 ## 2026-09-07 — Sticking the landing: the ramp turbo (PB1 card edit)
 
 **Why this exists.** The PB1 card gained a line after PB1 shipped: ramps should give

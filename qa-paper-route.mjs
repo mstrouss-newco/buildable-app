@@ -271,6 +271,51 @@ ok('riding up a ramp puts the rider in the air', airSeen);
 ok('landing clean really does hand out the turbo', !!turboSeen && turboSeen.turbos === 1, JSON.stringify(turboSeen && { turbos: turboSeen.turbos, boost: +turboSeen.boost.toFixed(2) }));
 ok('the turbo is a real speed boost, not a badge', !!turboSeen && turboSeen.boost > 1.3, `boost ${turboSeen && turboSeen.boost.toFixed(2)}s`);
 
+// --- 5b3) PB3: real art on the street, with the drawings underneath --------------
+console.log('\n--- ART: every visible piece is a slot, and every slot has a drawn fallback ---');
+const artMap = G._art();
+const slots = Object.keys(artMap);
+ok('the engine declares a slot for every visible piece of the street',
+  ['houseA', 'houseB', 'tree', 'bush', 'mailbox', 'flagUp', 'flagDown', 'rider', 'bin', 'cone', 'car', 'icecream', 'paper', 'bundle'].every((k) => slots.includes(k)),
+  slots.join(','));
+ok('every slot resolves to a URL', slots.every((k) => typeof artMap[k] === 'string' && artMap[k].length > 1), Object.entries(artMap).filter(([, v]) => !v).map(([k]) => k).join(',') || 'all resolve');
+ok('every resolved file is really on disk',
+  slots.every((k) => !artMap[k].startsWith('/') || fs.existsSync(dir + '/public' + artMap[k])),
+  slots.filter((k) => artMap[k].startsWith('/') && !fs.existsSync(dir + '/public' + artMap[k])).join(',') || 'all present');
+ok('the manifest names the art, so swapping the look is a manifest edit',
+  !!manifest.art && !!manifest.art.badge && manifest.levels.every((l) => l.parts.art && l.parts.art.houseA),
+  Object.keys(manifest.art).join(','));
+ok('a street can name its OWN art, not just the game', /applyArtSlots\(street\.art\)/.test(code));
+ok('the manifest gets the last word over the engine\'s defaults', /applyArtSlots\(cfg && cfg._manifest && cfg._manifest\.art\)/.test(code));
+ok('art is fetched at LOAD time, never baked into a draw call',
+  /function loadAllArt\(\)/.test(code) && /im\.src = url;/.test(code)
+  && !/drawImage\([^)]*["']\//.test(code));
+ok('a slot that fails to load keeps its drawn fallback', /im\.onerror = function\(\)\{\};/.test(code) && /if\(!stamp\(/.test(code));
+ok('every drawn piece still has its geometry underneath',
+  ['drawHouse', 'drawMailbox', 'drawObstacle', 'drawBundle', 'drawAlive', 'drawRider'].every((f) => new RegExp(`function ${f}\\(`).test(code)));
+ok('the pieces that CANNOT be a picture are declared, not forgotten',
+  G._drawnArt().length >= 3 && G._drawnArt().every((id) => /^paper-route\//.test(id)), G._drawnArt().join(','));
+ok('the mailbox still draws when the house art loads (a real bug this caught)',
+  /stamp\(\(h\.i % 2\) \? "houseB" : "houseA"[\s\S]{0,200}drawMailbox\(h, dz\);/.test(code));
+ok('the lawns get a tree or a bush from the houses themselves, for free',
+  /r\.garden\.push/.test(code) && /function drawGarden/.test(code));
+ok('the garden is scenery only, never something a kid can hit',
+  !/garden[\s\S]{0,200}bump\(/.test(code));
+const svgs = fs.readdirSync(dir + '/public/paper-route/art').filter((f) => f.endsWith('.svg'));
+ok('the art set is on disk as vectors', svgs.length >= 14, `${svgs.length} files`);
+ok('no emoji in any art file', svgs.every((f) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(fs.readFileSync(dir + '/public/paper-route/art/' + f, 'utf8'))));
+ok('every art file names itself, so the library can describe it',
+  svgs.every((f) => /<title>/.test(fs.readFileSync(dir + '/public/paper-route/art/' + f, 'utf8'))));
+const seed = fs.existsSync(dir + '/db/seed-paper-route-art.sql') ? fs.readFileSync(dir + '/db/seed-paper-route-art.sql', 'utf8') : '';
+ok('the set is registered in the SHARED library as an idempotent seed file',
+  /insert into community_sprites/.test(seed) && /on conflict do nothing/.test(seed));
+// every file the engine actually loads must be registered in the shared library
+const loadedFiles = [...new Set(slots.map((k) => artMap[k].split('/').pop()))];
+ok('every art file the engine loads is registered in the shared library',
+  loadedFiles.every((f) => seed.includes(f)),
+  loadedFiles.filter((f) => !seed.includes(f)).join(',') || `all ${loadedFiles.length} registered`);
+ok('the seed says it was actually applied, not just written', /APPLIED IN-SESSION/.test(seed));
+
 // --- 5c) PB2: photo mode for the picker tile (the TS rig's game half) -------------
 console.log('\n--- TILE SHOT: the engine stages its own real frame ---');
 ok('the engine answers ?tileshot=1', /tileshot["\']\)\s*===\s*["\']1["\']/.test(engine) || /_q\.get\("tileshot"\) === "1"/.test(engine));

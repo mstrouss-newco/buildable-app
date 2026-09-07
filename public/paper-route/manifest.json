@@ -32,7 +32,14 @@
   },
   "art": {
     "badge": "paper-route/badge/v1",
-    "loadingScreen": "paper-route/loading/v1"
+    "loadingScreen": "paper-route/loading/v1",
+    "hero": "paper-route/rider/classic-v1",
+    "rider": "paper-route/rider/classic-v1",
+    "paper": "paper-route/paper/rolled-v1",
+    "bundle": "paper-route/bundle/tied-v1",
+    "mailbox": "paper-route/mailbox/white-v1",
+    "flagUp": "paper-route/flag/up-v1",
+    "flagDown": "paper-route/flag/down-v1"
   },
   "levels": [
     {
@@ -265,7 +272,17 @@
             "badge": "Best Bike Taxi",
             "tip": "Ride close to the left kerb to pick them up, then close to the right kerb at the bus stop."
           }
-        ]
+        ],
+        "art": {
+          "houseA": "paper-route/house/cream-v1",
+          "houseB": "paper-route/house/blue-v1",
+          "tree": "paper-route/tree/leafy-v1",
+          "bush": "paper-route/bush/flowering-v1",
+          "bin": "paper-route/obstacle/bin-v1",
+          "cone": "paper-route/obstacle/cone-v1",
+          "car": "paper-route/vehicle/car-v1",
+          "icecream": "paper-route/vehicle/icecream-v1"
+        }
       }
     },
     {
@@ -515,7 +532,17 @@
             "badge": "Pier Pilot",
             "tip": "Hug the right kerb to pick them up, then the left kerb at the pier."
           }
-        ]
+        ],
+        "art": {
+          "houseA": "paper-route/house/cream-v1",
+          "houseB": "paper-route/house/blue-v1",
+          "tree": "paper-route/tree/leafy-v1",
+          "bush": "paper-route/bush/flowering-v1",
+          "bin": "paper-route/obstacle/bin-v1",
+          "cone": "paper-route/obstacle/cone-v1",
+          "car": "paper-route/vehicle/car-v1",
+          "icecream": "paper-route/vehicle/icecream-v1"
+        }
       }
     }
   ]

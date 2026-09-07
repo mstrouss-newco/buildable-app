@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 190" width="200" height="190">
+  <title>Ice cream van with a cone on the roof</title>
+  <g>
+    <ellipse cx="100" cy="182" rx="76" ry="8" fill="#000000" opacity="0.16"/>
+    <path d="M100 16 L118 62 h-36 z" fill="#e0b47a"/>
+    <path d="M100 16 L109 40 h-18 z" fill="#efc994"/>
+    <circle cx="100" cy="20" r="18" fill="#ffd7e4"/>
+    <circle cx="88" cy="24" r="11" fill="#ffe8ef"/>
+    <circle cx="112" cy="24" r="11" fill="#ffc2d6"/>
+    <rect x="22" y="62" width="156" height="106" rx="12" fill="#f6f9fb"/>
+    <rect x="22" y="62" width="156" height="106" rx="12" fill="none" stroke="#d3dde5" stroke-width="3"/>
+    <rect x="22" y="96" width="156" height="18" fill="#3FA9F5"/>
+    <rect x="22" y="114" width="156" height="8" fill="#ffd23f"/>
+    <rect x="46" y="130" width="108" height="30" rx="6" fill="#cfd9e2"/>
+    <rect x="52" y="136" width="96" height="18" rx="4" fill="#eaf1f6"/>
+    <circle cx="54" cy="168" r="16" fill="#2b3440"/>
+    <circle cx="146" cy="168" r="16" fill="#2b3440"/>
+    <circle cx="54" cy="168" r="6" fill="#7b8794"/>
+    <circle cx="146" cy="168" r="6" fill="#7b8794"/>
+  </g>
+</svg>

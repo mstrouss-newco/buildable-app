@@ -752,6 +752,7 @@
         bundles: streetProps(parts.bundles),
         alive: streetProps(parts.alive),
         gigs: gigList(parts.gigs),
+        art: (parts.art && typeof parts.art === "object") ? parts.art : null,
         coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]),
         unlocked: !!lv.unlocked,
         parts: parts

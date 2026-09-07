@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">
+  <title>Garden bush with small flowers</title>
+  <g>
+    <ellipse cx="60" cy="74" rx="34" ry="6" fill="#000000" opacity="0.12"/>
+    <circle cx="34" cy="52" r="22" fill="#4e9c52"/>
+    <circle cx="86" cy="52" r="22" fill="#469046"/>
+    <circle cx="60" cy="42" r="26" fill="#57a95a"/>
+    <circle cx="46" cy="38" r="4" fill="#ffd7e4"/>
+    <circle cx="72" cy="46" r="4" fill="#fff1a8"/>
+    <circle cx="60" cy="58" r="4" fill="#ffd7e4"/>
+  </g>
+</svg>

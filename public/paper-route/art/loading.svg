@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <title>Paper Route loading screen</title>
+  <defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8fd0f7"/><stop offset="1" stop-color="#dff0fb"/></linearGradient></defs>
+  <g>
+    <rect width="400" height="300" fill="url(#s)"/>
+    <path d="M0 132 q60 -22 120 -6 q70 18 140 -8 q80 -28 140 4 v22 h-400 z" fill="#8fc48e"/>
+    <rect y="150" width="400" height="150" fill="#79c265"/>
+    <path d="M160 150 L182 300 h36 L240 150 z" fill="#5b6673"/>
+    <rect x="196" y="176" width="8" height="18" fill="#ffffff"/>
+    <rect x="196" y="212" width="8" height="20" fill="#ffffff"/>
+    <rect x="196" y="252" width="8" height="22" fill="#ffffff"/>
+    <g transform="translate(72 176)">
+      <rect x="0" y="24" width="52" height="34" rx="3" fill="#f4e6cf"/>
+      <path d="M-6 26 L26 6 L58 26 Z" fill="#c25a45"/>
+    </g>
+    <g transform="translate(276 168)">
+      <rect x="0" y="26" width="56" height="38" rx="3" fill="#fdf1e0"/>
+      <path d="M-6 28 L28 6 L62 28 Z" fill="#7f9ec0"/>
+    </g>
+    <g transform="translate(146 208)">
+      <circle cx="28" cy="60" r="20" fill="#2b3440"/>
+      <rect x="20" y="24" width="16" height="26" rx="6" fill="#3FA9F5"/>
+      <rect x="12" y="0" width="32" height="30" rx="10" fill="#e8553f"/>
+      <circle cx="28" cy="-6" r="13" fill="#3c4a5a"/>
+    </g>
+    <rect x="248" y="222" width="28" height="16" rx="6" fill="#fbf7ec" transform="rotate(-16 262 230)"/>
+  </g>
+</svg>

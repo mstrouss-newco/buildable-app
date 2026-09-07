@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <title>Orange traffic cone</title>
+  <g>
+    <ellipse cx="60" cy="110" rx="34" ry="6" fill="#000000" opacity="0.14"/>
+    <rect x="22" y="98" width="76" height="14" rx="6" fill="#e06a22"/>
+    <path d="M60 10 L86 100 h-52 z" fill="#f07a2e"/>
+    <path d="M60 10 L70 46 h-20 z" fill="#ff8f47"/>
+    <rect x="41" y="52" width="38" height="14" rx="3" fill="#ffffff"/>
+    <rect x="35" y="74" width="50" height="12" rx="3" fill="#ffffff"/>
+  </g>
+</svg>

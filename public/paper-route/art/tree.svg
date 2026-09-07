@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 170" width="120" height="170">
+  <title>Round leafy street tree</title>
+  <g>
+    <rect x="52" y="96" width="16" height="66" rx="6" fill="#8a6144"/>
+    <path d="M60 132 L42 112" stroke="#8a6144" stroke-width="9" stroke-linecap="round"/>
+    <path d="M60 124 L79 104" stroke="#8a6144" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="60" cy="70" r="46" fill="#4e9c52"/>
+    <circle cx="34" cy="86" r="30" fill="#57a95a"/>
+    <circle cx="86" cy="86" r="30" fill="#469046"/>
+    <circle cx="60" cy="46" r="30" fill="#61b862"/>
+    <circle cx="46" cy="58" r="10" fill="#7ccb75" opacity="0.7"/>
+    <ellipse cx="60" cy="160" rx="30" ry="7" fill="#000000" opacity="0.12"/>
+  </g>
+</svg>

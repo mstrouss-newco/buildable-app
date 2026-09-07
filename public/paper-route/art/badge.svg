@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <title>Paper Route badge</title>
+  <g>
+    <circle cx="100" cy="100" r="94" fill="#3FA9F5"/>
+    <circle cx="100" cy="100" r="80" fill="#8fd0f7"/>
+    <path d="M20 148 h160 v52 h-160 z" fill="#79c265"/>
+    <path d="M64 148 L86 100 h28 l22 48 z" fill="#5b6673"/>
+    <rect x="96" y="112" width="8" height="12" fill="#ffffff"/>
+    <rect x="96" y="132" width="8" height="14" fill="#ffffff"/>
+    <circle cx="100" cy="120" r="22" fill="#e8553f"/>
+    <circle cx="100" cy="96" r="13" fill="#3c4a5a"/>
+    <rect x="60" y="76" width="26" height="18" rx="8" fill="#fbf7ec" transform="rotate(-18 73 85)"/>
+    <rect x="132" y="70" width="10" height="34" rx="4" fill="#b9333a"/>
+    <path d="M142 72 h30 v20 h-30 z" fill="#e8443f"/>
+  </g>
+</svg>

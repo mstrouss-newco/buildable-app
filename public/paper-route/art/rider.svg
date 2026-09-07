@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 230" width="180" height="230">
+  <title>The paper rider on the bike, seen from behind</title>
+  <g>
+    <ellipse cx="90" cy="222" rx="42" ry="8" fill="#000000" opacity="0.16"/>
+    <circle cx="90" cy="186" r="40" fill="#2b3440"/>
+    <circle cx="90" cy="186" r="27" fill="#46525f"/>
+    <circle cx="90" cy="186" r="8" fill="#8d99a5"/>
+    <rect x="78" y="118" width="24" height="60" rx="10" fill="#3FA9F5"/>
+    <rect x="46" y="128" width="30" height="36" rx="8" fill="#e9c46a"/>
+    <rect x="46" y="128" width="30" height="10" rx="5" fill="#d9ad4e"/>
+    <rect x="50" y="120" width="22" height="10" rx="3" fill="#fbf7ec"/>
+    <rect x="54" y="115" width="22" height="10" rx="3" fill="#f2ecdc"/>
+    <rect x="60" y="46" width="60" height="66" rx="20" fill="#e8553f"/>
+    <path d="M60 78 h60 v6 h-60 z" fill="#d24a36"/>
+    <rect x="30" y="64" width="38" height="14" rx="7" fill="#f6cba6"/>
+    <rect x="112" y="64" width="38" height="14" rx="7" fill="#f6cba6"/>
+    <rect x="20" y="58" width="20" height="12" rx="5" fill="#39434f"/>
+    <rect x="140" y="58" width="20" height="12" rx="5" fill="#39434f"/>
+    <circle cx="90" cy="34" r="28" fill="#3c4a5a"/>
+    <path d="M62 34 a28 28 0 0 1 56 0 z" fill="#586b80"/>
+    <rect x="62" y="30" width="56" height="7" rx="3" fill="#2f3a46"/>
+  </g>
+</svg>
