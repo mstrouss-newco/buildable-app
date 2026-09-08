@@ -284,6 +284,14 @@
   #orderCard .slot .mark{position:absolute;right:-4px;bottom:-4px;width:26px;height:26px;
     opacity:0;transform:scale(.5);transition:opacity .16s,transform .16s}
   #orderCard .slot.full .mark{opacity:1;transform:scale(1)}
+  /* FM8 — THE ONE THIS CUSTOMER LOVES. A heart on the slot, and that is the
+     whole lesson: bring the bear his honey and he pays more for it. */
+  #orderCard .slot .heart{position:absolute;left:-6px;bottom:-6px;width:24px;height:24px;
+    display:none}
+  #orderCard .slot.fav .heart{display:block}
+  #orderCard .cap .face.love{animation:loveBounce .6s ease}
+  @keyframes loveBounce{0%,100%{transform:scale(1)}30%{transform:scale(1.35) rotate(-6deg)}
+    65%{transform:scale(1.12) rotate(4deg)}}
   #orderCard .slot.nope{animation:nope .34s ease}
   @keyframes nope{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}
     60%{transform:translateX(5px)}}
@@ -394,6 +402,81 @@
   #decorCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
     border:none;background:transparent;cursor:pointer}
 
+  /* FM9 — WHO IS THIS? The same card the farm already uses everywhere, with
+     two pictures in it and no way to get it wrong. There is no close button on
+     purpose: both answers are right, and one of them has to be picked. */
+  #lookCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+    background:#fffef7;border-radius:26px;padding:14px 14px 18px;
+    box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
+    width:min(320px,90vw);max-width:320px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:11;text-align:center}
+  #lookCard.up{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+  #lookCard .title{font-weight:900;font-size:17px;color:#5b4a1f;padding:2px 0 10px}
+  #lookCard .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #lookCard .look{background:#f6efd6;border:2px solid #e7d9a4;border-radius:18px;
+    padding:8px 4px;cursor:pointer;transition:transform .08s,background .15s;
+    -webkit-tap-highlight-color:transparent}
+  #lookCard .look:active{transform:translateY(2px)}
+  #lookCard .look.on{background:#eaf7e4;border-color:#8ed08a}
+  #lookCard .look svg{width:100%;height:96px;display:block}
+
+  /* FM8 — THE STICKER BOOK. Same card shape as everything else. A stamp per
+     thing she has ever held, ever kept and ever been helped by; the ones she
+     has not got yet are grey, and this is the ONE place grey belongs, because
+     here grey means "not yet" and there is nothing else it could mean. */
+  #bookBtn{position:absolute;right:14px;
+    top:calc(146px + env(safe-area-inset-top));
+    background:rgba(255,252,240,.92);border:none;border-radius:999px;
+    padding:7px 13px 7px 9px;display:none;align-items:center;gap:6px;
+    box-shadow:0 3px 10px rgba(30,60,90,.18);font-weight:800;font-size:13px;
+    color:#5b4a1f;pointer-events:auto;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #bookBtn.on{display:flex}
+  #bookBtn.fresh{animation:stampPop .5s ease}
+  @keyframes stampPop{0%{transform:scale(1)}40%{transform:scale(1.18) rotate(-3deg)}
+    100%{transform:scale(1)}}
+  .bk-inshell #bookBtn{top:calc(var(--bk-nav-bottom,96px) + 144px)}
+  #bookCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+    background:#fffef7;border-radius:26px;padding:14px 14px 18px;
+    box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
+    width:min(380px,94vw);max-width:380px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:11;text-align:center}
+  #bookCard.up{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+  #bookCard .title{font-weight:900;font-size:17px;color:#5b4a1f;padding:2px 0 10px}
+  #bookCard .pages{max-height:min(58vh,420px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #bookCard .row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:7px;
+    padding:0 2px 8px}
+  #bookCard .stamp{background:#f6efd6;border:2px solid #e7d9a4;border-radius:16px;
+    padding:6px 2px;display:flex;align-items:center;justify-content:center;
+    position:relative}
+  #bookCard .stamp svg{width:44px;height:44px;display:block}
+  #bookCard .stamp.off{background:#f1efe8;border-color:#ddd8cc}
+  #bookCard .stamp.off svg{filter:grayscale(1);opacity:.28}
+  #bookCard .stamp.new{animation:stampPop .5s ease}
+  #bookCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
+    border:none;background:transparent;cursor:pointer}
+  /* the count of stamps, drawn as filled and empty dots — no reading needed */
+  #bookCard .dots{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding:4px 0 0}
+  #bookCard .dots i{width:7px;height:7px;border-radius:50%;background:#dcd4bd;display:block}
+  #bookCard .dots i.on{background:#63C466}
+
+  /* FM8 — SHOW A GROWN-UP. One tap takes a picture of the whole island from
+     above and puts it in My Stuff. The flash is the whole feedback. */
+  #camBtn{position:absolute;right:14px;
+    top:calc(190px + env(safe-area-inset-top));
+    background:rgba(255,252,240,.92);border:none;border-radius:999px;
+    padding:7px 13px 7px 9px;display:none;align-items:center;gap:6px;
+    box-shadow:0 3px 10px rgba(30,60,90,.18);font-weight:800;font-size:13px;
+    color:#5b4a1f;pointer-events:auto;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #camBtn.on{display:flex}
+  .bk-inshell #camBtn{top:calc(var(--bk-nav-bottom,96px) + 188px)}
+  #flash{position:absolute;left:0;top:0;right:0;bottom:0;background:#fff;
+    opacity:0;pointer-events:none;z-index:13;transition:opacity .16s}
+  #flash.on{opacity:.85;transition:none}
+
   /* Joystick — a soft touch pad kids can use, and drag-anywhere on the world
      also works. Kept clear of the top strip (HUD-AND-NAV rules). */
   #stick{position:absolute;left:calc(20px + env(safe-area-inset-left));
@@ -440,7 +523,7 @@
         <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
       </svg>
     </button>
-    <div class="title">Plant a seed</div>
+    <div class="title" id="seedTitle">Plant a seed</div>
     <div class="row" id="seedRow"><!-- three .seed cells injected --></div>
   </div>
 
@@ -488,6 +571,44 @@
     <div class="title">Where shall it go?</div>
     <div class="row" id="decorRow"><!-- five .thing cells injected --></div>
   </div>
+
+  <!-- FM9 — WHO IS THIS? Two pictures, asked once, remembered for good. -->
+  <div id="lookCard" role="dialog" aria-label="Who is this?">
+    <div class="title">Who is this?</div>
+    <div class="row" id="lookRow"><!-- two .look cells injected --></div>
+  </div>
+
+  <!-- FM8 — THE STICKER BOOK, kept on the barn. Walk to the barn and it opens
+       with the shop; this button is the second way in, the same as the shop's. -->
+  <button id="bookBtn" aria-label="Sticker book">
+    <svg width="20" height="20" viewBox="0 0 24 24">
+      <path d="M4 4.6 h6.6 a1.4 1.4 0 0 1 1.4 1.4 V20 a1.4 1.4 0 0 0 -1.4 -1.4 H4 Z"
+            fill="#F6E3B0" stroke="#B08A3C" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M20 4.6 h-6.6 A1.4 1.4 0 0 0 12 6 V20 a1.4 1.4 0 0 1 1.4 -1.4 H20 Z"
+            fill="#FFF7E2" stroke="#B08A3C" stroke-width="1.7" stroke-linejoin="round"/>
+      <circle cx="16.4" cy="11.4" r="2.4" fill="#F2889C" stroke="#B4566A" stroke-width="1.4"/>
+    </svg>Stickers
+  </button>
+  <div id="bookCard" role="dialog" aria-label="Sticker book">
+    <button class="close" id="bookClose" aria-label="Close">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="title">My stickers</div>
+    <div class="pages"><div class="row" id="bookRow"><!-- stamps injected --></div></div>
+    <div class="dots" id="bookDots"></div>
+  </div>
+
+  <!-- FM8 — SHOW A GROWN-UP. -->
+  <button id="camBtn" aria-label="Take a picture of the farm">
+    <svg width="20" height="20" viewBox="0 0 24 24">
+      <path d="M3.4 7.6 h4 l1.6 -2.2 h6 l1.6 2.2 h4 v11 h-17 Z" fill="#F6E3B0"
+            stroke="#B08A3C" stroke-width="1.7" stroke-linejoin="round"/>
+      <circle cx="12" cy="13.2" r="3.6" fill="#7EC8E3" stroke="#3C7C99" stroke-width="1.7"/>
+    </svg>Picture
+  </button>
+  <div id="flash"></div>
 
   <button id="shopBtn" aria-label="Shop">
     <svg width="20" height="20" viewBox="0 0 24 24">
@@ -1626,12 +1747,13 @@ function buildKid(){
     hbTube(0.16,0.14,0.90,PANTS,{p:[0,0.45,0]}),
     hbBox(0.30,0.14,0.44,SHOE,{p:[0,0.07,0.08]})
   ]));
-  legL.position.set(-0.20,0,0); g.add(legL);
+  var drawn=new THREE.Group(); g.add(drawn);
+  legL.position.set(-0.20,0,0); drawn.add(legL);
   var legR=hbMesh(hbBake([
     hbTube(0.16,0.14,0.90,PANTS,{p:[0,0.45,0]}),
     hbBox(0.30,0.14,0.44,SHOE,{p:[0,0.07,0.08]})
   ]));
-  legR.position.set(0.20,0,0); g.add(legR);
+  legR.position.set(0.20,0,0); drawn.add(legR);
   // body: torso + head-and-arms baked together so it's one draw call
   var body=hbMesh(hbBake([
     // torso — a lathe
@@ -1654,11 +1776,14 @@ function buildKid(){
     // a little smile — a slim dark box, curved by rotation, close to real
     hbBox(0.14,0.02,0.02,0x5A3A20,{p:[0,2.02,0.35]})
   ]));
-  g.add(body);
+  drawn.add(body);
   // remember the head-top for stack anchoring
   g.userData.headTopY = 2.50;
   g.userData.legL=legL; g.userData.legR=legR;
   g.userData.body=body;
+  // FM9 — everything drawn in code lives in here, so the real model can hide
+  // the lot in one line and give it straight back if it ever fails to load.
+  g.userData.drawn=drawn;
   return g;
 }
 var kid=buildKid();
@@ -1743,6 +1868,9 @@ function markCollected(kind){
 
 function pushOntoStack(kind, worldPos){
   var it=buildStackItem(kind); if(!it) return;
+  // FM9 — she bends down for a thing she picked up herself. Something the dog
+  // dropped, or a basket emptied from across the yard, is not her reaching.
+  if(worldPos && Math.hypot(worldPos.x-kid.position.x, worldPos.z-kid.position.z) < 3.2) kidPick();
   markCollected(kind);
   // start where the crop is on the ground, so we can animate it bouncing UP.
   it.position.copy(worldPos);
@@ -2646,6 +2774,7 @@ function flyOffStack(kind, A){
     if(stack[i].userData.kind===kind){
       var it=stack.splice(i,1)[0];
       reindexStack();
+      kidPick();
       var K=ANIMAL_KINDS[A.kind];
       FLYING.push({
         obj:it,
@@ -2673,6 +2802,7 @@ function updateFlying(dt, now){
       scene.remove(F.obj);
       FLYING.splice(i,1);
       if(F.slot) onCrateLanded(F);           // FM3: it landed in the crate
+      else if(F.truck) onTruckLanded(F);     // FM8: it went on the truck
       else onFed(F.animal, now);             // FM2: an animal ate it
     }
   }
@@ -3345,8 +3475,49 @@ var CUSTOMERS=[
     '<path d="M20 28.2 v1.6 M20 29.8 q-2.4 1.9 -4 .2 M20 29.8 q2.4 1.9 4 .2" fill="none" '+
       'stroke="#3A2A1E" stroke-width="1.5" stroke-linecap="round"/>'+
     '<circle cx="11.6" cy="27.4" r="2" fill="#F6CBD6"/><circle cx="28.4" cy="27.4" r="2" fill="#F6CBD6"/>'+
+  '</svg>',
+  // FM8 — owl
+  '<svg class="face" viewBox="0 0 40 40" aria-hidden="true">'+
+    '<path d="M8.2 12.6 L6.4 4.6 L13.8 8.2 Z" fill="#8E7BA6"/>'+
+    '<path d="M31.8 12.6 L33.6 4.6 L26.2 8.2 Z" fill="#8E7BA6"/>'+
+    '<ellipse cx="20" cy="22.4" rx="13" ry="13.4" fill="#9C88B4"/>'+
+    '<ellipse cx="20" cy="26.4" rx="8.6" ry="8" fill="#E7DDF0"/>'+
+    '<circle cx="14.4" cy="19.4" r="5.2" fill="#F6F1FA"/><circle cx="25.6" cy="19.4" r="5.2" fill="#F6F1FA"/>'+
+    '<circle cx="14.4" cy="19.4" r="2.4" fill="#3A2A1E"/><circle cx="25.6" cy="19.4" r="2.4" fill="#3A2A1E"/>'+
+    '<path d="M20 22.4 L17.4 26 L22.6 26 Z" fill="#E8A34A"/>'+
+  '</svg>',
+  // FM8 — frog
+  '<svg class="face" viewBox="0 0 40 40" aria-hidden="true">'+
+    '<circle cx="11.4" cy="10.4" r="6.2" fill="#77C15E"/><circle cx="28.6" cy="10.4" r="6.2" fill="#77C15E"/>'+
+    '<circle cx="11.4" cy="10.4" r="3.4" fill="#FFFDF2"/><circle cx="28.6" cy="10.4" r="3.4" fill="#FFFDF2"/>'+
+    '<circle cx="11.4" cy="10.8" r="1.9" fill="#3A2A1E"/><circle cx="28.6" cy="10.8" r="1.9" fill="#3A2A1E"/>'+
+    '<ellipse cx="20" cy="24.2" rx="13.4" ry="11.4" fill="#84CE68"/>'+
+    '<ellipse cx="20" cy="28.4" rx="8.4" ry="5.6" fill="#D8F0C6"/>'+
+    '<path d="M12.6 24.6 q7.4 6.4 14.8 0" fill="none" stroke="#3A6B2A" '+
+      'stroke-width="2" stroke-linecap="round"/>'+
+    '<circle cx="15.4" cy="18.6" r="1.3" fill="#3A6B2A"/><circle cx="24.6" cy="18.6" r="1.3" fill="#3A6B2A"/>'+
+  '</svg>',
+  // FM8 — hedgehog
+  '<svg class="face" viewBox="0 0 40 40" aria-hidden="true">'+
+    '<path d="M20 4 L23.4 10 L27.8 6.2 L28.6 12.4 L34 11 L31.6 16.6 L37 18.4 '+
+      'L32 22 L36 26 L29.4 26.6 L30.4 32 L24.4 30 L22.6 35.6 L18.6 31 L13.6 34.6 '+
+      'L12.8 28.6 L7 29.4 L9 23.8 L3.6 21.6 L8.4 18 L4.6 13.4 L11 12.6 L10.4 6.6 '+
+      'L16 9 Z" fill="#8A6A52"/>'+
+    '<circle cx="20" cy="21.6" r="10.6" fill="#B08E70"/>'+
+    '<ellipse cx="20" cy="26.4" rx="6.4" ry="5.4" fill="#EBD9C4"/>'+
+    '<circle cx="15.8" cy="19.6" r="1.9" fill="#3A2A1E"/><circle cx="24.2" cy="19.6" r="1.9" fill="#3A2A1E"/>'+
+    '<ellipse cx="20" cy="27.4" rx="2.4" ry="1.9" fill="#3A2A1E"/>'+
   '</svg>'
 ];
+// FM8 — A SMALL CAST WHO COME BACK, and each of them loves ONE thing. Nothing
+// on screen says so in words: the slot for it wears a heart, the pay is bigger,
+// and the face bounces when it lands. Six customers, six favourites, in the
+// same order as the faces above.
+var CUSTOMER_FAV=["honey","egg","carrot","bread","melon","strawberry"];
+function favOf(face){ return CUSTOMER_FAV[(face||0)%CUSTOMER_FAV.length]; }
+var HEART_SVG='<svg class="heart" viewBox="0 0 24 24"><path d="M12 21 C5 16.2 3 12.6 3 9.4 '+
+  'A4.6 4.6 0 0 1 12 7.4 A4.6 4.6 0 0 1 21 9.4 C21 12.6 19 16.2 12 21 Z" '+
+  'fill="#F2889C" stroke="#B4566A" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 function paintCustomer(){
   if(!orderFaceEl) return;
   orderFaceEl.innerHTML = CUSTOMERS[(order && order.face!=null ? order.face : 0) % CUSTOMERS.length];
@@ -3383,7 +3554,7 @@ function orderPay(items){
 }
 
 function newOrder(){
-  var pool=orderableKinds().slice(), i, n;
+  var pool=orderableKinds().slice(), pool0=pool.slice(), i, n;
   // gently bigger each time: two items, then three, and never more than six —
   // six silhouettes is the most that still reads at a glance on a phone.
   var size=Math.min(6, 2+ORDERS_DONE);
@@ -3394,7 +3565,18 @@ function newOrder(){
   for(i=distinct;i<size;i++) counts[Math.floor(Math.random()*distinct)]++;
   var items=[];
   for(i=0;i<distinct;i++){ for(n=0;n<counts[i];n++) items.push({kind:kinds[i], filled:false, el:null}); }
-  order={ items:items, pay:orderPay(items), sent:false, face:ORDERS_DONE%CUSTOMERS.length };
+  var face=ORDERS_DONE%CUSTOMERS.length;
+  // FM8 — this customer's favourite, but only if the farm can actually make it
+  // today. A want she cannot fill is the one bug this whole card must not add.
+  var fav=favOf(face), has=false;
+  if(pool0.indexOf(fav)>=0){
+    for(i=0;i<items.length;i++) if(items[i].kind===fav) has=true;
+    if(!has){ items[items.length-1].kind=fav; has=true; }
+  } else fav=null;
+  order={ items:items, pay:orderPay(items), sent:false, face:face,
+          fav:(has?fav:null), loved:false };
+  // the favourite is worth DOUBLE to the one who loves it
+  if(order.fav) order.pay += itemValueOf(order.fav)*ORDER_PAY_MULT;
   renderOrder();
   return order;
 }
@@ -3439,7 +3621,8 @@ function renderOrder(){
     el.dataset.kind=k;
     el.dataset.want=c.total;
     el.innerHTML=(r ? r.svg(58).replace("<svg ","<svg class=\"pic\" ") : "")+
-      '<div class="count">'+c.left+'</div>'+TICK_SVG;
+      '<div class="count">'+c.left+'</div>'+TICK_SVG+HEART_SVG;
+    if(order.fav===k) el.classList.add("fav");
     orderSlotsEl.appendChild(el);
   });
   // every ITEM still exists and still claims itself — the unload, orderNeeds
@@ -3579,6 +3762,15 @@ function onCrateLanded(F){
   sfx("deliver",{rate:Math.min(1.55, 1 + F.note*0.055)});
   haptic("light");
   crateBob=0.16;
+  // FM8 — the favourite landing is the biggest thing that happens to a
+  // customer: hearts over the crate, and the face itself jumps.
+  if(order && order.fav===slot.kind && !order.loved){
+    order.loved=true;
+    heartPuff(CRATE.x, 1.9, CRATE.z);
+    sfx("sparkle"); haptic("success");
+    var fc=orderFaceEl?orderFaceEl.querySelector(".face"):null;
+    if(fc){ fc.classList.remove("love"); void fc.offsetWidth; fc.classList.add("love"); }
+  }
   if(orderFull() && !order.sent){
     order.sent=true;
     orderCardEl.classList.add("done");
@@ -3934,6 +4126,14 @@ function snapshotFarm(){
     decor:DECOR.map(function(D){ return {k:D.kind, x:+D.x.toFixed(2),
       z:+D.z.toFixed(2), y:+D.yaw.toFixed(3)}; }),
     ordersDone:ORDERS_DONE,
+    // FM8 — the stamps she has already been shown, the sizes of farm already
+    // photographed, and whether a truck has ever come. All three are about not
+    // repeating a celebration she has already had.
+    seen:(function(){ var out=[],k; for(k in BOOK_SEEN) if(BOOK_SEEN[k]) out.push(k); return out; })(),
+    shots:(function(){ var out=[],k; for(k in PHOTO.rings) if(PHOTO.rings[k]) out.push(+k); return out; })(),
+    truckSeen:!!TRUCK.seen,
+    // FM9 — who she picked. The file behind the name can change; this cannot.
+    kidLook:KID_LOOK,
     order: order ? { pay:order.pay, face:order.face, sent:!!order.sent,
       items:order.items.map(function(it){ return {k:it.kind, f:!!it.filled}; }) } : null
   };
@@ -3996,7 +4196,8 @@ function saveSignature(){
          "m"+ANIMALS.map(function(a){return a.mark?a.mark.charAt(0):"-";}).join(""),
          "b"+BASKET.items.length, "o"+ORDERS_DONE, "u"+ownedList().length,
          "c"+collectedList().length, "d"+(DUCK_BOUGHT?1:0),
-         "r"+FIELD_RING, "v"+coversLeft(), "g"+(DOG.carry||"-"));
+         "r"+FIELD_RING, "v"+coversLeft(), "g"+(DOG.carry||"-"),
+         "k"+(KID_LOOK||"-"), "s"+(TRUCK.seen?1:0));
   if(order) for(i=0;i<order.items.length;i++) s.push(order.items[i].kind+(order.items[i].filled?"1":"0"));
   return s.join("|");
 }
@@ -4169,6 +4370,17 @@ function applySave(blob){
   // exist before the patches in it can be restored into it.
   applyAllUnlocks();
   ORDERS_DONE=blob.ordersDone|0;
+
+  // FM8 — the sticker book, the pictures already taken and the truck. The book
+  // is restored BEFORE anything else moves, so loading a farm full of stickers
+  // never fires a "new sticker" for every one of them.
+  BOOK_SEEN={};
+  (blob.seen||[]).forEach(function(id){ BOOK_SEEN[id]=1; });
+  BOOK_READY=(blob.seen||[]).length>0;
+  PHOTO.rings={};
+  (blob.shots||[]).forEach(function(r){ PHOTO.rings[r]=1; });
+  TRUCK.seen=!!blob.truckSeen;
+  if(blob.kidLook && kidLookById(blob.kidLook)) setKidLook(blob.kidLook, true);
 
   // ---- the duck, if she bought one
   if(blob.duck && !DUCK_BOUGHT){ DUCK_BOUGHT=true; addDuck(); }
@@ -4390,7 +4602,8 @@ var UNLOCKS=[
   { id:"mill",        price:380, name:"The mill",         built:true  },
   { id:"bees",        price:460, name:"Bees",             built:true  },
   { id:"strawberry",  price:560, name:"Strawberry seed",  built:true  },
-  { id:"tractor",     price:700, name:"A tractor",        built:false }
+  { id:"tractor",     price:700, name:"A tractor",        built:true  },
+  { id:"farmhand",    price:860, name:"A farmhand",        built:true  }
 ];
 var OWNED={};
 var UNBUILT_BACK=0.3;     // a third of the price hops back out of an empty box
@@ -4754,7 +4967,9 @@ function applyUnlock(id){
   if(id==="mill"){ return placeBuilding("mill", ISLE.mill, -0.35); }
   if(id==="dairy"){ return placeBuilding("dairy", ISLE.dairy, 0.3); }
   if(id==="bees"){ return placeHive(); }
-  return false;                      // FM8 fills the tractor in
+  if(id==="tractor"){ return placeTractor(); }
+  if(id==="farmhand"){ return spawnHand(); }
+  return false;
 }
 function applyAllExtras(){
   for(var i=0;i<EXTRAS.length;i++)
@@ -4798,6 +5013,8 @@ function unlockModel(id){
     return body ? fitReveal(body.obj, 1.5) : null;
   }
   if(id==="farmdog") return buildDog();
+  if(id==="tractor") return fitReveal(buildTractor(), 1.7);
+  if(id==="farmhand") return fitReveal(buildHand(), 1.7);
   if(id==="fieldrow"){
     var f=new THREE.Group(), i;
     for(i=0;i<3;i++){
@@ -5378,6 +5595,978 @@ function oneConfetti(hud, i){
   })();
 }
 
+// =========================================================================
+//  FM8 — HELPERS, A CAST WHO COME BACK, THE STICKER BOOK, AND A PICTURE
+//
+//  THE ONE RULE THE HELPERS ALL OBEY: they never take the fun part. Harvesting
+//  a crop, feeding an animal and the crate whoosh stay hers, always. A helper
+//  does the WAITING — the watering, the fetching, the long boring row of holes
+//  — and every one of them is slower than she is, so she can beat any of them
+//  to anything she wants to do herself.
+// =========================================================================
+
+// ------------------------------------------------------------- THE FARMHAND
+// He waters. That is all he does. He walks to a crop that is still growing,
+// tips his can over it, takes a bite out of the wait and moves on. He cannot
+// pick anything, he cannot feed anything, and he never touches a crop that is
+// ready — the ready ones are hers.
+var HAND_SPEED=3.9;         // she runs at 6.4
+var HAND_LOOK=1.0;          // how often he looks for something to water
+var HAND_POUR=1.5;          // how long he stands there pouring
+var HAND_HELP=0.35;         // and how much of the remaining wait he takes off
+var HAND_REST={x:-4.6, z:6.6};
+var HAND_C={ skin:0xE9BE93, hat:0xE3CC86, hatD:0xC3A85C, shirt:0xD86F5C,
+             dung:0x4C6C93, boot:0x4A3524, can:0x9FB6C4 };
+function buildHand(){
+  var g=new THREE.Group(), p=[];
+  // boots and legs, kept as their own meshes so they can swing when he walks
+  var legL=hbMesh(hbBake([
+    hbTube(0.20,0.18,0.95,HAND_C.dung,{p:[0,-0.48,0]}),
+    hbTurn([[0,-0.98],[0.26,-0.98],[0.28,-0.84],[0.001,-0.80]],HAND_C.boot)
+  ]));
+  var legR=legL.clone();
+  legL.position.set(-0.24,1.06,0); legR.position.set(0.24,1.06,0);
+  g.add(legL); g.add(legR);
+  // body, arms, head, and a hat with a real brim
+  p.push(hbTurn([[0,1.06],[0.44,1.14],[0.46,1.72],[0.40,2.02],[0.001,2.06]],HAND_C.shirt));
+  p.push(hbTurn([[0,1.06],[0.45,1.10],[0.44,1.46],[0.001,1.50]],HAND_C.dung));
+  p.push(hbTube(0.13,0.13,0.78,HAND_C.shirt,{p:[-0.52,1.58,0.06],r:[0,0,0.30]}));
+  p.push(hbTube(0.13,0.13,0.78,HAND_C.shirt,{p:[ 0.52,1.58,0.06],r:[0,0,-0.30]}));
+  p.push(hbBall(0.34,HAND_C.skin,{p:[0,2.34,0]}));
+  p.push(hbBall(0.075,0x3A2A1E,{p:[-0.13,2.36,0.29],s:[1,1.15,0.6]}));
+  p.push(hbBall(0.075,0x3A2A1E,{p:[ 0.13,2.36,0.29],s:[1,1.15,0.6]}));
+  p.push(hbTurn([[0,2.56],[0.86,2.56],[0.88,2.62],[0.34,2.66],[0.32,2.86],[0.001,2.90]],HAND_C.hat));
+  p.push(hbTurn([[0.30,2.62],[0.34,2.62],[0.34,2.70],[0.30,2.70]],HAND_C.hatD));
+  g.add(hbMesh(hbBake(p)));
+  // the can rides in his hand, and it is the same shape as hers
+  var can=hbMesh(hbBake([
+    hbTurn([[0,0],[0.26,0],[0.28,0.34],[0.22,0.38],[0.001,0.38]],HAND_C.can),
+    hbTube(0.055,0.075,0.40,HAND_C.can,{p:[0.30,0.22,0],r:[0,0,-0.85]})
+  ]));
+  can.position.set(0.62,1.28,0.22);
+  g.add(can);
+  g.userData.legL=legL; g.userData.legR=legR; g.userData.can=can;
+  return g;
+}
+var HAND={ obj:null, x:HAND_REST.x, z:HAND_REST.z, yaw:0, state:"idle",
+           target:null, pour:0, lookT:0, walkT:0, popIn:null };
+function spawnHand(){
+  if(HAND.obj) return false;
+  HAND.obj=buildHand();
+  HAND.x=kid.position.x+1.8; HAND.z=kid.position.z+1.8;
+  HAND.obj.position.set(HAND.x,0,HAND.z);
+  HAND.obj.scale.setScalar(0.15);
+  HAND.popIn=0;
+  HAND.state="idle"; HAND.target=null; HAND.pour=0;
+  scene.add(HAND.obj);
+  return true;
+}
+function hasHand(){ return !!HAND.obj; }
+// The crop with the LONGEST left to wait, because that is the one she is most
+// likely to have given up on. Ready crops are invisible to him on purpose.
+function handFindJob(){
+  var best=null, bestLeft=-1, now=performance.now()/1000, i;
+  for(i=0;i<PATCHES.length;i++){
+    var P=PATCHES[i];
+    if(P.state!=="growing" || P.cover || P.locked) continue;
+    var r=CROP_RECIPES[P.seed]; if(!r) continue;
+    var left=(r.growSec||34)-(now-P.plantedAt);
+    if(left<=1.2) continue;                    // nearly done: leave it to her
+    if(left>bestLeft){ bestLeft=left; best=P; }
+  }
+  return best;
+}
+function handStillGrowing(P){ return !!P && P.state==="growing" && !P.cover; }
+function handPourOn(P){
+  var r=CROP_RECIPES[P.seed]; if(!r) return false;
+  var now=performance.now()/1000;
+  var left=Math.max(0,(r.growSec||34)-(now-P.plantedAt));
+  P.plantedAt -= left*HAND_HELP;
+  puff(P.x,0.55,P.z,0x7EC8E3,7,0.55,1.3,0.42);
+  sfx("select");
+  return true;
+}
+function updateHand(dt, now){
+  if(!HAND.obj) return;
+  if(HAND.popIn!=null && HAND.popIn<1){
+    HAND.popIn=Math.min(1,HAND.popIn+dt*1.6);
+    var e=1+Math.sin(HAND.popIn*Math.PI)*0.22;
+    HAND.obj.scale.setScalar((0.15+0.85*HAND.popIn)*e);
+    if(HAND.popIn>=1) HAND.obj.scale.setScalar(1);
+  }
+  var tx=HAND_REST.x, tz=HAND_REST.z, stop=0.4, moving=false;
+  if(HAND.state==="pour"){
+    // standing over the crop, tipping the can
+    HAND.pour-=dt;
+    var tip=Math.min(1,(HAND_POUR-HAND.pour)/0.45);
+    if(HAND.obj.userData.can) HAND.obj.userData.can.rotation.z=-1.05*tip;
+    if(Math.random()<dt*7) puff(HAND.target.x,0.75,HAND.target.z,0x7EC8E3,1,0.25,0.7,0.35);
+    if(HAND.pour<=0 || !handStillGrowing(HAND.target)){
+      if(handStillGrowing(HAND.target)) handPourOn(HAND.target);
+      if(HAND.obj.userData.can) HAND.obj.userData.can.rotation.z=0;
+      HAND.target=null; HAND.state="idle";
+    }
+  } else {
+    if(HAND.state==="toCrop" && handStillGrowing(HAND.target)){
+      tx=HAND.target.x; tz=HAND.target.z; stop=1.1;
+    } else if(HAND.state==="toCrop"){
+      HAND.state="idle"; HAND.target=null;
+    }
+    var dx=tx-HAND.x, dz=tz-HAND.z, d=Math.hypot(dx,dz);
+    if(d-stop>0.02){
+      var k=Math.max(0.2,Math.min(1,(d-stop)/0.9));
+      var step=Math.min(HAND_SPEED*k*dt, d-stop);
+      HAND.x+=(dx/d)*step; HAND.z+=(dz/d)*step;
+      HAND.yaw=Math.atan2(dx,dz);
+      moving=step>0.012;
+    } else if(HAND.state==="toCrop"){
+      HAND.state="pour"; HAND.pour=HAND_POUR;
+    }
+  }
+  HAND.obj.position.set(HAND.x,0,HAND.z);
+  HAND.obj.rotation.y=HAND.yaw;
+  HAND.walkT += dt*(moving?9:0);
+  var sw=Math.sin(HAND.walkT)*(moving?0.5:0);
+  HAND.obj.userData.legL.rotation.x=sw;
+  HAND.obj.userData.legR.rotation.x=-sw;
+  HAND.obj.position.y=moving?Math.abs(Math.sin(HAND.walkT))*0.045:0;
+  HAND.lookT-=dt;
+  if(HAND.lookT<=0){
+    HAND.lookT=HAND_LOOK;
+    if(HAND.state==="idle"){
+      var P=handFindJob();
+      if(P){ HAND.target=P; HAND.state="toCrop"; }
+    }
+  }
+}
+
+// -------------------------------------------------------------- THE TRACTOR
+// The eighth present, and the only one FM5 shipped as an empty box. It plants
+// the WHOLE field in one go: she walks up to it, picks one seed, and it drives
+// the rows dropping a seed in every empty patch while she watches. It buys each
+// seed as it goes and simply stops when the coins run out, so it can never take
+// more than she has.
+var TRACTOR_SPOT={x:10.6, z:8.4};
+var TRACTOR_R=3.4;                 // walk this close and it asks what to plant
+var TRACTOR_SPEED=4.4;
+var TRACTOR_C={ body:0xC8452F, bodyD:0x9B3222, roof:0xF2E3B6, wheel:0x33302C,
+                hub:0xE7D06A, pipe:0x6E6A63 };
+function buildTractor(){
+  var g=new THREE.Group(), p=[];
+  p.push(hbBox(1.55,0.72,2.35,TRACTOR_C.body,{p:[0,0.92,0.10]}));
+  p.push(hbBox(1.20,0.62,0.95,TRACTOR_C.bodyD,{p:[0,1.52,-0.45]}));
+  p.push(hbBox(1.32,0.10,1.15,TRACTOR_C.roof,{p:[0,1.92,-0.45]}));
+  p.push(hbTube(0.10,0.10,0.70,TRACTOR_C.pipe,{p:[0.48,1.72,0.92]}));
+  p.push(hbBox(0.10,0.34,0.10,TRACTOR_C.pipe,{p:[0,1.34,1.28],r:[0.5,0,0]}));
+  g.add(hbMesh(hbBake(p)));
+  var i, W=[[-0.92,0.60,-0.88,0.60],[0.92,0.60,-0.88,0.60],
+            [-0.86,0.38,1.05,0.38],[0.86,0.38,1.05,0.38]];
+  for(i=0;i<W.length;i++){
+    var w=hbMesh(hbBake([
+      hbTube(W[i][1],W[i][1],0.30,TRACTOR_C.wheel,{r:[0,0,Math.PI/2]}),
+      hbTube(W[i][1]*0.45,W[i][1]*0.45,0.34,TRACTOR_C.hub,{r:[0,0,Math.PI/2]})
+    ]));
+    w.position.set(W[i][0],W[i][1],W[i][2]);
+    g.add(w);
+    if(!g.userData.wheels) g.userData.wheels=[];
+    g.userData.wheels.push(w);
+  }
+  return g;
+}
+var TRACTOR={ obj:null, x:TRACTOR_SPOT.x, z:TRACTOR_SPOT.z, yaw:Math.PI,
+              state:"parked", queue:[], kind:null, popIn:null, spin:0, latch:false };
+function placeTractor(){
+  if(TRACTOR.obj) return false;
+  TRACTOR.obj=buildTractor();
+  TRACTOR.x=TRACTOR_SPOT.x; TRACTOR.z=TRACTOR_SPOT.z; TRACTOR.yaw=Math.PI;
+  TRACTOR.obj.position.set(TRACTOR.x,0,TRACTOR.z);
+  TRACTOR.obj.rotation.y=TRACTOR.yaw;
+  TRACTOR.obj.scale.setScalar(0.15);
+  TRACTOR.popIn=0; TRACTOR.state="parked"; TRACTOR.queue=[];
+  scene.add(TRACTOR.obj);
+  BLOCKER_OWNER="tractor";
+  addCircleBlocker(TRACTOR_SPOT.x, TRACTOR_SPOT.z, 1.5, "tractor");
+  BLOCKER_OWNER="";
+  return true;
+}
+function hasTractor(){ return !!TRACTOR.obj; }
+function emptyPatches(){
+  var out=[], i;
+  for(i=0;i<PATCHES.length;i++){
+    var P=PATCHES[i];
+    if(P.state==="empty" && !P.cover && !P.locked) out.push(P);
+  }
+  // row by row, the way a tractor really would
+  out.sort(function(a,b){ return (a.z-b.z) || (a.x-b.x); });
+  return out;
+}
+function tractorReady(){ return !!TRACTOR.obj && TRACTOR.state==="parked" && emptyPatches().length>0; }
+function startTractorRun(kind){
+  if(!tractorReady() || !CROP_RECIPES[kind]) return false;
+  TRACTOR.queue=emptyPatches();
+  TRACTOR.kind=kind;
+  TRACTOR.state="driving";
+  sfx("select"); haptic("light");
+  return true;
+}
+function updateTractor(dt, now){
+  if(!TRACTOR.obj) return;
+  if(TRACTOR.popIn!=null && TRACTOR.popIn<1){
+    TRACTOR.popIn=Math.min(1,TRACTOR.popIn+dt*1.6);
+    var e=1+Math.sin(TRACTOR.popIn*Math.PI)*0.22;
+    TRACTOR.obj.scale.setScalar((0.15+0.85*TRACTOR.popIn)*e);
+    if(TRACTOR.popIn>=1) TRACTOR.obj.scale.setScalar(1);
+  }
+  var moving=false, tx=TRACTOR_SPOT.x, tz=TRACTOR_SPOT.z, stop=0.05;
+  if(TRACTOR.state==="driving"){
+    // drop the patches she has already planted herself while it was coming
+    while(TRACTOR.queue.length && TRACTOR.queue[0].state!=="empty") TRACTOR.queue.shift();
+    if(!TRACTOR.queue.length){ TRACTOR.state="home"; }
+    else { tx=TRACTOR.queue[0].x; tz=TRACTOR.queue[0].z; stop=0.9; }
+  }
+  var dx=tx-TRACTOR.x, dz=tz-TRACTOR.z, d=Math.hypot(dx,dz);
+  if(d-stop>0.02){
+    var step=Math.min(TRACTOR_SPEED*dt, d-stop);
+    TRACTOR.x+=(dx/d)*step; TRACTOR.z+=(dz/d)*step;
+    TRACTOR.yaw=Math.atan2(dx,dz);
+    moving=true;
+  } else if(TRACTOR.state==="driving"){
+    var P=TRACTOR.queue.shift();
+    if(P && P.state==="empty" && !plantPatch(P, TRACTOR.kind)){
+      // she cannot afford the next one: it parks, and nothing is taken
+      TRACTOR.queue=[]; TRACTOR.state="home";
+      flashToast("Keep saving"); sfx("hit");
+    }
+  } else if(TRACTOR.state==="home"){
+    TRACTOR.state="parked"; TRACTOR.yaw=Math.PI; TRACTOR.kind=null;
+  }
+  TRACTOR.obj.position.set(TRACTOR.x,0,TRACTOR.z);
+  TRACTOR.obj.rotation.y=TRACTOR.yaw;
+  TRACTOR.spin += dt*(moving?7.5:0);
+  var W=TRACTOR.obj.userData.wheels, i;
+  if(W) for(i=0;i<W.length;i++) W[i].rotation.x=TRACTOR.spin;
+  TRACTOR.obj.position.y = moving ? Math.abs(Math.sin(TRACTOR.spin*2))*0.02 : 0;
+}
+// Walk up to it and it asks what to plant — the same "walk at it and it
+// happens" as the barn and the well. The latch stops it asking twice.
+function atTheTractor(){
+  if(!TRACTOR.obj) return;
+  var d=Math.hypot(kid.position.x-TRACTOR.x, kid.position.z-TRACTOR.z);
+  if(d>TRACTOR_R*2.0){ TRACTOR.latch=false; return; }
+  if(d>TRACTOR_R || TRACTOR.latch) return;
+  TRACTOR.latch=true;
+  if(REVEAL.on || basketWaiting() || !tractorReady()) return;
+  openFieldPicker();
+}
+
+// -------------------------------------------------------- THE DELIVERY TRUCK
+// The crate takes anything and pays three times what it is worth. The truck is
+// the BIGGER customer and it is fussy: it only ever wants the things the farm
+// MAKES — bread, cheese and honey — and it pays five times over for them. It
+// comes down the road on its own, waits a good long while, and drives off again
+// whether it got what it wanted or not, so nothing about it can ever be missed
+// or failed.
+var TRUCK_GOODS=["bread","cheese","honey"];
+var TRUCK_MULT=5;
+var TRUCK_R=4.0;
+var TRUCK_STOP={x:-1.5, z:31.5};
+var TRUCK_IN={x:-30.0}, TRUCK_OUT={x:30.0};
+var TRUCK_SPEED=7.0;
+var TRUCK_WAIT=95;              // how long it will sit there for her
+var TRUCK_GAP=70;               // and how long before the next one comes
+var TRUCK_WANT_Y=3.5, TRUCK_WANT_SEC=1.9;
+var TRUCK_C={ cab:0x4E86A6, cabD:0x2F5A73, bed:0xE3CC86, bedD:0xC3A85C,
+              glass:0xBFE3F0, wheel:0x33302C, hub:0xE7D06A };
+function buildTruck(){
+  var g=new THREE.Group(), p=[];
+  p.push(hbBox(1.90,1.10,2.10,TRUCK_C.cab,{p:[0,1.35,-1.55]}));
+  p.push(hbBox(1.60,0.62,0.14,TRUCK_C.glass,{p:[0,1.62,-2.58]}));
+  p.push(hbBox(2.05,0.55,3.60,TRUCK_C.bedD,{p:[0,0.95,0.95]}));
+  p.push(hbBox(2.10,0.75,0.16,TRUCK_C.bed,{p:[0,1.55,2.72]}));
+  p.push(hbBox(0.16,0.75,3.60,TRUCK_C.bed,{p:[-1.00,1.55,0.95]}));
+  p.push(hbBox(0.16,0.75,3.60,TRUCK_C.bed,{p:[ 1.00,1.55,0.95]}));
+  p.push(hbBox(2.10,0.75,0.16,TRUCK_C.bed,{p:[0,1.55,-0.82]}));
+  g.add(hbMesh(hbBake(p)));
+  var i, W=[[-1.02,0.62,-1.95],[1.02,0.62,-1.95],[-1.02,0.62,1.45],[1.02,0.62,1.45]];
+  for(i=0;i<W.length;i++){
+    var w=hbMesh(hbBake([
+      hbTube(0.62,0.62,0.34,TRUCK_C.wheel,{r:[0,0,Math.PI/2]}),
+      hbTube(0.28,0.28,0.38,TRUCK_C.hub,{r:[0,0,Math.PI/2]})
+    ]));
+    w.position.set(W[i][0],W[i][1],W[i][2]);
+    g.add(w);
+    if(!g.userData.wheels) g.userData.wheels=[];
+    g.userData.wheels.push(w);
+  }
+  return g;
+}
+var TRUCK={ obj:null, x:TRUCK_IN.x, z:TRUCK_STOP.z, state:"away", wants:[],
+            want:null, wantI:0, wantT:0, t:TRUCK_GAP*0.55, pay:0, spin:0,
+            gap:0, run:0, seen:false };
+// It can only come once the farm makes something it buys, and only for the
+// goods she has actually carried at least once.
+function truckGoodsNow(){
+  var out=[], i;
+  for(i=0;i<TRUCK_GOODS.length;i++){
+    var k=TRUCK_GOODS[i];
+    if(COLLECTED[k] && ITEM(k) && producibleNow(k)) out.push(k);
+  }
+  return out;
+}
+function truckPossible(){ return truckGoodsNow().length>0; }
+function truckWantsLeft(kind){
+  var n=0, i;
+  for(i=0;i<TRUCK.wants.length;i++) if(TRUCK.wants[i].kind===kind && !TRUCK.wants[i].filled) n++;
+  return n;
+}
+function truckWantsAnything(){
+  for(var i=0;i<TRUCK.wants.length;i++) if(!TRUCK.wants[i].filled) return true;
+  return false;
+}
+function truckArrive(){
+  var pool=truckGoodsNow(), i, n;
+  if(!pool.length) return false;
+  if(!TRUCK.obj){ TRUCK.obj=buildTruck(); scene.add(TRUCK.obj); }
+  TRUCK.obj.visible=true;
+  for(i=pool.length-1;i>0;i--){ n=Math.floor(Math.random()*(i+1));
+    var t=pool[i]; pool[i]=pool[n]; pool[n]=t; }
+  var distinct=Math.min(pool.length, 2), size=2+Math.floor(Math.random()*2);
+  TRUCK.wants=[];
+  for(i=0;i<size;i++) TRUCK.wants.push({ kind:pool[i%distinct], filled:false, claimed:false });
+  var sum=0;
+  for(i=0;i<TRUCK.wants.length;i++) sum+=itemValueOf(TRUCK.wants[i].kind);
+  TRUCK.pay=Math.round(sum*TRUCK_MULT);
+  TRUCK.x=TRUCK_IN.x; TRUCK.z=TRUCK_STOP.z;
+  TRUCK.state="in"; TRUCK.t=TRUCK_WAIT; TRUCK.run=0; TRUCK.gap=0;
+  TRUCK.seen=true;
+  return true;
+}
+function showTruckWant(){
+  if(TRUCK.want){ scene.remove(TRUCK.want); TRUCK.want=null; }
+  var live=[], i;
+  for(i=0;i<TRUCK.wants.length;i++)
+    if(!TRUCK.wants[i].filled && live.indexOf(TRUCK.wants[i].kind)<0) live.push(TRUCK.wants[i].kind);
+  if(!live.length) return;
+  var r=ITEM(live[TRUCK.wantI%live.length]); if(!r) return;
+  var g=new THREE.Group();
+  g.add(hbMesh(hbBake(r.parts(1.05))));
+  scene.add(g); TRUCK.want=g;
+}
+function hideTruckWant(){ if(TRUCK.want){ scene.remove(TRUCK.want); TRUCK.want=null; } }
+function truckNear(){
+  return TRUCK.state==="waiting" &&
+    Math.hypot(kid.position.x-TRUCK.x, kid.position.z-TRUCK.z) < TRUCK_R;
+}
+function claimTruckSlot(kind){
+  for(var i=0;i<TRUCK.wants.length;i++){
+    var w=TRUCK.wants[i];
+    if(!w.filled && !w.claimed && w.kind===kind) return w;
+  }
+  return null;
+}
+function pullOneIntoTruck(){
+  for(var i=stack.length-1;i>=0;i--){
+    var kind=stack[i].userData.kind;
+    var slot=claimTruckSlot(kind); if(!slot) continue;
+    var it=stack.splice(i,1)[0];
+    reindexStack();
+    FLYING.push({
+      obj:it,
+      from:it.position.clone(),
+      to:new THREE.Vector3(TRUCK.x+(Math.random()-0.5)*1.2, 1.9, TRUCK.z+0.9+(Math.random()-0.5)*1.6),
+      t:0, dur:0.40, truck:slot, note:TRUCK.run
+    });
+    slot.claimed=true;
+    TRUCK.run++;
+    return true;
+  }
+  return false;
+}
+function onTruckLanded(F){
+  F.truck.filled=true;
+  sfx("deliver",{rate:Math.min(1.55, 1+F.note*0.055)});
+  haptic("light");
+  showTruckWant();
+  if(!truckWantsAnything()){
+    hideTruckWant();
+    sfx("mission"); haptic("success");
+    addCoins(TRUCK.pay);
+    flashToast("+"+TRUCK.pay);
+    coinBurstToPill(TRUCK.pay);
+    TRUCK.state="out";
+    scheduleSave();
+  }
+}
+function updateTruck(dt, now){
+  // it only ever exists once the farm makes something it buys
+  if(TRUCK.state==="away"){
+    TRUCK.t-=dt;
+    if(TRUCK.t<=0 && truckPossible() && !basketWaiting() && !REVEAL.on){
+      if(!truckArrive()) TRUCK.t=TRUCK_GAP;
+    }
+    return;
+  }
+  if(!TRUCK.obj) return;
+  var moving=false, dx;
+  if(TRUCK.state==="in"){
+    dx=TRUCK_STOP.x-TRUCK.x;
+    var step=Math.min(TRUCK_SPEED*dt, Math.abs(dx));
+    TRUCK.x += (dx>0?1:-1)*step; moving=true;
+    if(Math.abs(TRUCK_STOP.x-TRUCK.x)<0.05){
+      TRUCK.state="waiting"; TRUCK.wantI=0; TRUCK.wantT=0; showTruckWant();
+      sfx("select");
+    }
+  } else if(TRUCK.state==="waiting"){
+    TRUCK.t-=dt;
+    if(TRUCK.t<=0){ hideTruckWant(); TRUCK.state="out"; }
+    // the unload, on exactly the crate's rhythm so there is nothing new here
+    else if(truckNear() && !basketWaiting()){
+      TRUCK.gap-=dt;
+      if(TRUCK.gap<=0){ TRUCK.gap=UNLOAD_GAP; pullOneIntoTruck(); }
+    }
+  } else if(TRUCK.state==="out"){
+    dx=TRUCK_OUT.x-TRUCK.x;
+    TRUCK.x += Math.min(TRUCK_SPEED*dt, Math.abs(dx)); moving=true;
+    if(TRUCK.x>=TRUCK_OUT.x-0.05){
+      TRUCK.obj.visible=false;
+      TRUCK.state="away"; TRUCK.t=TRUCK_GAP; TRUCK.wants=[]; hideTruckWant();
+    }
+  }
+  TRUCK.obj.position.set(TRUCK.x, 0, TRUCK.z);
+  TRUCK.obj.rotation.y=Math.PI/2;              // it faces along the road
+  TRUCK.spin += dt*(moving?6.5:0);
+  var W=TRUCK.obj.userData.wheels, i;
+  if(W) for(i=0;i<W.length;i++) W[i].rotation.x=TRUCK.spin;
+  if(TRUCK.want){
+    TRUCK.want.position.set(TRUCK.x, TRUCK_WANT_Y+Math.sin(now*2.2)*0.14, TRUCK.z);
+    TRUCK.want.rotation.y += dt*1.4;
+    TRUCK.wantT += dt;
+    if(TRUCK.wantT>TRUCK_WANT_SEC){ TRUCK.wantT=0; TRUCK.wantI++; showTruckWant(); }
+  }
+}
+
+// ------------------------------------------------------- THE STICKER BOOK
+// One stamp for every kind of thing she has ever carried, every animal living
+// here and every helper who turned up. The ones she has not got yet are GREY,
+// and this is the one place in the farm where grey belongs: here it means
+// "not yet", and there is nothing else it could mean.
+var STICKER_ART={
+  chicken:'<svg viewBox="0 0 96 96"><ellipse cx="50" cy="58" rx="26" ry="22" fill="#FFFDF2"/>'+
+    '<circle cx="30" cy="38" r="15" fill="#FFFDF2"/>'+
+    '<path d="M22 26 q6 -10 12 0 q6 -9 8 2" fill="#D9534F"/>'+
+    '<path d="M18 40 L6 44 L18 47 Z" fill="#E8A34A"/>'+
+    '<circle cx="26" cy="36" r="3" fill="#3A2A1E"/>'+
+    '<path d="M62 46 q18 6 12 24 q-8 8 -16 -2" fill="#EFE6C8"/>'+
+    '<path d="M42 78 v8 M56 78 v8" stroke="#E8A34A" stroke-width="5" stroke-linecap="round"/></svg>',
+  cow:'<svg viewBox="0 0 96 96"><ellipse cx="52" cy="52" rx="30" ry="21" fill="#FFFDF2"/>'+
+    '<ellipse cx="44" cy="46" rx="10" ry="8" fill="#3A3330"/>'+
+    '<ellipse cx="66" cy="58" rx="8" ry="6" fill="#3A3330"/>'+
+    '<circle cx="24" cy="42" r="15" fill="#FFFDF2"/>'+
+    '<ellipse cx="20" cy="50" rx="9" ry="7" fill="#F2B8C0"/>'+
+    '<circle cx="20" cy="36" r="3" fill="#3A2A1E"/><circle cx="30" cy="34" r="3" fill="#3A2A1E"/>'+
+    '<path d="M12 28 q-6 -8 2 -10 M34 26 q6 -8 12 -2" stroke="#D9CDBA" stroke-width="5" '+
+    'fill="none" stroke-linecap="round"/>'+
+    '<path d="M38 72 v10 M64 72 v10" stroke="#3A3330" stroke-width="6" stroke-linecap="round"/></svg>',
+  pig:'<svg viewBox="0 0 96 96"><ellipse cx="52" cy="54" rx="28" ry="20" fill="#F0A9B4"/>'+
+    '<circle cx="26" cy="46" r="16" fill="#F5B9C3"/>'+
+    '<ellipse cx="14" cy="48" rx="8" ry="7" fill="#E08A9C"/>'+
+    '<circle cx="11" cy="46" r="2" fill="#8A4A58"/><circle cx="17" cy="50" r="2" fill="#8A4A58"/>'+
+    '<circle cx="26" cy="38" r="3" fill="#3A2A1E"/>'+
+    '<path d="M18 30 L22 20 L30 30 Z" fill="#E894A4"/>'+
+    '<path d="M40 72 v10 M66 72 v10" stroke="#E08A9C" stroke-width="7" stroke-linecap="round"/>'+
+    '<path d="M78 50 q10 -4 6 6" stroke="#E08A9C" stroke-width="4" fill="none" stroke-linecap="round"/></svg>',
+  bees:'<svg viewBox="0 0 96 96"><path d="M22 70 h52 v6 h-52 Z" fill="#8C6237"/>'+
+    '<path d="M26 70 q-2 -14 22 -14 q24 0 22 14 Z" fill="#E8B94A"/>'+
+    '<path d="M30 56 q-2 -12 18 -12 q20 0 18 12 Z" fill="#F2CB63"/>'+
+    '<path d="M34 44 q-1 -10 14 -10 q15 0 14 10 Z" fill="#E8B94A"/>'+
+    '<circle cx="48" cy="66" r="5" fill="#6B4A22"/>'+
+    '<circle cx="74" cy="34" r="5" fill="#F2CB63" stroke="#6B4A22" stroke-width="2"/>'+
+    '<circle cx="20" cy="30" r="4" fill="#F2CB63" stroke="#6B4A22" stroke-width="2"/></svg>',
+  dog:'<svg viewBox="0 0 96 96"><ellipse cx="54" cy="56" rx="26" ry="17" fill="#D9A05B"/>'+
+    '<circle cx="26" cy="44" r="16" fill="#D9A05B"/>'+
+    '<ellipse cx="18" cy="50" rx="9" ry="7" fill="#F2DCBB"/>'+
+    '<circle cx="14" cy="48" r="3" fill="#3A2A1E"/>'+
+    '<circle cx="24" cy="38" r="3" fill="#3A2A1E"/>'+
+    '<path d="M34 30 q10 -6 8 10 Z" fill="#B47F3F"/>'+
+    '<path d="M14 30 q-8 -4 -2 12 Z" fill="#B47F3F"/>'+
+    '<path d="M40 70 v10 M66 70 v10" stroke="#B47F3F" stroke-width="6" stroke-linecap="round"/>'+
+    '<path d="M78 46 q12 -10 6 -18" stroke="#D9A05B" stroke-width="6" fill="none" stroke-linecap="round"/></svg>',
+  hand:'<svg viewBox="0 0 96 96"><path d="M20 34 h56 l-6 6 h-44 Z" fill="#E3CC86"/>'+
+    '<path d="M34 34 q0 -14 14 -14 q14 0 14 14 Z" fill="#E3CC86"/>'+
+    '<circle cx="48" cy="42" r="12" fill="#E9BE93"/>'+
+    '<circle cx="43" cy="41" r="2.6" fill="#3A2A1E"/><circle cx="53" cy="41" r="2.6" fill="#3A2A1E"/>'+
+    '<path d="M34 56 h28 v22 h-28 Z" fill="#4C6C93"/>'+
+    '<path d="M34 56 h28 v8 h-28 Z" fill="#D86F5C"/>'+
+    '<path d="M66 62 h12 v10 h-12 Z" fill="#9FB6C4"/>'+
+    '<path d="M78 64 q8 2 4 10" stroke="#9FB6C4" stroke-width="4" fill="none" stroke-linecap="round"/></svg>',
+  tractor:'<svg viewBox="0 0 96 96"><path d="M22 44 h30 v18 h-38 v-10 Z" fill="#C8452F"/>'+
+    '<path d="M52 30 h20 v20 h-20 Z" fill="#C8452F"/>'+
+    '<path d="M50 26 h26 v6 h-26 Z" fill="#F2E3B6"/>'+
+    '<circle cx="66" cy="64" r="16" fill="#33302C"/><circle cx="66" cy="64" r="7" fill="#E7D06A"/>'+
+    '<circle cx="26" cy="68" r="10" fill="#33302C"/><circle cx="26" cy="68" r="4" fill="#E7D06A"/>'+
+    '<path d="M30 34 h6 v10 h-6 Z" fill="#6E6A63"/></svg>',
+  truck:'<svg viewBox="0 0 96 96"><path d="M10 40 h44 v24 h-44 Z" fill="#E3CC86"/>'+
+    '<path d="M54 44 h18 l10 12 v8 h-28 Z" fill="#4E86A6"/>'+
+    '<path d="M58 48 h12 l6 8 h-18 Z" fill="#BFE3F0"/>'+
+    '<circle cx="26" cy="68" r="9" fill="#33302C"/><circle cx="26" cy="68" r="4" fill="#E7D06A"/>'+
+    '<circle cx="68" cy="68" r="9" fill="#33302C"/><circle cx="68" cy="68" r="4" fill="#E7D06A"/>'+
+    '<path d="M10 40 h44 v6 h-44 Z" fill="#C3A85C"/></svg>'
+};
+// The book's pages, in the order a farm grows: the things she carries, then
+// who lives here, then who came to help.
+function stickerPages(){
+  var out=[], i;
+  for(i=0;i<COLLECT_ORDER.length;i++){
+    var k=COLLECT_ORDER[i], r=ITEM(k);
+    if(!r) continue;
+    out.push({ id:"item:"+k, art:r.svg(44), got:!!COLLECTED[k] });
+  }
+  out.push({ id:"who:chicken", art:STICKER_ART.chicken, got:animalHere("chicken") });
+  out.push({ id:"who:cow",     art:STICKER_ART.cow,     got:animalHere("cow") });
+  out.push({ id:"who:duck",    art:DUCK_SVG,            got:DUCK_BOUGHT });
+  out.push({ id:"who:pig",     art:STICKER_ART.pig,     got:animalHere("pig") });
+  out.push({ id:"who:bees",    art:STICKER_ART.bees,    got:animalHere("hive") });
+  out.push({ id:"help:dog",     art:STICKER_ART.dog,     got:!!DOG.obj });
+  out.push({ id:"help:hand",    art:STICKER_ART.hand,    got:!!HAND.obj });
+  out.push({ id:"help:tractor", art:STICKER_ART.tractor, got:!!TRACTOR.obj });
+  out.push({ id:"help:truck",   art:STICKER_ART.truck,   got:!!TRUCK.seen });
+  return out;
+}
+function animalHere(kind){
+  for(var i=0;i<ANIMALS.length;i++) if(ANIMALS[i].kind===kind) return true;
+  return false;
+}
+var BOOK_SEEN={}, BOOK_FRESH={};
+var bookBtnEl=document.getElementById("bookBtn");
+var bookCardEl=document.getElementById("bookCard");
+var bookRowEl=document.getElementById("bookRow");
+var bookDotsEl=document.getElementById("bookDots");
+var bookCloseEl=document.getElementById("bookClose");
+function renderBook(){
+  if(!bookRowEl) return;
+  var pages=stickerPages(), html="", dots="", i, got=0;
+  for(i=0;i<pages.length;i++){
+    var P=pages[i];
+    if(P.got) got++;
+    html += '<div class="stamp'+(P.got?"":" off")+(BOOK_FRESH[P.id]?" new":"")+
+            '" data-id="'+P.id+'">'+P.art+'</div>';
+    dots += '<i class="'+(P.got?"on":"")+'"></i>';
+  }
+  bookRowEl.innerHTML=html;
+  if(bookDotsEl) bookDotsEl.innerHTML=dots;
+  BOOK_FRESH={};
+  return got;
+}
+function openBook(){ renderBook(); if(bookCardEl) bookCardEl.classList.add("up"); }
+function closeBook(){ if(bookCardEl) bookCardEl.classList.remove("up"); }
+function bookOpen(){ return !!(bookCardEl && bookCardEl.classList.contains("up")); }
+if(bookCloseEl) bookCloseEl.addEventListener("click",closeBook);
+if(bookCardEl) bookCardEl.addEventListener("click",function(e){ if(e.target===bookCardEl) closeBook(); });
+if(bookBtnEl) bookBtnEl.addEventListener("click",function(){ if(bookOpen()) closeBook(); else openBook(); });
+// A stamp she has just earned announces itself, once, wherever she is standing.
+var bookWatchT=0;
+function watchStickers(dt){
+  bookWatchT-=dt;
+  if(bookWatchT>0) return;
+  bookWatchT=0.6;
+  var pages=stickerPages(), i, fresh=0, got=0;
+  for(i=0;i<pages.length;i++){
+    if(!pages[i].got) continue;
+    got++;
+    if(!BOOK_SEEN[pages[i].id]){
+      BOOK_SEEN[pages[i].id]=1;
+      BOOK_FRESH[pages[i].id]=1;
+      fresh++;
+    }
+  }
+  if(bookBtnEl) bookBtnEl.classList.toggle("on", got>0 && DRESSED);
+  if(fresh && BOOK_READY){
+    if(bookBtnEl){ bookBtnEl.classList.remove("fresh"); void bookBtnEl.offsetWidth;
+                   bookBtnEl.classList.add("fresh"); }
+    flashToast("A new sticker");
+    sfx("sparkle"); haptic("light");
+    scheduleSave();
+  }
+  if(bookOpen()) renderBook();
+  BOOK_READY=true;      // the first pass is the farm loading, not a new sticker
+}
+var BOOK_READY=false;
+// The book itself stands by the barn door, because that is where the shop is
+// and a kid should only have one place to remember.
+var BOOK_STAND={x:BARN_DOOR.x-4.8, z:BARN_DOOR.z+0.6};
+var BOOK_STAND_R=2.2, bookLatch=false;
+function buildBookStand(){
+  var g=new THREE.Group();
+  g.add(hbMesh(hbBake([
+    hbTube(0.16,0.20,1.10,0x9C6939,{p:[0,0.55,0]}),
+    hbBox(0.90,0.10,0.62,0xC58A55,{p:[0,1.12,0],r:[-0.32,0,0]})
+  ])));
+  var book=hbMesh(hbBake([
+    hbBox(0.62,0.10,0.46,0xF6E3B0,{p:[0,0,0]}),
+    hbBox(0.66,0.06,0.50,0xB6473C,{p:[0,-0.05,0]}),
+    hbBall(0.09,0xF2889C,{p:[0.14,0.07,0.02],s:[1,0.4,1]})
+  ]));
+  book.position.set(0,1.22,0.02); book.rotation.x=-0.32;
+  g.add(book);
+  g.userData.book=book;
+  return g;
+}
+var bookStandObj=null;
+function placeBookStand(){
+  if(bookStandObj) return false;
+  bookStandObj=buildBookStand();
+  bookStandObj.position.set(BOOK_STAND.x,0,BOOK_STAND.z);
+  bookStandObj.rotation.y=0.25;
+  scene.add(bookStandObj);
+  return true;
+}
+function atTheBook(now){
+  if(!bookStandObj) return;
+  if(bookStandObj.userData.book)
+    bookStandObj.userData.book.position.y=1.22+Math.sin(now*1.8)*0.03;
+  var d=Math.hypot(kid.position.x-BOOK_STAND.x, kid.position.z-BOOK_STAND.z);
+  if(d>BOOK_STAND_R*2.0){ bookLatch=false; return; }
+  if(d>BOOK_STAND_R || bookLatch) return;
+  bookLatch=true;
+  if(REVEAL.on || basketWaiting()) return;
+  if(shopCardEl && shopCardEl.classList.contains("up")) return;
+  openBook();
+}
+
+// --------------------------------------------------------- SHOW A GROWN-UP
+// One tap, the whole island from above, and it lands in My Stuff next to her
+// drawings. It also happens by itself the first time she plays at each size of
+// farm, so there is a before-and-after even if she never taps the button.
+var PHOTO={ busy:false, rings:{}, t:0, saved:0, lastOk:null };
+var camBtnEl=document.getElementById("camBtn");
+var flashEl=document.getElementById("flash");
+function farmDeviceId(){
+  try{
+    var k="deviceId", v=localStorage.getItem(k);
+    if(!v){ v="dev_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);
+            localStorage.setItem(k,v); }
+    return v;
+  }catch(e){ return "dev_farm"; }
+}
+// The island from the FM6 picture camera, taken in ONE frame: render, grab,
+// put the camera straight back. Nothing on screen moves, because the grab
+// happens before the browser paints anything.
+function farmShot(){
+  var pos=camera.position.clone(), quat=camera.quaternion.clone();
+  var data="";
+  try{
+    camera.position.set(0,74,60);
+    camera.lookAt(0,0,4);
+    renderer.render(scene,camera);
+    data=renderer.domElement.toDataURL("image/jpeg",0.82);
+  }catch(e){ data=""; }
+  camera.position.copy(pos); camera.quaternion.copy(quat);
+  return data;
+}
+function farmPhoto(auto){
+  if(PHOTO.busy) return false;
+  PHOTO.busy=true;
+  var data=farmShot();
+  if(flashEl){
+    flashEl.classList.add("on");
+    setTimeout(function(){ flashEl.classList.remove("on"); }, 30);
+  }
+  sfx("select"); haptic("light");
+  if(!auto) flashToast("A picture for a grown-up");
+  PHOTO.saved++;
+  var payload={
+    art_id:"farm_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    device_id:farmDeviceId(),
+    title:"My farm",
+    theme:"farm",
+    image_b64:data,
+    // saved_art wants a recipe as well as a picture; a farm's recipe is the
+    // farm itself, so the save blob rides along and nothing new is invented.
+    art:{ ops:[], farm:snapshotFarm() }
+  };
+  if(KID_ID) payload.kid_profile_id=KID_ID;
+  try{
+    fetch("/api/save-art",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload)})
+      .then(function(r){ PHOTO.lastOk=!!(r&&r.ok); })
+      .catch(function(){ PHOTO.lastOk=false; });
+  }catch(e){ PHOTO.lastOk=false; }
+  setTimeout(function(){ PHOTO.busy=false; }, 400);
+  return true;
+}
+if(camBtnEl) camBtnEl.addEventListener("click",function(){ farmPhoto(false); });
+// One picture per size of farm, taken by itself once she has been playing a
+// few seconds — never mid-celebration, never while the basket is waiting.
+function watchPhoto(dt){
+  if(!DRESSED) return;
+  PHOTO.t+=dt;
+  if(camBtnEl) camBtnEl.classList.toggle("on", PHOTO.t>1.5);
+  if(PHOTO.t<8 || PHOTO.busy) return;
+  if(REVEAL.on || basketWaiting() || NODRAW) return;
+  // never mid-whoosh: a picture taken while things are in the air costs a frame
+  // exactly when the farm can least afford one, and photographs a blur.
+  if(FLYING.length || unload.running || TRACTOR.state==="driving" || lookPickerUp()) return;
+  if(PHOTO.rings[FIELD_RING]) return;
+  PHOTO.rings[FIELD_RING]=1;
+  farmPhoto(true);
+  scheduleSave();
+}
+
+// ------------------------------------------------------------ THE FM8 TICK
+function fm8Tick(dt, now){
+  updateHand(dt, now);
+  updateTractor(dt, now);
+  updateTruck(dt, now);
+  atTheTractor();
+  atTheBook(now);
+  watchStickers(dt);
+  watchPhoto(dt);
+  watchLookPicker(dt);
+}
+// Everything FM8 put in the world, put back — the cloud-save swap in the first
+// second is the only thing that calls this.
+function fm8Reset(){
+  if(HAND.obj){ HAND.state="idle"; HAND.target=null; HAND.pour=0;
+    if(HAND.obj.userData.can) HAND.obj.userData.can.rotation.z=0; }
+  if(TRACTOR.obj){ TRACTOR.queue=[]; TRACTOR.kind=null; TRACTOR.state="parked";
+    TRACTOR.x=TRACTOR_SPOT.x; TRACTOR.z=TRACTOR_SPOT.z; }
+  hideTruckWant();
+  if(TRUCK.obj) TRUCK.obj.visible=false;
+  TRUCK.state="away"; TRUCK.wants=[]; TRUCK.t=TRUCK_GAP;
+  closeBook();
+}
+
+
+// =========================================================================
+//  FM9 — A REAL MAIN CHARACTER
+//
+//  Since FM1 the kid has been tube limbs, a ball head and two beads for eyes,
+//  and from the game camera she read as a blue blob. She is now a proper
+//  modelled character: Kenney's characterSmall body (CC0), converted to glb,
+//  with the whole of her — outfit, hair, face, skin — living in ONE 1024 png.
+//  That png is a NAMED SLOT, never a hardcoded path, so a different outfit, or
+//  a character per kid, is a one-file change and no code at all.
+//
+//  THE CODE-BUILT KID IS STILL HERE, hidden inside the same group. If the model
+//  ever fails to load, she comes straight back and the farm opens as it always
+//  did. Shared-library law: read on render, always with a local fallback.
+// =========================================================================
+var KID_DIR="/models/skyflyer/character/";
+var KID_URL=KID_DIR+"character-kid.glb";
+// The four movements. Each lives in its own file and carries a T-pose called
+// "Targeting Pose" at index 0 — taking animations[0] gets you a statue, so the
+// clip is always matched BY NAME.
+var KID_CLIP_URLS={ idle:KID_DIR+"anim-idle.glb",
+                    walk:KID_DIR+"anim-walk.glb",
+                    pick:KID_DIR+"anim-pickup.glb" };
+// The named slots. "who" is what the kid picked; the file behind it can change
+// without a line of this code changing.
+var KID_LOOKS=[
+  { id:"girl", skin:KID_DIR+"skin-farm-girl.png" },
+  { id:"boy",  skin:KID_DIR+"skin-farm-a.png" }
+];
+function kidLookById(id){
+  for(var i=0;i<KID_LOOKS.length;i++) if(KID_LOOKS[i].id===id) return KID_LOOKS[i];
+  return null;
+}
+var KID_LOOK=null;              // null until she picks, and then it is saved
+var KID_H=2.50;                 // exactly where the old kid's head was
+var KID3={ on:false, root:null, mixer:null, clips:{}, action:null, want:"idle",
+           mat:null, tex:{}, pickT:0, tried:false, fitScale:1,
+           skin:KID_LOOKS[0].skin };
+
+function kidTexture(url){
+  if(KID3.tex[url]) return KID3.tex[url];
+  var t=new THREE.TextureLoader().load(url);
+  // Straight out of the kit's own notes: without these she renders rough, and
+  // an upside-down skin puts her face on the back of her head.
+  t.flipY=false;
+  t.generateMipmaps=true;
+  t.minFilter=THREE.LinearMipmapLinearFilter;
+  t.magFilter=THREE.LinearFilter;
+  try{ t.anisotropy=Math.min(16, renderer.capabilities.getMaxAnisotropy()); }catch(e){}
+  // FM6's lesson, the other way round: this renderer works in linear, and a
+  // texture loaded by hand is already linear, so nothing is re-encoded here.
+  KID3.tex[url]=t;
+  return t;
+}
+// The one clip in a file that is not the T-pose.
+function realClip(anims){
+  var i;
+  if(!anims || !anims.length) return null;
+  for(i=0;i<anims.length;i++)
+    if(!/targeting/i.test(anims[i].name||"")) return anims[i];
+  return null;
+}
+function kidPlay(name){
+  if(!KID3.on || !KID3.mixer) return false;
+  var clip=KID3.clips[name];
+  if(!clip) return false;
+  if(KID3.action && KID3.action._bkName===name) return true;
+  var next=KID3.mixer.clipAction(clip);
+  next._bkName=name;
+  next.reset();
+  next.setLoop(name==="pick"?THREE.LoopOnce:THREE.LoopRepeat, name==="pick"?1:Infinity);
+  next.clampWhenFinished=(name==="pick");
+  next.enabled=true;
+  next.setEffectiveWeight(1);
+  if(KID3.action) next.crossFadeFrom(KID3.action, 0.18, false);
+  next.play();
+  KID3.action=next;
+  return true;
+}
+// Harvesting, feeding and taking an egg all reach for the ground, and they all
+// come through here. A quarter of a second is enough to read as a reach.
+function kidPick(){
+  if(!KID3.on) return;
+  KID3.pickT=0.75;
+  kidPlay("pick");
+}
+// The soft dark circle that stops her floating on the grass.
+function buildKidShadow(){
+  var g=new THREE.CircleGeometry(0.52, 20);
+  g.rotateX(-Math.PI/2);
+  var m=new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color:0x22331F, transparent:true,
+    opacity:0.22, depthWrite:false, fog:false }));
+  m.position.y=0.02;
+  m.renderOrder=-1;
+  return m;
+}
+function setKidLook(id, quiet){
+  var L=kidLookById(id); if(!L) return false;
+  KID_LOOK=L.id;
+  KID3.skin=L.skin;
+  if(KID3.mat){
+    KID3.mat.map=kidTexture(L.skin);
+    KID3.mat.needsUpdate=true;
+  } else {
+    loadKidModel(L.id);          // no-op once the load is already under way
+  }
+  if(!quiet){ sfx("celebrate"); haptic("success"); sparklePuff(kid.position.x,2.4,kid.position.z,12); }
+  return true;
+}
+function loadKidModel(lookId){
+  if(KID3.tried) return false;
+  KID3.tried=true;
+  if(!renderer || typeof THREE.GLTFLoader!=="function") return false;
+  var L=kidLookById(lookId)||KID_LOOKS[0];
+  if(!KID3.skin) KID3.skin=L.skin;
+  var loader; try{ loader=new THREE.GLTFLoader(); }catch(e){ return false; }
+  loader.load(KID_URL, function(gl){
+    var root=gl.scene;
+    if(!root){ return; }
+    // ONE material for the whole of her, built here: the glb's own is not
+    // worth keeping, and this renderer needs skinning switched on by hand.
+    // KID3.skin, not L.skin: she may have picked while the body was loading
+    var mat=new THREE.MeshPhongMaterial({ map:kidTexture(KID3.skin||L.skin), shininess:10,
+      skinning:true });
+    root.traverse(function(o){
+      if(o.isMesh || o.isSkinnedMesh){
+        o.material=mat;
+        o.frustumCulled=false;      // a skinned bounding box lies about where she is
+      }
+    });
+    KID3.mat=mat;
+    // stand her exactly where the old kid stood: 2.5 units tall, feet on zero
+    var box=new THREE.Box3().setFromObject(root);
+    var h=Math.max(0.001, box.max.y-box.min.y);
+    var sc=KID_H/h;
+    root.scale.setScalar(sc);
+    root.position.y=-box.min.y*sc;
+    KID3.fitScale=sc;
+    KID3.root=root;
+    KID3.mixer=new THREE.AnimationMixer(root);
+    // the drawn kid stays in the group, hidden, as the fallback she came from
+    if(kid.userData.drawn) kid.userData.drawn.visible=false;
+    kid.add(root);
+    if(!kid.userData.shadow){
+      var sh=buildKidShadow(); kid.add(sh); kid.userData.shadow=sh;
+    }
+    KID3.on=true;
+    // and now the movements, each from its own file, each matched by name
+    var k;
+    for(k in KID_CLIP_URLS) loadKidClip(k, KID_CLIP_URLS[k]);
+  }, null, function(){
+    KID3.on=false;               // the farm opens with the drawn kid, as ever
+  });
+  return true;
+}
+function loadKidClip(name, url){
+  var loader; try{ loader=new THREE.GLTFLoader(); }catch(e){ return; }
+  loader.load(url, function(gl){
+    var clip=realClip(gl.animations);
+    if(!clip) return;
+    KID3.clips[name]=clip;
+    if(name==="idle" && !KID3.action) kidPlay("idle");
+  }, null, function(){});
+}
+// Off the main loop: still is idle, moving is walk, and reaching for something
+// plays the pick-up once and then goes back to whichever of the two she is in.
+function updateKidModel(dt, moving){
+  if(!KID3.on) return;
+  if(KID3.pickT>0){
+    KID3.pickT-=dt;
+    if(KID3.pickT<=0) KID3.action=null;      // let the next state take over
+  } else {
+    kidPlay(moving?"walk":"idle");
+  }
+  if(KID3.mixer) KID3.mixer.update(dt);
+}
+
+// ------------------------------------------------------- WHO IS THIS? (FM9)
+// Mike's call: the kid picks. Two pictures, no words beyond the title, asked
+// once and remembered for good — the same card the farm already uses to name
+// an animal, so there is nothing new to learn.
+var lookCardEl=document.getElementById("lookCard");
+var lookRowEl=document.getElementById("lookRow");
+var LOOK_ART={
+  girl:'<svg viewBox="0 0 96 96"><path d="M22 44 q0 -30 26 -30 q26 0 26 30 v22 q0 8 -8 8 '+
+    'h-36 q-8 0 -8 -8 Z" fill="#6B4A2E"/>'+
+    '<circle cx="48" cy="44" r="19" fill="#E9BE93"/>'+
+    '<path d="M29 40 q4 -20 19 -20 q15 0 19 20 q-8 -9 -19 -9 q-11 0 -19 9 Z" fill="#7B5636"/>'+
+    '<circle cx="41" cy="44" r="3" fill="#3A2A1E"/><circle cx="55" cy="44" r="3" fill="#3A2A1E"/>'+
+    '<path d="M42 54 q6 5 12 0" stroke="#B4566A" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M26 74 h44 v14 h-44 Z" fill="#4C6C93"/>'+
+    '<path d="M34 74 v14 M62 74 v14" stroke="#3B567A" stroke-width="3"/></svg>',
+  boy:'<svg viewBox="0 0 96 96"><path d="M28 40 q2 -22 20 -22 q18 0 20 22 q-8 -8 -20 -8 '+
+    'q-12 0 -20 8 Z" fill="#6B4A2E"/>'+
+    '<circle cx="48" cy="46" r="19" fill="#E9BE93"/>'+
+    '<circle cx="41" cy="46" r="3" fill="#3A2A1E"/><circle cx="55" cy="46" r="3" fill="#3A2A1E"/>'+
+    '<path d="M42 56 q6 5 12 0" stroke="#B4566A" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M26 74 h44 v14 h-44 Z" fill="#D86F5C"/>'+
+    '<path d="M34 74 v14 M62 74 v14" stroke="#B4523F" stroke-width="3"/></svg>'
+};
+function renderLookPicker(){
+  if(!lookRowEl) return;
+  var html="", i;
+  for(i=0;i<KID_LOOKS.length;i++){
+    var L=KID_LOOKS[i];
+    html+='<div class="look'+(KID_LOOK===L.id?" on":"")+'" data-look="'+L.id+'">'+
+          (LOOK_ART[L.id]||"")+'</div>';
+  }
+  lookRowEl.innerHTML=html;
+  Array.prototype.forEach.call(lookRowEl.querySelectorAll(".look"),function(el){
+    el.addEventListener("click",function(){ pickLook(el.dataset.look); });
+  });
+}
+function openLookPicker(){ renderLookPicker(); if(lookCardEl) lookCardEl.classList.add("up"); }
+function closeLookPicker(){ if(lookCardEl) lookCardEl.classList.remove("up"); }
+function lookPickerUp(){ return !!(lookCardEl && lookCardEl.classList.contains("up")); }
+function pickLook(id){
+  if(!setKidLook(id)) return false;
+  closeLookPicker();
+  scheduleSave();
+  return true;
+}
+// Asked once, a couple of seconds in, and never again once she has answered.
+var lookAskT=0;
+function watchLookPicker(dt){
+  if(KID_LOOK || lookPickerUp()) return;
+  if(!DRESSED || REVEAL.on || basketWaiting()) return;
+  lookAskT+=dt;
+  if(lookAskT>2.2) openLookPicker();
+}
+
 // ------------------------------------------------------------------- BOOT
 // The farmyard has to exist before a save can be poured into it, so this runs
 // off the end of buildFarmyard() rather than off the end of the file.
@@ -5434,6 +6623,7 @@ function hardResetScene(){
     ANIMALS[i].mark=null; ANIMALS[i].fedCount=0;
   }
   closeBasket();
+  fm8Reset();
   order=null;
 }
 
@@ -5458,7 +6648,7 @@ function atTheBarn(dt){
   }
   if(d>BARN_R || barnLatch) return;
   barnLatch=true;
-  if(REVEAL.on || basketWaiting()) return;
+  if(REVEAL.on || basketWaiting() || bookOpen()) return;
   if(!nextUnlock() && DUCK_BOUGHT) return;      // nothing left in there to want
   barnOpened=true; tapUnlock(); openShop();
 }
@@ -5467,6 +6657,7 @@ function atTheBarn(dt){
 function fm5Tick(dt, now){
   updatePuffs(dt);
   updateDog(dt, now);
+  fm8Tick(dt, now);
   updateBasket(dt, now);
   updateReveal(dt);
   watchIdle(dt);
@@ -5617,6 +6808,8 @@ function dressIsland(){
 loadFarmAnimals(function(){
   loadNature(function(){
     dressIsland();
+    placeBookStand();          // FM8 — the sticker book, standing by the barn door
+    loadKidModel(KID_LOOK || KID_LOOKS[0].id);   // FM9 — the real main character
     buildFarmyard();
     if(Q.get("zoo")==="1") zoo();   // judge the models before believing the scene
   });
@@ -5674,7 +6867,16 @@ function zoo(){
     {name:"mill", make:buildMill},
     {name:"dairy", make:buildDairy},
     {name:"watering can", make:buildCan},
-    {name:"scarecrow", make:buildScarecrow}
+    {name:"scarecrow", make:buildScarecrow},
+    // FM8 and FM9 — same rule, and it earned its keep again: the farmhand's
+    // first turn was a scarecrow with arms and the truck's first bed was a box.
+    {name:"farmhand", make:buildHand},
+    {name:"tractor", make:buildTractor},
+    {name:"delivery truck", make:buildTruck},
+    {name:"sticker book", make:buildBookStand},
+    {name:"the kid (drawn fallback)", make:buildKid},
+    {name:"the kid (model)", make:function(){
+      return KID3.root ? KID3.root.clone(true) : null; }}
   ];
   // EVERY EXHIBIT IS NORMALISED TO THE SAME LONGEST DIMENSION, which is the
   // whole point of a stand: a shape is judged against the others rather than
@@ -5783,11 +6985,29 @@ buildSeedPicker();
 
 function openSeedPicker(patch){
   openPatch=patch;
+  FIELD_MODE=false;
+  setSeedTitle("Plant a seed");
+  updateSeedAffordability();
+  seedCardEl.classList.add("up");
+}
+// FM8 — the tractor's version of the same card. Same seeds, same prices, same
+// buttons; the only difference is that what she picks goes in EVERY patch.
+var FIELD_MODE=false;
+function setSeedTitle(text){
+  var t=document.getElementById("seedTitle");
+  if(t) t.textContent=text;
+}
+function openFieldPicker(){
+  openPatch=null;
+  FIELD_MODE=true;
+  setSeedTitle("Plant the whole field");
   updateSeedAffordability();
   seedCardEl.classList.add("up");
 }
 function closeSeedPicker(){
   openPatch=null;
+  FIELD_MODE=false;
+  setSeedTitle("Plant a seed");
   seedCardEl.classList.remove("up");
 }
 seedCloseEl.addEventListener("click",closeSeedPicker);
@@ -5810,24 +7030,40 @@ function updateSeedAffordability(){
   });
 }
 
-function tryPlant(kind){
-  if(!openPatch) return;
-  var r=CROP_RECIPES[kind]; if(!r) return;
-  tapUnlock();
-  if(!seedIsFree(kind) && !spendCoins(r.price)){ flashToast("Not enough coins"); sfx("hit"); return; }
+// FM8 — the ONE place a seed goes into the ground. Her tap and the tractor's
+// whole-field run both come through here, so the cost, the sprout and the puff
+// of soil can never drift apart between them.
+function plantPatch(P, kind){
+  var r=CROP_RECIPES[kind];
+  if(!P || !r || P.state!=="empty" || P.cover || P.locked) return false;
+  if(!seedIsFree(kind) && !spendCoins(r.price)) return false;
   sfx("select"); haptic("light");
-  openPatch.state="growing";
-  openPatch.seed=kind;
-  openPatch.plantedAt=performance.now()/1000;
-  // hide the dashed ring, add the sprout
-  openPatch.ring.visible=false;
+  P.state="growing";
+  P.seed=kind;
+  P.plantedAt=performance.now()/1000;
+  P.ring.visible=false;
   var sprout=buildCrop(kind,0);
-  sprout.position.set(openPatch.x, 0.06, openPatch.z);
-  openPatch.crop=sprout;
-  openPatch.chimed=false;
+  sprout.position.set(P.x, 0.06, P.z);
+  P.crop=sprout;
+  P.chimed=false;
   scene.add(sprout);
   // FM5 — a puff of soil, so the seed going in is something that HAPPENED.
-  soilPuff(openPatch.x, openPatch.z);
+  soilPuff(P.x, P.z);
+  return true;
+}
+function tryPlant(kind){
+  // FM8 — the same picker, asked from the tractor: one seed, the whole field.
+  if(FIELD_MODE){
+    if(!CROP_RECIPES[kind]) return;
+    tapUnlock();
+    startTractorRun(kind);
+    closeSeedPicker();
+    return;
+  }
+  if(!openPatch) return;
+  if(!CROP_RECIPES[kind]) return;
+  tapUnlock();
+  if(!plantPatch(openPatch, kind)){ flashToast("Not enough coins"); sfx("hit"); return; }
   closeSeedPicker();
 }
 
@@ -6315,6 +7551,8 @@ function step(){
     kid.userData.legR.rotation.x *= 0.85;
     kid.userData.body.position.y *= 0.85;
   }
+  // FM9 — and when the real model is up, the clips do the walking instead.
+  updateKidModel(dt, kidState.moving);
   // FM6 — she stays ON THE ISLAND. Not a fence and not a wall: she simply
   // cannot walk out onto the water, and the edge is a shape she can see.
   var edge=Math.hypot(kid.position.x, kid.position.z), lim=ISLAND_R-2.2;
@@ -6455,8 +7693,8 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm7",
-  coins: function(){ return coins; },
+  version: "fm8",
+  coins: function(){ return walletBalance(); },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
     return { x:P.x, z:P.z, state:P.state, seed:P.seed,
@@ -6562,6 +7800,89 @@ window.FARM = {
   } : null; },
   ordersDone: function(){ return ORDERS_DONE; },
   orderableKinds: orderableKinds,
+
+  // Three more testing levers, the same kind as giveItem and clearStack: empty
+  // the field, set the purse to an exact number, and read where the camera is.
+  harvestAll: function(){
+    var n=0, i;
+    for(i=0;i<PATCHES.length;i++){
+      var P=PATCHES[i];
+      if(P.cover || P.locked || P.state==="empty") continue;
+      if(P.crop){ scene.remove(P.crop); P.crop=null; }
+      if(P.halo){ scene.remove(P.halo); P.halo=null; }
+      P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false; P.sparkleT=0;
+      n++;
+    }
+    return n;
+  },
+  setCoins: function(n){ addCoins((n|0) - walletBalance()); return walletBalance(); },
+  cameraPos: function(){ return { x:+camera.position.x.toFixed(3),
+    y:+camera.position.y.toFixed(3), z:+camera.position.z.toFixed(3) }; },
+
+  // ---- FM8 ---------------------------------------------------------------
+  // The helpers, the second customer, the book and the picture, all readable
+  // and all drivable without a wall clock.
+  hand: function(){ return HAND.obj ? { x:+HAND.x.toFixed(2), z:+HAND.z.toFixed(2),
+    state:HAND.state, target:(HAND.target?{x:HAND.target.x,z:HAND.target.z}:null) } : null; },
+  handHelp: function(){ return HAND_HELP; },
+  handFindJob: function(){ var P=handFindJob(); return P?{x:P.x,z:P.z,seed:P.seed}:null; },
+  tractor: function(){ return TRACTOR.obj ? { x:+TRACTOR.x.toFixed(2), z:+TRACTOR.z.toFixed(2),
+    state:TRACTOR.state, kind:TRACTOR.kind, queue:TRACTOR.queue.length,
+    ready:tractorReady(), spot:{x:TRACTOR_SPOT.x, z:TRACTOR_SPOT.z}, r:TRACTOR_R } : null; },
+  openFieldPicker: function(){ openFieldPicker(); return FIELD_MODE; },
+  // Same lever as walkTick: play the tractor's drive out in game time rather
+  // than waiting for real frames.
+  tractorTick: function(sec){
+    var d=1/30, t=0, guard=0;
+    while(t<(sec||30) && TRACTOR.state!=="parked" && guard<20000){
+      updateTractor(d, performance.now()/1000); t+=d; guard++;
+    }
+    return TRACTOR.state;
+  },
+  fieldMode: function(){ return FIELD_MODE; },
+  emptyPatches: function(){ return emptyPatches().length; },
+  truck: function(){ return { state:TRUCK.state, x:+TRUCK.x.toFixed(2), z:TRUCK.z,
+    pay:TRUCK.pay, seen:!!TRUCK.seen, r:TRUCK_R, mult:TRUCK_MULT,
+    goods:TRUCK_GOODS.slice(), possible:truckPossible(),
+    wants:TRUCK.wants.map(function(w){ return {kind:w.kind, filled:!!w.filled}; }),
+    floating:!!TRUCK.want, stop:{x:TRUCK_STOP.x, z:TRUCK_STOP.z} }; },
+  truckCall: function(){ TRUCK.state="away"; TRUCK.t=0; return truckArrive(); },
+  stickers: function(){ return stickerPages().map(function(P){
+    return { id:P.id, got:!!P.got, seen:!!BOOK_SEEN[P.id] }; }); },
+  book: function(){ return { up:bookOpen(),
+    stamps:bookRowEl?bookRowEl.querySelectorAll(".stamp").length:0,
+    grey:bookRowEl?bookRowEl.querySelectorAll(".stamp.off").length:0,
+    stand:{x:BOOK_STAND.x, z:BOOK_STAND.z, r:BOOK_STAND_R, up:!!bookStandObj},
+    btn:!!(bookBtnEl&&bookBtnEl.classList.contains("on")) }; },
+  openBook: openBook,
+  closeBook: closeBook,
+  photo: function(){ return { taken:PHOTO.saved, rings:Object.keys(PHOTO.rings),
+    busy:PHOTO.busy, lastOk:PHOTO.lastOk,
+    btn:!!(camBtnEl&&camBtnEl.classList.contains("on")) }; },
+  // Takes the picture WITHOUT posting it anywhere, so a robot can prove the
+  // grab works without writing a row into anybody's gallery.
+  shotBytes: function(){ var d=farmShot(); return d?d.length:0; },
+  // ---- FM9 ---------------------------------------------------------------
+  kidModel: function(){ return { on:KID3.on, tried:KID3.tried,
+    look:KID_LOOK, skin:KID3.skin, fitScale:+KID3.fitScale.toFixed(4),
+    clips:Object.keys(KID3.clips), playing:KID3.action?KID3.action._bkName:null,
+    drawnVisible:!!(kid.userData.drawn && kid.userData.drawn.visible),
+    shadow:!!kid.userData.shadow, headTopY:kid.userData.headTopY,
+    height:(function(){ if(!KID3.root) return 0;
+      var b=new THREE.Box3().setFromObject(KID3.root);
+      return +(b.max.y-b.min.y).toFixed(3); })(),
+    footY:(function(){ if(!KID3.root) return null;
+      var b=new THREE.Box3().setFromObject(KID3.root);
+      return +(b.min.y+kid.position.y).toFixed(3); })() }; },
+  looks: function(){ return KID_LOOKS.map(function(L){ return L.id; }); },
+  lookPicker: function(){ return { up:lookPickerUp(),
+    options:lookRowEl?Array.prototype.slice.call(lookRowEl.querySelectorAll(".look"))
+      .map(function(el){ return el.dataset.look; }):[] }; },
+  pickLook: pickLook,
+  openLookPicker: openLookPicker,
+  kidPick: kidPick,
+  customerCast: function(){ return { faces:CUSTOMERS.length, favourites:CUSTOMER_FAV.slice(),
+    fav:order?order.fav:null, loved:order?!!order.loved:false }; },
 
   // ---- FM4 ---------------------------------------------------------------
   // What the kid has actually carried, and the lever that forgets it, so one

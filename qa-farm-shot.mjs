@@ -273,6 +273,86 @@ try {
   await shot(seven, 'fm7-seven-seeds-phone');
   await seven.close();
 
+  // ------------------------------------------------- FM8 and FM9: the new farm
+  const f8 = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+  await f8.route('**/api/save-art', r => r.fulfill({ status: 200,
+    contentType: 'application/json', body: '{"ok":true}' }));
+  await f8.goto(BASE, { waitUntil: 'load' });
+  await ready(f8);
+  // she has picked who she is, and the model has had time to arrive
+  await f8.evaluate(() => window.FARM.pickLook('girl'));
+  await f8.waitForFunction(() => window.FARM.kidModel().on === true, null, { timeout: 30000 })
+    .catch(() => {});
+  await f8.waitForTimeout(1200);
+
+  // the character herself, close enough to judge her face and her outfit
+  await f8.evaluate(() => { window.FARM.moveKidTo(-6, 0); window.FARM.giveItem('corn', 3); });
+  await f8.waitForTimeout(1600);
+  await shot(f8, 'fm9-the-kid');
+  await f8.evaluate(() => window.FARM.pickLook('boy'));
+  await f8.waitForTimeout(900);
+  await shot(f8, 'fm9-the-kid-boy');
+  await f8.evaluate(() => { window.FARM.pickLook('girl'); window.FARM.clearStack(); });
+
+  // the two helpers and the tractor, all on the farm at once
+  await f8.evaluate(() => {
+    ['pumpkinseed', 'farmdog', 'fieldrow', 'pig', 'mill', 'bees', 'strawberry',
+     'tractor', 'farmhand'].forEach(id => window.FARM.givePresent(id));
+    window.FARM.setCoins(400);
+    for (let i = 0; i < 6; i++) window.FARM.plant(i, 'corn');
+    window.FARM.moveKidTo(6, 8);
+  });
+  await f8.waitForTimeout(2200);
+  await shot(f8, 'fm8-helpers');
+
+  // the tractor planting the whole field, mid-run
+  await f8.evaluate(() => { window.FARM.harvestAll(); window.FARM.setCoins(400);
+    window.FARM.openFieldPicker(); });
+  await f8.waitForTimeout(500);
+  await shot(f8, 'fm8-plant-the-field-card');
+  await f8.evaluate(() => {
+    document.querySelector('#seedRow .seed[data-kind="corn"]').click();
+    window.FARM.tractorTick(6);              // a few seconds into the drive
+  });
+  await f8.waitForTimeout(900);
+  await shot(f8, 'fm8-tractor-planting');
+
+  // the truck on the road, wanting what the farm makes
+  await f8.evaluate(() => {
+    ['bread', 'cheese', 'honey'].forEach(k => window.FARM.giveItem(k, 1));
+    window.FARM.clearStack();
+    window.FARM.truckCall();
+  });
+  await f8.waitForFunction(() => window.FARM.truck().state === 'waiting', null, { timeout: 30000 })
+    .catch(() => {});
+  await f8.evaluate(() => { const t = window.FARM.truck();
+    window.FARM.moveKidTo(t.stop.x - 1, t.stop.z - 4); });
+  await f8.waitForTimeout(1400);
+  await shot(f8, 'fm8-delivery-truck');
+
+  // the sticker book, half full, which is the whole point of it
+  await f8.evaluate(() => { window.FARM.giveDuck(); window.FARM.openBook(); });
+  await f8.waitForTimeout(800);
+  await shot(f8, 'fm8-sticker-book');
+  await f8.evaluate(() => window.FARM.closeBook());
+  await f8.close();
+
+  // the sticker book and the who-is-this card at phone width
+  const f8p = await browser.newPage({ viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await f8p.goto(BASE, { waitUntil: 'load' });
+  await ready(f8p);
+  await f8p.waitForFunction(() => window.FARM.lookPicker().up === true, null, { timeout: 20000 })
+    .catch(() => {});
+  await f8p.waitForTimeout(600);
+  await shot(f8p, 'fm9-who-is-this-phone');
+  await f8p.evaluate(() => { window.FARM.pickLook('girl');
+    ['pumpkinseed', 'farmdog', 'fieldrow', 'pig'].forEach(id => window.FARM.givePresent(id));
+    window.FARM.openBook(); });
+  await f8p.waitForTimeout(800);
+  await shot(f8p, 'fm8-sticker-book-phone');
+  await f8p.close();
+
 } catch (e) {
   chk('the farm camera completed its run', false, e.message);
 } finally {
