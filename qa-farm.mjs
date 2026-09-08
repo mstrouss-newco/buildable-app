@@ -182,8 +182,17 @@ try {
   await ev(r => window.FARM.moveKidTo(r.x + 6.5, r.z + 6.5), ready);
   await page.waitForTimeout(700);
   const prePick = await ev(() => window.FARM.stackHeight());
-  await ev(r => window.FARM.moveKidTo(r.x, r.z), ready);
-  await page.waitForFunction(n => window.FARM.stackHeight() > n, prePick, { timeout: 12000 })
+  // stand ON it if the ground there is clear, and otherwise on the first clear
+  // side inside the magnet's reach: a produce spot can sit tight against the
+  // coop wall, and being slid out of a rail is being slid out of the magnet
+  await ev(r => {
+    if (!window.FARM.blockedAt(r.x, r.z)) { window.FARM.moveKidTo(r.x, r.z); return; }
+    const d = window.FARM.magnetRadius() - 0.6;
+    const sides = [[d, 0], [-d, 0], [0, d], [0, -d]];
+    const at = sides.find(([dx, dz]) => !window.FARM.blockedAt(r.x + dx, r.z + dz)) || [0, 0];
+    window.FARM.moveKidTo(r.x + at[0], r.z + at[1]);
+  }, ready);
+  await page.waitForFunction(n => window.FARM.stackHeight() > n, prePick, { timeout: 25000 })
     .catch(() => {});
   const picked = await ev(() => ({ stack: window.FARM.stack(), animals: window.FARM.animals() }));
   chk('walking over the egg hops it onto the stack like any crop',
@@ -934,10 +943,15 @@ try {
       // well away from the barn, because the barn opens and closes its own copy
       await ev5(() => { window.FARM.moveKidTo(-30, 20); window.FARM.addCoins(900); window.FARM.openShop(); });
       await p5.waitForTimeout(400);              // the card fades in
+      // textContent, not innerText: Chrome's innerText returns "" for anything
+      // inside a card that is still fading in, and at three frames a second the
+      // fade is very much still going. What the button SAYS is what matters here.
+      await p5.waitForFunction(() => document.getElementById('shopCard').classList.contains('up'),
+        null, { timeout: 10000 }).catch(() => {});
       const shown = await ev5(() => {
         const el = document.getElementById('buyPresent');
-        return { on: !!el && el.style.display !== 'none', text: el ? el.innerText : '',
-                 others: document.getElementById('shopCard').innerText };
+        return { on: !!el && el.style.display !== 'none', text: el ? el.textContent : '',
+                 others: document.getElementById('shopCard').textContent };
       });
       const nx = await ev5(() => window.FARM.nextUnlock());
       const otherPrices = LADDER.slice(1).filter(([, p]) => shown.others.includes(String(p)));
