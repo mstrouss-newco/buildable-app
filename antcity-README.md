@@ -251,6 +251,55 @@ The numbers (how often, what it pays, every word each bug says) live in
 `GAME_CONFIG.bug` and in `public/antcity/manifest.json`, so the recipe can retune the
 visits, or add a fourth visitor, without touching the engine.
 
+## How an ant moves, and how it looks (AC13)
+
+Two halves, kept deliberately apart. `walkVisual` decides how an ant **moves**;
+`drawAnt(x, y, angle, scale, t, opts)` decides how it **looks**. A future art style can
+replace the whole body without touching a line of movement.
+
+**Four ingredients, all four on.**
+
+1. **Feet that grip.** Every foot is stored in WORLD space (in cells, so it stays on the
+   same speck of dirt when the camera scrolls) and stays planted while the body walks past
+   it. The gait clock is driven by **distance travelled**, never by a timer, so an ant
+   cannot skate and a stopped ant is genuinely frozen with its feet down.
+2. **Stop and go.** Walk, freeze for a beat, occasionally dart.
+3. **A wobbly lane.** A slow drift either side of the trail, plus a little head casting.
+4. **Traffic and hellos.** An ant steps around a slower ant in front, and an outbound and
+   an inbound ant briefly touch antennae as they pass.
+
+**Two rules that must never be regressed.**
+
+- **Side view, not top-down.** All six legs point DOWN to the ground: three near-side at
+  full strength, three far-side shorter and faded. The body is gaster, thin waist, thorax,
+  head, about three times longer than tall. A round rear end plus forward mandibles reads
+  as a hermit crab. Mandibles and the white eye only draw when there is room for them; at
+  swarm size the eye is a plain dark dot. Antennae never thin below one screen pixel: they
+  are the strongest sign that this is an ant and not a beetle.
+- **Never rotate past vertical.** Rotating by heading alone flips an ant walking LEFT
+  upside down. Rotate by heading, then mirror with `scale(1,-1)` when the heading points
+  left, with a small dead zone so ants in a vertical shaft do not flicker, and replant the
+  feet whenever the mirror flips.
+
+The tripods are **near-front + near-back + far-middle** together, then the other three.
+Grouping by side instead swings the whole near side at once and reads as two wedges
+flapping.
+
+**The crowd is the score.** The number of ants on screen IS the progress meter, with no
+words. The cap (`sampleMax` 150, `sampleMaxPhone` 120) is a **painting budget**, nothing
+else: over budget it is leg detail that goes first, never ants. `antScale` is 0.215 of a
+cell, the 0.95x the motion lab locked. The counts-and-rates sim is unchanged and stays the
+only source of truth, and the motion layer runs on its own seeded random stream so wobble
+cannot shift a single roll the colony makes.
+
+**Food you can see (AC13, folded in from the old AC11).** Every edible thing is chunky,
+glossy and worth carrying, and it is the same drawing on the meadow, in an ant's mandibles
+and in the pantry: fat berries with a highlight and a stalk, real cut-leaf triangles,
+proper picnic crumbs, mushrooms that grow through stages and glow and bounce when ripe,
+and a storage pile that grows and shrinks with the stock so the pantry is the food meter
+made physical. The garden's mushrooms run on the garden's OWN clock, so they only swell
+while leaves are really being turned into food.
+
 ## The colony builder loop (grow it huge)
 
 Ant City is a kid-simple colony builder. The feel is a friendly ant version of a

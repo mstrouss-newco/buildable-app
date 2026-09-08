@@ -111,16 +111,123 @@ connected Supabase MCP and verified by counting the rows back.
   when the farm can least afford one.
 
 ### QA
-`qa-skyflyer.mjs` **827 green** (+27 static for FM8 and FM9). `qa-farm.mjs` grew a real FM8
-block (the farmhand, the tractor, the truck, the cast, the book, the picture and a reload)
-and an FM9 block (the model, her height, the movements, the picker and the fallback).
-`qa-farm-shot.mjs` takes eight new pictures. Cache-bust `?v=fm7` -> `?v=fm8`.
+`qa-skyflyer.mjs` **827 green** (+27 static for FM8 and FM9). `qa-farm.mjs` **266 green**,
+with a real FM8 block (the farmhand, the tractor, the truck, the cast, the book, the
+picture and a reload) and an FM9 block (the model, her height, the movements, the picker
+and the fallback, the last of them proved by ABORTING the model request in the browser).
+`qa-farm-shot.mjs` takes nine new pictures. `node qa-all.mjs` green. Cache-bust `?v=fm7`
+-> `?v=fm8`.
 
-**Two checks were already failing on `main` before this session touched anything** — "the
-first present is the pumpkin seed, and it is the only one shown" and "opening it plays the
-full reveal" — and they fail the same way on a clean checkout of `main` in this sandbox.
-They are three-frames-a-second timing in the harness, not the farm; they are left as they
-are rather than papered over, and they are worth a look next session.
+**Four checks were failing on `main` before this session touched anything** — both egg
+pickups, "the first present is the pumpkin seed", and "opening it plays the full reveal" —
+and a clean checkout of `main` in this sandbox fails them the same way. Every one of them
+was the harness rather than the farm, and all four are fixed here: the egg checks walked
+to the HEN rather than to the egg (which lands over a unit off her flank, and the magnet
+measures from the egg), the present check read `innerText`, which Chrome returns empty for
+a card that is still fading in, and the reveal check gave a celebration that plays in game
+time fifteen real seconds when game time here runs at a sixth of the clock.
+## 2026-09-08 (AC13): the swarm walks like ants, and the food is worth carrying
+
+**Phase AC, card AC13.** Touched `public/antcity-engine.html`, `qa-antcity.mjs`,
+`antcity-README.md`. The merged card: the swarm ants (old AC13) and the food glow-up
+(old AC11), together, because the ants and the things they carry come out of the same
+drawing layer.
+
+### Why the old ants felt wrong
+They were beads on a string. Constant speed, evenly spaced, on a perfect rail, with legs
+wiggling on a TIMER that had nothing to do with how fast the body was moving. So the fix
+is not a better ant picture, it is a better walk, and the walk now lives in its own
+function with the picture in another. `walkVisual` decides how an ant moves. `drawAnt`
+decides how it looks. A painted ant can replace the second without touching the first.
+
+### The four ingredients, all four on
+**Feet that grip.** Every foot is stored in world space, in cells, and stays on the same
+speck of dirt while the body walks past it. The gait clock is DISTANCE TRAVELLED, never a
+timer, so an ant physically cannot skate and an ant that has stopped is frozen with its
+feet down. That is the Age-of-Empires idle law made physical, and the robot proves it: a
+walking ant always has three of its six feet exactly where they were a frame ago, and the
+gait clock and the distance walked are the same number to within a thousandth of a cell.
+
+**Stop and go.** Walk, freeze for a beat, occasionally dart. A decision every so often,
+never a sine wave.
+
+**A wobbly lane.** A slow drift either side of the line, and a little head casting.
+
+**Traffic and hellos.** An ant steps around a slower ant in front of it, and an outbound
+and an inbound ant briefly touch antennae as they pass.
+
+### The two hard rules the motion lab learned the painful way
+**Side view, not top-down.** Three body segments about three times longer than tall, six
+legs pointing DOWN to the ground, three near-side at full strength and three far-side
+shorter and faded. A round rear end plus forward mandibles reads as a hermit crab, which
+is exactly what was rejected.
+
+**Never rotate past vertical.** Rotating an ant by its heading turns one walking LEFT
+upside down: eye underneath, antennae down, carried berry hanging below the head. So it
+rotates by heading and then MIRRORS whenever the heading points left, with a dead zone so
+an ant in a vertical shaft cannot flicker, and its feet are replanted the moment the
+mirror flips.
+
+### Three bugs this shook out, all of them the kind you only see on a screenshot
+1. **The tripod was not a tripod.** Near and far legs were grouped by the same bit that
+   picked the swinging half, so the whole near side swung together and then the whole far
+   side did. It read as two wedges flapping. The tripods are now near-front, near-back and
+   far-middle together, which is how a real ant walks.
+2. **Feet were planted at the wrong size.** A soldier is bigger and the ant the guide is
+   pointing at is bigger still, but their feet were being planted at the plain ant's size,
+   so the legs came out stretched.
+3. **Feet left behind.** The colony sim can move an ant outright — it swaps an idle one
+   for a nearer one when the camera moves — and a foot planted where the ant used to be
+   stretched into a long dark stick reaching across the tunnel. A foot too far from its own
+   body now simply takes a step. The grip is a rule about walking, not a tether.
+
+### The crowd IS the score
+The number of ants on screen is the progress meter, with no words at all. So the cap is a
+PAINTING budget and nothing else: 150 on a desktop, 120 on a phone, and over budget it is
+leg detail that goes first, never ants. The ants are drawn at 0.215 of a cell now, the
+0.95x the lab locked, which is much smaller than the old 0.34 and is what makes a river of
+them possible at all. The counts-and-rates sim is untouched and stays the only source of
+truth: a bigger colony costs more to paint, never more to think about. The motion layer
+even has its own seeded random stream, so adding wobble could not shift a single roll the
+colony makes and quietly rewrite a mission the robot has already proved.
+
+A cell holds three ants now instead of two, so a grown colony can actually be a crowd, and
+each of the three has its own standing spot so two can never be painted on top of each
+other.
+
+### Food you can see
+Every edible thing is chunky, glossy and worth carrying, and it is the same drawing whether
+it is on the meadow, in an ant's mandibles or stacked in the pantry. Berries are fat beads
+with a highlight and a stalk. Leaf bits are real cut-leaf triangles with a midrib. Crumbs
+are proper picnic crumbs. The fungus garden grows real mushrooms through real stages, and a
+ripe one glows and bounces until it is picked and leaves a sparkle behind — and it is the
+garden's OWN clock that drives them, so they only swell while leaves are really being
+turned into food. The storage room shows a pile that grows and shrinks with the stock, so
+the pantry is the food meter made physical. And the berry bush shows the next berry
+swelling on the branch the whole time the foragers are carrying them off.
+
+### Checked
+`qa-antcity.mjs` gained an AC13 section: the tripod is always planted, the gait clock is
+distance and not time, a stopped ant is frozen, every moving ant faces the way it is going,
+an ant walking left is mirrored rather than upside down, the crowd tracks the colony and
+never goes over the painting budget, no two ants are painted in the same spot, moving the
+jobs slider really thickens and thins the crowd that is walking, and a berry in an ant is a
+berry the bush has really lost. All green. `qa-antcity-shot.mjs` green in real Chromium,
+and the pictures were looked at, which is how the three bugs above were found.
+
+### Not done here
+The world pass and the underground soil layers are AC10, and cutting droppable water is
+AC10 as well. The worn forager trail baked into the ground is AC10's job too; this card
+gives it the stream of ants to put on it.
+
+### One call for Mike
+The card says a new colony should start at about 18 to 20 drawn ants so day one already
+looks like a colony. A new colony really has SIX ants, and the crowd is honest: it draws
+what the colony has. Raising the starting six would auto-complete the "Reach 10 Ants"
+mission and hand over soldiers and aphids in the first minute, which is a rule change the
+card forbids. So day one is six ants that walk beautifully, and the river arrives as the
+colony grows. Say the word and the starting colony can be raised with the mission targets
+moved up to match.
 
 ## 2026-09-08 (FM7): more to do — new crops, new animals, two little factories, and a farm she can arrange
 
