@@ -56,7 +56,7 @@ const shot = async (page, name) => {
     fs.existsSync(file) ? Math.round(fs.statSync(file).size / 1024) + 'KB' : 'missing');
 };
 const ready = (p) => p.waitForFunction(
-  () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
+  () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0, null,
   { timeout: 25000 });
 
 try {
@@ -89,7 +89,7 @@ try {
   await page.waitForTimeout(400);
   await page.evaluate(() => window.FARM.buyPresent());
   await page.waitForFunction(() => { const r = window.FARM.revealing();
-    return !!r && r.popped && window.FARM.confetti() > 10; }, { timeout: 12000 }).catch(() => {});
+    return !!r && r.popped && window.FARM.confetti() > 10; }, null, { timeout: 12000 }).catch(() => {});
   await page.waitForTimeout(250);
   const mid = await page.evaluate(() => ({ conf: window.FARM.confetti(),
     r: window.FARM.revealing(), plane: window.FARM.plane() }));
@@ -117,7 +117,7 @@ try {
   await fm6.waitForFunction(() => {
     const d = window.FARM.dog(), k = window.FARM.kid();
     return d.there && Math.hypot(d.x - k.x, d.z - k.z) < 3.2;
-  }, { timeout: 20000 }).catch(() => {});
+  }, null, { timeout: 20000 }).catch(() => {});
   await fm6.waitForTimeout(900);
   await shot(fm6, 'fm6-field-and-dog');
 
@@ -133,13 +133,13 @@ try {
     window.FARM.ageReady();
     return window.FARM.dog().there;
   });
-  await fm6.waitForFunction(() => window.FARM.dog().carry !== null, { timeout: 25000 }).catch(() => {});
+  await fm6.waitForFunction(() => window.FARM.dog().carry !== null, null, { timeout: 25000 }).catch(() => {});
   // and then wait until he is most of the way BACK to her, or the picture is a
   // dog somewhere off the top of the screen and shows nothing at all
   await fm6.waitForFunction(() => {
     const d = window.FARM.dog(), k = window.FARM.kid();
     return d.carry !== null && Math.hypot(d.x - k.x, d.z - k.z) < 5.2;
-  }, { timeout: 25000 }).catch(() => {});
+  }, null, { timeout: 25000 }).catch(() => {});
   chk('the dog really is carrying something when the picture is taken',
     fetched === true && (await fm6.evaluate(() => window.FARM.dog().carry)) !== null,
     String(await fm6.evaluate(() => window.FARM.dog().carry)));
@@ -165,6 +165,114 @@ try {
   await phone.waitForTimeout(800);
   await shot(phone, 'fm5-shop-phone');
   await phone.close();
+  // ------------------------------------- 6. FM6: the island, at three widths
+  // Mike judges the land at the sizes it is actually played at, so the same
+  // island is shot on a phone, on a tablet and on a desktop.
+  const WIDTHS = [
+    { name: 'phone',   w: 390,  h: 844, dpr: 2, mobile: true },
+    { name: 'tablet',  w: 1024, h: 768, dpr: 2, mobile: true },
+    { name: 'desktop', w: 1440, h: 900, dpr: 1, mobile: false }
+  ];
+  for (const W of WIDTHS) {
+    const pg = await browser.newPage({ viewport: { width: W.w, height: W.h },
+      deviceScaleFactor: W.dpr, isMobile: W.mobile, hasTouch: W.mobile });
+    await pg.goto(BASE, { waitUntil: 'load' });
+    await ready(pg);
+    await pg.evaluate(() => window.FARM.moveKidTo(0, 8));
+    await pg.waitForTimeout(2200);
+    await shot(pg, 'fm6-island-' + W.name);
+    // and the whole island in one frame, so the layout can be judged at all
+    await pg.evaluate(() => window.FARM.lookWide(true));
+    await pg.waitForTimeout(1400);
+    await shot(pg, 'fm6-island-wide-' + W.name);
+    await pg.close();
+  }
+
+  // the new land, under its stones, on a tablet
+  const land = await browser.newPage({ viewport: { width: 1024, height: 768 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await land.goto(BASE, { waitUntil: 'load' });
+  await ready(land);
+  const covered = await land.evaluate(() => {
+    window.FARM.givePresent('fieldrow');
+    window.FARM.moveKidTo(0, 15);
+    return window.FARM.coversLeft();
+  });
+  chk('the sixteen new slots really are under stones when the picture is taken',
+    covered === 16, covered + ' covered');
+  await land.waitForTimeout(1800);
+  await shot(land, 'fm6-new-land');
+  await land.close();
+
+  // ----------------------------------------- 7. FM7: the new verbs
+  const f7 = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  await f7.goto(BASE, { waitUntil: 'load' });
+  await ready(f7);
+  await f7.evaluate(() => {
+    window.FARM.addCoins(5000);
+    ['pumpkinseed','farmdog','fieldrow','pig','mill','bees','strawberry']
+      .forEach(id => window.FARM.givePresent(id));
+    ['tomatoseed','duck','melonseed','dairy'].forEach(id => window.FARM.giveExtra(id));
+    window.FARM.giveCan();
+  });
+  await f7.waitForTimeout(2200);
+
+  // the mill and the dairy, on the pads FM6 left for them
+  await f7.evaluate(() => window.FARM.moveKidTo(9, -10));
+  await f7.waitForTimeout(1400);
+  await shot(f7, 'fm7-mill-and-dairy');
+
+  // the seed pop-up, now seven crops
+  await f7.evaluate(() => window.FARM.openSeedPicker(4));
+  await f7.waitForTimeout(600);
+  await shot(f7, 'fm7-seven-seeds');
+  await f7.evaluate(() => window.FARM.closeSeedPicker());
+
+  // the name picker
+  await f7.evaluate(() => window.FARM.openNameFor(0));
+  await f7.waitForTimeout(600);
+  await shot(f7, 'fm7-name-picker');
+  await f7.evaluate(() => { window.FARM.nameAnimal(0, 'crown'); });
+
+  // the things she can buy for the farm
+  await f7.evaluate(() => window.FARM.openDecor());
+  await f7.waitForTimeout(600);
+  await shot(f7, 'fm7-make-it-yours');
+  await f7.evaluate(() => window.FARM.closeDecor());
+
+  // raining on a crop, held
+  const raining = await f7.evaluate(() => {
+    window.FARM.moveKidTo(0, 9);
+    window.FARM.plant(4, 'melon');
+    return window.FARM.waterPatch(4);
+  });
+  await f7.waitForFunction(() => window.FARM.can().drops > 6, null, { timeout: 15000 }).catch(() => {});
+  const drops = await f7.evaluate(() => window.FARM.can().drops);
+  chk('it really is raining on the crop when the picture is taken',
+    raining === true && drops > 6, drops + ' drops');
+  await shot(f7, 'fm7-watering');
+  await f7.evaluate(() => window.FARM.stopWatering());
+
+  // the pig, in its own pen
+  await f7.evaluate(() => window.FARM.moveKidTo(-6.5, 21.5));
+  await f7.waitForTimeout(1400);
+  await shot(f7, 'fm7-pig');
+  await f7.close();
+
+  // and the seed pop-up at phone width, where seven crops have to fit
+  const seven = await browser.newPage({ viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await seven.goto(BASE, { waitUntil: 'load' });
+  await ready(seven);
+  await seven.evaluate(() => {
+    window.FARM.givePresent('pumpkinseed'); window.FARM.givePresent('strawberry');
+    window.FARM.giveExtra('tomatoseed'); window.FARM.giveExtra('melonseed');
+    window.FARM.openSeedPicker(4);
+  });
+  await seven.waitForTimeout(700);
+  await shot(seven, 'fm7-seven-seeds-phone');
+  await seven.close();
+
 } catch (e) {
   chk('the farm camera completed its run', false, e.message);
 } finally {
