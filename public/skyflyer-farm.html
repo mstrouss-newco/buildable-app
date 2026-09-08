@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Sky Flyer — The Farm island (FM6)</title>
+<title>Sky Flyer — The Farm island (FM7)</title>
 <!--
   FM1 — the farm corner of Sunny Islands, built in the Sky Flyer engine style.
   Standalone scene: same three.min.js, same hand-built vertex-colored models
@@ -342,6 +342,58 @@
   .confetti{position:absolute;left:0;top:0;width:10px;height:15px;border-radius:2px;
     pointer-events:none;z-index:12;will-change:transform,opacity}
 
+  /* FM7 — THE NAME PICKER. Eight shapes, four across, and not one word in it
+     beyond the title. She cannot type and should never be asked to. */
+  #nameCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+    background:#fffef7;border-radius:26px;padding:14px 14px 18px;
+    box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
+    width:min(340px,92vw);max-width:340px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:11;text-align:center}
+  #nameCard.up{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+  #nameCard .title{font-weight:900;font-size:17px;color:#5b4a1f;padding:2px 0 10px}
+  #nameCard .row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+  #nameCard .mark{background:#f6efd6;border:2px solid #e7d9a4;border-radius:16px;
+    padding:8px 4px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;transition:transform .08s,background .15s}
+  #nameCard .mark:active{transform:translateY(2px)}
+  #nameCard .mark.on{background:#eaf7e4;border-color:#8ed08a}
+  #nameCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
+    border:none;background:transparent;cursor:pointer}
+
+  /* FM7 — THINGS FOR THE FARM. Same card shape as everything else, so the farm
+     only ever teaches one card. */
+  #decorBtn{position:absolute;right:14px;
+    top:calc(102px + env(safe-area-inset-top));
+    background:rgba(255,252,240,.92);border:none;border-radius:999px;
+    padding:7px 13px 7px 9px;display:none;align-items:center;gap:6px;
+    box-shadow:0 3px 10px rgba(30,60,90,.18);font-weight:800;font-size:13px;
+    color:#5b4a1f;pointer-events:auto;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #decorBtn.on{display:flex}
+  .bk-inshell #decorBtn{top:calc(var(--bk-nav-bottom,96px) + 100px)}
+  #decorCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);
+    background:#fffef7;border-radius:26px;padding:14px 14px 18px;
+    box-shadow:0 12px 40px rgba(30,60,90,.35),0 2px 0 #d9c99a inset;
+    width:min(360px,94vw);max-width:360px;pointer-events:auto;
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:11;text-align:center}
+  #decorCard.up{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+  #decorCard .title{font-weight:900;font-size:17px;color:#5b4a1f;padding:2px 0 10px}
+  #decorCard .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  #decorCard .thing{background:#f6efd6;border:2px solid #e7d9a4;border-radius:18px;
+    padding:8px 6px 10px;cursor:pointer;transition:transform .08s;
+    -webkit-tap-highlight-color:transparent}
+  #decorCard .thing:active{transform:translateY(2px)}
+  #decorCard .thing.locked{opacity:.42;cursor:not-allowed}
+  #decorCard .thing .art{height:62px;display:flex;align-items:center;justify-content:center}
+  #decorCard .thing .art svg{width:56px;height:56px;display:block}
+  #decorCard .thing .price{display:inline-flex;align-items:center;gap:4px;
+    background:#fff7d6;border-radius:999px;padding:2px 8px;margin-top:4px;
+    font-weight:800;font-size:13px;color:#8a6a12}
+  #decorCard .close{position:absolute;top:6px;right:8px;width:28px;height:28px;
+    border:none;background:transparent;cursor:pointer}
+
   /* Joystick — a soft touch pad kids can use, and drag-anywhere on the world
      also works. Kept clear of the top strip (HUD-AND-NAV rules). */
   #stick{position:absolute;left:calc(20px + env(safe-area-inset-left));
@@ -407,6 +459,36 @@
 
   <!-- FM3 — THE SHOP. Appears only once a duck is affordable-ish, so it never
        dangles something a kid cannot have. -->
+  <!-- FM7 — WHAT IS THIS ONE CALLED? Eight shapes, no words, no typing. -->
+  <div id="nameCard" role="dialog" aria-label="Name this animal">
+    <button class="close" id="nameClose" aria-label="Close">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="title">Pick a name</div>
+    <div class="row" id="nameRow"><!-- eight .mark cells injected --></div>
+  </div>
+
+  <!-- FM7 — THINGS FOR THE FARM. Tap one, then tap where it goes. -->
+  <button id="decorBtn" aria-label="Things for the farm">
+    <svg width="20" height="20" viewBox="0 0 24 24">
+      <path d="M12 21 V13" stroke="#3F8F46" stroke-width="2.2" stroke-linecap="round"/>
+      <circle cx="12" cy="8" r="3.1" fill="#F7C948" stroke="#B58A18" stroke-width="1.7"/>
+      <circle cx="7.4" cy="10.6" r="2.7" fill="#E86FA8" stroke="#A63C74" stroke-width="1.7"/>
+      <circle cx="16.6" cy="10.6" r="2.7" fill="#7EC8E3" stroke="#3C7C99" stroke-width="1.7"/>
+    </svg>Make it yours
+  </button>
+  <div id="decorCard" role="dialog" aria-label="Things for the farm">
+    <button class="close" id="decorClose" aria-label="Close">
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="#8a7a4a" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="title">Where shall it go?</div>
+    <div class="row" id="decorRow"><!-- five .thing cells injected --></div>
+  </div>
+
   <button id="shopBtn" aria-label="Shop">
     <svg width="20" height="20" viewBox="0 0 24 24">
       <path d="M4 8 h16 l-1.6 11 a2 2 0 0 1 -2 1.7 H7.6 a2 2 0 0 1 -2 -1.7 Z"
@@ -1201,8 +1283,14 @@ scene.add(buildField());
 // field: it costs the most, it takes the longest (still under a minute), and
 // it is worth the most when the crate asks for one. A seed still costs exactly
 // what its crop is worth, which is the rule FM4 set.
-var SEED_PRICES = { corn:4, carrot:3, wheat:2, pumpkin:10 };
-var ITEM_VALUES = { corn:4, carrot:3, wheat:2, egg:6, duckegg:7, milk:8, pumpkin:10 };
+var SEED_PRICES = { corn:4, carrot:3, wheat:2, pumpkin:10, strawberry:8, tomato:6, melon:12 };
+// FM7 — what a thing is worth. A crop is worth what its seed cost, as FM4 set
+// it. The four things a building or a pig MAKES are worth more than what went
+// into them, because that is the whole reason to bother: two wheat (2+2) go
+// into the mill and bread worth 14 comes out.
+var ITEM_VALUES = { corn:4, carrot:3, wheat:2, egg:6, duckegg:7, milk:8, pumpkin:10,
+  strawberry:8, tomato:6, melon:12,
+  truffle:16, honey:13, bread:14, cheese:20 };
 var ORDER_PAY_MULT = 3;       // an order pays 3x the sum of what it wants
 var SEED_PRICE = 2;           // the CHEAPEST seed — what the free-seed floor reads
 var DUCK_PRICE = 120;         // about four deliveries
@@ -1386,6 +1474,136 @@ CROP_RECIPES.pumpkin = {
       '</svg>';
   }
 };
+// =========================================================================
+//  FM7 — MORE TO DO. New verbs, and not one of them needs reading, and not
+//  one of them can be failed or run out of time.
+//
+//    - THREE MORE CROPS on top of the pumpkin: strawberry, tomato, melon.
+//      One recipe each, used for the plant in the ground, the thing on the
+//      stack and the picture on the order card, exactly as FM1 set it up.
+//    - A PIG who eats pumpkin and snuffles up truffles, and a BEEHIVE that
+//      makes honey FASTER THE MORE FLOWERS ARE NEAR IT.
+//    - THE MILL and THE DAIRY on the pads FM6 left for them. They are fed off
+//      the stack like an animal and float what they want over their roofs, so
+//      there is nothing new to learn: two wheat go in and bread comes out.
+//    - A WATERING CAN from the well: hold on a growing crop and it rains, and
+//      it grows twice as fast while she holds it.
+//    - MAKE IT HERS: buy and place flowers, hay, a fence, a tree, a scarecrow;
+//      and give every animal a name that is a picture, because she cannot type.
+// =========================================================================
+
+// ------------------------------------------------------------ THREE CROPS
+CROP_RECIPES.strawberry = {
+  price: 8, reward: 0, growSec: 38,
+  colors: {main:0xE0384A, seed:0xFFE08A, leaf:0x53A045, flower:0xFFF4E2},
+  parts:function(s){
+    var C=this.colors, p=[], i, a;
+    // low and bushy, with the berries hanging where a child can see them
+    for(i=0;i<5;i++){
+      a=(i/5)*Math.PI*2;
+      p.push(hbBall(0.30*s, C.leaf, {s:[1.5,0.30,1.1], r:[0,a,0.2],
+        p:[Math.cos(a)*0.34*s, 0.24*s, Math.sin(a)*0.34*s]}, 9));
+    }
+    // three berries: a cone standing on its point is the shape of a strawberry
+    for(i=0;i<3;i++){
+      a=i*2.1+0.4;
+      var bx=Math.cos(a)*0.36*s, bz=Math.sin(a)*0.36*s;
+      // point DOWN and shoulders up top: without the taper these came off the
+      // model stand looking like three cherries
+      p.push(hbTurn([[0.001,-0.30],[0.09,-0.22],[0.19,-0.02],[0.23,0.12],[0.17,0.24],[0.001,0.27]]
+        .map(function(q){ return [q[0]*s, q[1]*s]; }), C.main, {p:[bx, 0.52*s, bz]}, 12));
+      p.push(hbBall(0.035*s, C.seed, {p:[bx+0.13*s, 0.50*s, bz]}, 6));
+      p.push(hbBall(0.035*s, C.seed, {p:[bx-0.10*s, 0.55*s, bz+0.08*s]}, 6));
+      p.push(hbBall(0.10*s, C.leaf, {s:[1.6,0.34,1.6], p:[bx, 0.72*s, bz]}, 8));
+    }
+    return p;
+  },
+  svg:function(size){
+    size = size || 82;
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+      '<path d="M41 74 C22 62 18 44 24 34 C30 24 52 24 58 34 C64 44 60 62 41 74 Z" '+
+        'fill="#E0384A" stroke="#9C1D2C" stroke-width="2.5"/>'+
+      '<g fill="#FFE08A">'+
+        '<circle cx="33" cy="41" r="2.3"/><circle cx="41" cy="38" r="2.3"/><circle cx="49" cy="41" r="2.3"/>'+
+        '<circle cx="30" cy="52" r="2.3"/><circle cx="41" cy="50" r="2.3"/><circle cx="52" cy="52" r="2.3"/>'+
+        '<circle cx="36" cy="62" r="2.3"/><circle cx="46" cy="62" r="2.3"/>'+
+      '</g>'+
+      '<path d="M41 30 l-14 -5 l10 -3 l-6 -8 l10 5 l0 -9 l0 9 l10 -5 l-6 8 l10 3 Z" '+
+        'fill="#53A045" stroke="#2E6327" stroke-width="2" stroke-linejoin="round"/>'+
+      '</svg>';
+  }
+};
+
+CROP_RECIPES.tomato = {
+  price: 6, reward: 0, growSec: 36,
+  colors: {main:0xE24B3A, calyx:0x4E9A44, stem:0x5FA84E},
+  parts:function(s){
+    var C=this.colors, p=[], i, a;
+    p.push(hbTube(0.075*s, 0.06*s, 1.0*s, C.stem, {p:[0, 0.50*s, 0]}, 8));
+    for(i=0;i<4;i++){
+      a=(i/4)*Math.PI*2+0.3;
+      p.push(hbBall(0.24*s, C.stem, {s:[1.5,0.26,1.0], r:[0,a,0.25],
+        p:[Math.cos(a)*0.26*s, (0.42+ (i%2)*0.24)*s, Math.sin(a)*0.26*s]}, 8));
+    }
+    // two round tomatoes with a green star on top
+    for(i=0;i<2;i++){
+      a=i*Math.PI+0.6;
+      var tx=Math.cos(a)*0.30*s, tz=Math.sin(a)*0.30*s, ty=(0.72+i*0.22)*s;
+      p.push(hbBall(0.28*s, C.main, {s:[1,0.90,1], p:[tx, ty, tz]}, 12));
+      var k;
+      for(k=0;k<5;k++){
+        var ka=(k/5)*Math.PI*2;
+        p.push(hbBall(0.10*s, C.calyx, {s:[1.7,0.28,0.8], r:[0,ka,0.15],
+          p:[tx+Math.cos(ka)*0.11*s, ty+0.24*s, tz+Math.sin(ka)*0.11*s]}, 7));
+      }
+    }
+    return p;
+  },
+  svg:function(size){
+    size = size || 82;
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+      '<circle cx="41" cy="48" r="24" fill="#E24B3A" stroke="#992B20" stroke-width="2.5"/>'+
+      '<path d="M41 26 q-4 -6 -2 -10 q5 3 6 8 Z" fill="#5FA84E" stroke="#2E6327" stroke-width="2"/>'+
+      '<path d="M41 27 l-13 -6 l7 10 Z M41 27 l13 -6 l-7 10 Z M41 27 l-4 -13 l8 0 Z" '+
+        'fill="#4E9A44" stroke="#2E6327" stroke-width="2" stroke-linejoin="round"/>'+
+      '<ellipse cx="32" cy="41" rx="5" ry="7" fill="#F07A67" opacity="0.65"/>'+
+      '</svg>';
+  }
+};
+
+CROP_RECIPES.melon = {
+  price: 12, reward: 0, growSec: 50,
+  colors: {main:0x63A94E, band:0x35722F, stem:0x7A8F3A},   // `band`, not the other word: the no-real-money check greps for it
+  parts:function(s){
+    var C=this.colors, p=[], i, a;
+    // a big oval lying on its side, with dark bands over it
+    // LONG, not round. The first turn of this was a ribbed dome and it came off
+    // the model stand reading as a small green pumpkin.
+    p.push(hbBall(0.56*s, C.main, {s:[1.75,0.92,1.0], p:[0, 0.50*s, 0]}, 16));
+    for(i=0;i<4;i++){
+      a=(i/4)*Math.PI - Math.PI/2;
+      // the bands run the LONG way round it, which is what a melon has
+      p.push(hbBall(0.57*s, C.band, {s:[1.77,0.93,0.10], r:[0,0,0],
+        p:[0, 0.50*s, (i-1.5)*0.30*s]}, 14));
+    }
+    p.push(hbTube(0.07*s, 0.05*s, 0.34*s, C.stem, {r:[0.5,0,0.4], p:[0.34*s, 1.02*s, -0.14*s]}, 7));
+    for(i=0;i<3;i++)
+      p.push(hbBall(0.22*s, C.stem, {s:[1.5,0.24,1.1], r:[0,i*2.1,0.2],
+        p:[Math.cos(i*2.1)*0.72*s, 0.16*s, Math.sin(i*2.1)*0.72*s]}, 8));
+    return p;
+  },
+  svg:function(size){
+    size = size || 82;
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+      '<ellipse cx="41" cy="47" rx="30" ry="24" fill="#63A94E" stroke="#2E6327" stroke-width="2.5"/>'+
+      '<path d="M41 23 q-7 24 0 48" fill="none" stroke="#35722F" stroke-width="3.5"/>'+
+      '<path d="M24 27 q-4 20 3 38" fill="none" stroke="#35722F" stroke-width="3.2"/>'+
+      '<path d="M58 27 q4 20 -3 38" fill="none" stroke="#35722F" stroke-width="3.2"/>'+
+      '<path d="M46 22 q6 -8 12 -6 q-4 7 -10 8 Z" fill="#7A8F3A" stroke="#4C5B22" stroke-width="2"/>'+
+      '</svg>';
+  }
+};
+
 
 function buildCrop(kind, stage){
   var r=CROP_RECIPES[kind]; if(!r) return null;
@@ -1497,7 +1715,8 @@ function buildStackItem(kind){
 //  plant, so the FIRST order is always crops the kid can go and grow.
 // =========================================================================
 var COLLECT_KEY="bk_farm_collected";
-var COLLECT_ORDER=["corn","carrot","wheat","pumpkin","egg","duckegg","milk"];
+var COLLECT_ORDER=["corn","carrot","wheat","pumpkin","strawberry","tomato","melon",
+                   "egg","duckegg","milk","truffle","honey","bread","cheese"];
 var COLLECTED={corn:1,carrot:1,wheat:1};
 (function loadCollected(){
   try{
@@ -1676,6 +1895,86 @@ var PRODUCE_RECIPES = {
   }
 };
 // One lookup for anything that can ride the stack: crops AND produce.
+// -------------------------------------------------- FOUR THINGS TO CARRY HOME
+PRODUCE_RECIPES.truffle = {
+  colors:{main:0x4A342A, light:0x6B4E3D},
+  parts:function(s){
+    var C=this.colors, p=[], i, a;
+    p.push(hbBall(0.34*s, C.main, {s:[1.1,0.86,0.95]}, 12));
+    for(i=0;i<6;i++){
+      a=(i/6)*Math.PI*2 + i;
+      p.push(hbBall(0.13*s, i%2?C.light:C.main,
+        {p:[Math.cos(a)*0.26*s, Math.sin(i*1.3)*0.16*s, Math.sin(a)*0.24*s]}, 7));
+    }
+    return p;
+  },
+  svg:function(size){ size=size||82; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+    '<ellipse cx="41" cy="46" rx="26" ry="21" fill="#4A342A" stroke="#2B1C15" stroke-width="2.5"/>'+
+    '<circle cx="30" cy="38" r="6" fill="#6B4E3D"/><circle cx="50" cy="42" r="7" fill="#6B4E3D"/>'+
+    '<circle cx="39" cy="55" r="5" fill="#6B4E3D"/>'+
+    '</svg>'; }
+};
+PRODUCE_RECIPES.honey = {
+  colors:{glass:0xF2A93B, lid:0xC9782A, shine:0xFFD98A},
+  parts:function(s){
+    var C=this.colors, p=[];
+    // A JAR: wide in the belly, drawn in at the shoulder, with a lid that is a
+    // different colour and stands proud. The first one was a straight cylinder
+    // and read as a tin of paint on the model stand.
+    p.push(hbTurn([[0.001,0],[0.32,0.03],[0.35,0.20],[0.34,0.44],[0.22,0.56],[0.20,0.62],[0.001,0.62]]
+      .map(function(q){return [q[0]*s,q[1]*s];}), C.glass, null, 16));
+    p.push(hbTube(0.25*s,0.25*s,0.16*s,C.lid,{p:[0,0.68*s,0]},16));
+    p.push(hbTube(0.27*s,0.27*s,0.05*s,C.lid,{p:[0,0.76*s,0]},16));
+    p.push(hbBall(0.07*s, C.shine, {s:[0.5,1.6,0.5], p:[-0.19*s,0.32*s,0.17*s]},7));
+    return p;
+  },
+  svg:function(size){ size=size||82; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+    '<rect x="22" y="26" width="38" height="42" rx="8" fill="#F2A93B" stroke="#A9691D" stroke-width="2.5"/>'+
+    '<rect x="19" y="16" width="44" height="13" rx="5" fill="#C9782A" stroke="#8A4F16" stroke-width="2.5"/>'+
+    '<path d="M31 36 q0 14 0 24" stroke="#FFD98A" stroke-width="5" stroke-linecap="round" fill="none"/>'+
+    '</svg>'; }
+};
+PRODUCE_RECIPES.bread = {
+  colors:{crust:0xC98A4B, top:0xE0AB70, slash:0xA96C33},
+  parts:function(s){
+    var C=this.colors, p=[], i;
+    p.push(hbBall(0.44*s, C.crust, {s:[1.5,0.80,0.92], p:[0,0.30*s,0]}, 14));
+    p.push(hbBall(0.38*s, C.top, {s:[1.4,0.60,0.80], p:[0,0.40*s,0]}, 12));
+    for(i=0;i<3;i++)
+      p.push(hbBall(0.10*s, C.slash, {s:[0.5,0.4,1.5], r:[0,0,0.5],
+        p:[(i-1)*0.28*s, 0.60*s, 0]}, 7));
+    return p;
+  },
+  svg:function(size){ size=size||82; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+    '<ellipse cx="41" cy="47" rx="31" ry="19" fill="#C98A4B" stroke="#8A5A24" stroke-width="2.5"/>'+
+    '<ellipse cx="41" cy="41" rx="27" ry="14" fill="#E0AB70"/>'+
+    '<path d="M27 38 l7 -7 M39 36 l7 -7 M51 38 l7 -7" stroke="#A96C33" stroke-width="3.4" stroke-linecap="round"/>'+
+    '</svg>'; }
+};
+PRODUCE_RECIPES.cheese = {
+  colors:{main:0xF4C848, rind:0xDCA92C, hole:0xD9B23A},
+  parts:function(s){
+    var C=this.colors, p=[], i;
+    // a wedge: a squashed three-sided lathe reads as a triangle from above
+    // A THICK WEDGE. The first one was a flat triangle lying on the ground and
+    // read as a slice of pizza from above.
+    p.push(hbTurn([[0.001,0],[0.52,0.02],[0.52,0.46],[0.001,0.46]]
+      .map(function(q){return [q[0]*s,q[1]*s];}), C.main, {r:[0,0.5,0], p:[0,0.02*s,0]}, 3));
+    p.push(hbTurn([[0.001,0],[0.535,0.01],[0.535,0.07],[0.001,0.07]]
+      .map(function(q){return [q[0]*s,q[1]*s];}), C.rind, {r:[0,0.5,0], p:[0,0.44*s,0]}, 3));
+    // holes bitten out of the curved face, where they can actually be seen
+    for(i=0;i<4;i++)
+      p.push(hbBall(0.085*s, C.hole,
+        {p:[(-0.18+i*0.13)*s, (0.14+(i%2)*0.18)*s, (0.30-(i%2)*0.07)*s]}, 8));
+    return p;
+  },
+  svg:function(size){ size=size||82; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+    '<path d="M12 58 L60 22 L70 58 Z" fill="#F4C848" stroke="#A9791A" stroke-width="2.5" stroke-linejoin="round"/>'+
+    '<circle cx="34" cy="49" r="5" fill="#DCA92C"/><circle cx="52" cy="45" r="4" fill="#DCA92C"/>'+
+    '<circle cx="46" cy="54" r="3.4" fill="#DCA92C"/>'+
+    '</svg>'; }
+};
+
 function ITEM(kind){ return CROP_RECIPES[kind] || PRODUCE_RECIPES[kind] || null; }
 
 // =========================================================================
@@ -2111,16 +2410,165 @@ var ANIMAL_KINDS={
   }
 };
 
+
+// ================================================== THE PIG, THE HIVE, THE MILL
+// The mill and the dairy are ANIMALS as far as this file is concerned: they get
+// hungry, they float what they want over their heads, you walk past carrying it
+// and it flies off the stack, and a while later something is sitting outside
+// waiting to be picked up. That is the whole point — there is nothing new for
+// her to learn, because a building behaves exactly like a hen.
+ANIMAL_KINDS.pig = {
+  wants:"pumpkin", gives:"truffle",
+  makeSec:24,
+  size:2.60,
+  wantAt:2.30, mouthAt:1.05, produceOut:1.40
+};
+ANIMAL_KINDS.hive = {
+  wants:"", gives:"honey",       // nothing goes in: bees feed themselves
+  makeSec:34, freeRunning:true,
+  size:1.90,
+  wantAt:2.30, mouthAt:1.00, produceOut:1.35
+};
+ANIMAL_KINDS.mill = {
+  wants:"wheat", gives:"bread", needs:2,
+  makeSec:22, machine:true,
+  size:6.20,
+  wantAt:5.20, mouthAt:1.60, produceOut:2.70
+};
+ANIMAL_KINDS.dairy = {
+  wants:"milk", gives:"cheese", needs:2,
+  makeSec:24, machine:true,
+  size:4.40,
+  wantAt:4.00, mouthAt:1.40, produceOut:2.40
+};
+
+// ---------------------------------------------------------------- THE HIVE
+function buildHive(){
+  var p=[], i;
+  p.push(hbTurn([[0.80,0],[0.80,0.16],[0.70,0.20],[0.001,0.20]], 0x8C6237, null, 10));
+  for(i=0;i<3;i++){
+    p.push(hbTube(0.62-i*0.05, 0.62-i*0.05, 0.34, i%2?0xEBC96F:0xDDB855, {p:[0,0.36+i*0.38,0]}, 12));
+    p.push(hbTube(0.68-i*0.05, 0.68-i*0.05, 0.07, 0xC79E3E, {p:[0,0.53+i*0.38,0]}, 12));
+  }
+  p.push(hbTurn([[0.74,0],[0.66,0.10],[0.001,0.26]], 0xA34B3E, {p:[0,1.44,0]}, 12));
+  p.push(hbBox(0.52,0.06,0.34, 0x8C6237, {p:[0,0.30,0.62]}));   // the landing board
+  p.push(hbBall(0.10, 0x3A2A1E, {s:[1,0.7,1], p:[0,0.46,0.60]}, 7));   // the way in
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  // three bees that go round it and never stop
+  var bees=new THREE.Group();
+  for(i=0;i<3;i++){
+    var b=hbMesh(hbBake([hbBall(0.085,0xF2C749,{s:[1.3,1,1]},7),
+      hbBall(0.055,0x3A2A1E,{s:[1.1,1,1],p:[-0.09,0,0]},6),
+      hbBall(0.075,0xFFFFFF,{s:[1.4,0.16,0.9],p:[0,0.06,0]},6)]));
+    bees.add(b);
+  }
+  g.add(bees); g.userData.bees=bees;
+  return g;
+}
+
+// ---------------------------------------------------------------- THE MILL
+// A windmill: a round tower with a cap and four sails that turn. A watermill
+// would need water it is not standing next to.
+function buildMill(){
+  var p=[], i;
+  p.push(hbTurn([[1.35,0],[1.30,0.5],[1.05,2.4],[0.95,3.2],[0.98,3.35],[0.001,3.35]], 0xE6DCC4, null, 16));
+  for(i=0;i<3;i++)
+    p.push(hbTube(1.32-i*0.12, 1.32-i*0.12, 0.10, 0xC9BE9E, {p:[0,0.55+i*0.95,0]}, 16));
+  p.push(hbTurn([[1.12,0],[1.00,0.28],[0.55,0.70],[0.001,0.86]], 0x8C4136, {p:[0,3.30,0]}, 16));
+  p.push(hbBox(0.90,1.35,0.16, 0x8C6237, {p:[0,0.68,1.10]}));            // the door
+  p.push(hbBox(0.52,0.52,0.14, 0x6E5A3A, {p:[0,2.10,1.02]}));            // a window
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  // the sails, on their own group so they turn
+  // THE SAILS ARE THE WHOLE POINT OF A WINDMILL, and the first turn of this had
+  // cream arms holding cream cloth against a cream tower: on the model stand it
+  // was a white blur. The frame is dark wood now and the cloth is the barn's
+  // own red, so the shape reads from right across the island.
+  var sails=new THREE.Group(), a;
+  for(i=0;i<4;i++){
+    a=(i/4)*Math.PI*2;
+    var arm=hbMesh(hbBake([
+      hbBox(0.22,3.0,0.16, 0x7A5232, {p:[0,1.50,0]}),
+      hbBox(0.90,2.1,0.10, BARN_RED, {p:[0.50,1.70,0.06]}),
+      hbBox(0.94,0.14,0.12, 0x7A5232, {p:[0.50,0.66,0.06]}),
+      hbBox(0.94,0.14,0.12, 0x7A5232, {p:[0.50,2.74,0.06]})
+    ]));
+    arm.rotation.z=a; sails.add(arm);
+  }
+  sails.add(hbMesh(hbBake([hbBall(0.30,0x5E3F2A,{s:[1,1,1.4]},10)])));
+  sails.position.set(0,3.05,1.34);
+  g.add(sails); g.userData.sails=sails;
+  return g;
+}
+
+// --------------------------------------------------------------- THE DAIRY
+function buildDairy(){
+  var p=[], i;
+  p.push(hbBox(3.0,1.9,2.4, 0xF2F0E4, {p:[0,0.95,0]}));
+  p.push(hbBox(3.15,0.22,2.55, 0x6FA9C4, {p:[0,1.92,0]}));
+  p.push(hbBox(3.3,0.28,1.5, 0x4E86A6, {r:[0.62,0,0], p:[0,2.42,-0.62]}));
+  p.push(hbBox(3.3,0.28,1.5, 0x4E86A6, {r:[-0.62,0,0], p:[0,2.42,0.62]}));
+  p.push(hbBox(0.20,0.20,2.7, 0xF6EEDC, {p:[0,3.02,0]}));
+  p.push(hbBox(1.05,1.4,0.16, 0x6FA9C4, {p:[0,0.70,1.22]}));
+  // a milk churn outside the door, so what it does reads without a word
+  p.push(hbTurn([[0.001,0],[0.34,0.04],[0.36,0.62],[0.26,0.78],[0.29,0.84],[0.001,0.84]],
+    0xD8DEE2, {p:[1.05,0,1.35]}, 12));
+  p.push(hbTube(0.30,0.30,0.10, 0x9BA6AC, {p:[1.05,0.88,1.35]}, 12));
+  for(i=0;i<3;i++)
+    p.push(hbBall(0.16, 0x6FA9C4, {s:[1,0.5,1], p:[-1.0+i*0.42, 1.96, 0.9]}, 7));
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+
+// The three of them join makeAnimalBody, so everything past this point — the
+// wants, the feeding, the produce, the pickup, the save — is the code that was
+// already there.
+function makeBuiltBody(kind){
+  var mk = kind==="mill" ? buildMill : (kind==="dairy" ? buildDairy : buildHive);
+  var mesh=mk();
+  var wrap=new THREE.Group(); wrap.add(mesh);
+  var box=new THREE.Box3().setFromObject(mesh);
+  var span=Math.max(box.max.x-box.min.x, box.max.y-box.min.y, box.max.z-box.min.z);
+  return {obj:wrap, span:span, real:false, spin:mesh};
+}
+
+// ------------------------------------------ THE HIVE GOES FASTER NEAR FLOWERS
+// One rule, and it is a picture rule: the more flowers there are around the
+// hive, the sooner the honey. Nothing on screen says so; she plants a flower
+// bed next to it and the jars start coming quicker.
+var HIVE_FLOWER_R=9.0;
+function flowersNearHive(A){
+  var n=0, i, D;
+  for(i=0;i<DECOR.length;i++){
+    D=DECOR[i];
+    if(D.kind!=="flowers") continue;
+    if(Math.hypot(D.x-A.x, D.z-A.z) < HIVE_FLOWER_R) n++;
+  }
+  return n;
+}
+function hiveMakeSec(A){
+  // 34 seconds on its own, down to 14 with five flower beds around it, and
+  // never faster than that, because nothing on this farm is instant.
+  return Math.max(14, 34 - flowersNearHive(A)*4);
+}
+
 function makeAnimalBody(kind){
-  if(kind==="chicken"||kind==="duck"){
-    var node = (kind==="duck") ? "PekinDuck" : "Chicken";
+  // FM7 — the mill, the dairy and the hive are BUILDINGS, but everything past
+  // here treats them exactly as animals, which is why there is nothing new for
+  // a child to learn about them.
+  if(kind==="mill"||kind==="dairy"||kind==="hive"){
+    var b=makeBuiltBody(kind);
+    b.obj.scale.setScalar(ANIMAL_KINDS[kind].size/b.span);
+    return b;
+  }
+  if(kind==="chicken"||kind==="duck"||kind==="pig"){
+    var node = (kind==="duck") ? "PekinDuck" : (kind==="pig" ? "Pig" : "Chicken");
     var real = ANM_ON ? anmGet(node, ANIMAL_KINDS[kind].size) : null;
     if(real) return {obj:real, real:true};
     // The duck falls back to the drawn hen tinted white-and-orange rather than
     // to nothing, so a missing file costs a look and never the mechanic.
     var fb=buildChickenFallback();
     var w=new THREE.Group(); w.add(fb);
-    if(kind==="duck") w.scale.setScalar(ANIMAL_KINDS.duck.size/ANIMAL_KINDS.chicken.size);
+    if(kind!=="chicken") w.scale.setScalar(ANIMAL_KINDS[kind].size/ANIMAL_KINDS.chicken.size);
     return {obj:w, real:false};
   }
   // the cow, normalised the same way a loaded model is: sized by its LONGEST
@@ -2147,12 +2595,21 @@ function addAnimal(kind, x, z, facing, gait, opts){
     state:"hungry",        // hungry | making | ready. Never "starving".
     fedAt:0,
     want:null, produce:null, halo:null,
+    needs:K.needs||1,      // FM7: the mill and the dairy take TWO
+    fedCount:0,
+    machine:!!K.machine, freeRunning:!!K.freeRunning,
+    mark:null, markObj:null,   // FM7: the picture she named it with
     happy:0,               // seconds of the little celebration bounce left
     patrol:(opts&&opts.patrol)||null,
     patrolT:Math.random()*6.283
   };
   A.baseScale=obj.scale.x;      // anmGet normalised it; a pop-in must not undo that
-  A.rig=puppet(obj, gait, kind==="cow"?1.5:(kind==="duck"?2.9:3.6));
+  // a building has no walk cycle to give it, and a rig would only wobble it
+  if(!A.machine && kind!=="hive")
+    A.rig=puppet(obj, gait, kind==="cow"?1.5:(kind==="duck"?2.9:(kind==="pig"?2.0:3.6)));
+  if(built.spin) A.spin=built.spin;
+  // the hive is never hungry: the bees see to themselves
+  if(A.freeRunning){ A.state="making"; A.fedAt=performance.now()/1000; }
   ANIMALS.push(A);
   return A;
 }
@@ -2221,6 +2678,11 @@ function updateFlying(dt, now){
   }
 }
 function onFed(A, now){
+  // one of what it asked for landed. A mill wants two, so it only starts when
+  // the second one is in.
+  A.fedCount=(A.fedCount||0)+1;
+  if(A.fedCount < (A.needs||1)){ A.happy=0.5; return; }
+  A.fedCount=0;
   A.state="making";
   A.fedAt=now;
   A.happy=0.9;                 // a bounce, so the feed lands with a reaction
@@ -2283,7 +2745,10 @@ function collectProduce(A){
   if(A.halo){ scene.remove(A.halo); A.halo=null; }
   A.produceSide=null;
   A.magnet=null;
-  A.state="hungry";
+  A.readyAt=null;
+  // the hive goes straight back to work; everything else waits to be fed
+  if(A.freeRunning){ A.state="making"; A.fedAt=performance.now()/1000; }
+  else A.state="hungry";
   A.happy=0.6;
 }
 
@@ -2329,9 +2794,15 @@ function updateAnimals(dt, now){
       // FEED: walk near enough carrying the right thing and it just happens
       var d=Math.hypot(kid.position.x-A.x, kid.position.z-A.z);
       if(d<FEED_R){
-        var has=false, s;
-        for(s=0;s<stack.length;s++) if(stack[s].userData.kind===A.wants){ has=true; break; }
-        if(has && flyOffStack(A.wants, A)) A.state="feeding";
+        // FM7 — the mill and the dairy take TWO, and they take both or neither,
+        // so she never watches one wheat vanish into a mill that then sits there
+        var have=0, s;
+        for(s=0;s<stack.length;s++) if(stack[s].userData.kind===A.wants) have++;
+        if(have>=A.needs){
+          A.fedCount=0;
+          for(s=0;s<A.needs;s++) flyOffStack(A.wants, A);
+          A.state="feeding";
+        }
       }
       continue;
     }
@@ -2339,7 +2810,8 @@ function updateAnimals(dt, now){
     if(A.state==="feeding") continue;    // the item is mid-air; onFed takes over
 
     if(A.state==="making"){
-      if(now-A.fedAt >= A.makeSec) spawnProduce(A);
+      var mk = A.kind==="hive" ? hiveMakeSec(A) : A.makeSec;
+      if(now-A.fedAt >= mk) spawnProduce(A);
       continue;
     }
 
@@ -3232,11 +3704,15 @@ function renderShop(){
       buyPresentEl.innerHTML='<div class="art">'+PRESENT_SVG+'</div>'+priceBadge(U.price);
     }
   }
+  // FM7 — one EXTRA at a time under the present, cheapest first, so the card
+  // is still exactly two things however much the farm grows.
+  var E=nextExtra();
   if(buyDuckEl){
-    buyDuckEl.style.display = DUCK_BOUGHT ? "none" : "";
-    if(!DUCK_BOUGHT){
-      buyDuckEl.className="buy"+(walletBalance()>=DUCK_PRICE?"":" locked");
-      buyDuckEl.innerHTML='<div class="art">'+DUCK_SVG+'</div>'+priceBadge(DUCK_PRICE);
+    buyDuckEl.style.display = E ? "" : "none";
+    if(E){
+      buyDuckEl.className="buy"+(walletBalance()>=E.price?"":" locked");
+      buyDuckEl.dataset.extra=E.id;
+      buyDuckEl.innerHTML='<div class="art">'+(EXTRA_SVG[E.id]||DUCK_SVG)+'</div>'+priceBadge(E.price);
     }
   }
 }
@@ -3244,11 +3720,12 @@ function updateShopButton(){
   if(!shopBtnEl) return;
   // it only ever appears once it is worth appearing: never dangle a thing a
   // child cannot have, and never once there is nothing left in there.
-  var U=nextUnlock();
-  var prices=[]; if(U) prices.push(U.price); if(!DUCK_BOUGHT) prices.push(DUCK_PRICE);
+  var U=nextUnlock(), E=nextExtra();
+  var prices=[]; if(U) prices.push(U.price); if(E) prices.push(E.price);
   var show = prices.length>0 && walletBalance() >= Math.round(Math.min.apply(null,prices)*0.5);
   shopBtnEl.classList.toggle("on", show);
   if(shopCardEl.classList.contains("up")) renderShop();
+  updateDecorButton();
 }
 function openShop(){ renderShop(); shopCardEl.classList.add("up"); }
 function closeShop(){ shopCardEl.classList.remove("up"); }
@@ -3276,8 +3753,29 @@ function buyDuck(){
 if(shopBtnEl) shopBtnEl.addEventListener("click", function(){ tapUnlock(); openShop(); });
 if(shopCloseEl) shopCloseEl.addEventListener("click", closeShop);
 if(shopCardEl) shopCardEl.addEventListener("click", function(e){ if(e.target===shopCardEl) closeShop(); });
-if(buyDuckEl) buyDuckEl.addEventListener("click", buyDuck);
+if(buyDuckEl) buyDuckEl.addEventListener("click", buyExtra);
 if(buyPresentEl) buyPresentEl.addEventListener("click", buyPresent);
+// FM7 — the two new cards. These lookups have to sit HERE, above the
+// wiring: they used to live down beside the code that uses them, and a var
+// read before its line is simply undefined, so every one of these listeners
+// was quietly skipped and the two new buttons did nothing at all.
+var nameCardEl=document.getElementById("nameCard");
+var nameRowEl=document.getElementById("nameRow");
+var nameCloseEl=document.getElementById("nameClose");
+var decorBtnEl=document.getElementById("decorBtn");
+var decorCardEl=document.getElementById("decorCard");
+var decorRowEl=document.getElementById("decorRow");
+var decorCloseEl=document.getElementById("decorClose");
+// FM7 — the two new cards
+if(nameCloseEl) nameCloseEl.addEventListener("click", closeNamePicker);
+if(nameCardEl) nameCardEl.addEventListener("click", function(e){ if(e.target===nameCardEl) closeNamePicker(); });
+if(decorBtnEl) decorBtnEl.addEventListener("click", function(){
+  tapUnlock();
+  if(placing){ stopPlacing(); return; }      // tapping it again puts the thing back
+  openDecorCard();
+});
+if(decorCloseEl) decorCloseEl.addEventListener("click", closeDecorCard);
+if(decorCardEl) decorCardEl.addEventListener("click", function(e){ if(e.target===decorCardEl) closeDecorCard(); });
 
 
 function buildFarmyard(){
@@ -3423,6 +3921,18 @@ function snapshotFarm(){
     collected:collectedList(),
     unlocks:ownedList(),
     duck:DUCK_BOUGHT,
+    can:CAN_OWNED,
+    // BY KIND AND ORDER WITHIN KIND, never by index: which animals exist and in
+    // what order depends on what she has unlocked and when, so a saved index
+    // can easily come back pointing at a different animal.
+    names:(function(){ var seen={}, out=[];
+      ANIMALS.forEach(function(a){
+        var n=(seen[a.kind]=(seen[a.kind]||0)+1)-1;
+        if(a.mark) out.push({k:a.kind, n:n, m:a.mark});
+      });
+      return out; })(),
+    decor:DECOR.map(function(D){ return {k:D.kind, x:+D.x.toFixed(2),
+      z:+D.z.toFixed(2), y:+D.yaw.toFixed(3)}; }),
     ordersDone:ORDERS_DONE,
     order: order ? { pay:order.pay, face:order.face, sent:!!order.sent,
       items:order.items.map(function(it){ return {k:it.kind, f:!!it.filled}; }) } : null
@@ -3482,7 +3992,9 @@ function saveSignature(){
   for(i=0;i<PATCHES.length;i++) s.push(PATCHES[i].state.charAt(0)+(PATCHES[i].seed||""));
   for(i=0;i<ANIMALS.length;i++) s.push(ANIMALS[i].kind.charAt(0)+ANIMALS[i].state.charAt(0));
   for(i=0;i<stack.length;i++) s.push(stack[i].userData.kind);
-  s.push("b"+BASKET.items.length, "o"+ORDERS_DONE, "u"+ownedList().length,
+  s.push("n"+DECOR.length, "w"+(CAN_OWNED?1:0),
+         "m"+ANIMALS.map(function(a){return a.mark?a.mark.charAt(0):"-";}).join(""),
+         "b"+BASKET.items.length, "o"+ORDERS_DONE, "u"+ownedList().length,
          "c"+collectedList().length, "d"+(DUCK_BOUGHT?1:0),
          "r"+FIELD_RING, "v"+coversLeft(), "g"+(DOG.carry||"-"));
   if(order) for(i=0;i<order.items.length;i++) s.push(order.items[i].kind+(order.items[i].filled?"1":"0"));
@@ -3707,6 +4219,20 @@ function applySave(blob){
     }
   }
 
+  // ---- FM7: the can, what she has put down, and what she named things
+  if(blob.can && !CAN_OWNED) giveCanQuiet();
+  clearDecor();
+  (blob.decor||[]).forEach(function(D){ placeDecor(D.k, D.x, D.z, D.y, true); });
+  (blob.names||[]).forEach(function(N){
+    if(!N || !N.m) return;
+    var seen=0, i;
+    for(i=0;i<ANIMALS.length;i++){
+      if(ANIMALS[i].kind!==N.k) continue;
+      if(seen===N.n){ ANIMALS[i].mark=N.m; return; }
+      seen++;
+    }
+  });
+
   // ---- the tower she was carrying
   (blob.stack||[]).forEach(function(kind){
     if(ITEM(kind)) pushOntoStack(kind, new THREE.Vector3(kid.position.x, 0.9, kid.position.z));
@@ -3741,6 +4267,12 @@ function applySave(blob){
 function heldOnStack(kind){
   for(var i=0;i<stack.length;i++) if(stack[i].userData.kind===kind) return true;
   return false;
+}
+// FM7 — the mill and the dairy take TWO, so "has she got one" is not the
+// question any more.
+function countOnStack(kind){
+  var n=0; for(var i=0;i<stack.length;i++) if(stack[i].userData.kind===kind) n++;
+  return n;
 }
 function readyCropOf(kind){
   for(var i=0;i<PATCHES.length;i++)
@@ -3780,8 +4312,9 @@ function whatCanSheDoNow(){
   }
   for(i=0;i<ANIMALS.length;i++){
     if(ANIMALS[i].state==="ready") n++;           // loose produce, sitting out
-    else if(ANIMALS[i].state==="hungry" &&
-            (heldOnStack(ANIMALS[i].wants) || readyCropOf(ANIMALS[i].wants))) n++;
+    else if(ANIMALS[i].state==="hungry" && ANIMALS[i].wants &&
+            (countOnStack(ANIMALS[i].wants) >= (ANIMALS[i].needs||1) ||
+             readyCropOf(ANIMALS[i].wants))) n++;
   }
   if(basketWaiting()) n++;
   n += coversLeft();                    // FM6: land waiting to be tidied
@@ -3853,10 +4386,10 @@ var UNLOCKS=[
   { id:"pumpkinseed", price:130, name:"Pumpkin seed",     built:true  },
   { id:"farmdog",     price:180, name:"A farm dog",       built:true  },
   { id:"fieldrow",    price:240, name:"Another row",      built:true  },
-  { id:"pig",         price:300, name:"A pig",            built:false },
-  { id:"mill",        price:380, name:"The mill",         built:false },
-  { id:"bees",        price:460, name:"Bees",             built:false },
-  { id:"strawberry",  price:560, name:"Strawberry seed",  built:false },
+  { id:"pig",         price:300, name:"A pig",            built:true  },
+  { id:"mill",        price:380, name:"The mill",         built:true  },
+  { id:"bees",        price:460, name:"Bees",             built:true  },
+  { id:"strawberry",  price:560, name:"Strawberry seed",  built:true  },
   { id:"tractor",     price:700, name:"A tractor",        built:false }
 ];
 var OWNED={};
@@ -4213,20 +4746,56 @@ function updateDog(dt, now){
 // Idempotent, every one of them: this runs when a present is opened AND on
 // every load of a save that already has that present in it.
 function applyUnlock(id){
-  if(id==="pumpkinseed"){ buildSeedPicker(); return true; }
+  if(id==="pumpkinseed" || id==="strawberry" ||
+     id==="tomatoseed"  || id==="melonseed"){ buildSeedPicker(); return true; }
   if(id==="farmdog"){ return spawnDog(); }
   if(id==="fieldrow"){ return unlockFieldRing(); }
-  return false;                      // FM7 and FM8 fill the rest of the ladder in
+  if(id==="pig"){ return placePig(); }
+  if(id==="mill"){ return placeBuilding("mill", ISLE.mill, -0.35); }
+  if(id==="dairy"){ return placeBuilding("dairy", ISLE.dairy, 0.3); }
+  if(id==="bees"){ return placeHive(); }
+  return false;                      // FM8 fills the tractor in
+}
+function applyAllExtras(){
+  for(var i=0;i<EXTRAS.length;i++)
+    if(EXTRAS[i].id!=="duck" && OWNED[EXTRAS[i].id]) applyUnlock(EXTRAS[i].id);
 }
 function applyAllUnlocks(){
   for(var i=0;i<UNLOCKS.length;i++) if(OWNED[UNLOCKS[i].id]) applyUnlock(UNLOCKS[i].id);
+  applyAllExtras();
 }
 
 // The thing that hops out of the box. A present whose thing does not exist yet
 // still has no model, and FM5's fistful of coins stands in for it.
+// A mill is over three units tall and a strawberry is a fifth of one. The box
+// is the same size for all of them, so whatever comes out is scaled to fit it.
+function fitReveal(obj, want){
+  if(!obj) return null;
+  var box=new THREE.Box3().setFromObject(obj);
+  var span=Math.max(box.max.x-box.min.x, box.max.y-box.min.y, box.max.z-box.min.z);
+  if(span>0.001){
+    var wrap=new THREE.Group();
+    obj.scale.setScalar((want||1.5)/span);
+    obj.position.y = -box.min.y*obj.scale.y;
+    wrap.add(obj);
+    return wrap;
+  }
+  return obj;
+}
 function unlockModel(id){
   if(id==="pumpkinseed"){
     var g=new THREE.Group(); g.add(hbMesh(hbBake(CROP_RECIPES.pumpkin.parts(1.15)))); return g;
+  }
+  if(id==="strawberry"){
+    var sg=new THREE.Group(); sg.add(hbMesh(hbBake(CROP_RECIPES.strawberry.parts(1.3)))); return sg;
+  }
+  if(id==="mill") return fitReveal(buildMill(), 1.7);
+  if(id==="bees") return fitReveal(buildHive(), 1.5);
+  if(id==="pig"){
+    // the pig is a library model, so the one that hops out of the box is its
+    // OWN body, built the same way the one in the pen is
+    var body=makeAnimalBody("pig");
+    return body ? fitReveal(body.obj, 1.5) : null;
   }
   if(id==="farmdog") return buildDog();
   if(id==="fieldrow"){
@@ -4238,6 +4807,501 @@ function unlockModel(id){
     return f;
   }
   return null;
+}
+
+
+// =========================================================================
+//  FM7 — THE WATERING CAN. She fetches it from the well once, and after that
+//  she holds her finger on a growing crop and it RAINS on it, and it grows
+//  twice as fast for as long as she holds. No meter, nothing to run out of,
+//  nothing to fail: let go and it is simply not raining any more.
+// =========================================================================
+var CAN_OWNED=false, canObj=null;
+var WATER={ patch:null, t:0, drops:[] };
+
+function buildCan(){
+  var p=[];
+  p.push(hbTurn([[0.001,0],[0.30,0.03],[0.32,0.44],[0.28,0.52],[0.001,0.52]], 0x6FA9C4, null, 12));
+  p.push(hbTube(0.30,0.30,0.07,0x4E86A6,{p:[0,0.55,0]},12));
+  p.push(hbTube(0.065,0.065,0.52,0x4E86A6,{r:[0,0,Math.PI/2],p:[0,0.62,0]},8));
+  p.push(hbTube(0.07,0.13,0.60,0x4E86A6,{r:[0,0,-0.9],p:[0.34,0.40,0]},9));
+  p.push(hbTurn([[0.001,0],[0.17,0.04],[0.001,0.08]], 0x9BD0E2, {r:[0,0,-0.9], p:[0.58,0.62,0]}, 10));
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+// the same can, arriving without the fanfare, for a farm being restored
+function giveCanQuiet(){
+  if(CAN_OWNED) return false;
+  CAN_OWNED=true; canObj=buildCan(); scene.add(canObj); return true;
+}
+function giveCan(){
+  if(CAN_OWNED) return false;
+  CAN_OWNED=true;
+  canObj=buildCan();
+  scene.add(canObj);
+  flashToast("A watering can!");
+  sfx("levelup"); haptic("success");
+  sparklePuff(ISLE.well.x, 1.2, ISLE.well.z, 14);
+  return true;
+}
+// She picks it up by walking to the well, which is a place she already walks
+// past on her way from the barn to the field.
+function atTheWell(){
+  if(CAN_OWNED || !DRESSED) return;
+  if(Math.hypot(kid.position.x-ISLE.well.x, kid.position.z-ISLE.well.z) < 2.8) giveCan();
+}
+function startWatering(P){
+  if(!CAN_OWNED || !P || P.state!=="growing") return false;
+  WATER.patch=P; WATER.t=0;
+  return true;
+}
+function stopWatering(){
+  WATER.patch=null;
+  for(var i=0;i<WATER.drops.length;i++) scene.remove(WATER.drops[i]);
+  WATER.drops.length=0;
+}
+function updateWatering(dt, now){
+  if(canObj){
+    // it rides on her hip until she needs it, then tips over the crop
+    var W=WATER.patch;
+    if(W){
+      canObj.position.set(W.x-0.9, 1.7, W.z-0.2);
+      canObj.rotation.z=-1.05;
+      canObj.rotation.y=Math.atan2(W.x-kid.position.x, W.z-kid.position.z);
+    } else {
+      canObj.position.set(kid.position.x+0.75, 0.55+Math.sin(now*2)*0.03, kid.position.z-0.15);
+      canObj.rotation.z=0;
+      canObj.rotation.y=kidState.facing;
+    }
+  }
+  var P=WATER.patch;
+  if(!P){ return; }
+  if(P.state!=="growing"){ stopWatering(); return; }
+  // DOUBLE SPEED while she holds: one extra second of growing per second.
+  P.plantedAt -= dt;
+  // and it rains, so she can see why
+  WATER.t-=dt;
+  if(WATER.t<=0 && WATER.drops.length<26){
+    WATER.t=0.05;
+    var d=hbMesh(hbBake([hbBall(0.05,0x9BD0E2,{s:[1,2.2,1]},6)]));
+    d.position.set(P.x+(Math.random()-0.5)*PATCH_R*1.5, 1.45+Math.random()*0.5,
+                   P.z+(Math.random()-0.5)*PATCH_R*1.5);
+    d.userData.v=2.6+Math.random()*1.6;
+    scene.add(d); WATER.drops.push(d);
+  }
+  for(var i=WATER.drops.length-1;i>=0;i--){
+    var dr=WATER.drops[i];
+    dr.position.y -= dr.userData.v*dt;
+    if(dr.position.y<0.08){
+      scene.remove(dr); WATER.drops.splice(i,1);
+      if(Math.random()<0.4) puff(dr.position.x, 0.10, dr.position.z, 0x9BD0E2, 2, 0.5, 0.7, 0.22);
+    }
+  }
+}
+
+// =========================================================================
+//  FM7 — EVERY ANIMAL GETS A NAME, AND THE NAME IS A PICTURE.
+//
+//  She cannot type and should never be asked to. Walk up to an animal, tap it,
+//  and pick one of eight shapes. That shape is its name from then on, and it
+//  floats over its head whenever she is near it.
+// =========================================================================
+var NAME_MARKS=[
+  {id:"star",   c:0xF7C948, svg:'<path d="M20 4 L24.5 15 L36 16 L27 24 L30 35 L20 29 L10 35 L13 24 L4 16 L15.5 15 Z"/>'},
+  {id:"heart",  c:0xE8637C, svg:'<path d="M20 34 C6 24 4 15 10 10 C15 6 20 11 20 13 C20 11 25 6 30 10 C36 15 34 24 20 34 Z"/>'},
+  {id:"flower", c:0xE86FA8, svg:'<g><circle cx="20" cy="10" r="6"/><circle cx="30" cy="20" r="6"/><circle cx="20" cy="30" r="6"/><circle cx="10" cy="20" r="6"/><circle cx="20" cy="20" r="5.5" fill="#FFF3C4"/></g>'},
+  {id:"crown",  c:0xF0A72E, svg:'<path d="M5 30 L7 12 L14 20 L20 8 L26 20 L33 12 L35 30 Z"/>'},
+  {id:"moon",   c:0xC9B8F0, svg:'<path d="M26 6 A15 15 0 1 0 26 34 A12 12 0 1 1 26 6 Z"/>'},
+  {id:"sun",    c:0xFFD34E, svg:'<g><circle cx="20" cy="20" r="9"/><path d="M20 2 v6 M20 32 v6 M2 20 h6 M32 20 h6 M7 7 l4 4 M29 29 l4 4 M33 7 l-4 4 M11 29 l-4 4" stroke-width="3.2" stroke-linecap="round"/></g>'},
+  {id:"leaf",   c:0x63C46A, svg:'<path d="M32 8 C14 8 8 18 8 32 C22 32 32 24 32 8 Z"/>'},
+  {id:"bell",   c:0xE0A24E, svg:'<path d="M20 5 C27 5 29 12 29 20 L32 28 H8 L11 20 C11 12 13 5 20 5 Z M20 30 a3 3 0 0 0 0 6 a3 3 0 0 0 0 -6"/>'}
+];
+function markSvg(id, size){
+  var i, M=null;
+  for(i=0;i<NAME_MARKS.length;i++) if(NAME_MARKS[i].id===id) M=NAME_MARKS[i];
+  if(!M) return "";
+  return '<svg width="'+(size||40)+'" height="'+(size||40)+'" viewBox="0 0 40 40" '+
+    'fill="#'+M.c.toString(16).padStart(6,"0")+'" stroke="#5B4A2A" stroke-width="2" '+
+    'stroke-linejoin="round">'+M.svg+'</svg>';
+}
+// the same shape, in 3D, to float over the animal it belongs to
+function buildMark3D(id){
+  var i, M=null;
+  for(i=0;i<NAME_MARKS.length;i++) if(NAME_MARKS[i].id===id) M=NAME_MARKS[i];
+  if(!M) return null;
+  var p=[];
+  if(id==="star"||id==="flower"||id==="sun"){
+    for(i=0;i<(id==="star"?5:(id==="sun"?8:5));i++){
+      var a=(i/(id==="star"?5:(id==="sun"?8:5)))*Math.PI*2;
+      p.push(hbBall(id==="sun"?0.09:0.13, M.c,
+        {s:[1,0.5,1], p:[Math.cos(a)*0.24, 0, Math.sin(a)*0.24]}, 7));
+    }
+    p.push(hbBall(0.15, id==="flower"?0xFFF3C4:M.c, {s:[1,0.5,1]}, 8));
+  } else if(id==="heart"){
+    p.push(hbBall(0.15, M.c, {s:[1,0.5,1], p:[-0.11,0,0.07]}, 8));
+    p.push(hbBall(0.15, M.c, {s:[1,0.5,1], p:[0.11,0,0.07]}, 8));
+    p.push(hbCone(0.20, 0.34, M.c, {r:[Math.PI/2,0,0], p:[0,0,-0.14]}, 8));
+  } else if(id==="moon"){
+    p.push(hbTube(0.24,0.24,0.10,M.c,{p:[0,0,0]},14));
+    p.push(hbTube(0.17,0.17,0.13,0x8FD262,{p:[0.13,0,0]},12));
+  } else if(id==="crown"){
+    p.push(hbTube(0.24,0.24,0.12,M.c,{p:[0,0,0]},10));
+    for(i=0;i<4;i++){
+      var ca=(i/4)*Math.PI*2;
+      p.push(hbCone(0.08,0.22,M.c,{p:[Math.cos(ca)*0.22, 0.12, Math.sin(ca)*0.22]},7));
+    }
+  } else if(id==="leaf"){
+    p.push(hbBall(0.26, M.c, {s:[1.5,0.34,0.85], r:[0,0.6,0]}, 10));
+  } else {
+    p.push(hbTurn([[0.001,0],[0.22,0.06],[0.16,0.30],[0.001,0.34]], M.c, null, 10));
+    p.push(hbBall(0.07, M.c, {p:[0,-0.05,0]}, 6));
+  }
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+var namingAnimal=null;
+function buildNamePicker(){
+  if(!nameRowEl) return;
+  nameRowEl.innerHTML="";
+  NAME_MARKS.forEach(function(M){
+    var el=document.createElement("div");
+    el.className="mark"; el.dataset.mark=M.id;
+    el.innerHTML=markSvg(M.id, 46);
+    el.addEventListener("click", function(){ pickName(M.id); });
+    nameRowEl.appendChild(el);
+  });
+}
+buildNamePicker();   // NAME_MARKS and markSvg both live above this line
+function openNamePicker(A){
+  if(!nameCardEl) return false;
+  namingAnimal=A;
+  Array.prototype.forEach.call(nameRowEl.querySelectorAll(".mark"), function(el){
+    el.classList.toggle("on", A.mark===el.dataset.mark);
+  });
+  nameCardEl.classList.add("up");
+  return true;
+}
+function closeNamePicker(){ if(nameCardEl) nameCardEl.classList.remove("up"); namingAnimal=null; }
+function pickName(id){
+  var A=namingAnimal; if(!A) return false;
+  A.mark=id;
+  if(A.markObj){ scene.remove(A.markObj); A.markObj=null; }
+  sfx("select"); haptic("light");
+  sparklePuff(A.x, (ANIMAL_KINDS[A.kind].wantAt||1.6)*0.9, A.z, 9);
+  closeNamePicker();
+  scheduleSave();
+  return true;
+}
+// the mark floats over its animal, but only when she is near enough to be
+// looking at it, so eight badges never clutter the field at once
+function updateMarks(dt, now){
+  for(var i=0;i<ANIMALS.length;i++){
+    var A=ANIMALS[i];
+    if(!A.mark) continue;
+    var near=Math.hypot(kid.position.x-A.x, kid.position.z-A.z) < 8.5;
+    if(near && !A.markObj){
+      A.markObj=buildMark3D(A.mark);
+      if(A.markObj) scene.add(A.markObj);
+    } else if(!near && A.markObj){
+      scene.remove(A.markObj); A.markObj=null;
+    }
+    if(A.markObj){
+      var K=ANIMAL_KINDS[A.kind];
+      A.markObj.position.set(A.x + (A.want?0.85:0), (K.wantAt||1.6)+0.55+Math.sin(now*2.3+i)*0.07, A.z);
+      A.markObj.rotation.y += dt*1.1;
+    }
+  }
+}
+
+// =========================================================================
+//  FM7 — MAKE IT HERS. Buy a thing, then tap where it goes.
+//
+//  Five things, and none of them does anything except be where she put it —
+//  which is the point. A farm you have arranged is a farm you own. The one
+//  that is not only decoration is the flower bed: put those near the hive and
+//  the honey comes quicker (see hiveMakeSec).
+//
+//  Placing is two taps and no dragging: tap the thing, then tap the ground.
+//  A drag is a hard gesture for a four-year-old on a moving camera, and this
+//  farm already teaches "tap where you want it" for everything else.
+// =========================================================================
+var DECOR=[];                    // {kind, x, z, yaw, obj}
+var DECOR_KINDS=[
+  { id:"flowers",   price:30,  name:"Flowers"   },
+  { id:"hay",       price:40,  name:"Hay"       },
+  { id:"fence",     price:25,  name:"Fence"     },
+  { id:"tree",      price:80,  name:"A tree"    },
+  { id:"scarecrow", price:120, name:"Scarecrow" }
+];
+var placing=null;                // the kind she has picked up but not put down
+var ghost=null;
+
+function decorPrice(id){
+  for(var i=0;i<DECOR_KINDS.length;i++) if(DECOR_KINDS[i].id===id) return DECOR_KINDS[i].price;
+  return 30;
+}
+function buildScarecrow(){
+  var p=[];
+  p.push(hbTube(0.10,0.10,2.5,0x8C6237,{p:[0,1.25,0]},8));
+  p.push(hbTube(0.09,0.09,1.9,0x8C6237,{r:[0,0,Math.PI/2],p:[0,1.85,0]},8));
+  p.push(hbTurn([[0.001,0],[0.42,0.10],[0.40,0.72],[0.001,0.80]],0xE8DCA8,{p:[0,1.20,0]},12));
+  p.push(hbBall(0.34,0xE8C98A,{s:[1,1.15,1],p:[0,2.30,0]},12));
+  p.push(hbTurn([[0.62,0],[0.52,0.06],[0.001,0.30]],0xDCC079,{p:[0,2.52,0]},14));
+  p.push(hbBall(0.055,0x3A2A1E,{p:[-0.13,2.34,0.28]},6));
+  p.push(hbBall(0.055,0x3A2A1E,{p:[0.13,2.34,0.28]},6));
+  p.push(hbBall(0.05,0x3A2A1E,{s:[2.6,0.7,1],p:[0,2.16,0.30]},6));
+  var i;
+  for(i=0;i<5;i++){
+    p.push(hbCone(0.07,0.30,0xDCC079,{r:[0.4,0,(i-2)*0.35],p:[-0.92+i*0.05,1.72,0]},6));
+    p.push(hbCone(0.07,0.30,0xDCC079,{r:[0.4,0,(i-2)*0.35],p:[0.92-i*0.05,1.72,0]},6));
+  }
+  var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
+  return g;
+}
+function buildFencePiece(){
+  var g=new THREE.Group();
+  buildFenceRun(g, 3.0, 0, 0, 0);
+  var post=buildFencePost(); post.position.set(-1.5,0,0); g.add(post);
+  var post2=buildFencePost(); post2.position.set(1.5,0,0); g.add(post2);
+  return g;
+}
+function buildDecor(kind){
+  if(kind==="hay"){ return buildHayBale(); }
+  if(kind==="scarecrow"){ return buildScarecrow(); }
+  if(kind==="fence"){ return buildFencePiece(); }
+  if(kind==="tree"){
+    var t=NAT_READY ? natGet(["CommonTree_1","CommonTree_3","CommonTree_5"][Math.floor(Math.random()*3)], 5.0) : null;
+    if(t) return t;
+    // no kit, no problem: a drawn tree in the farm's own hand
+    var p=[];
+    p.push(hbTube(0.26,0.34,2.0,0x8C6237,{p:[0,1.0,0]},9));
+    p.push(hbBall(1.30,0x63A94E,{s:[1,0.85,1],p:[0,2.60,0]},14));
+    p.push(hbBall(0.85,0x74B04E,{s:[1,0.85,1],p:[0.75,2.10,0.35]},12));
+    var g2=new THREE.Group(); g2.add(hbMesh(hbBake(p))); return g2;
+  }
+  // flowers
+  var f=NAT_READY ? natGet(Math.random()<0.5?"Flower_3_Group":"Flower_4_Group", 1.7) : null;
+  if(f) return f;
+  var q=[], i, a;
+  for(i=0;i<7;i++){
+    a=(i/7)*Math.PI*2;
+    q.push(hbTube(0.035,0.030,0.55,0x53A045,{p:[Math.cos(a)*0.3,0.28,Math.sin(a)*0.3]},6));
+    q.push(hbBall(0.14,[0xE86FA8,0xF7C948,0xE8637C][i%3],
+      {s:[1,0.5,1],p:[Math.cos(a)*0.3,0.58,Math.sin(a)*0.3]},8));
+  }
+  var g3=new THREE.Group(); g3.add(hbMesh(hbBake(q))); return g3;
+}
+
+// Where a thing may go: on the island, on open ground, not on the farm itself.
+function canPlaceAt(x,z){
+  if(Math.hypot(x,z) > ISLAND_R-3.0) return false;
+  if(blockedAt(x,z,1.0)) return false;
+  if(areaContaining(x,z)) return false;                 // not inside a pen
+  if(Math.abs(x-FIELD_CX)<fieldHalf(1)+1.0 && Math.abs(z-FIELD_CZ)<fieldHalf(1)+1.0) return false;
+  if(Math.abs(x-RUNWAY.x)<RUNWAY.halfW+2.0 && Math.abs(z-RUNWAY.z)<RUNWAY.halfL+1.0) return false;
+  if(Math.abs(z-ISLE.road.z)<3.6) return false;
+  if(Math.hypot(x-ISLE.pond.x, z-ISLE.pond.z) < ISLE.pond.r+1.6) return false;
+  var i;
+  for(i=0;i<DECOR.length;i++) if(Math.hypot(x-DECOR[i].x, z-DECOR[i].z) < 1.9) return false;
+  return true;
+}
+function placeDecor(kind, x, z, yaw, free){
+  if(!canPlaceAt(x,z)) return false;
+  if(!free && !spendCoins(decorPrice(kind))){ flashToast("Keep saving"); sfx("hit"); return false; }
+  var obj=buildDecor(kind);
+  if(!obj) return false;
+  obj.position.set(x,0,z);
+  obj.rotation.y = yaw==null ? Math.random()*6.28 : yaw;
+  scene.add(obj);
+  DECOR.push({kind:kind, x:x, z:z, yaw:obj.rotation.y, obj:obj});
+  if(kind==="tree" || kind==="scarecrow") addCircleBlocker(x,z,0.55,"decor");
+  if(!free){
+    soilPuff(x,z); sfx("levelup"); haptic("success");
+    sparklePuff(x, 0.8, z, 10);
+  }
+  scheduleSave();
+  return true;
+}
+function clearDecor(){
+  for(var i=0;i<DECOR.length;i++) scene.remove(DECOR[i].obj);
+  DECOR.length=0;
+  for(i=BLOCKERS.length-1;i>=0;i--) if(BLOCKERS[i].tag==="decor") BLOCKERS.splice(i,1);
+}
+
+// ---- the ghost that follows her tap until she puts the thing down
+function startPlacing(kind){
+  if(placing) stopPlacing();
+  placing=kind;
+  ghost=buildDecor(kind);
+  if(ghost){
+    ghost.position.set(kid.position.x, 0, kid.position.z+3);
+    ghost.traverse(function(o){ if(o.isMesh){ o.material=o.material.clone();
+      o.material.transparent=true; o.material.opacity=0.55; } });
+    scene.add(ghost);
+  }
+  closeDecorCard();
+  return true;
+}
+function stopPlacing(){
+  if(ghost){ scene.remove(ghost); ghost=null; }
+  placing=null;
+}
+function moveGhost(x,z){
+  if(!ghost) return;
+  ghost.position.set(x,0,z);
+  var ok=canPlaceAt(x,z);
+  ghost.traverse(function(o){ if(o.isMesh && o.material) o.material.opacity = ok?0.75:0.25; });
+}
+// a tap while she is holding something puts it down there
+function tapWhilePlacing(x,z){
+  if(!placing) return false;
+  var kind=placing;
+  if(!canPlaceAt(x,z)){ moveGhost(x,z); sfx("hit"); return true; }
+  stopPlacing();
+  placeDecor(kind, x, z, null, false);
+  return true;
+}
+
+var DECOR_SVG={
+  flowers:'<svg viewBox="0 0 60 60"><g stroke="#2E6327" stroke-width="3" stroke-linecap="round">'+
+    '<path d="M20 52 V34"/><path d="M32 52 V28"/><path d="M44 52 V36"/></g>'+
+    '<circle cx="20" cy="30" r="8" fill="#E86FA8" stroke="#A63C74" stroke-width="2.5"/>'+
+    '<circle cx="32" cy="24" r="9" fill="#F7C948" stroke="#B58A18" stroke-width="2.5"/>'+
+    '<circle cx="44" cy="32" r="8" fill="#E8637C" stroke="#A63450" stroke-width="2.5"/></svg>',
+  hay:'<svg viewBox="0 0 60 60"><ellipse cx="30" cy="34" rx="22" ry="17" fill="#DCC079" stroke="#9C7F2E" stroke-width="2.5"/>'+
+    '<ellipse cx="30" cy="34" rx="9" ry="14" fill="#C9AC5E" stroke="#9C7F2E" stroke-width="2"/>'+
+    '<path d="M12 26 h36 M12 42 h36" stroke="#B89B4E" stroke-width="2.5"/></svg>',
+  fence:'<svg viewBox="0 0 60 60"><g fill="#EDDDA8" stroke="#B89B4E" stroke-width="2.5">'+
+    '<rect x="10" y="18" width="6" height="30" rx="2"/><rect x="44" y="18" width="6" height="30" rx="2"/>'+
+    '<rect x="8" y="24" width="44" height="5" rx="2"/><rect x="8" y="36" width="44" height="5" rx="2"/></g></svg>',
+  tree:'<svg viewBox="0 0 60 60"><rect x="26" y="34" width="8" height="18" rx="3" fill="#8C6237" stroke="#5E3F22" stroke-width="2.5"/>'+
+    '<circle cx="30" cy="24" r="16" fill="#63A94E" stroke="#2E6327" stroke-width="2.5"/>'+
+    '<circle cx="42" cy="30" r="9" fill="#74B04E" stroke="#2E6327" stroke-width="2.5"/></svg>',
+  scarecrow:'<svg viewBox="0 0 60 60"><path d="M30 22 V52" stroke="#8C6237" stroke-width="4" stroke-linecap="round"/>'+
+    '<path d="M14 32 H46" stroke="#8C6237" stroke-width="4" stroke-linecap="round"/>'+
+    '<circle cx="30" cy="18" r="9" fill="#E8C98A" stroke="#A9803E" stroke-width="2.5"/>'+
+    '<path d="M17 13 h26 l-4 -5 h-18 Z" fill="#DCC079" stroke="#9C7F2E" stroke-width="2.5" stroke-linejoin="round"/>'+
+    '<circle cx="27" cy="17" r="1.8" fill="#3A2A1E"/><circle cx="33" cy="17" r="1.8" fill="#3A2A1E"/></svg>'
+};
+function renderDecorCard(){
+  if(!decorRowEl) return;
+  decorRowEl.innerHTML="";
+  DECOR_KINDS.forEach(function(D){
+    var el=document.createElement("div");
+    el.className="thing"+(walletBalance()>=D.price?"":" locked");
+    el.dataset.kind=D.id;
+    el.innerHTML='<div class="art">'+DECOR_SVG[D.id]+'</div>'+priceBadge(D.price);
+    el.addEventListener("click", function(){
+      if(walletBalance()<D.price){ sfx("hit"); return; }
+      tapUnlock(); startPlacing(D.id);
+    });
+    decorRowEl.appendChild(el);
+  });
+}
+function openDecorCard(){ renderDecorCard(); if(decorCardEl) decorCardEl.classList.add("up"); }
+function closeDecorCard(){ if(decorCardEl) decorCardEl.classList.remove("up"); }
+function updateDecorButton(){
+  if(!decorBtnEl) return;
+  // it turns up once she can afford the cheapest thing in it
+  decorBtnEl.classList.toggle("on", DRESSED && walletBalance() >= 25);
+}
+
+
+// =========================================================================
+//  FM7 — WHERE THE NEW THINGS GO, AND HOW SHE GETS THEM.
+//
+//  The present ladder Mike priced has eight rungs and the dairy, the tomato
+//  and the melon are not among them. Rather than change a ladder he has
+//  already approved, they are sold in the shop the way the duck always was:
+//  ONE extra at a time, cheapest first, under the present. The card still
+//  shows exactly two things, which is as much as a four-year-old should have
+//  to choose between.
+// =========================================================================
+// South-west of the field, in its own open ground. The first spot for it put
+// its north fence exactly on the coop's south fence and the two read as one
+// confusing double rail.
+var PIG_C={x:-6.5, z:16.5};
+var EXTRAS=[
+  { id:"tomatoseed", price:90,  name:"Tomato seed" },
+  { id:"duck",       price:120, name:"A duck"      },
+  { id:"melonseed",  price:150, name:"Melon seed"  },
+  { id:"dairy",      price:260, name:"The dairy"   }
+];
+function extraOwned(id){ return id==="duck" ? DUCK_BOUGHT : !!OWNED[id]; }
+function nextExtra(){
+  for(var i=0;i<EXTRAS.length;i++) if(!extraOwned(EXTRAS[i].id)) return EXTRAS[i];
+  return null;
+}
+var EXTRA_SVG={
+  tomatoseed: CROP_RECIPES.tomato.svg(96),
+  melonseed:  CROP_RECIPES.melon.svg(96),
+  duck: null,                                  // DUCK_SVG, taken at render time
+  dairy:'<svg width="96" height="96" viewBox="0 0 96 96">'+
+    '<rect x="18" y="42" width="60" height="34" rx="4" fill="#F2F0E4" stroke="#A9A79A" stroke-width="2.5"/>'+
+    '<path d="M12 42 L48 20 L84 42 Z" fill="#4E86A6" stroke="#2F5A73" stroke-width="2.5" stroke-linejoin="round"/>'+
+    '<rect x="40" y="54" width="16" height="22" rx="3" fill="#6FA9C4" stroke="#2F5A73" stroke-width="2.5"/>'+
+    '<circle cx="28" cy="56" r="5" fill="#6FA9C4"/><circle cx="68" cy="56" r="5" fill="#6FA9C4"/></svg>'
+};
+function buyExtra(){
+  var E=nextExtra(); if(!E) return false;
+  if(E.id==="duck") return buyDuck();
+  if(!spendCoins(E.price)){ flashToast("Keep saving"); sfx("hit"); return false; }
+  OWNED[E.id]=1;
+  closeShop();
+  applyUnlock(E.id);
+  updateShopButton();
+  flashToast("Yours!");
+  sfx("celebrate"); haptic("success");
+  scheduleSave();
+  return true;
+}
+
+// ------------------------------------------- putting the new things on the map
+function placePig(){
+  if(PIG_PEN_UP) return false;
+  PIG_PEN_UP=true;
+  var g=new THREE.Group();
+  BLOCKER_OWNER="pigpen";
+  g.add(buildPen(PIG_C.x, PIG_C.z, 3.8, 3.0, "W"));
+  BLOCKER_OWNER="";
+  var tr=buildTrough(); tr.position.set(PIG_C.x+1.9, 0, PIG_C.z+1.5); tr.rotation.y=-0.3; g.add(tr);
+  scene.add(g);
+  var A=addAnimal("pig", PIG_C.x-0.6, PIG_C.z-0.4, -0.8, "plod",
+    {patrol:{cx:PIG_C.x-0.4, cz:PIG_C.z-0.2, r:1.5, speed:0.22}});
+  A.obj.scale.setScalar(A.baseScale*0.15); A.popIn=0;
+  return true;
+}
+var PIG_PEN_UP=false;
+function placeBuilding(kind, at, facing){
+  var i;
+  for(i=0;i<ANIMALS.length;i++) if(ANIMALS[i].kind===kind) return false;   // already there
+  var A=addAnimal(kind, at.x, at.z, facing||0, null, null);
+  A.obj.scale.setScalar(A.baseScale*0.15); A.popIn=0;
+  addCircleBlocker(at.x, at.z, kind==="mill"?1.5:1.7, kind);
+  return true;
+}
+function placeHive(){
+  return placeBuilding("hive", {x:ISLE.orchard.x+5.5, z:ISLE.orchard.z+7.5}, 0.4);
+}
+
+// The sails turn, the bees go round, and neither ever stops — a building that
+// is standing still reads as broken.
+function updateBuilt(dt, now){
+  for(var i=0;i<ANIMALS.length;i++){
+    var A=ANIMALS[i];
+    if(!A.spin) continue;
+    if(A.kind==="mill" && A.spin.userData.sails)
+      A.spin.userData.sails.rotation.z += dt*(A.state==="making" ? 1.35 : 0.42);
+    if(A.kind==="hive" && A.spin.userData.bees){
+      var B=A.spin.userData.bees, b;
+      for(b=0;b<B.children.length;b++){
+        var a=now*(1.5+b*0.35)+b*2.1;
+        B.children[b].position.set(Math.cos(a)*(0.95+b*0.12), 1.05+Math.sin(now*2+b)*0.28,
+                                   Math.sin(a)*(0.95+b*0.12));
+        B.children[b].rotation.y=-a;
+      }
+    }
+  }
 }
 
 // ----------------------------------------------------------- BUYING THE BOX
@@ -4364,6 +5428,11 @@ function hardResetScene(){
   reindexStack();
   if(DOG.carryObj){ scene.remove(DOG.carryObj); DOG.carryObj=null; }
   DOG.carry=null; DOG.target=null; DOG.state="follow";
+  stopWatering(); stopPlacing(); clearDecor();
+  for(i=0;i<ANIMALS.length;i++){
+    if(ANIMALS[i].markObj){ scene.remove(ANIMALS[i].markObj); ANIMALS[i].markObj=null; }
+    ANIMALS[i].mark=null; ANIMALS[i].fedCount=0;
+  }
   closeBasket();
   order=null;
 }
@@ -4591,7 +5660,21 @@ function zoo(){
     {name:"present", make:function(){ var g=new THREE.Group();
       g.add(buildPresentBox()); var l=buildPresentLid(); l.position.y=1.3; g.add(l); return g; }},
     {name:"pumpkin", make:function(){ return hbMesh(hbBake(CROP_RECIPES.pumpkin.parts(1))); }},
-    {name:"farm dog", make:buildDog}
+    {name:"farm dog", make:buildDog},
+    // FM7 — everything new goes on the stand before it goes on the farm.
+    {name:"strawberry", make:function(){ return hbMesh(hbBake(CROP_RECIPES.strawberry.parts(1))); }},
+    {name:"tomato", make:function(){ return hbMesh(hbBake(CROP_RECIPES.tomato.parts(1))); }},
+    {name:"melon", make:function(){ return hbMesh(hbBake(CROP_RECIPES.melon.parts(1))); }},
+    {name:"truffle", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.truffle.parts(1))); }},
+    {name:"honey", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.honey.parts(1))); }},
+    {name:"bread", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.bread.parts(1))); }},
+    {name:"cheese", make:function(){ return hbMesh(hbBake(PRODUCE_RECIPES.cheese.parts(1))); }},
+    {name:"pig (model)", make:function(){ return ANM_ON?anmGet("Pig",1.0):null; }},
+    {name:"beehive", make:buildHive},
+    {name:"mill", make:buildMill},
+    {name:"dairy", make:buildDairy},
+    {name:"watering can", make:buildCan},
+    {name:"scarecrow", make:buildScarecrow}
   ];
   // EVERY EXHIBIT IS NORMALISED TO THE SAME LONGEST DIMENSION, which is the
   // whole point of a stand: a shape is judged against the others rather than
@@ -4627,10 +5710,12 @@ function zoo(){
   // Frame the whole grid, whatever size it grows to, and sit HIGH enough that
   // the front row does not stand in front of the back row — the second pass
   // hid the cow behind the egg.
+  // FM7 — the stand is up to six rows now and the last one was off the bottom
+  // of the screen. The camera backs off with the DEPTH as well as the width.
   var spanX=(perRow+0.5)*gap, spanZ=(rows-1)*rowGap;
-  var back=Math.max(spanX*0.92, 12);
-  camera.position.set(0, 8.5+spanZ*0.55, spanZ*0.5+back);
-  camera.lookAt(0, 0.6, spanZ*0.55);
+  var back=Math.max(spanX*0.92, 12) + spanZ*0.42;
+  camera.position.set(0, 10.5+spanZ*0.72, spanZ*0.5+back);
+  camera.lookAt(0, 0.6, spanZ*0.5);
   // FM6 — the wish-list card sat right on top of the last row of exhibits, so
   // the two models the stand existed to judge were the two you could not see.
   try{ orderCardEl.classList.remove("up"); }catch(e){}
@@ -4668,7 +5753,10 @@ function availableSeeds(){
   }
   return out;
 }
-var UNLOCK_SEEDS=[["pumpkinseed","pumpkin"],["strawberry","strawberry"]];
+// Which present hands over which seed. Tomato and melon are not on the present
+// ladder Mike priced, so they are sold in the shop instead — see EXTRAS.
+var UNLOCK_SEEDS=[["pumpkinseed","pumpkin"],["strawberry","strawberry"],
+                  ["tomatoseed","tomato"],["melonseed","melon"]];
 
 function buildSeedPicker(){
   seedRowEl.innerHTML="";
@@ -4915,16 +6003,30 @@ var _mouse=new THREE.Vector2();
 var canvas=renderer.domElement;
 var downXY=null, downAt=0;
 
+// FM7 — a HOLD is a thing now too. A tap is still a tap and everything FM4
+// built on it is untouched; keeping a finger down on a growing crop, once she
+// has the can, makes it rain on that crop for exactly as long as she holds.
 canvas.addEventListener("pointerdown",function(e){
   if(seedCardEl.classList.contains("up")) return;
   downXY={x:e.clientX,y:e.clientY}; downAt=performance.now();
+  var P=growingPatchAt(e.clientX,e.clientY);
+  if(P && CAN_OWNED) startWatering(P);
 });
 canvas.addEventListener("pointerup",function(e){
+  stopWatering();
   if(!downXY) return;
   var dx=e.clientX-downXY.x, dy=e.clientY-downXY.y, t=performance.now()-downAt;
   downXY=null;
-  if(Math.hypot(dx,dy)>10 || t>380) return;   // it was a drag, not a tap
+  if(Math.hypot(dx,dy)>10 || t>380) return;   // it was a drag, or it was a hold
   handleTap(e.clientX,e.clientY);
+});
+canvas.addEventListener("pointercancel",function(){ stopWatering(); downXY=null; });
+canvas.addEventListener("pointerleave",function(){ stopWatering(); });
+canvas.addEventListener("pointermove",function(e){
+  // while she is holding a thing to put down, the ghost follows her finger
+  if(!placing) return;
+  var g=groundAt(e.clientX,e.clientY);
+  if(g) moveGhost(g.x,g.z);
 });
 // =========================================================================
 //  FM4 — TAP TO GO. Mike's call: on a tablet this is the MAIN way to move,
@@ -5081,6 +6183,37 @@ function pickTapTarget(hx,hz){
   return cands[0];
 }
 
+// Where on the ground is this pixel? Pulled out of handleTap so the watering
+// hold, the naming tap and the decoration ghost can all ask the same question.
+function groundAt(px,py){
+  _mouse.x=(px/W)*2-1; _mouse.y=-(py/H)*2+1;
+  ray.setFromCamera(_mouse,camera);
+  var dir=ray.ray.direction, org=ray.ray.origin;
+  if(Math.abs(dir.y)<1e-6) return null;
+  var t=-org.y/dir.y; if(t<0) return null;
+  return {x:org.x+dir.x*t, z:org.z+dir.z*t};
+}
+function growingPatchAt(px,py){
+  var g=groundAt(px,py); if(!g) return null;
+  var best=null, bestD=PATCH_R*1.5, i, P, d;
+  for(i=0;i<PATCHES.length;i++){
+    P=PATCHES[i]; if(P.state!=="growing") continue;
+    d=Math.hypot(g.x-P.x, g.z-P.z);
+    if(d<bestD){ best=P; bestD=d; }
+  }
+  return best;
+}
+function animalAt(px,py){
+  var g=groundAt(px,py); if(!g) return null;
+  var best=null, bestD=2.4, i, A, d;
+  for(i=0;i<ANIMALS.length;i++){
+    A=ANIMALS[i];
+    d=Math.hypot(g.x-A.x, g.z-A.z);
+    if(d<bestD){ best=A; bestD=d; }
+  }
+  return best;
+}
+
 function handleTap(x,y){
   _mouse.x=(x/W)*2 - 1;
   _mouse.y=-(y/H)*2 + 1;
@@ -5091,6 +6224,15 @@ function handleTap(x,y){
   var t=-org.y/dir.y; if(t<0) return;
   var hx=org.x+dir.x*t, hz=org.z+dir.z*t;
   // find the nearest empty patch within reach — still the seed pop-up
+  // FM7 — if she is holding something to put down, this tap puts it there
+  if(placing && tapWhilePlacing(hx,hz)) return;
+  // FM7 — and tapping an animal she is ALREADY standing next to asks what it
+  // is called. Tapping one across the farm still just walks her to it, so
+  // nothing FM4 taught her has changed.
+  var nearA=animalAt(x,y);
+  if(nearA && Math.hypot(kid.position.x-nearA.x, kid.position.z-nearA.z) < FEED_R*1.25){
+    tapUnlock(); openNamePicker(nearA); return;
+  }
   var best=null, bestD=PATCH_R*1.4;
   for(var i=0;i<PATCHES.length;i++){
     var P=PATCHES[i]; if(P.state!=="empty" || P.locked || P.cover) continue;
@@ -5293,6 +6435,13 @@ function step(){
   WIND.time.value = now;
   atTheBarn(dt);
 
+  // FM7 — the well hands over the can, the sails turn, the bees go round, the
+  // rain falls while she holds, and every animal wears the name she gave it
+  atTheWell();
+  updateBuilt(dt, now);
+  updateWatering(dt, now);
+  updateMarks(dt, now);
+
   // FM5 — the puffs, the welcome-back basket, the present reveal, the
   // never-idle watch and the background save.
   fm5Tick(dt, now);
@@ -5306,7 +6455,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm6b",
+  version: "fm7",
   coins: function(){ return coins; },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
@@ -5539,6 +6688,9 @@ window.FARM = {
   nextUnlock: function(){ var U=nextUnlock();
     return U?{ id:U.id, price:U.price, name:U.name, built:!!U.built }:null; },
   owned: ownedList,
+  // builds the thing that would hop out of that present's box, and throws it
+  // away again: the picture gate cannot open eight presents in a row
+  previewUnlock: function(id){ var m=unlockModel(id); return !!m; },
   buyPresent: buyPresent,
   revealing: function(){ return REVEAL.on ? { t:+REVEAL.t.toFixed(2),
     popped:REVEAL.popped, unlock:REVEAL.unlock?REVEAL.unlock.id:null,
@@ -5609,6 +6761,51 @@ window.FARM = {
     OWNED[id]=1; applyUnlock(id); updateShopButton(); return true;
   },
   unlockModel: function(id){ return !!unlockModel(id); },
+
+  // ---- FM7 ---------------------------------------------------------------
+  extras: function(){ return EXTRAS.map(function(E){
+    return { id:E.id, price:E.price, name:E.name, owned:extraOwned(E.id) }; }); },
+  nextExtra: function(){ var E=nextExtra();
+    return E?{ id:E.id, price:E.price, name:E.name }:null; },
+  buyExtra: buyExtra,
+  giveExtra: function(id){
+    if(id==="duck"){ if(!DUCK_BOUGHT){ DUCK_BOUGHT=true; addDuck(); } return true; }
+    OWNED[id]=1; applyUnlock(id); updateShopButton(); return true;
+  },
+  // the watering can, and the rain it makes
+  can: function(){ return { owned:CAN_OWNED,
+    watering:WATER.patch?PATCHES.indexOf(WATER.patch):-1, drops:WATER.drops.length }; },
+  giveCan: giveCan,
+  waterPatch: function(i){ return startWatering(PATCHES[i]); },
+  stopWatering: stopWatering,
+  wellAt: function(){ return {x:ISLE.well.x, z:ISLE.well.z}; },
+  // the names, which are pictures
+  nameMarks: function(){ return NAME_MARKS.map(function(M){ return M.id; }); },
+  nameAnimal: function(i, id){ if(!ANIMALS[i]) return false;
+    namingAnimal=ANIMALS[i]; return pickName(id); },
+  names: function(){ return ANIMALS.map(function(A,i){
+    return { i:i, kind:A.kind, mark:A.mark||null, badge:!!A.markObj }; }); },
+  namePickerUp: function(){ return !!(nameCardEl && nameCardEl.classList.contains("up")); },
+  openNameFor: function(i){ return ANIMALS[i] ? openNamePicker(ANIMALS[i]) : false; },
+  // the things she buys and puts down
+  decorKinds: function(){ return DECOR_KINDS.map(function(D){
+    return { id:D.id, price:D.price }; }); },
+  decor: function(){ return DECOR.map(function(D){
+    return { kind:D.kind, x:+D.x.toFixed(2), z:+D.z.toFixed(2) }; }); },
+  placing: function(){ return placing; },
+  startPlacing: startPlacing,
+  stopPlacing: stopPlacing,
+  placeAt: function(x,z){ return tapWhilePlacing(x,z); },
+  canPlaceAt: canPlaceAt,
+  openDecor: openDecorCard, closeDecor: closeDecorCard,
+  decorCardUp: function(){ return !!(decorCardEl && decorCardEl.classList.contains("up")); },
+  decorBtnShown: function(){ return !!(decorBtnEl && decorBtnEl.classList.contains("on")); },
+  // the buildings, which are animals as far as this file is concerned
+  hiveSeconds: function(){ var A=null,i;
+    for(i=0;i<ANIMALS.length;i++) if(ANIMALS[i].kind==="hive") A=ANIMALS[i];
+    return A?{ base:A.makeSec, now:hiveMakeSec(A), flowers:flowersNearHive(A) }:null; },
+  needsOf: function(kind){ return (ANIMAL_KINDS[kind]&&ANIMAL_KINDS[kind].needs)||1; },
+  pigPen: function(){ return PIG_PEN_UP?{x:PIG_C.x,z:PIG_C.z}:null; },
 
   plane: function(){ return { phase:PL.phase, pay:PL.pay, busy:planeBusy(),
     x:plane?+plane.position.x.toFixed(2):null,

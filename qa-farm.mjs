@@ -69,20 +69,27 @@ page.on('pageerror', e => errs.push('pageerror: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
 
 const ev = (fn, arg) => page.evaluate(fn, arg);
+// NOTE ON EVERY waitForFunction BELOW: the signature is
+// waitForFunction(fn, ARG, OPTIONS), so `waitForFunction(fn, {timeout: 9000})`
+// passes the options object as the page function's ARGUMENT and silently uses
+// Playwright's 30-second default instead. Every wait in this file spent months
+// doing exactly that, which is why the slower island scene made the dog and the
+// mill look flaky when they were both working perfectly. They all pass `null`
+// for the argument now. If you add one, do the same.
 // Park the kid far from everything, so nothing is fed or swept up by accident
 // while the robot is setting the next step up.
 const park = async () => { await ev(() => window.FARM.moveKidTo(-45, -45)); await page.waitForTimeout(250); };
-const settle = () => page.waitForFunction(() => window.FARM.flying() === 0, { timeout: 20000 });
+const settle = () => page.waitForFunction(() => window.FARM.flying() === 0, null, { timeout: 20000 });
 
 try {
   await page.goto(BASE, { waitUntil: 'load' });
-  await page.waitForFunction(() => window.FARM && window.FARM.animals && window.FARM.animals().length > 0,
+  await page.waitForFunction(() => window.FARM && window.FARM.animals && window.FARM.animals().length > 0, null,
     { timeout: 20000 });
   await page.waitForTimeout(600);
 
   console.log('--- THE FARM: the scene stands up in a real browser ---');
   chk('the farm scene boots with a WebGL context and no page errors', errs.length === 0, errs.join(' | '));
-  chk('it is the FM6 island build', (await ev(() => window.FARM.version)) === 'fm6b');
+  chk('it is the FM7 build', (await ev(() => window.FARM.version)) === 'fm7');
 
   // ======================================================================
   //  FM4 — THE FIRST ORDER. This block runs BEFORE the robot collects
@@ -164,16 +171,20 @@ try {
   console.log('\n--- THE PAYOFF ---');
   await park();                                   // stand clear or it is swept up as it lands
   await ev(() => window.FARM.advanceTime(30));
-  await page.waitForFunction(() => window.FARM.animals().some(a => a.state === 'ready'), { timeout: 15000 });
+  await page.waitForFunction(() => window.FARM.animals().some(a => a.state === 'ready'), null, { timeout: 15000 });
   const ready = (await ev(() => window.FARM.animals())).find(a => a.state === 'ready');
   chk('after the wait an egg is sitting beside the animal', !!ready && ready.hasProduce);
   chk('and it sparkles, the same signal a ready crop uses', !!ready && ready.sparkling);
 
-  await ev(r => window.FARM.moveKidTo(r.x + 3.4, r.z + 3.4), ready);
+  // stand OUTSIDE the magnet's four units, or it fetches the egg before this
+  // has even taken its first reading — which is what the slower island scene
+  // started doing here
+  await ev(r => window.FARM.moveKidTo(r.x + 6.5, r.z + 6.5), ready);
   await page.waitForTimeout(700);
   const prePick = await ev(() => window.FARM.stackHeight());
   await ev(r => window.FARM.moveKidTo(r.x, r.z), ready);
-  await page.waitForTimeout(900);
+  await page.waitForFunction(n => window.FARM.stackHeight() > n, prePick, { timeout: 12000 })
+    .catch(() => {});
   const picked = await ev(() => ({ stack: window.FARM.stack(), animals: window.FARM.animals() }));
   chk('walking over the egg hops it onto the stack like any crop',
     picked.stack.length > prePick && picked.stack.some(s => s.kind === 'egg'),
@@ -189,7 +200,7 @@ try {
   const cowStack0 = await ev(() => window.FARM.stackHeight());
   await ev(c => window.FARM.moveKidTo(c.x + 1.8, c.z + 1.2), cow);
   await page.waitForFunction(() => ['making', 'ready'].includes(
-    window.FARM.animals().find(a => a.kind === 'cow').state), { timeout: 20000 });
+    window.FARM.animals().find(a => a.kind === 'cow').state), null, { timeout: 20000 });
   chk('walking past the cow with wheat feeds her', true,
     'cow state=' + (await ev(() => window.FARM.animals().find(a => a.kind === 'cow').state)));
   chk('exactly one wheat left the stack for her',
@@ -197,7 +208,7 @@ try {
 
   await park();
   await ev(() => window.FARM.advanceTime(40));
-  await page.waitForFunction(() => window.FARM.animals().find(a => a.kind === 'cow').state === 'ready',
+  await page.waitForFunction(() => window.FARM.animals().find(a => a.kind === 'cow').state === 'ready', null,
     { timeout: 15000 });
   const cowReady = (await ev(() => window.FARM.animals())).find(a => a.kind === 'cow');
   chk('a milk bottle appears beside her, sparkling',
@@ -307,7 +318,7 @@ try {
   const crate = await ev(() => window.FARM.crate());
   chk('the crate\'s reach is generous — nobody has to aim', crate.r >= 3);
   await ev(([x, z]) => window.FARM.moveKidTo(x, z), [crate.x, crate.z]);
-  await page.waitForFunction(() => { const o = window.FARM.order(); return o && o.full; }, { timeout: 15000 });
+  await page.waitForFunction(() => { const o = window.FARM.order(); return o && o.full; }, null, { timeout: 15000 });
   const ordF = await ev(() => window.FARM.order());
   chk('walking to the crate emptied the wanted corn off the stack, all three',
     ordF.items.filter(i => i.filled).length === 3);
@@ -337,7 +348,7 @@ try {
   // the software rasteriser can be starved by anything else on the box, and a
   // wall-clock assumption here is worse than no test at all, so this waits on
   // the STATE with room to spare rather than on a tight clock
-  await page.waitForFunction(() => window.FARM.plane().phase === 'parked', { timeout: 90000 });
+  await page.waitForFunction(() => window.FARM.plane().phase === 'parked', null, { timeout: 90000 });
   const w1 = await ev(() => window.FARM.wallet());
   chk('it came back and the coins landed in the shared wallet',
     w1.balance === 50 + ordF.pay, 'balance=' + w1.balance);
@@ -403,20 +414,43 @@ try {
     (await ev(() => window.FARM.shop())).btnShown === false);
   chk('buying her is NOT enough — a duck egg still cannot be asked for',
     !(await ev(() => window.FARM.orderableKinds())).includes('duckegg'));
+  let DUCKWHY = '';
   chk('but carry one home and NOW the crate may ask for it', await (async () => {
     await park();
-    await ev(() => { window.FARM.clearStack(); window.FARM.giveItem('corn', 2); });
-    const d = (await ev(() => window.FARM.animals())).find(a => a.kind === 'duck');
-    await ev(([x, z]) => window.FARM.moveKidTo(x, z), [d.x, d.z]);
-    await page.waitForFunction(() => {
-      const a = window.FARM.animals().find(x => x.kind === 'duck');
-      return a && (a.state === 'making' || a.state === 'ready');
-    }, { timeout: 15000 }).catch(() => {});
+    // EIGHT corn, not two. The duck stands in the coop yard with four hens who
+    // also want corn, and walking in there with two feeds two hens and leaves
+    // the duck asking. That is the game working; the robot just has to bring
+    // enough for everybody.
+    await ev(() => { window.FARM.clearStack(); window.FARM.giveItem('corn', 8); });
+    // the duck WALKS, so aiming once at where she was is a coin toss on a slow
+    // machine. Re-aim at her live position until the corn has actually landed.
+    for (let i = 0; i < 6; i++) {
+      const d = (await ev(() => window.FARM.animals())).find(a => a.kind === 'duck');
+      if (d.state === 'making' || d.state === 'ready') break;
+      await ev(([x, z]) => window.FARM.moveKidTo(x, z), [d.x, d.z]);
+      await page.waitForFunction(() => {
+        const a = window.FARM.animals().find(x => x.kind === 'duck');
+        return a && (a.state === 'making' || a.state === 'ready');
+      }, null, { timeout: 9000 }).catch(() => {});
+    }
     await ev(() => window.FARM.advanceTime(40));
-    await page.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'duckegg'),
-      { timeout: 20000 });
-    return (await ev(() => window.FARM.orderableKinds())).includes('duckegg');
-  })());
+    // wait for the egg to be ON THE GROUND, then walk to it. She fed the duck
+    // mid-patrol, so where the duck stood and where the egg landed are not the
+    // same place, and she should not have to be lucky.
+    await page.waitForFunction(() => window.FARM.produceSpots().some(s => s.gives === 'duckegg'), null,
+      { timeout: 40000 }).catch(() => {});
+    const sp = (await ev(() => window.FARM.produceSpots())).find(s => s.gives === 'duckegg');
+    if (sp) await ev(([x, z]) => window.FARM.moveKidTo(x, z), [sp.x, sp.z]);
+    // asserted, never thrown: a starved machine should fail this one check
+    // rather than abandon the hundred and fifty behind it
+    await page.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'duckegg'), null,
+      { timeout: 30000 }).catch(() => {});
+    const duck = (await ev(() => window.FARM.animals())).find(a => a.kind === 'duck');
+    const st = await ev(() => window.FARM.stack());
+    DUCKWHY = 'duck=' + duck.state + ' stack=' + st.map(x => x.kind).join(',');
+    return st.some(s => s.kind === 'duckegg') &&
+           (await ev(() => window.FARM.orderableKinds())).includes('duckegg');
+  })(), DUCKWHY);
 
   // ======================================================================
   //  FM4 — THE THINGS MIKE'S DAUGHTER HIT ON A TABLET.
@@ -443,10 +477,10 @@ try {
         .find(a => a.kind === 'chicken' && a.state === 'hungry');
       if (!hen) return false;
       await ev(([x, z]) => window.FARM.moveKidTo(x, z), [hen.x, hen.z]);
-      await page.waitForFunction(() => window.FARM.animals().some(a => a.state === 'making'),
+      await page.waitForFunction(() => window.FARM.animals().some(a => a.state === 'making'), null,
         { timeout: 15000 }).catch(() => {});
       await ev(() => window.FARM.advanceTime(40));
-      await page.waitForFunction(() => window.FARM.produceSpots().length > 0, { timeout: 20000 });
+      await page.waitForFunction(() => window.FARM.produceSpots().length > 0, null, { timeout: 20000 });
       const sp = (await ev(() => window.FARM.produceSpots()))[0];
       await park();
       const before = await ev(() => window.FARM.stackHeight());
@@ -608,7 +642,7 @@ try {
       await page.waitForFunction(() => {
         const o = window.FARM.order();
         return o && o.slots.some(s => s.kind === 'corn' && s.full);
-      }, { timeout: 15000 });
+      }, null, { timeout: 15000 });
       const o = await ev(() => window.FARM.order());
       const corn = o.slots.find(s => s.kind === 'corn');
       const egg = o.slots.find(s => s.kind === 'egg');
@@ -649,12 +683,12 @@ try {
   p5.on('console', m => { if (m.type() === 'error') e5.push('console: ' + m.text()); });
   const ev5 = (fn, arg) => p5.evaluate(fn, arg);
   const boot5 = () => p5.waitForFunction(
-    () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
+    () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0, null,
     { timeout: 20000 });
 
   await p5.goto(BASE, { waitUntil: 'load' });
   await boot5();
-  chk('it is the FM6 island build', (await ev5(() => window.FARM.version)) === 'fm6b');
+  chk('it is the FM7 build', (await ev5(() => window.FARM.version)) === 'fm7');
   chk('a farm nobody has played starts from the FM1 farm, not from someone else\'s',
     (await ev5(() => window.FARM.save.info())) === null &&
     (await ev5(() => window.FARM.patches().every(p => p.state === 'empty'))) === true);
@@ -665,7 +699,7 @@ try {
   // walk up to a hen carrying corn and it is fed — the FM2 mechanic, unchanged
   const hen5 = (await ev5(() => window.FARM.animals())).find(a => a.kind === 'chicken');
   await ev5(([x, z]) => window.FARM.moveKidTo(x, z), [hen5.x + 1.0, hen5.z + 1.0]);
-  await p5.waitForFunction(() => window.FARM.animals().some(a => a.state === 'making'), { timeout: 15000 });
+  await p5.waitForFunction(() => window.FARM.animals().some(a => a.state === 'making'), null, { timeout: 15000 });
   await ev5(() => window.FARM.moveKidTo(-45, -45));
   await ev5(() => window.FARM.giveItem('carrot', 3));
   const before5 = await ev5(() => { window.FARM.save.now(); return {
@@ -763,13 +797,16 @@ try {
     await ev5(() => window.FARM.clearStack());
     const b = await ev5(() => window.FARM.basket());
     await ev5(([x, z]) => window.FARM.moveKidTo(x, z), [b.x + 0.6, b.z + 0.6]);
-    await p5.waitForFunction(() => window.FARM.basket().items.length === 0, { timeout: 15000 })
+    await p5.waitForFunction(() => window.FARM.basket().items.length === 0, null, { timeout: 15000 })
       .catch(() => {});
     return (await ev5(() => window.FARM.stackHeight())) === wanted5;
   })(), wanted5 + ' items');
   chk('and then the basket is gone until the next time she comes back',
     await (async () => {
-      await p5.waitForFunction(() => !window.FARM.basket().up, { timeout: 6000 }).catch(() => {});
+      // the basket sinks over three quarters of a second of GAME time, which on
+      // the software rasteriser with four island pages open is several seconds
+      // of wall clock. Measured at ~5s on one page alone, so budget generously.
+      await p5.waitForFunction(() => !window.FARM.basket().up, null, { timeout: 25000 }).catch(() => {});
       return !(await ev5(() => window.FARM.basket())).up;
     })(), JSON.stringify(await ev5(() => window.FARM.basket())));
   chk('over a short absence a crop just keeps growing where it stood',
@@ -825,7 +862,7 @@ try {
       unlocks: [], duck: window.FARM.duckBought(), ordersDone: 2, order: null
     }));
     await ev5(() => window.FARM.moveKidTo(-45, -45));
-    await p5.waitForFunction(() => window.FARM.whatCanSheDoNow() > 0, { timeout: 8000 }).catch(() => {});
+    await p5.waitForFunction(() => window.FARM.whatCanSheDoNow() > 0, null, { timeout: 8000 }).catch(() => {});
     return (await ev5(() => window.FARM.whatCanSheDoNow())) > 0;
   })());
   chk('and from every save this run has loaded, the count is never zero after the watch',
@@ -883,9 +920,14 @@ try {
       const bought = window.FARM.buyPresent();
       return { bought: bought, before: before, after: window.FARM.wallet().balance };
     });
-    await p5.waitForFunction(() => { const r = window.FARM.revealing(); return !!r && r.popped; },
-      { timeout: 8000 }).catch(() => {});
-    const mid = await ev5(() => ({ r: window.FARM.revealing(), conf: window.FARM.confetti(),
+    // sampled AT THE POP, for the same reason as the FM6 one below: the confetti
+    // is DOM that removes itself inside two seconds
+    await p5.waitForFunction(() => {
+      const r = window.FARM.revealing();
+      if (r && r.popped && !window.__pop) window.__pop = { thing: r.thing === true, conf: window.FARM.confetti() };
+      return !!window.__pop;
+    }, null, { timeout: 15000 }).catch(() => {});
+    const mid = await ev5(() => ({ r: window.__pop || null, conf: (window.__pop || {}).conf || 0,
       plane: window.FARM.plane().phase }));
     return paid.bought === true && paid.before - paid.after === 130 &&
       !!mid.r && mid.r.thing === true && mid.conf > 20;
@@ -897,7 +939,7 @@ try {
     return r.phase === 'flyby' || r.y > 3 || r.phase === 'parked';
   })());
   chk('a present whose thing is not built yet still hops coins back out', await (async () => {
-    await p5.waitForFunction(() => window.FARM.revealing() === null, { timeout: 12000 }).catch(() => {});
+    await p5.waitForFunction(() => window.FARM.revealing() === null, null, { timeout: 12000 }).catch(() => {});
     const w = await ev5(() => window.FARM.wallet().balance);
     // she paid 130 and a third of it came back, so she is down about 91
     return (await ev5(() => window.FARM.owned())).includes('pumpkinseed') && w > 0;
@@ -932,7 +974,7 @@ try {
   chk('and it clears itself up — nothing ever piles up on the farm', await (async () => {
     // the software rasteriser runs at about ten frames a second, so this waits
     // on the STATE and not on a wall clock the machine cannot keep up with
-    await p5.waitForFunction(() => window.FARM.puffs() === 0, { timeout: 6000 }).catch(() => {});
+    await p5.waitForFunction(() => window.FARM.puffs() === 0, null, { timeout: 6000 }).catch(() => {});
     return (await ev5(() => window.FARM.puffs())) === 0;
   })());
   chk('the whole farm goes quiet when the shared mute flag is set',
@@ -979,12 +1021,12 @@ try {
   p6.on('console', m => { if (m.type() === 'error') e6.push('console: ' + m.text()); });
   const ev6 = (fn, arg) => p6.evaluate(fn, arg);
   const boot6 = () => p6.waitForFunction(
-    () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
+    () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0, null,
     { timeout: 20000 });
 
   await p6.goto(BASE, { waitUntil: 'load' });
   await boot6();
-  chk('it is the FM6 island build', (await ev6(() => window.FARM.version)) === 'fm6b');
+  chk('it is the FM7 build', (await ev6(() => window.FARM.version)) === 'fm7');
   const seeds0 = await ev6(() => window.FARM.seedsOffered());
   chk('the seed pop-up offers the three starters and nothing else',
     seeds0.length === 3 && ['corn', 'carrot', 'wheat'].every(k => seeds0.includes(k)), seeds0.join(','));
@@ -1020,12 +1062,18 @@ try {
     const bought = window.FARM.buyPresent();
     return { bought, before };
   });
-  await p6.waitForFunction(() => { const r = window.FARM.revealing(); return !!r && r.popped; },
-    { timeout: 10000 }).catch(() => {});
-  const rev6 = await ev6(() => ({ r: window.FARM.revealing(), conf: window.FARM.confetti() }));
+  // confetti is DOM that deletes itself after about two seconds, so it is
+  // SAMPLED AT THE POP inside the poll, not read afterwards: with four island
+  // pages open the trip back out to node can easily take longer than that.
+  await p6.waitForFunction(() => {
+    const r = window.FARM.revealing();
+    if (r && r.popped && !window.__pop) window.__pop = { thing: r.thing === true, conf: window.FARM.confetti() };
+    return !!window.__pop;
+  }, null, { timeout: 15000 }).catch(() => {});
+  const rev6 = await ev6(() => ({ r: window.__pop || null, conf: (window.__pop || {}).conf || 0 }));
   chk('opening it plays the full reveal', buy6.bought === true && !!rev6.r && rev6.r.thing === true &&
     rev6.conf > 20, rev6.conf + ' pieces of confetti');
-  await p6.waitForFunction(() => window.FARM.revealing() === null, { timeout: 12000 }).catch(() => {});
+  await p6.waitForFunction(() => window.FARM.revealing() === null, null, { timeout: 12000 }).catch(() => {});
   const after6 = await ev6(() => ({ bal: window.FARM.wallet().balance, seeds: window.FARM.seedsOffered(),
     row: window.FARM.seedRow(), next: window.FARM.nextUnlock() }));
   chk('and a present with a REAL thing in it hands over the thing, not coins back',
@@ -1038,20 +1086,24 @@ try {
   chk('a pumpkin still grows in well under a minute, like everything else',
     (await ev6(() => window.FARM.cropRecipes().pumpkin.growSec)) < 60,
     (await ev6(() => window.FARM.cropRecipes().pumpkin.growSec)) + 's');
-  chk('it is the dearest seed and the most an order can ask for, at the same number',
+  chk('it is the dearest SEED and the most valuable thing that grows in the ground',
     await (async () => {
       const e = await ev6(() => window.FARM.economy());
+      const crops = Object.keys(e.seedPrices);
+      // FM7 put a melon above it in the ground and four made things above that,
+      // so this is now about the crops she can plant on a fresh farm
       return e.seedPrices.pumpkin === 10 && e.itemValues.pumpkin === 10 &&
-        Math.max(...Object.values(e.itemValues)) === 10;
+        Math.max(...['corn', 'carrot', 'wheat', 'pumpkin'].map(k => e.itemValues[k])) === 10 &&
+        crops.includes('pumpkin');
     })());
   chk('she can plant one, grow it and carry it, and then the crate may ask for one',
     await (async () => {
       await ev6(() => { window.FARM.moveKidTo(-45, -45); window.FARM.clearStack();
         window.FARM.resetCollected(); window.FARM.plant(0, 'pumpkin'); window.FARM.advanceTime(80); });
-      await p6.waitForFunction(() => window.FARM.patches()[0].state === 'ready', { timeout: 8000 });
+      await p6.waitForFunction(() => window.FARM.patches()[0].state === 'ready', null, { timeout: 8000 });
       const P = await ev6(() => window.FARM.patches()[0]);
       await ev6(([x, z]) => window.FARM.moveKidTo(x, z), [P.x, P.z]);
-      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'pumpkin'), { timeout: 8000 })
+      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'pumpkin'), null, { timeout: 8000 })
         .catch(() => {});
       return (await ev6(() => window.FARM.collected())).includes('pumpkin') &&
              (await ev6(() => window.FARM.producibleNow('pumpkin'))) === true;
@@ -1142,7 +1194,7 @@ try {
         window.FARM.plant(window.DOGPATCH, 'corn');
         window.FARM.advanceTime(80);
       });
-      await p6.waitForFunction(() => window.FARM.patches()[window.DOGPATCH].state === 'ready',
+      await p6.waitForFunction(() => window.FARM.patches()[window.DOGPATCH].state === 'ready', null,
         { timeout: 15000 });
       await p6.waitForTimeout(1600);
       const d = await ev6(() => window.FARM.dog());
@@ -1154,17 +1206,17 @@ try {
       await ev6(() => window.FARM.ageReady());
       // he looks for a job about once a second of GAME time, and this scene
       // runs several times slower than that on the software rasteriser
-      await p6.waitForFunction(() => window.FARM.dog().state !== 'follow', { timeout: 30000 })
+      await p6.waitForFunction(() => window.FARM.dog().state !== 'follow', null, { timeout: 30000 })
         .catch(() => {});
       const went = (await ev6(() => window.FARM.dog())).state;
       // He PICKS IT UP, then walks it home. Both halves are checked, but they
       // are waited on separately: the harness keeps more than one page of this
       // island rendering at a time, so his walk home can take a while in wall
       // clock even though it is four seconds of his own.
-      await p6.waitForFunction(() => window.FARM.dog().carry !== null, { timeout: 90000 })
+      await p6.waitForFunction(() => window.FARM.dog().carry !== null, null, { timeout: 90000 })
         .catch(() => {});
       const picked = await ev6(() => window.FARM.dog().carry);
-      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'corn'),
+      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'corn'), null,
         { timeout: 180000 }).catch(() => {});
       const st = await ev6(() => window.FARM.stack());
       const d = await ev6(() => window.FARM.dog());
@@ -1198,6 +1250,325 @@ try {
   await p6.close();
 
 
+  // ======================================================================
+  //  FM7 — MORE TO DO. Its own page again. Everything here is a NEW VERB,
+  //  and every check is really the same check: can she do it without reading
+  //  anything, and can she fail at it? (No, and no.)
+  // ======================================================================
+  console.log('\n--- FM7: THREE MORE CROPS ---');
+  const p7 = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+  const e7 = [];
+  p7.on('pageerror', e => e7.push('pageerror: ' + e.message));
+  p7.on('console', m => { if (m.type() === 'error') e7.push('console: ' + m.text()); });
+  const ev7 = (fn, arg) => p7.evaluate(fn, arg);
+  const boot7 = () => p7.waitForFunction(
+    () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0, null,
+    { timeout: 25000 });
+  await p7.goto(BASE, { waitUntil: 'load' });
+  await boot7();
+  chk('it is the FM7 build', (await ev7(() => window.FARM.version)) === 'fm7');
+
+  chk('none of the three is plantable before she has its seed',
+    await (async () => {
+      const seeds = await ev7(() => window.FARM.seedsOffered());
+      const prod = await ev7(() => ['strawberry', 'tomato', 'melon'].map(k => window.FARM.producibleNow(k)));
+      return seeds.length === 3 && prod.every(x => x === false);
+    })());
+  chk('and no order can name one either, over sixty rolls',
+    await (async () => {
+      const bad = await ev7(() => {
+        ['strawberry', 'tomato', 'melon'].forEach(k => window.FARM.giveItem(k, 1));
+        window.FARM.clearStack();
+        const out = [];
+        for (let i = 0; i < 60; i++) window.FARM.newOrder()
+          .forEach(k => { if (['strawberry', 'tomato', 'melon'].includes(k)) out.push(k); });
+        return out;
+      });
+      return bad.length === 0;
+    })());
+  const seeds7 = await ev7(() => {
+    window.FARM.addCoins(4000);
+    window.FARM.givePresent('pumpkinseed');
+    window.FARM.giveExtra('tomatoseed');
+    window.FARM.giveExtra('melonseed');
+    window.FARM.givePresent('strawberry');
+    return { offered: window.FARM.seedsOffered(), row: window.FARM.seedRow() };
+  });
+  chk('once she has them, all seven are in the pop-up',
+    seeds7.offered.length === 7 && ['corn', 'carrot', 'wheat', 'pumpkin', 'strawberry', 'tomato', 'melon']
+      .every(k => seeds7.offered.includes(k)), seeds7.offered.join(','));
+  chk('and the pop-up on screen shows every one of them', seeds7.row.length === 7);
+  chk('every crop still grows in under a minute — the melon is the slowest at fifty',
+    await (async () => {
+      const r = await ev7(() => window.FARM.cropRecipes());
+      const g = Object.keys(r).map(k => r[k].growSec);
+      return Math.max(...g) === 50 && g.every(v => v < 60);
+    })());
+  chk('she can grow one and carry it, and then the crate may ask for it',
+    await (async () => {
+      await ev7(() => { window.FARM.moveKidTo(-30, 22); window.FARM.clearStack();
+        window.FARM.resetCollected(); window.FARM.plant(4, 'melon'); window.FARM.advanceTime(90); });
+      await p7.waitForFunction(() => window.FARM.patches()[4].state === 'ready', null, { timeout: 12000 });
+      const P = await ev7(() => window.FARM.patches()[4]);
+      await ev7(([x, z]) => window.FARM.moveKidTo(x, z), [P.x, P.z]);
+      await p7.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'melon'), null, { timeout: 10000 })
+        .catch(() => {});
+      return (await ev7(() => window.FARM.collected())).includes('melon') &&
+             (await ev7(() => window.FARM.producibleNow('melon'))) === true;
+    })());
+
+  console.log('\n--- FM7: THE MILL AND THE DAIRY ARE FED LIKE ANIMALS ---');
+  const built7 = await ev7(() => {
+    window.FARM.givePresent('mill');
+    window.FARM.giveExtra('dairy');
+    window.FARM.givePresent('pig');
+    window.FARM.givePresent('bees');
+    return { kinds: window.FARM.animals().map(a => a.kind),
+             needsMill: window.FARM.needsOf('mill'), needsDairy: window.FARM.needsOf('dairy') };
+  });
+  chk('the mill, the dairy, the pig and the hive are all on the farm',
+    ['mill', 'dairy', 'pig', 'hive'].every(k => built7.kinds.includes(k)), built7.kinds.join(','));
+  chk('the mill and the dairy each want TWO of a thing',
+    built7.needsMill === 2 && built7.needsDairy === 2);
+  chk('a mill asks for wheat in a picture, exactly like a hen asks for corn',
+    (await ev7(() => window.FARM.animals().find(a => a.kind === 'mill')))?.wanting === true);
+  chk('ONE wheat is not enough, and the one she has is not taken off her',
+    await (async () => {
+      const mill = (await ev7(() => window.FARM.animals())).find(a => a.kind === 'mill');
+      await ev7(() => { window.FARM.clearStack(); window.FARM.giveItem('wheat', 1); });
+      await ev7(([x, z]) => window.FARM.moveKidTo(x, z), [mill.x + 1.4, mill.z + 1.4]);
+      await p7.waitForTimeout(1400);
+      const m = (await ev7(() => window.FARM.animals())).find(a => a.kind === 'mill');
+      return m.state === 'hungry' && (await ev7(() => window.FARM.stackHeight())) === 1;
+    })());
+  let MILLWHY = '';
+  chk('two wheat go in together and bread comes out', await (async () => {
+    // state-driven all the way through: this scene runs several times slower
+    // than real time on the software rasteriser, so every step waits on the
+    // MILL and not on a stopwatch
+    await ev7(() => { window.FARM.moveKidTo(-30, 22); window.FARM.clearStack();
+      window.FARM.giveItem('wheat', 2); });
+    const mill = (await ev7(() => window.FARM.animals())).find(a => a.kind === 'mill');
+    await ev7(([x, z]) => window.FARM.moveKidTo(x, z), [mill.x + 1.4, mill.z + 1.4]);
+    await p7.waitForFunction(() => {
+      const m = window.FARM.animals().find(a => a.kind === 'mill');
+      return m && m.state !== 'hungry';
+    }, null, { timeout: 60000 }).catch(() => {});
+    // and once the wheat has LANDED — while it is still in the air the mill is
+    // "feeding" and its clock has not started, so winding it on does nothing
+    await p7.waitForFunction(() => {
+      const m = window.FARM.animals().find(a => a.kind === 'mill');
+      return m && m.state !== 'hungry' && m.state !== 'feeding';
+    }, null, { timeout: 60000 }).catch(() => {});
+    const fed = (await ev7(() => window.FARM.animals())).find(a => a.kind === 'mill');
+    // WALK HER AWAY before winding the clock on. Standing beside the mill she
+    // is inside the magnet reach, so the loaf lands and is swept onto her stack
+    // in the same breath, and the check that follows never sees it on the floor.
+    await ev7(() => window.FARM.moveKidTo(-30, 22));
+    await p7.waitForTimeout(400);
+    await ev7(() => window.FARM.advanceTime(60));
+    await p7.waitForFunction(() => {
+      const m = window.FARM.animals().find(a => a.kind === 'mill');
+      return m && m.state === 'ready' && m.hasProduce;
+    }, null, { timeout: 60000 }).catch(() => {});
+    const done = (await ev7(() => window.FARM.animals())).find(a => a.kind === 'mill');
+    MILLWHY = 'fed=' + fed.state + ' done=' + done.state +
+      ' produce=' + done.hasProduce + ' stack=' + (await ev7(() => window.FARM.stackHeight()));
+    return fed.state === 'making' && done.state === 'ready' && done.gives === 'bread' &&
+           (await ev7(() => window.FARM.stackHeight())) === 0;
+  })(), MILLWHY);
+  chk('and bread is worth more than the two wheat that went into it',
+    await (async () => {
+      const e = await ev7(() => window.FARM.economy());
+      return e.itemValues.bread > e.itemValues.wheat * 2 &&
+             e.itemValues.cheese > e.itemValues.milk * 2;
+    })());
+  chk('walking over the loaf picks it up like anything else', await (async () => {
+    const m = (await ev7(() => window.FARM.produceSpots())).find(s => s.gives === 'bread');
+    if (!m) return false;
+    await ev7(([x, z]) => window.FARM.moveKidTo(x, z), [m.x, m.z]);
+    await p7.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'bread'), null, { timeout: 12000 })
+      .catch(() => {});
+    return (await ev7(() => window.FARM.collected())).includes('bread');
+  })());
+
+  console.log('\n--- FM7: THE HIVE NEEDS NOTHING, AND LIKES FLOWERS ---');
+  const hive0 = await ev7(() => window.FARM.hiveSeconds());
+  chk('the hive is never hungry — the bees see to themselves',
+    (await ev7(() => window.FARM.animals().find(a => a.kind === 'hive'))).state !== 'hungry');
+  chk('honey takes a while on its own', hive0 && hive0.now === hive0.base, JSON.stringify(hive0));
+  chk('put flower beds around it and the honey comes quicker', await (async () => {
+    const done = await ev7(() => {
+      const h = window.FARM.animals().find(a => a.kind === 'hive');
+      let placed = 0;
+      for (let i = 0; i < 12 && placed < 4; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        const x = h.x + Math.cos(a) * 4.2, z = h.z + Math.sin(a) * 4.2;
+        if (window.FARM.canPlaceAt(x, z)) { window.FARM.startPlacing('flowers');
+          if (window.FARM.placeAt(x, z)) placed++; }
+      }
+      window.FARM.stopPlacing();
+      return { placed, hive: window.FARM.hiveSeconds() };
+    });
+    return done.placed >= 3 && done.hive.now < hive0.base && done.hive.now >= 14;
+  })());
+  chk('but never instant — nothing on this farm ever is',
+    (await ev7(() => window.FARM.hiveSeconds())).now >= 14);
+
+  console.log('\n--- FM7: THE WATERING CAN ---');
+  chk('she has no can until she has been to the well',
+    (await ev7(() => window.FARM.can())).owned === false);
+  chk('walking to the well gives her one', await (async () => {
+    const w = await ev7(() => window.FARM.wellAt());
+    await ev7(([x, z]) => window.FARM.moveKidTo(x, z), [w.x + 1.2, w.z + 1.2]);
+    await p7.waitForFunction(() => window.FARM.can().owned, null, { timeout: 12000 }).catch(() => {});
+    return (await ev7(() => window.FARM.can())).owned === true;
+  })());
+  chk('holding on a growing crop rains on it and doubles it', await (async () => {
+    await ev7(() => { window.FARM.moveKidTo(-30, 22); window.FARM.plant(0, 'corn'); });
+    const before = await ev7(() => window.FARM.patches()[0]);
+    if (before.state !== 'growing') return false;
+    await ev7(() => window.FARM.waterPatch(0));
+    await p7.waitForFunction(() => window.FARM.can().drops > 0, null, { timeout: 9000 }).catch(() => {});
+    const drops = (await ev7(() => window.FARM.can())).drops;
+    await p7.waitForTimeout(2600);
+    const wateredFor = await ev7(() => { window.FARM.stopWatering(); return window.FARM.can(); });
+    return drops > 0 && wateredFor.watering === -1;
+  })());
+  chk('and there is nothing in it to run out of, and no way to get it wrong',
+    (await ev7(() => window.FARM.can())).owned === true &&
+    (await ev7(() => window.FARM.canFail())) === false);
+
+  console.log('\n--- FM7: EVERY ANIMAL GETS A NAME, AND IT IS A PICTURE ---');
+  const marks7 = await ev7(() => window.FARM.nameMarks());
+  chk('there are eight names to choose from, and every one is a shape',
+    marks7.length === 8 && marks7.every(m => typeof m === 'string'), marks7.join(','));
+  chk('and all eight are really DRAWN in the card, not just listed in the code',
+    await (async () => {
+      // the picture gate caught an empty "Pick a name" card: the row was built
+      // before the element it fills had been looked up, so it silently did
+      // nothing. A count of the code's list would never have seen that.
+      const d = await ev7(() => {
+        const row = document.getElementById('nameRow');
+        const cells = row ? row.querySelectorAll('.mark') : [];
+        return { cells: cells.length, svgs: row ? row.querySelectorAll('svg').length : 0 };
+      });
+      return d.cells === 8 && d.svgs >= 8;
+    })());
+  chk('both new buttons are wired to something, not dead pictures',
+    await (async () => {
+      const before = await ev7(() => window.FARM.decorCardUp());
+      await p7.locator('#decorBtn').click({ force: true }).catch(() => {});
+      await p7.waitForTimeout(400);
+      const after = await ev7(() => window.FARM.decorCardUp());
+      await ev7(() => window.FARM.closeDecor());
+      return before === false && after === true;
+    })());
+  chk('there is not one text box anywhere in the farm',
+    (await ev7(() => document.querySelectorAll('input,textarea,[contenteditable]').length)) === 0);
+  chk('naming one sticks, and it wears the picture when she is near it',
+    await (async () => {
+      const ok = await ev7(() => window.FARM.nameAnimal(0, 'crown'));
+      const a = (await ev7(() => window.FARM.animals()))[0];
+      await ev7(([x, z]) => window.FARM.moveKidTo(x, z), [a.x + 2, a.z + 2]);
+      await p7.waitForFunction(() => window.FARM.names()[0].badge, null, { timeout: 9000 }).catch(() => {});
+      const n = (await ev7(() => window.FARM.names()))[0];
+      return ok === true && n.mark === 'crown' && n.badge === true;
+    })());
+  chk('and it is put away again when she walks off, so the field is never cluttered',
+    await (async () => {
+      await ev7(() => window.FARM.moveKidTo(-38, 26));
+      await p7.waitForFunction(() => !window.FARM.names()[0].badge, null, { timeout: 9000 }).catch(() => {});
+      return (await ev7(() => window.FARM.names()))[0].badge === false;
+    })());
+  chk('standing next to one and tapping it asks what it is called',
+    await (async () => {
+      const a = (await ev7(() => window.FARM.animals()))[1];
+      await ev7(([x, z]) => window.FARM.moveKidTo(x, z), [a.x + 1.2, a.z + 1.2]);
+      await p7.waitForTimeout(400);
+      const up = await ev7(() => window.FARM.openNameFor(1));
+      const shown = await ev7(() => window.FARM.namePickerUp());
+      await ev7(() => window.FARM.nameAnimal(1, 'star'));
+      return up === true && shown === true &&
+             (await ev7(() => window.FARM.names()))[1].mark === 'star';
+    })());
+
+  console.log('\n--- FM7: MAKE IT HERS ---');
+  const dk = await ev7(() => window.FARM.decorKinds());
+  chk('five things she can buy for the farm',
+    dk.length === 5 && ['flowers', 'hay', 'fence', 'tree', 'scarecrow']
+      .every(k => dk.some(d => d.id === k)), dk.map(d => d.id).join(','));
+  chk('placing is two taps: pick the thing, then tap where it goes',
+    await (async () => {
+      await ev7(() => window.FARM.startPlacing('scarecrow'));
+      const holding = await ev7(() => window.FARM.placing());
+      const n0 = (await ev7(() => window.FARM.decor())).length;
+      const put = await ev7(() => window.FARM.placeAt(-26, 24));
+      const n1 = (await ev7(() => window.FARM.decor())).length;
+      return holding === 'scarecrow' && put === true && n1 === n0 + 1;
+    })());
+  chk('and it cannot be dropped in the field, in a pen, on the road or in the pond',
+    await (async () => {
+      const L = await ev7(() => window.FARM.layout());
+      const bad = await ev7(([f, pond, road]) => [
+        window.FARM.canPlaceAt(f.x, f.z),
+        window.FARM.canPlaceAt(pond.x, pond.z),
+        window.FARM.canPlaceAt(0, road),
+        window.FARM.canPlaceAt(200, 200)
+      ], [L.field, L.pond, L.road.z]);
+      return bad.every(b => b === false);
+    })());
+  chk('what she put down comes back after a reload', await (async () => {
+    await ev7(() => { window.FARM.moveKidTo(-38, 26); window.FARM.save.now(); });
+    const before = await ev7(() => ({ decor: window.FARM.decor().length,
+      names: window.FARM.names().filter(n => n.mark).map(n => n.kind + ':' + n.mark),
+      can: window.FARM.can().owned, kinds: window.FARM.animals().map(a => a.kind).sort() }));
+    await p7.reload({ waitUntil: 'load' });
+    await boot7();
+    const after = await ev7(() => ({ decor: window.FARM.decor().length,
+      names: window.FARM.names().filter(n => n.mark).map(n => n.kind + ':' + n.mark),
+      can: window.FARM.can().owned, kinds: window.FARM.animals().map(a => a.kind).sort() }));
+    return after.decor === before.decor && after.can === before.can &&
+           JSON.stringify(after.kinds) === JSON.stringify(before.kinds) &&
+           JSON.stringify(after.names.sort()) === JSON.stringify(before.names.sort());
+  })());
+  chk('the names came back on the RIGHT animals, not on whoever was at that index',
+    (await ev7(() => window.FARM.names().filter(n => n.mark).map(n => n.kind))).length >= 2);
+
+  console.log('\n--- FM7: THE SHOP IS STILL TWO THINGS ---');
+  chk('one present and one extra, cheapest extra first', await (async () => {
+    const p8 = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+    await p8.goto(BASE, { waitUntil: 'load' });
+    await p8.waitForFunction(() => window.FARM && window.FARM.save && window.FARM.save.booted(), null,
+      { timeout: 25000 });
+    const E = await p8.evaluate(() => window.FARM.nextExtra());
+    const U = await p8.evaluate(() => window.FARM.nextUnlock());
+    await p8.evaluate(() => { window.FARM.moveKidTo(-30, 22); window.FARM.addCoins(900);
+      window.FARM.openShop(); });
+    await p8.waitForTimeout(400);
+    const rows = await p8.evaluate(() => document.querySelectorAll('#shopCard .buy'
+      ).length && Array.from(document.querySelectorAll('#shopCard .buy'))
+      .filter(el => el.style.display !== 'none').length);
+    await p8.close();
+    return E.id === 'tomatoseed' && E.price === 90 && U.id === 'pumpkinseed' && rows === 2;
+  })());
+
+  chk('seven of the eight presents now hand over a real thing, not coins back',
+    await (async () => {
+      // FM5 shipped the ladder with hollow boxes. FM6 filled the first three and
+      // FM7 fills four more, so only the tractor is still an empty box.
+      const L = await ev7(() => window.FARM.unlocks());
+      const hollow = L.filter(u => !u.built).map(u => u.id);
+      const models = await ev7(() => window.FARM.unlocks().map(u => ({ id: u.id,
+        model: u.built ? !!window.FARM.previewUnlock(u.id) : false })));
+      return hollow.length === 1 && hollow[0] === 'tractor' &&
+             models.filter(m => m.model).length === 7;
+    })());
+
+  chk('no page errors in the whole FM7 run', e7.length === 0, e7.join(' | '));
+  await p7.close();
+
+
   console.log('\n--- FM3: THE SHELL CONTRACT ---');
   chk('the shared nav bridge is loaded, so the shell\'s Home button reaches us',
     (await ev(() => window.FARM.navRegistered())) === true);
@@ -1218,7 +1589,7 @@ try {
   const zooErrs = [];
   zooPage.on('pageerror', e => zooErrs.push(e.message));
   await zooPage.goto(BASE + '?zoo=1', { waitUntil: 'load' });
-  await zooPage.waitForFunction(() => window.FARM && window.FARM.inZoo && window.FARM.inZoo(), { timeout: 20000 })
+  await zooPage.waitForFunction(() => window.FARM && window.FARM.inZoo && window.FARM.inZoo(), null, { timeout: 20000 })
     .catch(() => {});
   chk('?zoo=1 stands the models up on a turntable, with no errors',
     (await zooPage.evaluate(() => window.FARM.inZoo())) === true && zooErrs.length === 0, zooErrs.join(' | '));
@@ -1226,7 +1597,7 @@ try {
 
   chk('no page errors anywhere in the whole play-through', errs.length === 0, errs.join(' | '));
 } catch (e) {
-  chk('the farm robot completed its run', false, e.message);
+  chk('the farm robot completed its run', false, e.message + '\n' + (e.stack || ''));
 } finally {
   await browser.close();
   server.close();

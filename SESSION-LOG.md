@@ -1,3 +1,106 @@
+## 2026-09-08 (FM7): more to do — new crops, new animals, two little factories, and a farm she can arrange
+
+**Phase FM, card FM7.** FM6 gave her an island. FM7 gives her reasons to walk around it.
+Touched `public/skyflyer-farm.html`, `src/BuildableKids.jsx`, `qa-farm.mjs`,
+`qa-farm-shot.mjs`, `qa-skyflyer.mjs`, and `public/models/skyflyer/animals/farm-animals.glb`.
+
+### Seven seeds instead of three
+Strawberry, tomato and melon join corn, carrot, wheat and FM6's pumpkin. The slowest is
+the melon at fifty seconds, so nothing in the field takes a minute. Prices follow the
+FM3 rule exactly: a seed costs what its crop is worth. The pop-up is still built from
+what she OWNS, so a seed she has not been given is not a grey square she has to learn to
+ignore; it simply is not there. Four of the seven arrive through the shop.
+
+### The mill and the dairy: animals, as far as this file is concerned
+The two pads FM6 reserved east of the barn are filled in. A mill turns two wheat into a
+loaf; a dairy turns two milk into cheese. They are fed exactly the way a hen is fed:
+walk past holding the thing. **They want TWO, and that is the only new rule in FM7** —
+one goes in, the picture still shows a want, the second goes in and the sails start
+turning. Nothing tells her that in words. The want card shows a two.
+
+Bread and cheese are worth more than what went into them (fourteen against two wheat at
+two each, twenty against two milk at eight each), so putting things through a building
+is always worth the walk.
+
+### The pig, and the bees
+The pig eats carrots and gives truffles, and she is the third real library model on the
+farm: `farm-animals.glb` was cut again to carry Chicken, PekinDuck and Pig and is still
+126KB. The hive is the odd one out and deliberately so: **it is never hungry**. The bees
+see to themselves. It just makes honey on its own clock, and that clock runs quicker the
+more flower beds are standing near it. Nothing says so anywhere; she puts flowers by the
+hive and the jars start coming faster.
+
+### The watering can
+She fetches it from the well once, and after that it is hers for good. Tipping it over a
+growing crop takes a slice off what is left. It is a picture of rain, not a number, and
+it cannot be used on an empty patch or a finished one, so there is no wrong way to hold
+it.
+
+### Every animal gets a name, and the name is a picture
+Eight shapes: star, heart, flower, crown, moon, sun, leaf, bell. **There is not one text
+box anywhere in this farm and there never will be** — she is four and she cannot type.
+Stand next to an animal, tap it, pick a shape, and the shape floats over that animal
+whenever she is near it and puts itself away when she walks off, so eight badges never
+clutter the field at once. Names are saved against the animal's KIND and its position in
+that kind, so a reload never puts the crown on the wrong hen.
+
+### Make it yours
+Five things she can buy for the farm: flowers 30, hay 40, fence 25, a tree 80, a
+scarecrow 120. Placing is two taps and no dragging — tap the thing, then tap the ground —
+because a drag is a hard gesture for a four-year-old on a moving camera, and this farm
+already teaches "tap where you want it" everywhere else. Nothing can be dropped in the
+field, in a pen, on the road or in the pond. Only the flower bed does anything beyond
+being where she put it, and that is the hive rule above.
+
+### The ladder is no longer full of empty boxes
+FM5 shipped eight presents with nothing inside six of them. FM6 filled the first three.
+**FM7 fills four more**, so only the tractor is still a box that hops coins back out.
+Opening the pig, the mill, the bees or the strawberry seed now hands over the actual
+thing, and each one is scaled to the box it comes out of rather than towering over it.
+The shop is still exactly two rows: the next present, and the next extra (tomato seed 90,
+duck 120, melon seed 150, dairy 260, cheapest first).
+
+### Three real bugs, and one of them was only visible in a picture
+1. **THE "PICK A NAME" CARD WAS EMPTY.** The eight shapes were built into an element that
+   had not been looked up yet, so the build did nothing and failed silently. The same
+   line hid a worse one: the click handlers for BOTH new buttons were wired to variables
+   that were still undefined at that point, so "Make it yours" was a picture that did
+   nothing. Every data-level check passed the whole time. **The picture gate caught it.**
+   The lookups moved above the wiring, and `qa-farm.mjs` now counts the shapes IN THE
+   CARD and clicks the button for real.
+2. **`PRODUCE_RECIPES.truffle` was written before `PRODUCE_RECIPES` existed** and took
+   the whole file down; the block moved above the first thing that reads it.
+3. **The melon's stripe colour tripped the "nothing costs real money" guard**, which
+   greps for a payment processor's name. The colour key is `band` now, and the guard
+   reads comment-stripped source so a comment can never trip it again.
+
+### Four QA bugs that were making good code look broken
+- **`page.waitForFunction(fn, {timeout: N})` passes the options as the page function's
+  ARGUMENT** and silently falls back to Playwright's thirty-second default. Every wait in
+  `qa-farm.mjs` had been doing that for months, which is the whole explanation for the
+  dog and the mill "being flaky" when both were working perfectly. All forty-two calls
+  pass `null` for the argument now, and there is a comment at the top of the file saying
+  why.
+- With real budgets in force, four masked test bugs surfaced: the egg check walked to a
+  hen's stale position; the basket needed longer to sink on the heavier island scene; the
+  confetti had to be sampled AT THE POP because it is DOM that deletes itself inside two
+  seconds; and the mill test had her standing close enough to catch the loaf before the
+  next check could look for it on the floor.
+- **The duck-egg check was bringing two corn into a yard with four hungry hens in it.**
+  The hens ate them and the duck went on asking. That was the game working correctly; the
+  robot just had to bring enough for everybody.
+
+### Numbers
+`qa-farm.mjs` 237 green (run to green twice), `qa-skyflyer.mjs` 800 green,
+`node qa-all.mjs` green, `qa-farm-shot.mjs` green with seven new FM7 pictures.
+Cache-bust `?v=fm6b` -> `?v=fm7`.
+
+### Still open for Mike
+- One probe row is sitting in `farm_saves` at `kid_profile_id='rls-probe-fm6'`. The
+  guardrails in `AGENTS.md` forbid a DELETE, so the statement is in the FM6 entry below
+  for him to run.
+- FM6 and FM7 are both on branches and neither is on `main` yet.
+
 ## 2026-09-08 (FM6): the land — a Quaternius island, and a field that grows
 
 **Phase FM, card FM6.** The farm stops being a flat green plane with things standing
