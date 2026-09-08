@@ -222,6 +222,39 @@ camera off the island so a layout can be judged in one frame. The game never use
   guardrails forbid a DELETE, so it is left for Mike:
   `delete from public.farm_saves where kid_profile_id = 'rls-probe-fm6';`
 
+## 2026-09-07 (later) — The new tiles go live
+
+**Shipped.** Seventeen of the nineteen game tiles now show a photograph of the real game
+instead of an AI painting. `GameTileArt` in `src/BuildableKids.jsx` gained a `TILE_SHOTS`
+map (keyed by `imgId`) and prefers `/tile-shots/<id>.jpg` when the game has one. That map
+IS the rollout: add an id and that game switches over, delete one and it goes straight
+back. The Keep Playing card on Home follows the same rule.
+
+**No database write, and nothing destroyed.** The obvious way to do this was to overwrite
+each game's row in `image_cache`, which would have replaced the AI painting with the
+photo permanently. Instead the app just asks for a different URL. Every painting is
+untouched and still cached behind `/api/images`, and both render sites fall BACK to the
+painting if a photo ever fails to load, so the worst case is today's tile rather than a
+blank one.
+
+**JPEG, not PNG.** The first cut would have put 8.3 MB of PNG on the Play grid, up to a
+megabyte per tile, on a page that shows eighteen of them at once to a kid on an iPad. A
+tile is a photograph displayed 226 pixels wide, so the camera now writes JPEG at quality
+82: the whole set is 1.3 MB and the largest tile is 160 KB, with no visible difference at
+tile size. Caught before it shipped, not after.
+
+**Calls I made for you.**
+1. **Tennis and Riley's Garden keep their painting.** Their photos are worse tiles than
+   their paintings, and a tile's job is to make a kid tap it. Tennis is a washed-out court
+   (the court art is the bug, QA30) and Riley's Garden really is a fairy, a bee and an
+   empty field. Both are one line away from switching on once the game is fixed. Every
+   other game with a shot went live.
+2. **The wash stayed on.** Mike never picked between wash and no wash and approved the
+   sheet as it stood, which was the washed version. Turning it off is a re-run of the
+   camera with `--no-wash`, not a rebuild.
+
+**QA.** `node qa-all.mjs`: ALL CHECKS PASS. The app also builds clean, and the built bundle
+carries the new paths.
 ## 2026-09-07: the pumpkin, the farm dog and a growable field
 
 **NOT a card. Read this first.** This work was built as "FM6" against a scope Mike

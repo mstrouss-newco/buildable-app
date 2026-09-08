@@ -232,9 +232,10 @@ for (const g of GAMES) {
       const clip = g.mode === 'photo'
         ? undefined
         : { x: Math.max(0, Math.round(vw * fx - W / 2)), y: Math.max(0, Math.round(vh * fy - H / 2)), width: W, height: H };
-      const file = path.join(OUT, label + '.png');
-      if (clip) await page.screenshot({ path: file, clip });
-      else await page.locator('canvas').first().screenshot({ path: file });
+      const file = path.join(OUT, label + '.jpg');
+      const shot = { path: file, type: 'jpeg', quality: 82 };
+      if (clip) await page.screenshot({ ...shot, clip });
+      else await page.locator('canvas').first().screenshot(shot);
       const kb = Math.round(fs.statSync(file).size / 1024);
       shots.push({ id: g.id, name: g.name, imgId: g.imgId, color: g.color, label, file, kb, mode: g.mode || 'demo' });
       console.log(`OK    ${label.padEnd(20)} ${String(kb).padStart(4)} KB  ${g.mode || 'demo'}  zoom ${zoom}`);
@@ -260,7 +261,7 @@ for (const s of shots) {
   const i = all.findIndex((x) => x.label === s.label);
   if (i >= 0) all[i] = s; else all.push(s);
 }
-all = all.filter((s) => fs.existsSync(path.join(OUT, s.label + '.png')));
+all = all.filter((s) => fs.existsSync(path.join(OUT, s.label + '.jpg')));
 fs.writeFileSync(manifest, JSON.stringify(all, null, 2));
 console.log(`\n${shots.length} shot(s) written to ${OUT}/, ${failed} failed.`);
 console.log('Nothing has been swapped into the live tiles. Open /tile-shots.html to review.');

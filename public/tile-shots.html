@@ -94,7 +94,7 @@ carry it behind <code>?tileshot=1</code>. Shared rig: <code>buildable-tileshot.j
 
   const card = (s, phone) =>
     `<div class="pgc${phone ? ' phone' : ''}">
-       <span class="art"><img src="/tile-shots/${s.label}.png" alt=""></span>
+       <span class="art"><img src="/tile-shots/${s.label}.jpg" alt=""></span>
        <div class="meta"><div class="top"><span class="sw" style="background:${esc(s.color)}"></span>
        <div class="nm">${esc(s.name)}</div></div><div class="cat">${esc(s.mode)} shot</div></div>
      </div>`;
@@ -124,13 +124,13 @@ carry it behind <code>?tileshot=1</code>. Shared rig: <code>buildable-tileshot.j
           ? 'Photographed straight out of the game’s own attract mode, so it is a real moment of play and the game needed no code changes.'
           : 'The game poses this scene itself behind a hidden launch flag, then holds still for the camera.'}</p>
         <div class="pair">
-          <figure><img src="/tile-shots/${s.label}.png" alt="">
+          <figure><img src="/tile-shots/${s.label}.jpg" alt="">
             <figcaption><span class="tag new">new</span> the real game</figcaption></figure>
           <figure><img src="/api/images?kind=game&id=${esc(s.imgId)}" alt="">
             <figcaption><span class="tag old">live today</span> the AI painting</figcaption></figure>
         </div>
         ${extras.length ? `<div class="pair">${extras.map(([l, cap]) =>
-          `<figure><img src="/tile-shots/${l}.png" alt=""><figcaption>${cap}</figcaption></figure>`).join('')}</div>` : ''}
+          `<figure><img src="/tile-shots/${l}.jpg" alt=""><figcaption>${cap}</figcaption></figure>`).join('')}</div>` : ''}
       </div>`;
   }
 
@@ -145,6 +145,14 @@ carry it behind <code>?tileshot=1</code>. Shared rig: <code>buildable-tileshot.j
         world is already that colour.</li>
         <li><b>Any single game that does not work.</b> Every one of these is one line of settings
         away from a different moment or a tighter crop, so name it and it changes.</li>
+      </ul>
+      <h3 style="margin-top:14px">What is live now</h3>
+      <ul>
+        <li>Seventeen games show their photograph on the real tile. The painting is not
+        deleted — it is still cached, and if a photo ever fails to load the tile falls
+        straight back to it.</li>
+        <li>Tennis and Riley's Garden kept their painting, because their photo is the worse
+        tile. Both are one line away from switching on once their game is fixed.</li>
       </ul>
       <h3 style="margin-top:14px">Three that are not right yet, and why</h3>
       <ul>

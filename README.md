@@ -6,6 +6,27 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+<<<<<<< HEAD
+## The tile shots go live (September 7 2026)
+`src/BuildableKids.jsx`, `scripts/tile-shot.mjs`, `public/tile-shots/`
+
+Seventeen of nineteen game tiles now show a photograph of the real game. `GameTileArt`
+carries a `TILE_SHOTS` map keyed by `imgId` and prefers `/tile-shots/<id>.jpg`; that map is
+the rollout switch, per game, in one line.
+
+**No `image_cache` row was written.** Overwriting each game's cached painting would have
+destroyed it; instead the app asks for a different URL, every painting stays cached behind
+`/api/images`, and both render sites fall back to the painting if a photo fails to load.
+
+**Tiles are JPEG.** PNG would have put 8.3 MB on the Play grid (up to 1 MB a tile, eighteen
+at once). At quality 82 the whole set is 1.3 MB, largest tile 160 KB, indistinguishable at
+226 pixels wide.
+
+Tennis and Riley's Garden deliberately keep their paintings — their photos are worse tiles.
+See the comment above `TILE_SHOTS` for why and how to switch them on.
+
+---
+=======
 ## AC9 — Ant City: soldiers, and the bad bugs they see off (September 7 2026)
 `public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/bug-*.svg`
 (new), `qa-antcity.mjs`, `antcity-README.md`. Phase **AC**, card **AC9**, branch
@@ -84,6 +105,7 @@ folding it into `qa-paper-route.mjs` would have dropped the whole game out of th
 gate.
 
 The `soon: true` gate on the tile is untouched.
+>>>>>>> origin/main
 
 ## TS1-TS3 — the whole catalogue gets a real tile shot (September 7 2026)
 `scripts/tile-shot.mjs`, `public/tile-shots.html`, `public/tile-shots/`
