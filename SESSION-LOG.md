@@ -1,3 +1,102 @@
+## 2026-09-08 (AC10): the meadow becomes a place, the ground becomes layers, and water goes
+
+**Phase AC, card AC10.** Touched `public/antcity-engine.html`,
+`public/antcity/manifest.json`, `public/antcity/art/world/` (thirteen new sprites),
+`scripts/nature-shot.mjs` (new), `db/register-antcity-world-sprites.sql` (new, and
+APPLIED), `qa-antcity.mjs`, `antcity-README.md`, `ANTCITY-ASSET-PLAN.md`,
+`ASSET-LIBRARY.md`. The merged card: the world pass (old AC10) and cutting droppable
+water (old AC12), together, because cutting water removes art the world pass would
+otherwise have had to draw.
+
+### Part two first: food is the only thing a kid drops
+Water overlapped with food and muddled the story, since rain water is also the
+setback villain. Gone: the Water tool, the water meter, water in upkeep, water in the
+hatch maths, water as an item, water in the save. Staying: rain floods, which are now
+the only water in the game, cleared by builders exactly as before.
+
+**The hatch rate was rebalanced, and it was measured rather than guessed.** I ran the
+same three job mixes for six hundred colony seconds on the old build with the water
+kept topped up, on the old build with food only, and on the new build:
+
+| job mix (dig/forage/nurse) | old, water topped up | old, food only | new, no water |
+|---|---|---|---|
+| 4 / 6 / 2 | 54 born | 34 born | 61 born |
+| 2 / 10 / 4 | 59 born | 53 born | 61 born |
+| 6 / 4 / 6 | 61 born | 61 born | 61 born |
+
+So 0.14 came down to 0.115 per nursery ant per second. A colony now grows at the pace
+it grew at when a kid was keeping the water up; what is gone is the punishment for
+letting it run dry. A well-staffed colony is identical, and the thin-nursery mix is
+the one that gained, because that is exactly the colony the water penalty used to
+bite hardest.
+
+An old save with a water drop still sitting on the meadow gets it back as a crumb, so
+nothing is stranded.
+
+### Part one: a model camera, and thirteen sprites out of it
+`scripts/nature-shot.mjs` turns the CC0 Quaternius Stylized Nature models already in
+`public/models/nature/` into flat, side-on, transparent PNGs. three.js renders each
+one through an **orthographic** camera under one fixed rig (sky fill, warm key, cool
+rim), and the script trims the transparent margins itself so the file is exactly the
+piece. Headless, SwiftShader, no GPU, no network, about a minute for thirteen.
+
+Orthographic is the whole point: a perspective camera gives a tree a vanishing point,
+and a sprite with a vanishing point cannot be repeated across a meadow without every
+copy pointing somewhere different. One rig is the other point: thirteen models shot
+in one run look like one set of art.
+
+`Bush_Common` is deliberately skipped, its texture resolves dark red, which is a bug
+in the pack. `Bush_Common_Flowers` is the same bush with the right colours.
+
+All thirteen are registered to the shared library by
+`db/register-antcity-world-sprites.sql`, which was written AND applied this session:
+thirteen `community_sprites` rows under `nature/world/`, approved and reusable, so
+every other project can pull a tree or a rock out of the same drawer.
+
+### The meadow itself
+Back to front: sky with a sun and three clouds, far hills, a far tree line standing on
+them, a nearer hill, mid trees, the grass bank the door is cut into, the worn forager
+trail, and near props on the trail line. Composed ONCE into an offscreen canvas and
+blitted, rebuilt only when the layout changes or the rain starts or stops, so forty
+pieces of art cost one drawImage a frame. Every piece is placed by a hash of its own
+index, so the meadow is the same one every time and the robot sees what a kid sees.
+
+**The worn trail** runs out of the anthill door, along the bank and past every plant
+the foragers visit, on the exact line an ant stands on up there. AC13 gave the world a
+stream of ants; this gives them something to walk on.
+
+### Three things the screenshots caught that the tests could not
+1. **A lake that was not there.** A flat pale-green band filling half the strip, with
+   the far trees standing in it, read as water. Each hill band got its own gradient
+   and the haze became a gradient instead of a rectangle with a hard edge.
+2. **Rain on a sunny day.** A drawn fringe of grass blades along the whole top of the
+   bank read as rain falling. Cut it; the grass texture comes from the near props.
+3. **Corrugated cardboard.** The soil gradient restarted every row, drawing a faint
+   line at every cell edge. One gradient per LAYER fixed it.
+
+### The ground below
+Topsoil with roots, loam with buried acorns, clay, and pebbly stone with the rare
+little fossil. Layers are data in `GAME_CONFIG.soil` and in the manifest, the last one
+has no bottom because a free-build colony has none either, and the three soil tiles
+that had been sitting in the repo unused since AC4 are finally wired up, one per
+layer. All of it decoration: nothing buried changes what a cell does.
+
+### Checked
+`qa-antcity.mjs` gained an AC10 section: water is gone from tool, meter, store, item,
+save and hatch maths; rain still floods and builders still clear it; the meadow is
+composed once and cached and placed by hash and not by random; thirteen sprites are
+real files that resolve from manifest ids; the trail sits on the line the ants really
+walk; the soil is four layers, every row lands in one, digging goes through them in
+order, each has a real tile, and what is buried is drawn geometry. Six stale
+water-era assertions elsewhere in the file were updated rather than deleted. All
+green, `qa-antcity-shot.mjs` green in real Chromium, `node qa-all.mjs` green.
+
+### Not done here
+The HYBRID plan's hero pieces, generated through the Asset Studio to give the world
+its own character on top of the kit. That needs a browser on the live site, and this
+sandbox cannot reach buildablekids.com. AC3 (real per-kid saving and away-time
+growth) is the next card.
+
 ## 2026-09-08 (AC13): the swarm walks like ants, and the food is worth carrying
 
 **Phase AC, card AC13.** Touched `public/antcity-engine.html`, `qa-antcity.mjs`,

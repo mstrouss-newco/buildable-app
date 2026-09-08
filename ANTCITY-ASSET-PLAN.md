@@ -7,6 +7,45 @@ to match. Every slot keeps a drawn `BR` fallback so a missing file never breaks 
 
 This plan fills the placeholder IDs already in `public/antcity/manifest.json`.
 
+## What AC10 actually shipped for the world (September 8 2026)
+
+The surface is no longer one composed painting. It is a **layered scene the engine
+composes once and caches**: sky, far hills, a far tree line, a near hill, mid trees,
+a grass bank, the worn forager trail, and near props standing on the trail line.
+
+The pieces are the **CC0 Quaternius Stylized Nature MegaKit** models already in
+`public/models/nature/`, shot into flat side-on transparent sprites by
+`scripts/nature-shot.mjs` under one lighting rig and written to
+`public/antcity/art/world/`:
+
+| Sprite | Model | Manifest id |
+|---|---|---|
+| `tree-round-1/2/3.png` | CommonTree_1 / _3 / _5 | `antcity/world/tree-round-1..3-v1` |
+| `tree-pine-1/2.png` | Pine_1 / Pine_3 | `antcity/world/tree-pine-1..2-v1` |
+| `bush-flowers.png` | Bush_Common_Flowers | `antcity/world/bush-flowers-v1` |
+| `fern.png` | Fern_1 | `antcity/world/fern-v1` |
+| `grass-tall.png` | Grass_Common_Tall | `antcity/world/grass-tall-v1` |
+| `flowers-1/2.png` | Flower_3_Group / Flower_4_Group | `antcity/world/flowers-1..2-v1` |
+| `mushroom.png` | Mushroom_Common | `antcity/world/mushroom-v1` |
+| `rock-1/2.png` | Rock_Medium_1 / _2 | `antcity/world/rock-1..2-v1` |
+
+All thirteen are registered to the shared library (`community_sprites`,
+`asset_id` prefix `nature/world/`) by `db/register-antcity-world-sprites.sql`, so
+every other project can use them. Every one has a drawn fallback in the engine.
+
+**Bush_Common is deliberately not used:** its texture resolves dark red, a bug in
+the pack. `Bush_Common_Flowers` is the same bush with the right colours on it.
+
+**Still open:** the HYBRID plan's hero pieces, generated through the Asset Studio to
+give the world its own character on top of the kit. That needs a browser on the live
+site (`/api/asset-studio`), which a sandbox session cannot reach.
+
+The underground is layers now too — topsoil, loam, clay, pebbly stone — declared as
+data in `GAME_CONFIG.soil` and in the manifest's `world.soil`, each with its own tile
+(`antcity/soil/sandy-v1`, `loam-v1`, `deep-v1`, which existed as files and were
+finally wired up) and its own buried things: roots, acorns, pebbles and the rare
+little fossil. All decoration; none of it changes what a cell does.
+
 ## Reuse (already on the file shelf, just register to the shared library)
 
 | Manifest ID | Reuse from | Notes |

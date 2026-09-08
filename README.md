@@ -27,6 +27,44 @@ See the comment above `TILE_SHOTS` for why and how to switch them on.
 
 ---
 =======
+## AC10 — Ant City: a real meadow, real soil, and food is the only drop (September 8 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/world/`,
+`scripts/nature-shot.mjs`, `db/register-antcity-world-sprites.sql`, `qa-antcity.mjs`.
+Phase **AC**, card **AC10**, branch `claude/ac-13-start-4w0q36`.
+
+**Droppable water is gone.** It overlapped with food and muddled the story, since rain
+water is also the setback villain. No Water tool, no water meter, no water in upkeep or
+in the hatch maths. Rain floods stay and are now the only water in the game. The hatch
+rate came down from 0.14 to 0.115 so a colony grows at the pace it grew at when a kid was
+keeping the water topped up; what is gone is the punishment for letting it run dry, and
+that was measured across three job mixes rather than guessed. An old save with a water
+drop on the meadow gets it back as a crumb.
+
+**A model camera.** `scripts/nature-shot.mjs` turns the CC0 Quaternius nature models
+already in the repo into flat, side-on, transparent sprites: three.js, an orthographic
+camera, one fixed lighting rig, margins trimmed. Headless, no GPU, no network, about a
+minute for thirteen pieces. Orthographic matters because a sprite with a vanishing point
+cannot be repeated across a scene; one rig matters because thirteen models shot together
+look like one set of art rather than thirteen downloads. All thirteen are registered to
+the shared library so every project can use them.
+
+**The meadow is a place.** Sky, far hills, a far tree line standing on them, a nearer
+hill, mid trees, the grass bank the door is cut into, the worn forager trail, and near
+props on the trail line. Composed once into an offscreen canvas and blitted, so forty
+pieces of art cost one drawImage a frame, and every piece is placed by a hash of its own
+index so the meadow is the same one every time.
+
+**The ground is layers.** Topsoil with roots, loam with buried acorns, clay, and pebbly
+stone with the rare little fossil. Data in GAME_CONFIG and in the manifest, the deepest
+layer with no bottom, and the three soil tiles that had sat unused since AC4 finally
+wired up one per layer.
+
+Three bugs came out of looking at the screenshots: a pale band that read as a lake the
+far trees were standing in, a row of grass blades that read as rain falling on a sunny
+day, and a soil gradient restarted every row that read as corrugated cardboard.
+
+---
+
 ## AC13 — Ant City: the swarm walks like ants, and food you can see (September 8 2026)
 `public/antcity-engine.html`, `qa-antcity.mjs`, `antcity-README.md`. Phase **AC**, card
 **AC13**, branch `claude/ac-13-start-4w0q36`.
