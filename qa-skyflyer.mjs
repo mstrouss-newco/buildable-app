@@ -3278,14 +3278,18 @@ chk('FM8: and every one of them is slower than she is, so she can always win the
     return speed > hand && speed > dog && speed > trac;
   })());
 chk('FM8: the tractor plants through the SAME one door her own tap uses',
-  /function plantPatch\(P, kind\)/.test(farm) &&
-  /if\(!plantPatch\(openPatch, kind\)\)/.test(farm) &&
+  /function plantPatch\(P, kind, freeFloor\)/.test(farm) &&
+  /if\(!plantPatch\(openPatch, kind, true\)\)/.test(farm) &&
   /plantPatch\(P, TRACTOR\.kind\)/.test(farm));
 chk('FM8: it can never spend a coin she has not got — it parks instead',
   (function(){
     const i = farm.indexOf('function plantPatch');
     const body = farm.slice(i, farm.indexOf('function tryPlant', i));
-    return /seedIsFree\(kind\) *&& *!spendCoins/.test(body) &&
+    // the free-seed floor is HER tap's rule and nobody else's: tryPlant passes
+    // it, the tractor does not, so a broke farm cannot be planted out for nothing
+    return /!\(freeFloor && seedIsFree\(kind\)\) && !spendCoins/.test(body) &&
+           /plantPatch\(openPatch, kind, true\)/.test(farm) &&
+           /plantPatch\(P, TRACTOR\.kind\)/.test(farm) &&
            /TRACTOR\.queue=\[\]; TRACTOR\.state="home";/.test(farm);
   })());
 chk('FM8: the truck is the BIGGER customer, and it only ever buys what the farm MAKES',

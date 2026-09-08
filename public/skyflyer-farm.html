@@ -5774,7 +5774,8 @@ function buildTractor(){
   return g;
 }
 var TRACTOR={ obj:null, x:TRACTOR_SPOT.x, z:TRACTOR_SPOT.z, yaw:Math.PI,
-              state:"parked", queue:[], kind:null, popIn:null, spin:0, latch:false };
+              state:"parked", queue:[], kind:null, popIn:null, spin:0, latch:false,
+              blocker:null };
 function placeTractor(){
   if(TRACTOR.obj) return false;
   TRACTOR.obj=buildTractor();
@@ -5785,7 +5786,9 @@ function placeTractor(){
   TRACTOR.popIn=0; TRACTOR.state="parked"; TRACTOR.queue=[];
   scene.add(TRACTOR.obj);
   BLOCKER_OWNER="tractor";
-  addCircleBlocker(TRACTOR_SPOT.x, TRACTOR_SPOT.z, 1.5, "tractor");
+  // it is solid, and the solid part GOES WITH IT: a blocker left behind at the
+  // parking spot is an invisible wall in the middle of the grass while it works
+  TRACTOR.blocker=addCircleBlocker(TRACTOR_SPOT.x, TRACTOR_SPOT.z, 1.5, "tractor");
   BLOCKER_OWNER="";
   return true;
 }
@@ -5842,6 +5845,7 @@ function updateTractor(dt, now){
   }
   TRACTOR.obj.position.set(TRACTOR.x,0,TRACTOR.z);
   TRACTOR.obj.rotation.y=TRACTOR.yaw;
+  if(TRACTOR.blocker){ TRACTOR.blocker.x=TRACTOR.x; TRACTOR.blocker.z=TRACTOR.z; }
   TRACTOR.spin += dt*(moving?7.5:0);
   var W=TRACTOR.obj.userData.wheels, i;
   if(W) for(i=0;i<W.length;i++) W[i].rotation.x=TRACTOR.spin;
@@ -7033,10 +7037,14 @@ function updateSeedAffordability(){
 // FM8 — the ONE place a seed goes into the ground. Her tap and the tractor's
 // whole-field run both come through here, so the cost, the sprout and the puff
 // of soil can never drift apart between them.
-function plantPatch(P, kind){
+// `freeFloor` is FM3's rule that a kid who cannot afford a seed gets one free,
+// so being stuck is impossible. It belongs to HER TAP and to nothing else: the
+// tractor is a seven-hundred-coin luxury, and letting it take the free seed
+// twenty-five times over would hand a broke farm a whole free field.
+function plantPatch(P, kind, freeFloor){
   var r=CROP_RECIPES[kind];
   if(!P || !r || P.state!=="empty" || P.cover || P.locked) return false;
-  if(!seedIsFree(kind) && !spendCoins(r.price)) return false;
+  if(!(freeFloor && seedIsFree(kind)) && !spendCoins(r.price)) return false;
   sfx("select"); haptic("light");
   P.state="growing";
   P.seed=kind;
@@ -7063,7 +7071,7 @@ function tryPlant(kind){
   if(!openPatch) return;
   if(!CROP_RECIPES[kind]) return;
   tapUnlock();
-  if(!plantPatch(openPatch, kind)){ flashToast("Not enough coins"); sfx("hit"); return; }
+  if(!plantPatch(openPatch, kind, true)){ flashToast("Not enough coins"); sfx("hit"); return; }
   closeSeedPicker();
 }
 
@@ -7847,6 +7855,14 @@ window.FARM = {
     wants:TRUCK.wants.map(function(w){ return {kind:w.kind, filled:!!w.filled}; }),
     floating:!!TRUCK.want, stop:{x:TRUCK_STOP.x, z:TRUCK_STOP.z} }; },
   truckCall: function(){ TRUCK.state="away"; TRUCK.t=0; return truckArrive(); },
+  // Same lever as tractorTick and walkTick: the truck's drive down the road is
+  // four seconds of game time, which is half a minute of wall clock on a
+  // three-frames-a-second rasteriser.
+  truckTick: function(sec){
+    var d=1/30, t=0, guard=0;
+    while(t<(sec||10) && guard<20000){ updateTruck(d, performance.now()/1000); t+=d; guard++; }
+    return TRUCK.state;
+  },
   stickers: function(){ return stickerPages().map(function(P){
     return { id:P.id, got:!!P.got, seen:!!BOOK_SEEN[P.id] }; }); },
   book: function(){ return { up:bookOpen(),
