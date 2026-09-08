@@ -97,6 +97,134 @@ its own character on top of the kit. That needs a browser on the live site, and 
 sandbox cannot reach buildablekids.com. AC3 (real per-kid saving and away-time
 growth) is the next card.
 
+## 2026-09-08 (FM8 + FM9): helpers, a cast who come back, a sticker book, and a real girl
+
+**Phase FM, cards FM8 and FM9.** FM7 gave her things to do. FM8 gives her people to do
+them with, and FM9 finally gives her a face. Touched `public/skyflyer-farm.html`,
+`src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-farm-shot.mjs`, `qa-skyflyer.mjs`, and added
+`public/models/skyflyer/character/` (nine files) and `db/seed-farm-character.sql`.
+
+### The one rule every helper obeys
+They never take the fun part. Harvesting a crop, feeding an animal and the crate whoosh
+stay hers, always, and every helper is slower than she is, so she can beat any of them to
+anything she wants to do herself. She runs at 6.4; the dog trots at 4.6, the farmhand
+walks at 3.9 and the tractor drives at 4.4.
+
+**The farmhand, 860,** waters and does nothing else. He goes for the crop with the LONGEST
+left to wait, because that is the one she has given up on, and he cannot see a ready crop
+at all. Standing over it he tips his can for a second and a half and takes a third off
+whatever wait was left. He cannot pick anything up, he cannot feed anything, and the check
+that proves it watches her tower stay exactly the same height while he works.
+
+**The tractor, 700,** is the last of FM5's empty boxes, and it is now the biggest single
+thing on the farm. She walks up to it, it asks the ONE question the farm already knows how
+to ask (the seed card, with its title changed to "Plant the whole field"), and then it
+drives the rows dropping a seed in every empty patch while she watches. It buys each seed
+as it goes and PARKS the moment she cannot afford the next one, so it can never take more
+than she has. Her tap and the tractor's run now go through one door, `plantPatch()`, so the
+price, the sprout and the puff of soil cannot drift apart between them.
+
+**The delivery truck** is a second, bigger customer, and it comes on its own down the road
+FM6 laid along the south edge. It is fussy where the crate is not: it only ever buys what
+the farm MAKES, bread, cheese and honey, and it pays FIVE times what it asks for against
+the crate's three. It floats what it wants over its bed the same way the crate does, it
+unloads on exactly the crate's rhythm, and it drives off after a minute and a half whether
+it got what it wanted or not, so nothing about it can be missed or failed. It cannot come
+at all until the mill, the dairy or the hive is standing, which is the same guardrail FM4
+put on the crate: nothing may ask for a thing this farm cannot make today.
+
+### Six customers, and what each of them loves
+Bear, fox and bunny are joined by an owl, a frog and a hedgehog, and each of the six has
+ONE favourite: honey, egg, carrot, bread, melon, strawberry. When the order carries it, the
+slot for it wears a heart, the pay is double for that item, and the moment it lands in the
+crate the face itself jumps and hearts go up. Nothing says any of this in words. A
+favourite is only ever asked for if the farm can make one today, and a robot rolls forty
+orders to prove it.
+
+### The sticker book
+It stands by the barn door on a little post, so there is one place to remember and not two,
+and the button in the corner opens it too. One stamp per item she has ever carried, per
+animal living here and per helper who turned up: twenty-three stamps today. The ones she
+has not got are GREY, and this is the one place in the whole farm where grey belongs,
+because here it means "not yet" and there is nothing else it could mean. A new stamp
+announces itself once, wherever she is standing. Loading a farm that is already full of
+stickers fires nothing, because what she has been shown rides home in the save.
+
+### Show a grown-up
+One tap takes a picture of the whole island from above, using the same wide camera FM6
+built for judging a layout, and puts it in My Stuff next to her drawings. No new table and
+no new API: it goes through `/api/save-art` with `{ops: []}` and the farm's own save blob
+as the recipe, so it lands in the gallery she already has. There is also an automatic one
+at each size of farm, taken a few seconds in and never mid-whoosh, so there is a
+before-and-after even if she never taps the button.
+
+### FM9: a real main character
+Since FM1 the kid has been tube limbs, a ball head and two beads for eyes, and from the
+game camera she read as a blue blob. She is now Kenney's characterSmall (CC0), converted to
+glb, with four movements: idle, walk, run and the bend-down pick-up. Standing still is
+idle, moving is walk, and reaching for something she picked up herself plays the pick-up
+once. She stands at exactly 2.5 units, where the old kid stood, so the stack still lands on
+her head and nothing else on the farm moved. A soft dark circle under her stops her
+floating on the grass.
+
+**What makes her a person is ONE png.** Outfit, hair, face and skin tone all live in a
+single 1024 skin, wired as a NAMED SLOT and never a path, so a different outfit or a
+character per kid is a one-file change and no code at all. Mike's call was "the kid picks",
+so the farm asks once, with two pictures and no words beyond the title, and remembers the
+answer for good. Picking is a different skin on the same body, which is why it is instant.
+
+**The girl skin that arrived is not the one the farm loads.** `skin-farm-girl.png`
+paints her head and neck a deep maroon (135,34,26) while her own arms and hands in the
+same atlas stay the kit's peach (246,152,120), so on the farm she read as a dark red mask
+on a peach body. The farm now loads `skin-farm-girl-v2.png`, built here from the farm
+outfit's own skin with HER HAIR composited over it, so every tone agrees and the only
+difference between the two looks is the hair, which is the whole idea. The file that
+arrived is untouched and still in the repo, and going back to it is one path in the
+`KID_LOOKS` table. **This is exactly what the picture gate is for:** every data check
+passed with the maroon face, and only a screenshot showed it.
+
+**The code-built kid is still there,** hidden inside the same group. Block the model in the
+browser and the farm opens exactly as it always did, with the drawn kid walking on her code
+legs. That is checked by aborting the request in the harness, not by reading the source.
+
+Files: `character-kid.glb`, `anim-idle/walk/run/pickup.glb`, three skins, the kit's licence
+and a README carrying the loading rules, all under `public/models/skyflyer/character/`
+(408KB the lot). Registered in the shared asset library as eight rows in
+`community_sprites` through `db/seed-farm-character.sql`, applied in-session through the
+connected Supabase MCP and verified by counting the rows back.
+
+### What this session found
+- **`window.FARM.coins()` has been handing back a DOM node**, not a number, since FM1:
+  there is no local `coins` variable, so it resolved to the `<span id="coins">` the browser
+  puts on `window`. Test-only, now returns the wallet balance.
+- **The FM8 cast reader was being silently overridden.** A second `customers:` key later in
+  the same object literal won, so the new one returned a number. Renamed `customerCast`.
+- **The harness runs at THREE frames a second** on the software rasteriser, and dt is capped
+  at 0.05, so game time there runs at about a sixth of real time. That is the whole
+  explanation for a set of checks that looked flaky: a full-field tractor run takes ninety
+  seconds of wall clock in the harness and about four on a phone. Fixed properly, with a
+  `tractorTick()` lever that plays the drive out in game time (the same shape as the
+  existing `walkTick`), and with waits on STATE rather than on the clock.
+- **The auto picture is now guarded** so it never fires while anything is in the air, mid
+  unload, mid tractor run or over the who-is-this card: a JPEG encode costs a frame exactly
+  when the farm can least afford one.
+
+### QA
+`qa-skyflyer.mjs` **827 green** (+27 static for FM8 and FM9). `qa-farm.mjs` **266 green**,
+with a real FM8 block (the farmhand, the tractor, the truck, the cast, the book, the
+picture and a reload) and an FM9 block (the model, her height, the movements, the picker
+and the fallback, the last of them proved by ABORTING the model request in the browser).
+`qa-farm-shot.mjs` takes nine new pictures. `node qa-all.mjs` green. Cache-bust `?v=fm7`
+-> `?v=fm8`.
+
+**Four checks were failing on `main` before this session touched anything** — both egg
+pickups, "the first present is the pumpkin seed", and "opening it plays the full reveal" —
+and a clean checkout of `main` in this sandbox fails them the same way. Every one of them
+was the harness rather than the farm, and all four are fixed here: the egg checks walked
+to the HEN rather than to the egg (which lands over a unit off her flank, and the magnet
+measures from the egg), the present check read `innerText`, which Chrome returns empty for
+a card that is still fading in, and the reveal check gave a celebration that plays in game
+time fifteen real seconds when game time here runs at a sixth of the clock.
 ## 2026-09-08 (AC13): the swarm walks like ants, and the food is worth carrying
 
 **Phase AC, card AC13.** Touched `public/antcity-engine.html`, `qa-antcity.mjs`,
