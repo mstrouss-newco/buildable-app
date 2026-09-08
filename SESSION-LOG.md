@@ -95,11 +95,18 @@ duck 120, melon seed 150, dairy 260, cheapest first).
 `node qa-all.mjs` green, `qa-farm-shot.mjs` green with seven new FM7 pictures.
 Cache-bust `?v=fm6b` -> `?v=fm7`.
 
+### Landed
+Mike's instruction this session: **"push all the branches live after each session."**
+So FM6 and FM7 both went to `main` in one merge (FM6 underneath, FM7 on top, which is
+the order they were built in anyway), and Vercel takes it from there. That rule is now
+written into `AGENTS.md` under the session workflow, so no future session leaves a
+finished branch sitting unmerged. Nothing is marked `deployed` on the planner: this
+sandbox cannot reach the live site, and `deployed` should mean somebody actually looked.
+
 ### Still open for Mike
 - One probe row is sitting in `farm_saves` at `kid_profile_id='rls-probe-fm6'`. The
   guardrails in `AGENTS.md` forbid a DELETE, so the statement is in the FM6 entry below
   for him to run.
-- FM6 and FM7 are both on branches and neither is on `main` yet.
 
 ## 2026-09-08 (FM6): the land — a Quaternius island, and a field that grows
 

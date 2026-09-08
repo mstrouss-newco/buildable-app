@@ -212,6 +212,17 @@ no jargon.
 - **QA honesty.** Any session that touches a game ends by running that game's QA script
   (`qa-{game}.mjs`). If a game has no QA script, say so plainly. **Never claim QA passed
   if it did not actually run.**
+- **EVERY SESSION ENDS ON `main`, LIVE.** (Owner's instruction, 2026-09-08: "push all
+  the branches live after each session.") Work on the branch you were given, but do not
+  leave it sitting there. Once the gate below is green: merge `main` into your branch,
+  fix any conflict (`SESSION-LOG.md` is the usual one, and both entries are kept), re-run
+  the gate, merge the branch into `main` with a merge commit, and push. Vercel deploys
+  `main` on its own. If several branches are waiting, land them in dependency order,
+  oldest underneath. Do NOT hold a branch back waiting for the owner to look at pictures:
+  send him the pictures AND ship it. If something is genuinely not ready, say which
+  branch and why, in one line, rather than quietly leaving it unmerged.
+  **Do not mark a card `deployed` on the planner from this sandbox** — it cannot reach
+  the live site to check, and `deployed` means somebody looked.
 - **`qa-all.mjs` is the release gate. Run it before you call a session done.**
 
   ```
