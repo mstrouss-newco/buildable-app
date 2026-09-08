@@ -6534,22 +6534,26 @@ function updateKidModel(dt, moving){
 // an animal, so there is nothing new to learn.
 var lookCardEl=document.getElementById("lookCard");
 var lookRowEl=document.getElementById("lookRow");
+// THE PICTURES MUST BE THE ACTUAL LOOKS. The first turn of this card offered a
+// girl in blue and a boy in red, and both skins are the same blue dungarees:
+// a four-year-old who picks the red one and gets the blue one has been lied to.
+// Hair, skin and dungarees below are the real colours out of the two skin files.
 var LOOK_ART={
   girl:'<svg viewBox="0 0 96 96"><path d="M22 44 q0 -30 26 -30 q26 0 26 30 v22 q0 8 -8 8 '+
-    'h-36 q-8 0 -8 -8 Z" fill="#6B4A2E"/>'+
-    '<circle cx="48" cy="44" r="19" fill="#E9BE93"/>'+
-    '<path d="M29 40 q4 -20 19 -20 q15 0 19 20 q-8 -9 -19 -9 q-11 0 -19 9 Z" fill="#7B5636"/>'+
+    'h-36 q-8 0 -8 -8 Z" fill="#2E1A14"/>'+
+    '<circle cx="48" cy="44" r="19" fill="#F69777"/>'+
+    '<path d="M29 40 q4 -20 19 -20 q15 0 19 20 q-8 -9 -19 -9 q-11 0 -19 9 Z" fill="#2E1A14"/>'+
     '<circle cx="41" cy="44" r="3" fill="#3A2A1E"/><circle cx="55" cy="44" r="3" fill="#3A2A1E"/>'+
     '<path d="M42 54 q6 5 12 0" stroke="#B4566A" stroke-width="3" fill="none" stroke-linecap="round"/>'+
-    '<path d="M26 74 h44 v14 h-44 Z" fill="#4C6C93"/>'+
-    '<path d="M34 74 v14 M62 74 v14" stroke="#3B567A" stroke-width="3"/></svg>',
+    '<path d="M26 74 h44 v14 h-44 Z" fill="#195C86"/>'+
+    '<path d="M36 74 v14 M60 74 v14" stroke="#FFFFFF" stroke-width="4"/></svg>',
   boy:'<svg viewBox="0 0 96 96"><path d="M28 40 q2 -22 20 -22 q18 0 20 22 q-8 -8 -20 -8 '+
-    'q-12 0 -20 8 Z" fill="#6B4A2E"/>'+
-    '<circle cx="48" cy="46" r="19" fill="#E9BE93"/>'+
+    'q-12 0 -20 8 Z" fill="#A36841"/>'+
+    '<circle cx="48" cy="46" r="19" fill="#F69777"/>'+
     '<circle cx="41" cy="46" r="3" fill="#3A2A1E"/><circle cx="55" cy="46" r="3" fill="#3A2A1E"/>'+
     '<path d="M42 56 q6 5 12 0" stroke="#B4566A" stroke-width="3" fill="none" stroke-linecap="round"/>'+
-    '<path d="M26 74 h44 v14 h-44 Z" fill="#D86F5C"/>'+
-    '<path d="M34 74 v14 M62 74 v14" stroke="#B4523F" stroke-width="3"/></svg>'
+    '<path d="M26 74 h44 v14 h-44 Z" fill="#195C86"/>'+
+    '<path d="M36 74 v14 M60 74 v14" stroke="#FFFFFF" stroke-width="4"/></svg>'
 };
 function renderLookPicker(){
   if(!lookRowEl) return;

@@ -329,8 +329,8 @@ try {
   // stand her well back from it, so the truck and what it wants are both in the
   // frame rather than hard against the bottom edge behind the hint
   await f8.evaluate(() => { const t = window.FARM.truck();
-    window.FARM.tapAt(t.stop.x, t.stop.z - 9);      // a real tap, so the hint retires
-    window.FARM.moveKidTo(t.stop.x, t.stop.z - 9); });
+    window.FARM.tapAt(t.stop.x, t.stop.z - 5);      // a real tap, so the hint retires
+    window.FARM.moveKidTo(t.stop.x + 1.5, t.stop.z - 5); });
   await f8.waitForTimeout(1600);
   await shot(f8, 'fm8-delivery-truck');
 
