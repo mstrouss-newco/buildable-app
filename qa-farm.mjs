@@ -182,16 +182,25 @@ try {
   await ev(r => window.FARM.moveKidTo(r.x + 6.5, r.z + 6.5), ready);
   await page.waitForTimeout(700);
   const prePick = await ev(() => window.FARM.stackHeight());
+  // WALK TO THE EGG, not to the hen. The egg lands up to a unit and a bit off
+  // her flank, and the magnet measures from the EGG, so standing a magnet's
+  // reach from the animal can be a magnet's reach and a half from the thing.
+  const eggSpot = await ev(() => {
+    const s = window.FARM.produceSpots();
+    return s.length ? s[0] : null;
+  });
+  chk('the egg is still sitting there when she sets off for it', !!eggSpot);
   // stand ON it if the ground there is clear, and otherwise on the first clear
   // side inside the magnet's reach: a produce spot can sit tight against the
   // coop wall, and being slid out of a rail is being slid out of the magnet
-  await ev(r => {
+  if (eggSpot) await ev(r => {
     if (!window.FARM.blockedAt(r.x, r.z)) { window.FARM.moveKidTo(r.x, r.z); return; }
-    const d = window.FARM.magnetRadius() - 0.6;
-    const sides = [[d, 0], [-d, 0], [0, d], [0, -d]];
+    const d = window.FARM.magnetRadius() - 0.8;
+    const sides = [[d, 0], [-d, 0], [0, d], [0, -d],
+                   [d * 0.7, d * 0.7], [-d * 0.7, -d * 0.7]];
     const at = sides.find(([dx, dz]) => !window.FARM.blockedAt(r.x + dx, r.z + dz)) || [0, 0];
     window.FARM.moveKidTo(r.x + at[0], r.z + at[1]);
-  }, ready);
+  }, eggSpot);
   await page.waitForFunction(n => window.FARM.stackHeight() > n, prePick, { timeout: 25000 })
     .catch(() => {});
   const picked = await ev(() => ({ stack: window.FARM.stack(), animals: window.FARM.animals() }));

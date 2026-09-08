@@ -30,3 +30,14 @@ values
   ('farm/character/skin-farm-b-v1','Farm outfit B: red shirt, grey dungarees, brown boots (1024 skin)','character','model-3d-skin','https://www.buildablekids.com/models/skyflyer/character/skin-farm-b.png','{farm,town}','Kenney skin, CC0. One png carries outfit, hair, face and skin tone',true,true,'approved','agent:farm-fm9'),
   ('farm/character/skin-farm-girl-v1','Farm girl: outfit A with longer hair (1024 skin)','character','model-3d-skin','https://www.buildablekids.com/models/skyflyer/character/skin-farm-girl.png','{farm,town}','Kenney skins combined, CC0. One png carries outfit, hair, face and skin tone',true,true,'approved','agent:farm-fm9')
 on conflict do nothing;
+
+-- Added in the same session: the corrected girl skin. The supplied
+-- skin-farm-girl.png paints the head a deep maroon while the arms in the same
+-- atlas stay peach, so the farm loads this one instead. The original row above
+-- stays: nothing in the library is removed, and either is one path away.
+insert into community_sprites
+  (asset_id, subject, layer_type, category, image_url, theme_tags, prompt_used,
+   has_transparency, reusable, moderation_status, created_by_device_id)
+values
+  ('farm/character/skin-farm-girl-v2','Farm girl, corrected: outfit A tones with her own hair (1024 skin)','character','model-3d-skin','https://www.buildablekids.com/models/skyflyer/character/skin-farm-girl-v2.png','{farm,town}','skin-farm-a.png with the hair from skin-farm-girl.png composited over it, so the face matches the hands',true,true,'approved','agent:farm-fm9')
+on conflict do nothing;

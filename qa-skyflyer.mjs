@@ -3356,8 +3356,13 @@ chk('FM9: the character and its four movements are IN THE REPO, with their licen
    'LICENSE-kenney.txt', 'README.md']
     .every(f => fs.existsSync(dir + '/public/models/skyflyer/character/' + f)));
 chk('FM9: what makes her a person is ONE png, wired as a named slot and never a path',
-  /var KID_LOOKS=\[/.test(farm) && /\{ id:"girl", skin:KID_DIR\+"skin-farm-girl\.png" \}/.test(farm) &&
+  /var KID_LOOKS=\[/.test(farm) && /\{ id:"girl", skin:KID_DIR\+"skin-farm-girl-v2\.png" \}/.test(farm) &&
   /function kidLookById/.test(farm) && /KID3\.mat\.map=kidTexture\(L\.skin\)/.test(farm));
+chk('FM9: and the girl skin the farm uses is the one whose face matches her own hands',
+  fs.existsSync(dir + '/public/models/skyflyer/character/skin-farm-girl-v2.png') &&
+  /skin-farm-girl-v2\.png/.test(farm) &&
+  // the file that arrived is kept, and it is one path away
+  fs.existsSync(dir + '/public/models/skyflyer/character/skin-farm-girl.png'));
 chk('FM9: the clip is matched BY NAME, because index 0 of every anim file is a T-pose',
   /function realClip/.test(farm) && /targeting/i.test(farm) &&
   !/animations\[0\]/.test(farmCode));

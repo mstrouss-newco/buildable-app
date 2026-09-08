@@ -46,3 +46,15 @@ hardcoded path, so a different outfit or a per-kid character is a one-file chang
 ## Known and accepted
 From the farm's high camera her head reads a little tall and she looks more like a small
 teenager than a five year old. That is the model's geometry, not the paint. Accepted for now.
+
+## Correction made when this went into the farm (FM9 build session)
+
+`skin-farm-girl.png` paints the head and neck a deep maroon (135,34,26) while the
+arms and hands in the same atlas stay the kit's peach (246,152,120). On the farm that
+reads as a dark red mask on a peach body rather than as a girl, so the farm now loads
+**`skin-farm-girl-v2.png`**: `skin-farm-a.png` with HER HAIR composited over it (the
+near-black hair pixels from the head region, plus the boy's fringe dyed to match), so
+every tone agrees and the only difference between the two looks is the hair.
+
+The original file is untouched and still here. Going back to it is one path in the
+`KID_LOOKS` table in `public/skyflyer-farm.html` — that is what the named slot is for.

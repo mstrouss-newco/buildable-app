@@ -323,11 +323,15 @@ try {
     window.FARM.clearStack();
     window.FARM.truckCall();
   });
+  await f8.evaluate(() => window.FARM.truckTick(8));
   await f8.waitForFunction(() => window.FARM.truck().state === 'waiting', null, { timeout: 30000 })
     .catch(() => {});
+  // stand her well back from it, so the truck and what it wants are both in the
+  // frame rather than hard against the bottom edge behind the hint
   await f8.evaluate(() => { const t = window.FARM.truck();
-    window.FARM.moveKidTo(t.stop.x - 1, t.stop.z - 4); });
-  await f8.waitForTimeout(1400);
+    window.FARM.tapAt(t.stop.x, t.stop.z - 9);      // a real tap, so the hint retires
+    window.FARM.moveKidTo(t.stop.x, t.stop.z - 9); });
+  await f8.waitForTimeout(1600);
   await shot(f8, 'fm8-delivery-truck');
 
   // the sticker book, half full, which is the whole point of it
@@ -342,9 +346,14 @@ try {
     deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await f8p.goto(BASE, { waitUntil: 'load' });
   await ready(f8p);
-  await f8p.waitForFunction(() => window.FARM.lookPicker().up === true, null, { timeout: 20000 })
+  // it comes up by itself a couple of seconds in, which at three frames a second
+  // is a good while, so the picture waits for it and then asks for it
+  await f8p.waitForFunction(() => window.FARM.lookPicker().up === true, null, { timeout: 30000 })
     .catch(() => {});
-  await f8p.waitForTimeout(600);
+  await f8p.evaluate(() => { if (!window.FARM.lookPicker().up) window.FARM.openLookPicker(); });
+  await f8p.waitForTimeout(900);
+  chk('the who-is-this card really is on screen when its picture is taken',
+    (await f8p.evaluate(() => window.FARM.lookPicker())).options.join(',') === 'girl,boy');
   await shot(f8p, 'fm9-who-is-this-phone');
   await f8p.evaluate(() => { window.FARM.pickLook('girl');
     ['pumpkinseed', 'farmdog', 'fieldrow', 'pig'].forEach(id => window.FARM.givePresent(id));

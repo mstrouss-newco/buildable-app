@@ -74,6 +74,16 @@ character per kid is a one-file change and no code at all. Mike's call was "the 
 so the farm asks once, with two pictures and no words beyond the title, and remembers the
 answer for good. Picking is a different skin on the same body, which is why it is instant.
 
+**The girl skin that arrived is not the one the farm loads.** `skin-farm-girl.png`
+paints her head and neck a deep maroon (135,34,26) while her own arms and hands in the
+same atlas stay the kit's peach (246,152,120), so on the farm she read as a dark red mask
+on a peach body. The farm now loads `skin-farm-girl-v2.png`, built here from the farm
+outfit's own skin with HER HAIR composited over it, so every tone agrees and the only
+difference between the two looks is the hair, which is the whole idea. The file that
+arrived is untouched and still in the repo, and going back to it is one path in the
+`KID_LOOKS` table. **This is exactly what the picture gate is for:** every data check
+passed with the maroon face, and only a screenshot showed it.
+
 **The code-built kid is still there,** hidden inside the same group. Block the model in the
 browser and the farm opens exactly as it always did, with the drawn kid walking on her code
 legs. That is checked by aborting the request in the harness, not by reading the source.

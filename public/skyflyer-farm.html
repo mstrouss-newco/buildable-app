@@ -6148,14 +6148,18 @@ var bookDotsEl=document.getElementById("bookDots");
 var bookCloseEl=document.getElementById("bookClose");
 function renderBook(){
   if(!bookRowEl) return;
-  var pages=stickerPages(), html="", dots="", i, got=0;
+  var pages=stickerPages(), html="", i, got=0;
   for(i=0;i<pages.length;i++){
     var P=pages[i];
     if(P.got) got++;
     html += '<div class="stamp'+(P.got?"":" off")+(BOOK_FRESH[P.id]?" new":"")+
             '" data-id="'+P.id+'">'+P.art+'</div>';
-    dots += '<i class="'+(P.got?"on":"")+'"></i>';
   }
+  // The dots are a PROGRESS BAR, not a second copy of the grid: the filled ones
+  // come first and grow along the row. Interleaved with the empties they read as
+  // noise, which is what the picture gate showed.
+  var dots="";
+  for(i=0;i<pages.length;i++) dots += '<i class="'+(i<got?"on":"")+'"></i>';
   bookRowEl.innerHTML=html;
   if(bookDotsEl) bookDotsEl.innerHTML=dots;
   BOOK_FRESH={};
@@ -6365,8 +6369,15 @@ var KID_CLIP_URLS={ idle:KID_DIR+"anim-idle.glb",
                     pick:KID_DIR+"anim-pickup.glb" };
 // The named slots. "who" is what the kid picked; the file behind it can change
 // without a line of this code changing.
+// THE GIRL SKIN IS NOT THE ONE THAT ARRIVED. The supplied `skin-farm-girl.png`
+// paints her face and neck a deep maroon while her own arms and hands stay the
+// peach the rest of the kit uses, so on the farm she read as a dark red mask
+// with black hair. `skin-farm-girl-v2.png` is built from the farm outfit's own
+// skin with HER HAIR composited over it, so the tones match everywhere and the
+// only difference between the two looks is the hair, which is the whole idea.
+// The original file is still in the repo, untouched, and this is one path away.
 var KID_LOOKS=[
-  { id:"girl", skin:KID_DIR+"skin-farm-girl.png" },
+  { id:"girl", skin:KID_DIR+"skin-farm-girl-v2.png" },
   { id:"boy",  skin:KID_DIR+"skin-farm-a.png" }
 ];
 function kidLookById(id){
@@ -7897,6 +7908,19 @@ window.FARM = {
   pickLook: pickLook,
   openLookPicker: openLookPicker,
   kidPick: kidPick,
+  // A close look at her, for the picture gate: park the camera at her shoulder
+  // and report what the material and the texture actually ARE, because "she is
+  // dark" and "she has no texture yet" look identical in a screenshot.
+  kidCloseUp: function(){
+    camera.position.set(kid.position.x+2.6, 2.4, kid.position.z+4.2);
+    camera.lookAt(kid.position.x, 1.3, kid.position.z);
+    WIDE=false;
+    var m=KID3.mat, t=m&&m.map;
+    return { hasMat:!!m, hasMap:!!t, mapImage:!!(t&&t.image),
+      w:(t&&t.image&&t.image.width)||0, encoding:(t&&t.encoding)||null,
+      color:m?m.color.getHexString():null, skinning:!!(m&&m.skinning),
+      lights:scene.children.filter(function(o){return o.isLight;}).length };
+  },
   customerCast: function(){ return { faces:CUSTOMERS.length, favourites:CUSTOMER_FAV.slice(),
     fav:order?order.fav:null, loved:order?!!order.loved:false }; },
 
