@@ -362,6 +362,82 @@ try {
   await shot(f8p, 'fm8-sticker-book-phone');
   await f8p.close();
 
+  // ------------------------------------------------- FM10: ask against give
+  // THE GATE FOR THIS CARD. A data check cannot see that two things LOOK the
+  // same, which is exactly how the want sign and the ready sign ended up
+  // identical. So the proof is one phone-sized frame with a hungry animal and
+  // a ready crop in it together, judged by eye.
+  const f10 = await browser.newPage({ viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await f10.goto(BASE, { waitUntil: 'load' });
+  await ready(f10);
+  await f10.evaluate(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
+  await f10.evaluate(() => {
+    window.FARM.addCoins(400);
+    // the pig is the one hungry animal that stands anywhere near the field, so
+    // it is the only way to get an ASK and a GIVE into one phone-shaped frame
+    ['pumpkinseed', 'farmdog', 'fieldrow', 'pig'].forEach(id => window.FARM.givePresent(id));
+    for (let i = 0; i < 9; i++) window.FARM.plant(i, 'corn');
+    window.FARM.advanceTime(80);              // the whole field is takeable
+  });
+  await f10.waitForFunction(() => window.FARM.animals().some(a => a.kind === 'pig'), null,
+    { timeout: 25000 }).catch(() => {});
+  // STAND SOUTH OF THE ANIMAL AND LOOK UP THE FARM AT THE FIELD. The camera
+  // looks north, so an animal behind her is an animal out of shot: the pair has
+  // to be lined up in DEPTH and not across the screen, or a phone frame is far
+  // too narrow to hold both.
+  const gap = await f10.evaluate(() => {
+    let best = null;
+    for (const a of window.FARM.animals().filter(x => x.state === 'hungry' && x.wants))
+      for (const P of window.FARM.patches().filter(x => x.state === 'ready')) {
+        const d = Math.hypot(P.x - a.x, P.z - a.z);
+        if (!best || d < best.d) best = { d, ax: a.x, az: a.z, px: P.x, pz: P.z };
+      }
+    window.FARM.moveKidTo(best.ax + (best.px - best.ax) * 0.35, best.az + 5.5);
+    return +best.d.toFixed(1);
+  });
+  chk('the asking animal and the ready crop are close enough to share a frame',
+    gap > 0 && gap < 15, gap + ' units apart');
+  await f10.waitForFunction(() => window.FARM.animals().some(a => a.loud && a.asking),
+    null, { timeout: 25000 }).catch(() => {});
+  // the who-is-this card comes up by itself a couple of seconds in, and it is
+  // big enough to cover the very pair this picture exists to show
+  await f10.evaluate(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
+  await f10.waitForTimeout(1400);
+  const S10 = await f10.evaluate(() => window.FARM.signs());
+  chk('the frame really holds BOTH: something asking and something to take',
+    S10.ask.some(a => a.ring && a.bubble) && S10.give.some(g => g.arrow && g.halo),
+    'ask ' + S10.ask.length + ', give ' + S10.give.length);
+  await shot(f10, 'fm10-ask-and-give-phone');
+
+  // and the same pair at desktop width, where Mike looks at the detail
+  await f10.setViewportSize({ width: 1100, height: 780 });
+  await f10.waitForTimeout(900);
+  await shot(f10, 'fm10-ask-and-give');
+  await f10.close();
+
+  // the mill wanting TWO, which is now a picture rather than a 2 on a card
+  const f10b = await browser.newPage({ viewport: { width: 1100, height: 780 } });
+  await f10b.goto(BASE, { waitUntil: 'load' });
+  await ready(f10b);
+  await f10b.evaluate(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
+  await f10b.evaluate(() => {
+    ['pumpkinseed', 'farmdog', 'fieldrow', 'pig', 'mill'].forEach(id => window.FARM.givePresent(id));
+  });
+  await f10b.waitForFunction(() => window.FARM.animals().some(a => a.kind === 'mill'),
+    null, { timeout: 25000 }).catch(() => {});
+  await f10b.evaluate(() => {
+    const m = window.FARM.animals().find(a => a.kind === 'mill');
+    window.FARM.moveKidTo(m.x, m.z + 3);
+  });
+  await f10b.waitForTimeout(1600);
+  const SM = await f10b.evaluate(() => window.FARM.signs());
+  chk('the mill is holding two wheat in its bubble, not one and a number',
+    SM.ask.some(a => a.kind === 'mill' && a.needs === 2 && a.items === 2 && a.bubble),
+    JSON.stringify(SM.ask.filter(a => a.kind === 'mill')));
+  await shot(f10b, 'fm10-the-mill-wants-two');
+  await f10b.close();
+
 } catch (e) {
   chk('the farm camera completed its run', false, e.message);
 } finally {

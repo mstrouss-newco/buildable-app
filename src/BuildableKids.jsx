@@ -1547,7 +1547,7 @@ function RileysScreen({ onHome, level }) { return <GameFrame title="Riley's Gard
 // all: the page existed and was routed, but the only way in was to type the URL.
 // It gets its own cache-bust because it is its own page, on its own release
 // cycle from the flying engine next door.
-function FarmScreen({ onHome, level }) { return <GameFrame title="The Farm" src={"/skyflyer-farm.html?v=fm8" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#B3E58C" />; }
+function FarmScreen({ onHome, level }) { return <GameFrame title="The Farm" src={"/skyflyer-farm.html?v=fm10" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#B3E58C" />; }
 function StringMatchScreen({ onHome, level }) { return <GameFrame title="String Match" src={"/string-match.html?v=2" + (level != null ? "&level=" + level : "")} onHome={onHome} bg="#bfe3f5" light />; }
 // AC2 — Ant City. One colony the kid keeps, so there is no level param: the shell
 // hands over the equipped look (Ant / Meadow / Dirt indexes from Make it mine) and

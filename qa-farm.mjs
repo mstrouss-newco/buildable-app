@@ -185,24 +185,37 @@ try {
   // WALK TO THE EGG, not to the hen. The egg lands up to a unit and a bit off
   // her flank, and the magnet measures from the EGG, so standing a magnet's
   // reach from the animal can be a magnet's reach and a half from the thing.
-  const eggSpot = await ev(() => {
-    const s = window.FARM.produceSpots();
-    return s.length ? s[0] : null;
-  });
+  // THE EGG OF THE HEN WE WAITED ON, and not simply the first egg on the farm.
+  // Several animals can be ready at once, and one of those other eggs may
+  // already be halfway to her on the magnet — walking to that one and then
+  // waiting for it proves nothing. This is the fix for a check that has gone
+  // red on and off since FM6 without the farm ever being at fault.
+  const eggSpot = await ev(i => {
+    const s = window.FARM.produceSpots().find(p => p.i === i);
+    return s || null;
+  }, ready.i);
   chk('the egg is still sitting there when she sets off for it', !!eggSpot);
-  // stand ON it if the ground there is clear, and otherwise on the first clear
-  // side inside the magnet's reach: a produce spot can sit tight against the
-  // coop wall, and being slid out of a rail is being slid out of the magnet
+  // stand ON it if the ground there is clear, and otherwise at the nearest
+  // clear place inside the magnet's reach: a produce spot can sit tight
+  // against the coop wall, and being slid out of a rail is being slid out of
+  // the magnet. Sixteen ways round at three distances, because six was not
+  // always enough and the fallback was then a spot she cannot stand on.
   if (eggSpot) await ev(r => {
     if (!window.FARM.blockedAt(r.x, r.z)) { window.FARM.moveKidTo(r.x, r.z); return; }
-    const d = window.FARM.magnetRadius() - 0.8;
-    const sides = [[d, 0], [-d, 0], [0, d], [0, -d],
-                   [d * 0.7, d * 0.7], [-d * 0.7, -d * 0.7]];
-    const at = sides.find(([dx, dz]) => !window.FARM.blockedAt(r.x + dx, r.z + dz)) || [0, 0];
-    window.FARM.moveKidTo(r.x + at[0], r.z + at[1]);
+    const reach = window.FARM.magnetRadius() - 0.8;
+    for (const d of [reach * 0.45, reach * 0.7, reach]) {
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        const x = r.x + Math.cos(a) * d, z = r.z + Math.sin(a) * d;
+        if (!window.FARM.blockedAt(x, z)) { window.FARM.moveKidTo(x, z); return; }
+      }
+    }
+    window.FARM.moveKidTo(r.x, r.z);
   }, eggSpot);
-  await page.waitForFunction(n => window.FARM.stackHeight() > n, prePick, { timeout: 25000 })
-    .catch(() => {});
+  // wait on THAT hen letting go of its egg, not on the stack getting taller:
+  // any other egg drifting in on the magnet would satisfy a height test
+  await page.waitForFunction(i => window.FARM.animals()[i].state !== 'ready', ready.i,
+    { timeout: 25000 }).catch(() => {});
   const picked = await ev(() => ({ stack: window.FARM.stack(), animals: window.FARM.animals() }));
   chk('walking over the egg hops it onto the stack like any crop',
     picked.stack.length > prePick && picked.stack.some(s => s.kind === 'egg'),
@@ -1906,7 +1919,11 @@ try {
     })());
   chk('the stack still lands on her head, at the same height as ever',
     await (async () => {
-      await ev9(() => { window.FARM.clearStack(); window.FARM.giveItem('corn', 2); });
+      // AWAY FROM EVERY ANIMAL FIRST. Corn handed to her while she stands next
+      // to a hungry hen is corn that flies straight off the stack again, and
+      // the tower is then two short of what this is measuring.
+      await ev9(() => { window.FARM.moveKidTo(-45, -45); window.FARM.clearStack();
+        window.FARM.giveItem('corn', 2); });
       await p9.waitForFunction(() => { const s = window.FARM.stack();
         return s.length === 2 && s[0].y > 2.4; }, null, { timeout: 25000 }).catch(() => {});
       const s = await ev9(() => window.FARM.stack());
@@ -1955,6 +1972,172 @@ try {
       await pf.close();
       return K.on === false && K.drawnVisible === true && moved.x === 0;
     })());
+
+  // =======================================================================
+  //  FM10 — MAKE IT OBVIOUS WHAT THE FARM IS ASKING FOR
+  //
+  //  Mike's playtest: a hungry animal looked exactly like a happy one, and the
+  //  thing floating over it was the same picture as the thing floating over a
+  //  ready crop. These checks prove the two families exist and behave; only
+  //  qa-farm-shot.mjs can prove they LOOK different, which is why that gate
+  //  exists at all.
+  // =======================================================================
+  console.log('\n--- FM10: ASK AND GIVE ARE TWO DIFFERENT PICTURES ---');
+  const p10 = await browser.newPage({ viewport: { width: 900, height: 700 } });
+  const e10 = [];
+  p10.on('pageerror', ev => e10.push(ev.message));
+  await p10.goto(BASE, { waitUntil: 'load' });
+  await p10.waitForFunction(() => window.FARM && window.FARM.save.booted(), null, { timeout: 25000 });
+  const ev10 = (fn, arg) => p10.evaluate(fn, arg);
+
+  chk('everything that is asking wears a bubble, and nothing that is asking wears an arrow',
+    await (async () => {
+      const S = await ev10(() => window.FARM.signs());
+      return S.ask.length > 0 && S.ask.every(a => a.bubble && !a.arrow);
+    })());
+  chk('a want hovers around its bubble and never bounces off the ground',
+    await (async () => {
+      // the ask sits up at the animal's want height; a give sits on the soil
+      const S = await ev10(() => window.FARM.signs());
+      return S.ask.every(a => a.y > 1.2);
+    })());
+
+  chk('ONE VOICE AT A TIME — only the animal she is nearest to gets loud',
+    await (async () => {
+      await ev10(() => {
+        const a = window.FARM.animals().filter(x => x.state === 'hungry' && x.wants)[0];
+        window.FARM.moveKidTo(a.x + 1.2, a.z + 1.2);
+      });
+      await p10.waitForFunction(() => window.FARM.animals().some(a => a.loud), null,
+        { timeout: 25000 }).catch(() => {});
+      const A = await ev10(() => window.FARM.animals());
+      const loud = A.filter(a => a.loud);
+      if (loud.length !== 1) return false;
+      // and it really is the nearest hungry one, not just any of them
+      const k = await ev10(() => window.FARM.kid());
+      const d = a => Math.hypot(a.x - k.x, a.z - k.z);
+      const hungry = A.filter(a => a.state === 'hungry' && a.wants);
+      return hungry.every(a => d(a) >= d(loud[0]) - 0.001) && loud[0].asking === true;
+    })());
+  chk('the loud one is the only one standing in a ring — the rest ask quietly',
+    await (async () => {
+      const A = await ev10(() => window.FARM.animals());
+      return A.filter(a => a.asking).length === 1 &&
+             A.filter(a => a.state === 'hungry' && a.wanting).length > 1;
+    })());
+  chk('walk away and the whole farm goes quiet again — nobody is left shouting',
+    await (async () => {
+      await ev10(() => window.FARM.moveKidTo(0, 20));
+      await p10.waitForFunction(() => !window.FARM.animals().some(a => a.loud), null,
+        { timeout: 25000 }).catch(() => {});
+      const A = await ev10(() => window.FARM.animals());
+      // they are all still asking, just not in her face
+      return A.every(a => !a.loud && !a.asking) &&
+             A.filter(a => a.state === 'hungry' && a.wanting).length > 1;
+    })());
+
+  chk('the animal she is nearest to STOPS pacing and turns to face her',
+    await (async () => {
+      const hen = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
+      if (!hen) return false;
+      await ev10(([x, z]) => window.FARM.moveKidTo(x + 1.1, z + 1.1), [hen.x, hen.z]);
+      await p10.waitForFunction(() => {
+        const a = window.FARM.animals().find(x => x.patrolling);
+        return a && a.loud;
+      }, null, { timeout: 25000 }).catch(() => {});
+      const at = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
+      // give it a good many frames of the software rasteriser and it must not
+      // have walked anywhere, because it is busy asking her for something
+      await p10.waitForTimeout(1500);
+      const after = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
+      return at.loud && Math.hypot(after.x - at.x, after.z - at.z) < 0.05;
+    })());
+  chk('and it starts pacing again the moment she is not the one it is asking',
+    await (async () => {
+      await ev10(() => window.FARM.moveKidTo(0, 20));
+      const b = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
+      await p10.waitForFunction(h => {
+        const a = window.FARM.animals().find(x => x.patrolling);
+        return a && !a.loud && Math.hypot(a.x - h.x, a.z - h.z) > 0.3;
+      }, { x: b.x, z: b.z }, { timeout: 25000 }).catch(() => {});
+      const c = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
+      return !c.loud && Math.hypot(c.x - b.x, c.z - b.z) > 0.15;
+    })());
+
+  chk('a ready crop wears the arrow and the sparkle — the GIVE half of the split',
+    await (async () => {
+      await ev10(() => {
+        window.FARM.addCoins(200);
+        for (let i = 0; i < 4; i++) window.FARM.plant(i, 'corn');
+        window.FARM.advanceTime(80);
+      });
+      await p10.waitForFunction(() => window.FARM.signs().give.some(g => g.what === 'crop'),
+        null, { timeout: 25000 }).catch(() => {});
+      const S = await ev10(() => window.FARM.signs());
+      const crops = S.give.filter(g => g.what === 'crop');
+      return crops.length > 0 && crops.every(g => g.arrow && g.halo && !g.bubble);
+    })());
+  chk('a ready egg says take me the same way a ready crop does, not its own way',
+    await (async () => {
+      const hen = (await ev10(() => window.FARM.animals()))
+        .find(a => a.kind === 'chicken' && a.state === 'hungry');
+      await ev10(k => window.FARM.giveItem(k.wants, 2), hen);
+      await ev10(k => window.FARM.moveKidTo(k.x, k.z + 1.7), hen);
+      await p10.waitForFunction(i => window.FARM.animals()[i].wanting === false, hen.i,
+        { timeout: 40000 }).catch(() => {});
+      // AND THEN STAND WELL BACK. The magnet reaches four units, so reading the
+      // signs from beside the hen reads them after the egg is already on her
+      // stack — which is not the egg failing to wear an arrow, it is the robot
+      // standing too close to see one.
+      await ev10(() => window.FARM.moveKidTo(-45, -45));
+      await ev10(() => window.FARM.advanceTime(80));
+      await p10.waitForFunction(i => window.FARM.animals()[i].state === 'ready', hen.i,
+        { timeout: 40000 }).catch(() => {});
+      const S = await ev10(() => window.FARM.signs());
+      const eggs = S.give.filter(g => g.what === 'produce');
+      return eggs.length > 0 && eggs.every(g => g.arrow && g.halo && !g.bubble);
+    })());
+  chk('the two families never share a colour, so they can never read the same',
+    await (async () => {
+      const S = await ev10(() => window.FARM.signs());
+      return S.askTint !== S.giveTint && S.noticeR > 0;
+    })());
+
+  chk('feeding an animal takes every one of its signs down with it',
+    await (async () => {
+      const before = await ev10(() => window.FARM.signs());
+      const A0 = (await ev10(() => window.FARM.animals())).find(a => a.state === 'hungry' && a.wants);
+      await ev10(k => window.FARM.giveItem(k.wants, 2), A0);
+      await ev10(k => window.FARM.moveKidTo(k.x, k.z + 1.7), A0);
+      // "feeding" is a state it passes THROUGH while the item is still in the
+      // air, and the sign only comes down when the item lands. So the wait is
+      // on the SIGN and not on the state, or this reads the half-second in
+      // between and calls a working farm broken.
+      await p10.waitForFunction(i => window.FARM.animals()[i].wanting === false, A0.i,
+        { timeout: 40000 }).catch(() => {});
+      const a = (await ev10(() => window.FARM.animals()))[A0.i];
+      return before.ask.length > 0 && a.state !== 'hungry' && !a.wanting && !a.asking && !a.loud;
+    })());
+
+  chk('the mill holds TWO wheat in its bubble, because two is what it wants',
+    await (async () => {
+      await ev10(() => ['pumpkinseed', 'farmdog', 'fieldrow', 'pig', 'mill']
+        .forEach(id => window.FARM.givePresent(id)));
+      await p10.waitForFunction(() => window.FARM.signs().ask.some(a => a.kind === 'mill'),
+        null, { timeout: 25000 }).catch(() => {});
+      const S = await ev10(() => window.FARM.signs());
+      const mill = S.ask.find(a => a.kind === 'mill');
+      const one = S.ask.find(a => a.kind === 'chicken');
+      return !!mill && mill.needs === 2 && mill.items === 2 && !!one && one.items === 1;
+    })());
+  chk('the crate asks in the same language as everything else that asks',
+    await (async () => {
+      const S = await ev10(() => window.FARM.signs());
+      const crate = S.ask.find(a => a.what === 'crate');
+      return !!crate && crate.bubble === true && crate.arrow === false;
+    })());
+  chk('no page errors in the whole FM10 run', e10.length === 0, e10.join(' | '));
+  await p10.close();
 
   console.log('\n--- FM3: THE SHELL CONTRACT ---');
   chk('the shared nav bridge is loaded, so the shell\'s Home button reaches us',

@@ -2609,7 +2609,10 @@ chk('FM2: the wait for an egg or milk is well under a minute',
 chk('FM2: the produce appears BESIDE the animal and sparkles like a ready crop',
   /function spawnProduce\(A, quiet\)/.test(farm) &&   // FM5 added the silent catch-up path
   /K\.produceOut/.test(farm) &&
-  /TorusGeometry\(0\.62,0\.05,6,20\),0xFFF6A8/.test(farm));
+  // FM10 named the warm yellow GIVE_TINT and shares it with the ready crop,
+  // so the sparkle is now one colour in one place rather than two literals
+  /TorusGeometry\(0\.62,0\.09,6,20\),GIVE_TINT/.test(farm) &&
+  /var ASK_TINT=0xBFD8FF, GIVE_TINT=0xFFF6A8, GIVE_ARROW=0xFFA92E;/.test(farm));
 chk('FM2: walking over it hops it onto the stack exactly like a harvested crop',
   /function collectProduce\(A\)/.test(farm) &&
   /pushOntoStack\(A\.gives,/.test(farm) &&
@@ -2700,7 +2703,7 @@ chk('FM3 gap 1: it routes to a screen of its own that frames the page',
   /function FarmScreen/.test(jsxF) &&
   /screen === SCREEN_FARM/.test(jsxF));
 chk('FM3 gap 1: the link carries its OWN cache-bust, not the flying engine\'s',
-  /skyflyer-farm\.html\?v=fm8/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
 chk('FM3 gap 1: the tile is DRAWN geometry, and there is not an emoji in it',
   (function(){
     const m = jsxF.match(/const TILE_ART = \{[\s\S]*?\n\};/);
@@ -2977,7 +2980,7 @@ chk('FM5: the small celebrations all go through the shared Feel Kit, so mute wor
   /heartPuff\(A\.x,/.test(farm) &&
   /if\(!quiet\)\{ sparklePuff/.test(farm));
 chk('FM5: the shell contract still holds — the door carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm8/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
 chk('FM5: the save endpoint and its migration both exist in the repo',
   fs.existsSync('api/farm-save.js') && fs.existsSync('db/create-farm-save.sql') &&
   /farm_saves/.test(read('db/create-farm-save.sql')) &&
@@ -3071,7 +3074,7 @@ chk('FM7: and every built present has a model to hop out of the box',
   ['pumpkinseed', 'farmdog', 'fieldrow', 'strawberry', 'mill', 'bees', 'pig', 'tractor', 'farmhand']
     .every(id => new RegExp('id===\"' + id + '\"').test(farm.slice(farm.indexOf('function unlockModel')))));
 chk('FM6: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm8/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
 chk('FM6: still no timer, no countdown, no emoji, after all of that',
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
 
@@ -3143,7 +3146,7 @@ chk('FM6: the coop and the cow pen kept their FM4 gates through the move',
 chk('FM6: still no timer, no countdown, no emoji, after a whole island of it',
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
 chk('FM6: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm8/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
 
 // ==========================================================================
 //  FM7 — MORE TO DO. Crops, a pig, a hive, the mill, the dairy, the watering
@@ -3251,7 +3254,7 @@ chk('FM7: still no timer, no countdown, no emoji, and nothing that can be failed
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) &&
   !emoji.test(farm) && !/gameOver|youLose|starv|\bdied\b/i.test(farmCode));
 chk('FM7: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm8/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
 
 // ==========================================================================
 //  FM8 — HELPERS, A CAST WHO COME BACK, THE STICKER BOOK AND THE PICTURE.
@@ -3392,6 +3395,78 @@ chk('FM9: the kid picks who she is, and it is remembered',
   /kidLook:KID_LOOK/.test(farm) && /if\(blob\.kidLook && kidLookById\(blob\.kidLook\)\)/.test(farm));
 chk('FM9: and the model goes on the stand like everything else',
   /\{name:"the kid \(model\)"/.test(farm) && /\{name:"the kid \(drawn fallback\)"/.test(farm));
+
+// ==========================================================================
+//  FM10 — ASK AND GIVE ARE TWO DIFFERENT PICTURES.
+//
+//  Mike's playtest: a hungry animal looked no different from a happy one, and
+//  the thing floating over it was the same little model as the thing floating
+//  over a ready crop. These checks hold the SHAPE of the fix in place. They do
+//  NOT prove it looks right — only qa-farm-shot.mjs can do that, which is the
+//  whole reason that gate exists.
+// ==========================================================================
+console.log('\n--- FM10: make it obvious what the farm is asking for ---');
+chk('FM10: ask and give are two named colours, not one shared sparkle',
+  /var ASK_TINT=0xBFD8FF, GIVE_TINT=0xFFF6A8, GIVE_ARROW=0xFFA92E;/.test(farm) &&
+  // and the old hard-coded warm yellow is gone from both ready signs
+  !/0xFFF6A8,\{r:\[Math\.PI\/2,0,0\]\}/.test(farm) &&
+  !/, 0xFFF6A8, \{r:\[Math\.PI\/2,0,0\]\}/.test(farm));
+chk('FM10: a want sits in a thought-bubble OUTLINE, so it never hides the item',
+  /function askBubble\(rad\)/.test(farm) &&
+  // ONE ring and two trailing dots. The first go had four overlapping rings
+  // plus a two-ring tail and the picture gate showed it reading as scribble.
+  /var ring=new THREE\.Mesh\(new THREE\.TorusGeometry\(rad,rad\*0\.085,6,26\),mat\);/.test(farm) &&
+  (farm.match(/new THREE\.TorusGeometry\(rad/g) || []).length === 1);
+chk('FM10: the asked-for item is the same model, washed cool and soft',
+  /var ASK_MAT=new THREE\.MeshPhongMaterial\(\{vertexColors:true/.test(farm) &&
+  /emissive:new THREE\.Color\(ASK_TINT\)/.test(farm) &&
+  /function askMesh\(geo\)\{ return new THREE\.Mesh\(geo,ASK_MAT\); \}/.test(farm) &&
+  /var m=askMesh\(hbBake\(r\.parts/.test(farm));
+chk('FM10: a give wears an arrow, and the arrow only ever points up',
+  /function giveArrow\(s\)/.test(farm) && /function beatArrow\(ar, baseY, now, i\)/.test(farm) &&
+  /ar\.position\.y=baseY\+u\*0\.38;/.test(farm) &&
+  // one beat shared by the ready crop and the ready egg, not two near-copies
+  /beatArrow\(A\.arrow, 1\.05, now, i\)/.test(farm) &&
+  /beatArrow\(P\.arrow, 1\.10, now, i\)/.test(farm) &&
+  // and it is a deeper amber than the sparkle, because pale yellow on light
+  // green grass did not read at all in the first picture
+  /GIVE_ARROW=0xFFA92E/.test(farm) && /color:GIVE_ARROW/.test(farm));
+chk('FM10: the ask hovers and wobbles, the give bounces UP — never the reverse',
+  /A\.want\.rotation\.z=Math\.sin\(now\*1\.7\+i\)\*\(A\.loud\?0\.13:0\.05\);/.test(farm) &&
+  /A\.want\.scale\.setScalar\(1\+Math\.sin\(now\*2\.1\+i\)\*sw\);/.test(farm) &&
+  /A\.produce\.position\.y=0\.10\+0\.04\+Math\.max\(0,Math\.sin\(now\*4\.2\+i\)\)\*0\.17;/.test(farm) &&
+  /var bob = 0\.04 \+ Math\.max\(0,wob\)\*0\.15;/.test(farm));
+chk('FM10: a hungry animal stops, faces her, droops, and stands in a soft ring',
+  /function askRing\(\)/.test(farm) && /function turnTo\(cur, want, t\)/.test(farm) &&
+  /if\(A\.patrol && !A\.loud\)\{/.test(farm) &&
+  /A\.obj\.rotation\.y=turnTo\(A\.obj\.rotation\.y,/.test(farm) &&
+  // a mill cannot turn and droop, and a leaning building reads as broken
+  /if\(!K\.machine\)\{/.test(farm) &&
+  /A\.askRing=askRing\(\); scene\.add\(A\.askRing\);/.test(farm));
+chk('FM10: ONE VOICE AT A TIME — only the nearest hungry animal is loud',
+  /var loudest=-1, loudD=1e9/.test(farm) &&
+  /A\.loud = \(A\.state==="hungry" && !!A\.wants && i===loudest && loudD<NOTICE_R\);/.test(farm) &&
+  /var NOTICE_R=7\.5;/.test(farm));
+chk('FM10: the wanting-two rule is a picture too — two wheat in the mill bubble',
+  /var n=A\.needs\|\|1, i;/.test(farm) &&
+  /var rad=n>1\?0\.74:0\.56;/.test(farm) &&
+  /m\.position\.x=\(n>1\)\?\(i-\(n-1\)\/2\)\*0\.48:0;/.test(farm));
+chk('FM10: the crate asks in the same language as everything else that asks',
+  /var bub=askBubble\(0\.56\); g\.add\(bub\);/.test(farm) &&
+  /crateWant\.userData\.bubble\.quaternion\.copy\(camera\.quaternion\);/.test(farm) &&
+  !/g\.add\(hbMesh\(hbBake\(r\.parts\(0\.95\)\)\)\);/.test(farm));
+chk('FM10: the bubble faces the camera, or it goes edge-on and vanishes',
+  /A\.want\.userData\.bubble\.quaternion\.copy\(camera\.quaternion\);/.test(farm));
+chk('FM10: every sign is taken down again — the ring, the droop and the arrows',
+  /function hideWant\(A\)\{[\s\S]*?if\(A\.askRing\)\{ scene\.remove\(A\.askRing\); A\.askRing=null; \}/.test(farm) &&
+  (farm.match(/if\(A\.arrow\)\{ scene\.remove\(A\.arrow\); A\.arrow=null; \}/g) || []).length >= 3 &&
+  (farm.match(/if\(P\.arrow\)\{ scene\.remove\(P\.arrow\); P\.arrow=null; \}/g) || []).length >= 4);
+chk('FM10: a robot can read both families side by side',
+  /signs: function\(\)/.test(farm) && /askTint:ASK_TINT, giveTint:GIVE_TINT/.test(farm) &&
+  /loud:!!A\.loud, asking:!!A\.askRing, arrow:!!A\.arrow/.test(farm));
+chk('FM10: still no words, no timer and no emoji anywhere in the fix',
+  !emoji.test(farm) &&
+  !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode));
 
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(ok?0:1);

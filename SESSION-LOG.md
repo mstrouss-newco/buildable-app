@@ -1,3 +1,93 @@
+## 2026-09-08 (FM10): make it obvious what the farm is asking for
+
+**Phase FM, card FM10.** A clarity pass off Mike's playtest, not a feature. Two things
+read wrong on a phone and both are small. Touched `public/skyflyer-farm.html`,
+`src/BuildableKids.jsx`, `qa-farm.mjs`, `qa-farm-shot.mjs`, `qa-skyflyer.mjs`.
+
+### 1. A hungry animal did not look like it needed anything
+
+The animal itself never changed, so she walked straight past it. It does now, and the
+change is in the animal and not in a label:
+
+- The one she is nearest to **stops**, turns to face her, droops and sways on the spot,
+  and stands in a soft pulsing ring the colour of an ask.
+- Its bubble **bobs deeper and swells** instead of sitting still in the air.
+- **ONE VOICE AT A TIME.** Only the nearest hungry animal is loud. Six animals pulsing
+  at once is noise, not an instruction, so the rest keep asking quietly and carry on
+  doing whatever they were doing.
+- Further off than `NOTICE_R` (7.5 units) nothing changes at all, because an animal
+  frozen and staring at nothing across the island reads as broken rather than as hungry.
+- **A mill does not droop.** FM7 already marks the mill and the dairy `machine:true`, and
+  that flag is what separates a thing that can turn and lean from a thing that cannot.
+  They get the ring and the bubble and nothing else.
+
+### 2. "Bring me this" and "take me" were the same picture
+
+Both were the same little model turning in the air, so the two most important sentences
+in the farm were indistinguishable. They are now two families, and the split is a rule
+rather than a one-off:
+
+- **ASK** — a hungry animal, the mill, the dairy and the crate. The item sits inside a
+  **thought-bubble outline**, washed cool and soft (`ASK_TINT`), hovering with a wobble.
+  An outline and never a filled cloud, or the bubble would hide the very thing it is
+  asking for. Mike picked the bubble over an empty plate and over a question mark; a
+  question mark is a reading symbol and she cannot read.
+- **GIVE** — a ready crop, a ready egg, milk, honey, bread, cheese. Warm and bright
+  (`GIVE_TINT`), **bouncing up** off the ground at roughly twice the old hop, wearing the
+  sparkle ring and a little arrow that only ever points one way: up, onto her stack. One
+  `beatArrow()` drives every arrow on the farm, so a ready crop and a ready egg say it in
+  the same voice rather than in two similar ones.
+- **FM7's wanting-two is a picture now too.** A mill that wants two wheat holds two wheat
+  in its bubble, rather than only carrying a 2 on the card.
+- The crate was left in the ask family deliberately. It is asking, and a bare turning
+  model over it would have gone straight back to reading as something to walk over and
+  take. That is one step past the card's wording and it is called out here on purpose.
+
+### The gate is a picture, and it earned its keep twice in one session
+
+A data check cannot tell that two things LOOK alike, which is exactly how they came to be
+identical. `qa-farm-shot.mjs` now takes a hungry animal and a ready crop in the same
+phone-sized frame from the real game camera, plus the same pair at desktop width and the
+mill holding its two wheat, and it asserts the frame really contains both families before
+the shutter goes.
+
+**The first version passed every check and looked wrong in both directions.** The bubble
+was four overlapping rings with a two-ring tail, which at the farm's camera distance is
+scribble, and it swallowed the item it was framing; it is now ONE ring with two dots
+trailing under it, and the item inside grew. The arrow was worse: at 0.24 units in the
+same pale yellow as the sparkle, it was invisible on light green grass, and the only way
+to be sure it was even in the scene was to turn it magenta and take the picture again.
+It is now four times the size and a deeper amber. Both faults were data-green the whole
+time: `signs()` reported `arrow: true` for all nine ready crops in a frame where not one
+of them could be seen.
+
+**Framing a phone shot is part of the work.** The camera looks north, so an animal behind
+her is an animal out of shot, and the pair has to line up in DEPTH rather than across a
+390-pixel-wide screen. The hens are fifteen units east of the field and can never share a
+phone frame with it; the pig can, so the gate buys the pig, stands her five and a half
+units south of it and looks up the farm at the field.
+
+### One thing found on the way
+
+**The egg-pickup check has been going red on and off since FM6 and the farm was never at
+fault.** The harness waited for one hen to lay, then walked to `produceSpots()[0]`, which
+is the first egg on the FARM and not that hen's. With several animals ready at once, and
+one of the other eggs already drifting in on the magnet, it walked to the wrong egg and
+then waited on a stack height that another egg had already satisfied. `produceSpots()`
+now carries the animal's index, the check walks to the hen it actually waited on, and it
+waits on that hen letting go rather than on the tower getting taller. The fallback when
+the egg sits against the coop wall also searches sixteen ways round at three distances
+instead of six at one, because the old fallback could end up choosing a spot she cannot
+stand on.
+
+### Checks
+
+`qa-skyflyer.mjs` **840 green** (+13 static for FM10). `qa-farm.mjs` **280 green**
+with a new FM10 block that proves one voice at a time, that the loud one stops pacing and
+starts again, that the two families never share a colour, and that feeding takes every
+sign down with it. `qa-farm-shot.mjs` takes three new pictures. `node qa-all.mjs` green.
+Cache-bust `?v=fm8` -> `?v=fm10`.
+
 ## 2026-09-08 (FM8 + FM9): helpers, a cast who come back, a sticker book, and a real girl
 
 **Phase FM, cards FM8 and FM9.** FM7 gave her things to do. FM8 gives her people to do

@@ -155,6 +155,34 @@
   Play page, the coins are the SHELL'S shared wallet (not a local variable), the
   shared nav bridge is loaded so Home works on iPhone, and the shared Feel Kit
   gives it sound.
+
+  FM10 — MAKE IT OBVIOUS WHAT THE FARM IS ASKING FOR. A clarity pass off Mike's
+  playtest, no new features. Two things read wrong on a phone:
+
+    - A HUNGRY ANIMAL DID NOT LOOK LIKE IT NEEDED ANYTHING. The animal itself
+      never changed, so she walked straight past it. Now the nearest hungry one
+      STOPS, turns to face her, droops and sways on the spot, and stands in a
+      soft pulsing ring, while its bubble bobs deeper and swells. ONE VOICE AT A
+      TIME: only the nearest is loud, because six animals pulsing at once is
+      noise and not an instruction. Further away than NOTICE_R it carries on
+      pacing, since an animal frozen and staring at nothing reads as broken.
+    - "BRING ME THIS" AND "TAKE ME" WERE THE SAME PICTURE: both were a little
+      item turning in the air. They are now two families and the split is a
+      rule, not a one-off:
+        ASK  (a hungry animal, the mill, the dairy, the crate) — the item sits
+             inside a THOUGHT-BUBBLE OUTLINE, washed cool and soft, hovering
+             with a wobble. An outline and never a filled cloud, or the bubble
+             would hide the very thing it is asking for.
+        GIVE (a ready crop, a ready egg, milk, honey, bread, cheese) — warm and
+             bright, BOUNCING UP off the ground, with the sparkle ring and a
+             little arrow that only ever points one way: up, onto her stack.
+      FM7's WANTING-TWO is now a picture too: a mill that wants two wheat holds
+      two wheat in its bubble, rather than only a 2 on the card.
+
+    The gate for this card is a SCREENSHOT, not a data check: a data check
+    cannot tell that two things look alike, which is exactly how they ended up
+    identical. qa-farm-shot.mjs takes a hungry animal and a ready crop in one
+    phone-sized frame.
 -->
 <style>
   html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#B3E58C;
@@ -2742,20 +2770,122 @@ function addAnimal(kind, x, z, facing, gait, opts){
   return A;
 }
 
-// The want sign: the actual 3D item, small, floating and turning over the
-// animal's head. This is the entire instruction, and it needs no words.
+// =========================================================================
+//  FM10 — ASK AND GIVE ARE TWO DIFFERENT PICTURES.
+//
+//  Mike's playtest, 2026-09-08: the thing floating over a hungry hen and the
+//  thing floating over a ready crop were the SAME little model turning in the
+//  air, so "bring me this" and "take me" read identically. A child cannot be
+//  expected to tell them apart by where they sit. They are split here, and the
+//  split is a rule the whole farm keeps:
+//
+//    ASK  — cool and soft, sitting inside a thought-bubble OUTLINE, hovering
+//           with a wobble. Nothing here to pick up.
+//    GIVE — warm and bright, bouncing UP off the ground, wearing the sparkle
+//           ring and a little arrow that only ever points up.
+//
+//  Still no words in either, and neither needs reading. The outline matters:
+//  a filled cloud would hide the very item it is asking for.
+// =========================================================================
+var ASK_TINT=0xBFD8FF, GIVE_TINT=0xFFF6A8, GIVE_ARROW=0xFFA92E;
+var NOTICE_R=7.5;      // how near she must be before a hungry animal looks up
+// FM7 already marks the mill and the dairy machine:true. That flag is what
+// separates a thing that can turn and droop from a thing that cannot.
+
+// The ask material is the item's own colours washed cool and softened, so an
+// asked-for corn is plainly the same corn she is carrying, only quieter.
+// Softened, not bleached. At 0.42 the wash took a thin pale thing like wheat
+// down to nothing inside its own bubble, which the mill's picture showed.
+var ASK_MAT=new THREE.MeshPhongMaterial({vertexColors:true, shininess:8,
+  transparent:true, opacity:0.95,
+  emissive:new THREE.Color(ASK_TINT), emissiveIntensity:0.22});
+function askMesh(geo){ return new THREE.Mesh(geo,ASK_MAT); }
+
+// A thought bubble drawn as ONE ring with two dots trailing under it. The
+// first version was four overlapping rings plus a two-ring tail, and at the
+// farm's camera distance that reads as scribble and swallows the very item it
+// is framing — the picture gate showed it and no data check could have.
+function askBubble(rad){
+  var g=new THREE.Group();
+  var mat=new THREE.MeshBasicMaterial({color:ASK_TINT,transparent:true,opacity:0.92});
+  var ring=new THREE.Mesh(new THREE.TorusGeometry(rad,rad*0.085,6,26),mat);
+  g.add(ring);
+  var t1=new THREE.Mesh(new THREE.SphereGeometry(rad*0.15,8,6),mat);
+  t1.position.set(-rad*0.62,-rad*1.12,0); g.add(t1);
+  var t2=new THREE.Mesh(new THREE.SphereGeometry(rad*0.09,8,6),mat);
+  t2.position.set(-rad*0.86,-rad*1.44,0); g.add(t2);
+  g.userData.mat=mat;
+  return g;
+}
+
+// The soft ring on the ground under an animal that wants something. It is the
+// ASK colour and never the GIVE colour, because the ground under a hungry hen
+// is not somewhere to walk to and collect.
+function askRing(){
+  var m=new THREE.Mesh(new THREE.TorusGeometry(0.85,0.075,6,22),
+        new THREE.MeshBasicMaterial({color:ASK_TINT,transparent:true,opacity:0.3}));
+  m.rotation.x=Math.PI/2; return m;
+}
+
+// The arrow over anything she may TAKE. Warm, small, and it points up: off the
+// ground and onto her stack, which is the only thing it ever means.
+function giveArrow(s){
+  var g=new THREE.Group();
+  // A deeper amber than the sparkle ring: the same warm family, but pale
+  // yellow on light green grass is nearly invisible, which the first picture
+  // showed plainly. It is also drawn BIG — this is the loudest thing the farm
+  // says, because it is the one she is meant to walk into.
+  var mat=new THREE.MeshBasicMaterial({color:GIVE_ARROW,transparent:true,opacity:0.95});
+  var c=new THREE.Mesh(new THREE.ConeGeometry(s*0.55,s*0.85,8),mat); c.position.y=s*0.62; g.add(c);
+  var b=new THREE.Mesh(new THREE.BoxGeometry(s*0.30,s*0.55,s*0.30),mat); b.position.y=s*0.10; g.add(b);
+  g.userData.mat=mat; return g;
+}
+// One beat for every arrow on the farm, so a ready egg and a ready crop say
+// "take me" in the same voice rather than two similar ones.
+function beatArrow(ar, baseY, now, i){
+  if(!ar) return;
+  var u=(now*1.5+i*0.37)%1;
+  ar.position.y=baseY+u*0.38;
+  ar.userData.mat.opacity=0.85*(1-u);
+}
+// Shortest way round to an angle, so an animal turning to face her never
+// swings the long way about.
+function turnTo(cur, want, t){
+  var d=((want-cur+Math.PI*3)%(Math.PI*2))-Math.PI;
+  return cur+d*Math.min(1,t);
+}
+
+// The want sign: the real 3D item, inside the ask bubble, over the animal's
+// head. This is the entire instruction, and it needs no words.
 function showWant(A){
   if(A.want) return;
   var r=ITEM(A.wants); if(!r) return;
-  // Big enough to READ from the farm's overhead camera. This little model is
-  // the entire instruction — undersize it and a child who cannot read has
-  // nothing at all to go on.
-  var m=hbMesh(hbBake(r.parts(0.85)));
-  var g=new THREE.Group(); g.add(m);
+  var n=A.needs||1, i;
+  var g=new THREE.Group();
+  // Wider bubble for a mill or a dairy, because it holds two things.
+  var rad=n>1?0.74:0.56;
+  var bub=askBubble(rad); g.add(bub);
+  // FM7's WANTING-TWO is now a picture in the world and not only a 2 on the
+  // card: a mill that wants two wheat holds two wheat in its bubble.
+  var items=[];
+  for(i=0;i<n;i++){
+    // Big enough to READ from the farm's overhead camera. Undersize it and a
+    // child who cannot read has nothing at all to go on.
+    var m=askMesh(hbBake(r.parts(n>1?0.88:0.95)));
+    m.position.x=(n>1)?(i-(n-1)/2)*0.48:0;
+    g.add(m); items.push(m);
+  }
+  g.userData.bubble=bub; g.userData.items=items;
   g.position.set(A.x, ANIMAL_KINDS[A.kind].wantAt, A.z);
   scene.add(g); A.want=g;
 }
-function hideWant(A){ if(A.want){ scene.remove(A.want); A.want=null; } }
+function hideWant(A){
+  if(A.want){ scene.remove(A.want); A.want=null; }
+  // the hunger signals go with it: the ring, the droop and the sway
+  if(A.askRing){ scene.remove(A.askRing); A.askRing=null; }
+  if(A.obj){ A.obj.rotation.z=0; A.obj.rotation.x=0; }
+  A.loud=false;
+}
 
 // ------------------------------------------------- taking one off the stack
 // After a splice every item above drops one place, so the whip-lag delay has
@@ -2858,10 +2988,12 @@ function spawnProduce(A, quiet){
   A.produce=g; A.produceX=px; A.produceZ=pz;
   // the SAME sparkle a ready crop wears, so "come and get it" reads the same
   // way everywhere in the farm
-  var halo=hbPaint(new THREE.TorusGeometry(0.62,0.05,6,20),0xFFF6A8,{r:[Math.PI/2,0,0]});
-  var mh=new THREE.Mesh(halo,new THREE.MeshBasicMaterial({color:0xFFF6A8,transparent:true,opacity:0.7}));
+  var halo=hbPaint(new THREE.TorusGeometry(0.62,0.09,6,20),GIVE_TINT,{r:[Math.PI/2,0,0]});
+  var mh=new THREE.Mesh(halo,new THREE.MeshBasicMaterial({color:GIVE_TINT,transparent:true,opacity:0.8}));
   mh.position.set(px,0.10,pz);
   scene.add(mh); A.halo=mh;
+  // FM10 — and the arrow, which is what makes it a GIVE and not an ask
+  A.arrow=giveArrow(0.90); A.arrow.position.set(px,1.05,pz); scene.add(A.arrow);
   A.magnet=null;
   A.readyAt=performance.now()/1000;    // FM6: how long it has sat there, for the dog
   A.state="ready";
@@ -2873,6 +3005,7 @@ function collectProduce(A){
   pushOntoStack(A.gives, new THREE.Vector3(A.produceX, 0.8, A.produceZ));
   scene.remove(A.produce); A.produce=null;
   if(A.halo){ scene.remove(A.halo); A.halo=null; }
+  if(A.arrow){ scene.remove(A.arrow); A.arrow=null; }
   A.produceSide=null;
   A.magnet=null;
   A.readyAt=null;
@@ -2884,8 +3017,22 @@ function collectProduce(A){
 
 // ------------------------------------------------------------ the main tick
 function updateAnimals(dt, now){
+  // FM10 — ONE VOICE AT A TIME. Six animals all pulsing at once is noise, not
+  // an instruction, so only the NEAREST hungry one is loud. The rest keep
+  // asking quietly and carry on with what they were doing.
+  var loudest=-1, loudD=1e9, q, Q, qd;
+  for(q=0;q<ANIMALS.length;q++){
+    Q=ANIMALS[q];
+    if(Q.state!=="hungry" || !Q.wants) continue;
+    qd=Math.hypot(kid.position.x-Q.x, kid.position.z-Q.z);
+    if(qd<loudD){ loudD=qd; loudest=q; }
+  }
   for(var i=0;i<ANIMALS.length;i++){
     var A=ANIMALS[i], K=ANIMAL_KINDS[A.kind];
+    // Loud means: she is close enough for a turned head to mean anything, and
+    // this is the one she is nearest to. Across the island an animal frozen
+    // and staring at nothing reads as broken, so it goes on pacing instead.
+    A.loud = (A.state==="hungry" && !!A.wants && i===loudest && loudD<NOTICE_R);
     // FM3: a bought animal grows in from nothing rather than blinking into
     // existence — a thing you saved 120 coins for gets an entrance.
     if(A.popIn!=null && A.popIn<1){
@@ -2895,8 +3042,9 @@ function updateAnimals(dt, now){
       if(A.popIn>=1) A.obj.scale.setScalar(A.baseScale);
     }
 
-    // the one chicken that walks: a slow loop around the yard
-    if(A.patrol){
+    // the one chicken that walks: a slow loop around the yard. It STOPS when
+    // it is the one asking her for something (FM10).
+    if(A.patrol && !A.loud){
       A.patrolT+=dt*A.patrol.speed;
       A.x=A.patrol.cx+Math.cos(A.patrolT)*A.patrol.r;
       A.z=A.patrol.cz+Math.sin(A.patrolT)*A.patrol.r;
@@ -2918,8 +3066,40 @@ function updateAnimals(dt, now){
     if(A.state==="hungry"){
       showWant(A);
       if(A.want){
-        A.want.position.set(A.x, K.wantAt+Math.sin(now*2.4+i)*0.10, A.z);
-        A.want.rotation.y+=dt*1.5;
+        // ASK MOTION: a hover with a WOBBLE, never the upward bounce a ready
+        // thing uses. The loud one bobs deeper and swells; the others idle.
+        var amp=A.loud?0.17:0.07, sw=A.loud?0.10:0.03, wi;
+        A.want.position.set(A.x, K.wantAt+Math.sin(now*2.1+i)*amp, A.z);
+        A.want.rotation.z=Math.sin(now*1.7+i)*(A.loud?0.13:0.05);
+        A.want.scale.setScalar(1+Math.sin(now*2.1+i)*sw);
+        // the bubble outline always faces the camera, or it goes edge-on and
+        // vanishes at exactly the moment it is doing its job
+        if(A.want.userData.bubble) A.want.userData.bubble.quaternion.copy(camera.quaternion);
+        var its=A.want.userData.items||[];
+        for(wi=0;wi<its.length;wi++) its[wi].rotation.y+=dt*1.2;
+      }
+      // SHE HAS BEEN NOTICED. The nearest hungry animal stops, turns to face
+      // her, droops on the spot and stands in a soft pulsing ring. That is the
+      // whole of FM10's first half: an animal that wants something now LOOKS
+      // like it wants something, with nothing to read.
+      if(A.loud){
+        // A LIVING thing turns and droops. A mill does not: a leaning building
+        // reads as broken rather than as hungry, so the buildings get the ring
+        // and the bubble and nothing else.
+        if(!K.machine){
+          A.obj.rotation.y=turnTo(A.obj.rotation.y,
+            Math.atan2(kid.position.x-A.x, kid.position.z-A.z), dt*4);
+          A.obj.rotation.z=Math.sin(now*2.6+i)*0.07;              // the sway
+          A.obj.rotation.x=0.03+Math.abs(Math.sin(now*1.3+i))*0.05; // the droop
+        }
+        if(!A.askRing){ A.askRing=askRing(); scene.add(A.askRing); }
+        A.askRing.position.set(A.x, 0.06, A.z);
+        A.askRing.material.opacity=0.16+0.30*Math.abs(Math.sin(now*2.1));
+        A.askRing.scale.setScalar(0.90+0.14*Math.abs(Math.sin(now*2.1)));
+      } else {
+        if(A.askRing){ scene.remove(A.askRing); A.askRing=null; }
+        A.obj.rotation.z=lerp(A.obj.rotation.z,0,0.2);
+        A.obj.rotation.x=lerp(A.obj.rotation.x,0,0.2);
       }
       // FEED: walk near enough carrying the right thing and it just happens
       var d=Math.hypot(kid.position.x-A.x, kid.position.z-A.z);
@@ -2946,12 +3126,17 @@ function updateAnimals(dt, now){
     }
 
     if(A.state==="ready"){
-      // bob and sparkle, exactly like a ready crop
-      A.produce.position.y=0.10+0.06+Math.max(0,Math.sin(now*4.2+i))*0.08;
+      // FM10 — a GIVE BOUNCES UP. Twice the hop a want gets, off the ground
+      // rather than around a bubble, and it never wobbles side to side.
+      A.produce.position.y=0.10+0.04+Math.max(0,Math.sin(now*4.2+i))*0.17;
       A.produce.rotation.y+=dt*1.1;
       if(A.halo){
         A.halo.rotation.z+=dt*2.2;
-        A.halo.material.opacity=0.35+0.35*Math.abs(Math.sin(now*3+i));
+        A.halo.material.opacity=0.48+0.32*Math.abs(Math.sin(now*3+i));
+      }
+      if(A.arrow){
+        A.arrow.position.x=A.produceX; A.arrow.position.z=A.produceZ;
+        beatArrow(A.arrow, 1.05, now, i);
       }
       // FM4 — THE MAGNET. Get anywhere near a loose egg or bottle and it
       // slides over to you and hops on. There is no tap, no menu, and no
@@ -3680,14 +3865,21 @@ function swapCrateWant(){
   if(!live.length || !order || order.sent) return;
   var r=ITEM(live[crateWantI%live.length]); if(!r) return;
   var g=new THREE.Group();
-  g.add(hbMesh(hbBake(r.parts(0.95))));
+  // FM10 — the crate is ASKING, so it wears the ask bubble like every other
+  // thing on this farm that wants something. Leave it as a bare turning model
+  // and it goes back to looking like something she can walk over and take.
+  var bub=askBubble(0.56); g.add(bub);
+  var m=askMesh(hbBake(r.parts(0.88))); g.add(m);
+  g.userData.bubble=bub; g.userData.items=[m];
   g.position.set(CRATE.x, CRATE_WANT_Y, CRATE.z);
   scene.add(g); crateWant=g;
 }
 function updateCrateWant(dt, now){
   if(!crateWant) return;
-  crateWant.rotation.y += dt*1.4;
-  crateWant.position.y = CRATE_WANT_Y + Math.sin(now*2.2)*0.13;
+  crateWant.userData.items[0].rotation.y += dt*1.4;
+  crateWant.userData.bubble.quaternion.copy(camera.quaternion);
+  crateWant.rotation.z = Math.sin(now*1.7)*0.08;
+  crateWant.position.y = CRATE_WANT_Y + Math.sin(now*2.1)*0.13;
   crateWantT += dt;
   if(crateWantT>CRATE_WANT_SEC){ crateWantT=0; crateWantI++; swapCrateWant(); }
 }
@@ -4869,12 +5061,14 @@ function dogTake(J){
     kind=P.seed;
     scene.remove(P.crop); P.crop=null;
     if(P.halo){ scene.remove(P.halo); P.halo=null; }
+    if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
     P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false; P.sparkleT=0;
   } else {
     var A=J.a;
     kind=A.gives;
     scene.remove(A.produce); A.produce=null;
     if(A.halo){ scene.remove(A.halo); A.halo=null; }
+    if(A.arrow){ scene.remove(A.arrow); A.arrow=null; }
     A.produceSide=null; A.magnet=null; A.readyAt=null;
     A.state="hungry"; A.happy=0.6;
   }
@@ -6623,12 +6817,14 @@ function hardResetScene(){
     var P=PATCHES[i];
     if(P.crop){ scene.remove(P.crop); P.crop=null; }
     if(P.halo){ scene.remove(P.halo); P.halo=null; }
+    if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
     P.state="empty"; P.seed=null; P.plantedAt=0; P.ring.visible=true; P.chimed=false;
   }
   for(i=0;i<ANIMALS.length;i++){
     var A=ANIMALS[i];
     if(A.produce){ scene.remove(A.produce); A.produce=null; }
     if(A.halo){ scene.remove(A.halo); A.halo=null; }
+    if(A.arrow){ scene.remove(A.arrow); A.arrow=null; }
     hideWant(A);
     A.state="hungry"; A.magnet=null; A.produceSide=null;
   }
@@ -7644,22 +7840,26 @@ function step(){
       continue;
     }
     if(P.state==="ready"){
-      // WOBBLE + SPARKLE — invite the walk-through
+      // FM10 — THE GIVE BOUNCE. It hops UP off the soil, brightly, and wears
+      // an arrow. That is the whole difference from a want, which hovers in a
+      // bubble and wobbles. Mike could not tell the two apart on a phone.
       P.sparkleT += dt;
       var wob = Math.sin(now*4.4+i*0.9);
-      P.crop.rotation.z = wob*0.10;
-      P.crop.rotation.x = Math.cos(now*3.7+i*1.1)*0.08;
-      var bob = 0.06 + Math.max(0,wob)*0.06;
+      P.crop.rotation.z = wob*0.06;
+      P.crop.rotation.x = Math.cos(now*3.7+i*1.1)*0.05;
+      var bob = 0.04 + Math.max(0,wob)*0.15;
       P.crop.position.y = 0.06 + bob;
       // sparkle: temporary spinning halo tube added once
       if(!P.halo){
-        var halo=hbPaint(new THREE.TorusGeometry(PATCH_R*0.9, 0.05, 6, 20), 0xFFF6A8, {r:[Math.PI/2,0,0]});
-        var mh=new THREE.Mesh(halo, new THREE.MeshBasicMaterial({color:0xFFF6A8, transparent:true, opacity:0.65}));
-        mh.position.set(P.x, 0.10, P.z);
+        var halo=hbPaint(new THREE.TorusGeometry(PATCH_R*0.9, 0.10, 6, 20), GIVE_TINT, {r:[Math.PI/2,0,0]});
+        var mh=new THREE.Mesh(halo, new THREE.MeshBasicMaterial({color:GIVE_TINT, transparent:true, opacity:0.75}));
+        mh.position.set(P.x, 0.16, P.z);
         scene.add(mh); P.halo=mh;
       }
       P.halo.rotation.z += dt*2.2;
-      P.halo.material.opacity = 0.35 + 0.35*Math.abs(Math.sin(now*3+i));
+      P.halo.material.opacity = 0.48 + 0.32*Math.abs(Math.sin(now*3+i));
+      if(!P.arrow){ P.arrow=giveArrow(1.00); P.arrow.position.set(P.x,1.10,P.z); scene.add(P.arrow); }
+      beatArrow(P.arrow, 1.10, now, i);
 
       // harvest? kid within pickup radius of this patch
       // FM4: the same radius the produce uses. A ready crop is harvested by
@@ -7674,6 +7874,7 @@ function step(){
         // clear the patch back to empty
         scene.remove(P.crop); P.crop=null;
         if(P.halo){ scene.remove(P.halo); P.halo=null; }
+        if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
         P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false;
       }
     }
@@ -7764,8 +7965,35 @@ window.FARM = {
     return { i:i, kind:A.kind, real:!!A.real, nested:!!A.nested, patrolling:!!A.patrol,
              x:+A.x.toFixed(3), z:+A.z.toFixed(3),
              state:A.state, wants:A.wants, gives:A.gives, makeSec:A.makeSec,
-             wanting:!!A.want, hasProduce:!!A.produce, sparkling:!!A.halo };
+             wanting:!!A.want, hasProduce:!!A.produce, sparkling:!!A.halo,
+             loud:!!A.loud, asking:!!A.askRing, arrow:!!A.arrow };
   }); },
+  // FM10 — ASK AND GIVE, side by side, so a check can prove the two families
+  // are not the same picture. The screenshot is still the real gate: a data
+  // check cannot see that two things LOOK alike, which is exactly how they
+  // ended up identical in the first place.
+  signs: function(){
+    var ask=[], give=[], i, A, P;
+    for(i=0;i<ANIMALS.length;i++){ A=ANIMALS[i];
+      if(A.want) ask.push({ what:"animal", kind:A.kind, wants:A.wants,
+        needs:A.needs||1, items:(A.want.userData.items||[]).length,
+        bubble:!!A.want.userData.bubble, ring:!!A.askRing, loud:!!A.loud,
+        arrow:false, y:+A.want.position.y.toFixed(3) });
+      if(A.produce) give.push({ what:"produce", kind:A.gives, halo:!!A.halo,
+        arrow:!!A.arrow, bubble:false, y:+A.produce.position.y.toFixed(3) });
+    }
+    for(i=0;i<PATCHES.length;i++){ P=PATCHES[i];
+      if(P.state==="ready" && P.crop) give.push({ what:"crop", kind:P.seed,
+        halo:!!P.halo, arrow:!!P.arrow, bubble:false,
+        y:+P.crop.position.y.toFixed(3) });
+    }
+    if(crateWant) ask.push({ what:"crate", kind:"crate", wants:null, needs:1,
+      items:(crateWant.userData.items||[]).length,
+      bubble:!!crateWant.userData.bubble, ring:false, loud:false, arrow:false,
+      y:+crateWant.position.y.toFixed(3) });
+    return { ask:ask, give:give, askTint:ASK_TINT, giveTint:GIVE_TINT,
+             noticeR:NOTICE_R };
+  },
   animalKinds: function(){ var out={}; for(var k in ANIMAL_KINDS){
     out[k]={wants:ANIMAL_KINDS[k].wants, gives:ANIMAL_KINDS[k].gives,
             makeSec:ANIMAL_KINDS[k].makeSec, size:ANIMAL_KINDS[k].size};
@@ -7833,6 +8061,7 @@ window.FARM = {
       if(P.cover || P.locked || P.state==="empty") continue;
       if(P.crop){ scene.remove(P.crop); P.crop=null; }
       if(P.halo){ scene.remove(P.halo); P.halo=null; }
+      if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
       P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false; P.sparkleT=0;
       n++;
     }
@@ -7986,10 +8215,16 @@ window.FARM = {
     }
     return { x:+kid.position.x.toFixed(2), z:+kid.position.z.toFixed(2), walking:!!walkTo };
   },
-  produceSpots: function(){ return ANIMALS.filter(function(A){ return !!A.produce; })
-    .map(function(A){ return {kind:A.kind, gives:A.gives,
-      x:+A.produceX.toFixed(2), z:+A.produceZ.toFixed(2),
-      blocked:blockedAt(A.produceX,A.produceZ,KID_R*0.7)}; }); },
+  // The animal's INDEX rides along, or a harness that waited on one hen ends up
+  // walking to a different hen's egg — which is exactly how the egg pickup
+  // check has been going red on and off since FM6.
+  produceSpots: function(){ var out=[],i;
+    for(i=0;i<ANIMALS.length;i++){ var A=ANIMALS[i]; if(!A.produce) continue;
+      out.push({ i:i, kind:A.kind, gives:A.gives,
+        x:+A.produceX.toFixed(2), z:+A.produceZ.toFixed(2),
+        blocked:blockedAt(A.produceX,A.produceZ,KID_R*0.7) });
+    }
+    return out; },
   // Where an egg WOULD land for every animal, without waiting one out.
   plannedProduceSpots: function(){ return ANIMALS.map(function(A){
     var sp=produceSpot(A, ANIMAL_KINDS[A.kind]);
