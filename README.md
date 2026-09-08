@@ -27,6 +27,43 @@ See the comment above `TILE_SHOTS` for why and how to switch them on.
 
 ---
 =======
+## AC13 — Ant City: the swarm walks like ants, and food you can see (September 8 2026)
+`public/antcity-engine.html`, `qa-antcity.mjs`, `antcity-README.md`. Phase **AC**, card
+**AC13**, branch `claude/ac-13-start-4w0q36`.
+
+The old ants were beads on a string: constant speed, evenly spaced, on a perfect rail, with
+legs wiggling on a timer that had nothing to do with how fast the body was moving. AC13
+replaces the walk, not the picture — and puts the two in separate functions so a painted
+ant can replace the look later without touching a line of movement.
+
+**Feet that grip.** Every foot is stored in world space and stays on the same speck of dirt
+while the body walks past it, and the gait clock is DISTANCE TRAVELLED, never a timer. An
+ant cannot skate, and a stopped ant is genuinely frozen with its feet down. On top of that:
+stop and go, a wobbly lane, and traffic — an ant steps around a slower ant in front, and two
+passing the other way touch antennae.
+
+**Side view, and never upside down.** Three segments about three times longer than tall, six
+legs pointing down, three near-side full strength and three far-side shorter and faded.
+Rotating by heading alone turns an ant walking left upside down, so it rotates and then
+MIRRORS, with a dead zone so a vertical shaft cannot make it flicker.
+
+**The crowd is the score.** The number of ants on screen is the progress meter, with no
+words. The cap is a painting budget only — 150 desktop, 120 phone — and over budget it is
+leg detail that goes, never ants. The ants are 0.215 of a cell now, the 0.95x the motion lab
+locked. The counts-and-rates sim is untouched, and the motion layer has its own seeded
+random stream so wobble cannot shift a single roll the colony makes.
+
+**Food you can see.** Fat glossy berries with a highlight and a stalk, real cut-leaf
+triangles, proper picnic crumbs, mushrooms that grow through stages and glow and bounce when
+ripe, a storage pile that grows and shrinks with the stock, and the next berry visibly
+swelling on the bush. Same drawing on the meadow, in the mandibles and in the pantry.
+
+Three bugs came out of looking at the screenshots: the tripod was grouped wrong so the legs
+swung as two wedges, bigger ants had their feet planted at the plain ant's size so their legs
+stretched, and a foot could be left behind when the sim moved an ant outright.
+
+---
+
 ## AC9 — Ant City: soldiers, and the bad bugs they see off (September 7 2026)
 `public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/bug-*.svg`
 (new), `qa-antcity.mjs`, `antcity-README.md`. Phase **AC**, card **AC9**, branch

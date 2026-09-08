@@ -274,9 +274,17 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     startAnts: 6,
     startFood: 12,
     startWater: 8,
-    sampleMax: 70,            // AC5: a swarm of little ants, not a handful of big ones
-    antScale: 0.34,           // ant size as a share of one cell: small enough to read as a swarm,
-                              // big enough that one ant is still an ant on a phone
+    // ---- AC13: the crowd IS the score --------------------------------------
+    //  The number of ants on screen is the progress meter, with no words at all.
+    //  So the cap is a PAINTING budget, not a design choice: a grown colony is a
+    //  solid river of ants, and a phone gets a smaller river than a desktop only
+    //  because it has less paint. Over budget it is leg detail that goes first.
+    sampleMax: 150,           // the most ants ever drawn, on a desktop
+    sampleMaxPhone: 120,      // and on a phone
+    antScale: 0.215,          // AC13: the 0.95x the motion lab locked, which is much
+                              // smaller than the old 1.5x swarm demo. It puts a plain
+                              // ant at about ten pixels, small enough that a hundred
+                              // and fifty of them read as a colony rather than a parade.
 
     dig:     { perAntPerSec: 0.55 },   // cells opened per digger per second
     forage:  { walkSpeed: 3.0, storageSpeedMax: 1.8 },   // AC7: a forager's pay is the TRIP, not a rate
@@ -820,6 +828,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var used = Math.min(grow, C.leaves);
       if(used > 0){
         C.leaves -= used;
+        // AC13: the garden's own clock, so the mushrooms on screen only swell
+        // while the garden is actually turning leaves into food.
+        C.gardenT = (C.gardenT || 0) + used;
         var made = Math.min(used * ch.fungusFoodPerLeaf, Math.max(0, foodCap() - C.food));
         C.food += made; C.mush += made;
       }
@@ -890,6 +901,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     // ants, five bugs seen off) could never fire. They are their own thing now.
     checkMilestones();
     walkSample(dt);
+    // AC13: and then the ants walk it like animals. This decides nothing about
+    // the colony, it only decides how the ants get where the sim already put them.
+    walkVisual(dt);
     tickHow(dt); tickIdle(dt);
     // the one hint line and the needs meters are kept true by the simulation itself,
     // five times a second, so a headless run reads exactly what a player sees
@@ -1131,7 +1145,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var s = cells[Math.floor(srand()*cells.length)];
     C.sample.push({ fc:s.c, fr:s.r, job:"forager", wp:[], task:null, carry:null, state:"walk", t:0,
                     cool:srand()*0.6, walked:0, flip:srand()<0.5, bob:srand()*6,
-                    post:null, hold:null, ox:0, oy:0 });
+                    post:null, hold:null, ox:0, oy:0, dx:null });
   }
 
   // the drawn crowd carries the same job MIX the kid set on the bar, so what is
@@ -1176,9 +1190,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   function hold(a, k){ if(a.hold) occ[a.hold] = Math.max(0, (occ[a.hold]|0) - 1); a.hold = k; if(k) occ[k] = (occ[k]|0) + 1; }
   function load(k, a){ return Math.max(0, (occ[k]|0) - ((a && a.hold === k) ? 1 : 0)); }
-  //  A cell holds two ants, side by side, and never a third. The queen's own seat
+  //  A cell holds three ants shoulder to shoulder (AC13 raised it from two, so a
+  //  grown colony can be the river of ants the crowd-is-the-score rule wants), and
+  //  never a fourth. Each of the three gets its OWN standing spot in the cell, so
+  //  two of them can never be painted on top of each other. The queen's own seat
   //  holds nobody but the queen, which is what the pile of five was sitting on.
-  function CELL_MAX(){ return 2; }
+  function CELL_MAX(){ return 3; }
+  //  where the slot-th ant in a cell stands, across the width of it
+  function slotX(slot){ return slot === 0 ? -0.26 : (slot === 1 ? 0.26 : 0); }
   function freeCell(c, r, a){
     if(c === C.queen.c && r === C.queen.r) return false;
     return load(occKey(c,r), a) < CELL_MAX();
@@ -1208,7 +1227,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var k = occKey(best.c, best.r), slot = load(k, a);
     a.post = { c:best.c, r:best.r };
     hold(a, k);
-    a.wp = route; a.ox = slot ? 0.20 : -0.20; a.oy = (a.bob % 1) * 0.22 - 0.11;
+    a.wp = route; a.ox = slotX(slot); a.oy = (a.bob % 1) * 0.22 - 0.11;
     a.state = route.length ? "walk" : "idle";
     return true;
   }
@@ -1410,8 +1429,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     for(j=0;j<all.length;j++) if(all[j].r >= b.lo && all[j].r <= b.hi) bandPool.push(all[j]);
     // two ants to a cell is the most that can stand somewhere without piling up, so
     // that, and not a made-up number, is how big the drawn crowd is allowed to be
-    var room = (bandPool.length ? bandPool.length : all.length) * CELL_MAX();
-    var want = Math.min(GAME_CONFIG.sampleMax, C.ants, Math.max(4, room));
+    var room = (bandPool.length ? bandPool.length : all.length) * CELL_MAX() + 8;
+    var want = Math.min(drawCap(), C.ants, Math.max(4, room));
     while(C.sample.length < want) spawnSample();
     while(C.sample.length > want){ var gone = C.sample.pop(); dropTask(gone); dropPost(gone); }
     reJob();
@@ -1831,14 +1850,36 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(BR){ BR.rrect(X, px+4, py+4, CS-8, CS-8, 9); X.fill(); } else X.fillRect(px+4, py+4, CS-8, CS-8);
     }
     if(x.room === "fungus"){
-      // how full the garden is right now, so a working chain is visible at a glance
-      var full = Math.max(0, Math.min(1, C.leaves / 8));
-      X.fillStyle = "rgba(232,220,174,.9)";
-      for(var f=0;f<3;f++){
-        if(f/3 >= full && f > 0) break;
-        var mx2 = px + CS*0.28 + f*CS*0.22, my2 = py + CS*0.74;
-        X.beginPath(); X.arc(mx2, my2 - CS*0.05, CS*0.08, Math.PI, 0); X.fill();
-        X.fillRect(mx2 - CS*0.02, my2 - CS*0.05, CS*0.04, CS*0.08);
+      // AC13: real mushrooms, growing through real stages. The garden's own
+      // clock drives them, so they only swell while leaves are being turned
+      // into food, and a ripe one glows and bounces until it is picked.
+      var gt = (C.gardenT || 0) * 0.55, full = Math.max(0, Math.min(1, C.leaves / 8));
+      for(var f=0;f<4;f++){
+        if(f > 0 && f/4 >= full + 0.25) break;
+        var ph = (gt + f*0.27) % 1, ready = ph > 0.88;
+        var mx2 = px + CS*0.24 + f*CS*0.18, my2 = py + CS*0.78;
+        drawMushroom(mx2, my2, CS*0.30, Math.min(1, ph/0.88), ready, C.t + f);
+        if(ph < 0.06 && BR){                       // the sparkle it leaves when picked
+          X.globalAlpha = 1 - ph/0.06; X.fillStyle = "#fff3d6";
+          BR.sparkle(X, mx2, my2 - CS*0.16, CS*0.14, C.t); X.fill(); X.globalAlpha = 1;
+        }
+      }
+      return;
+    }
+    if(x.room === "storage"){
+      // AC13: the pantry is the food meter made physical. The pile really is the
+      // stock, so it grows and shrinks with the bar and never drifts out of step.
+      var fill = Math.max(0, Math.min(1, C.food / Math.max(1, foodCap())));
+      var rows = Math.round(fill * 3), k = 0;
+      for(var ry=0; ry<rows; ry++){
+        var wide = 3 - ry;
+        for(var cx2=0; cx2<wide; cx2++, k++){
+          var sx = px + CS*(0.5 + (cx2 - (wide-1)/2)*0.20);
+          var sy = py + CS*(0.80 - ry*0.17);
+          if((k % 3) === 1) drawBerry(sx, sy, CS*0.20);
+          else if((k % 3) === 2) drawLeafBit(sx, sy, CS*0.20);
+          else drawCrumb(sx, sy, CS*0.20);
+        }
       }
       return;
     }
@@ -1875,6 +1916,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var base = SKY - 14;
     drawBush(plantX("leaf"), "#4f9636", "#8ad05f");        // the leaf bush
     drawBush(plantX("berry"), "#4f9636", "#5fa84a");       // the berry bush
+    // AC13: the next berry swelling on the branch, so the bush is visibly
+    // growing one back the whole time the foragers are carrying them off.
+    var md = GAME_CONFIG.meadow, grow = Math.max(0, Math.min(1, (C.berryReady||0) % 1));
+    if(countItems("berry") < md.berryMax){
+      var bx = plantX("berry") + 12, by = SKY - 30;
+      X.globalAlpha = 0.35 + grow*0.65;
+      drawBerry(bx, by, 6 + grow*16);
+      X.globalAlpha = 1;
+    }
     if(!C.aphids) return;
     var ax = plantX("aphid");
     if(IMG.aphid) drawImg(IMG.aphid, ax, base - 18, 46);
@@ -1885,6 +1935,66 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       for(var a2=0;a2<3;a2++){ X.beginPath(); X.arc(ax + (a2-1)*9, base - 16 - a2*5, 5, 0, 7); X.fill(); }
     }
   }
+  // ======================================================================
+  //  AC13 — FOOD YOU CAN SEE. Every edible thing is chunky, glossy and worth
+  //  carrying: never a speck, never a dot standing in for a number. It is the
+  //  same drawing whether it is sitting on the meadow, riding in an ant's
+  //  mandibles or stacked in the pantry, so a kid follows one object all the
+  //  way from the bush to the store. Drawn geometry, no emoji, BR art wins
+  //  wherever the library has a picture for it.
+  // ======================================================================
+  //  a berry: a fat glossy bead with a highlight, a dark side and a little stalk
+  function drawBerry(x, y, size){
+    var r = size*0.36;
+    X.fillStyle = "rgba(0,0,0,.14)"; X.beginPath(); X.ellipse(x, y + r*0.92, r*0.85, r*0.24, 0, 0, 7); X.fill();
+    X.fillStyle = "#b32f4a"; X.beginPath(); X.arc(x, y, r, 0, 7); X.fill();
+    X.fillStyle = "#d94360"; X.beginPath(); X.arc(x - r*0.10, y - r*0.10, r*0.86, 0, 7); X.fill();
+    X.fillStyle = "rgba(255,190,205,.75)"; X.beginPath(); X.ellipse(x - r*0.32, y - r*0.36, r*0.28, r*0.19, -0.6, 0, 7); X.fill();
+    X.strokeStyle = "#5d8a3a"; X.lineWidth = Math.max(1, r*0.20); X.lineCap = "round";
+    X.beginPath(); X.moveTo(x, y - r*0.92); X.lineTo(x + r*0.30, y - r*1.35); X.stroke();
+  }
+  //  a cut leaf: a real triangle of leaf with a midrib, the shape a leafcutter carries
+  function drawLeafBit(x, y, size){
+    var r = size*0.44;
+    X.save(); X.translate(x, y); X.rotate(-0.35);
+    X.fillStyle = "#79bf46";
+    X.beginPath(); X.moveTo(0, -r); X.lineTo(r*0.82, r*0.62); X.lineTo(-r*0.82, r*0.62); X.closePath(); X.fill();
+    X.fillStyle = "rgba(255,255,255,.28)";
+    X.beginPath(); X.moveTo(0, -r); X.lineTo(r*0.30, r*0.10); X.lineTo(-r*0.36, r*0.24); X.closePath(); X.fill();
+    X.strokeStyle = "#4f8f2c"; X.lineWidth = Math.max(1, r*0.16); X.lineCap = "round";
+    X.beginPath(); X.moveTo(0, -r*0.86); X.lineTo(0, r*0.50); X.stroke();
+    X.restore();
+  }
+  //  a crumb: a proper picnic crumb, three chunks of cake with a crust, not a dot
+  function drawCrumb(x, y, size){
+    var r = size*0.34;
+    X.fillStyle = "rgba(0,0,0,.13)"; X.beginPath(); X.ellipse(x, y + r*0.95, r*1.05, r*0.26, 0, 0, 7); X.fill();
+    X.fillStyle = "#e7b877";
+    if(BR){ BR.rrect(X, x - r, y - r*0.72, r*1.7, r*1.5, r*0.42); X.fill(); }
+    else X.fillRect(x - r, y - r*0.72, r*1.7, r*1.5);
+    X.fillStyle = "#d19a55";
+    X.beginPath(); X.arc(x + r*0.62, y + r*0.10, r*0.55, 0, 7); X.fill();
+    X.fillStyle = "#f6d7a4";
+    X.beginPath(); X.arc(x - r*0.42, y - r*0.34, r*0.36, 0, 7); X.fill();
+    X.fillStyle = "rgba(255,255,255,.45)";
+    X.beginPath(); X.ellipse(x - r*0.30, y - r*0.52, r*0.30, r*0.15, -0.4, 0, 7); X.fill();
+  }
+  //  a mushroom, grown through its stages: 0 sprout, 1 button, 2 plump and glossy
+  function drawMushroom(x, y, size, stage, ready, t){
+    var g = stage, r = size * (0.42 + g*0.30);
+    var bob = ready ? Math.sin(t*6) * size*0.06 : 0;
+    y += bob;
+    if(ready){                                    // a ready one glows until it is picked
+      X.globalAlpha = 0.30 + 0.16*Math.sin(t*6); X.fillStyle = "#fff0b8";
+      X.beginPath(); X.arc(x, y - r*0.25, r*1.5, 0, 7); X.fill(); X.globalAlpha = 1;
+    }
+    X.fillStyle = "#f2ead4";                      // stalk
+    X.fillRect(x - r*0.17, y - r*0.20, r*0.34, r*0.62);
+    X.fillStyle = "#e6d9a8";                      // cap
+    X.beginPath(); X.ellipse(x, y - r*0.20, r*0.72, r*0.52 * (0.7 + g*0.3), 0, Math.PI, 0); X.fill();
+    X.fillStyle = "rgba(255,255,255,.5)";
+    X.beginPath(); X.ellipse(x - r*0.26, y - r*0.42, r*0.20, r*0.11, -0.4, 0, 7); X.fill();
+  }
   // one item, drawn wherever it is: waiting on the meadow, or in an ant's mandibles
   function drawItem(kind, x, y, size){
     if(kind === "water"){
@@ -1893,24 +2003,20 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       X.quadraticCurveTo(x-size*0.45, y+size*0.07, x, y-size*0.6); X.fill();
       return;
     }
-    if(kind === "berry"){
-      X.fillStyle = "#d2405a"; X.beginPath(); X.arc(x, y, size*0.30, 0, 7); X.fill();
-      X.fillStyle = "#e8697f"; X.beginPath(); X.arc(x - size*0.10, y - size*0.10, size*0.10, 0, 7); X.fill();
-      return;
-    }
+    if(kind === "berry"){ drawBerry(x, y, size); return; }
     if(kind === "leaf"){
       if(IMG.leaf){ drawImg(IMG.leaf, x, y, size); return; }
-      X.fillStyle = "#8ad05f"; X.beginPath(); X.ellipse(x, y, size*0.42, size*0.26, -0.4, 0, 7); X.fill();
-      return;
+      drawLeafBit(x, y, size); return;
     }
     if(kind === "dew"){
       if(IMG.honeydew){ drawImg(IMG.honeydew, x, y, size*0.7); return; }
-      X.fillStyle = "#ffd166"; X.beginPath(); X.arc(x, y, size*0.22, 0, 7); X.fill();
+      X.fillStyle = "#f0b93f"; X.beginPath(); X.arc(x, y, size*0.26, 0, 7); X.fill();
+      X.fillStyle = "#ffd97a"; X.beginPath(); X.arc(x - size*0.07, y - size*0.07, size*0.18, 0, 7); X.fill();
+      X.fillStyle = "rgba(255,255,255,.6)"; X.beginPath(); X.arc(x - size*0.11, y - size*0.11, size*0.07, 0, 7); X.fill();
       return;
     }
     if(IMG.crumb){ drawImg(IMG.crumb, x, y, size); return; }
-    X.fillStyle = "#d9a05b"; X.beginPath(); X.arc(x, y, size*0.32, 0, 7); X.fill();
-    X.fillStyle = "#c98b4b"; X.beginPath(); X.arc(x + size*0.16, y + size*0.10, size*0.16, 0, 7); X.fill();
+    drawCrumb(x, y, size);
   }
   function drawSurfaceItems(){
     for(var i=0;i<C.surface.length;i++){
@@ -1938,89 +2044,392 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
   }
   // ======================================================================
-  //  The ants themselves (AC7). They are DRAWN, not photographed: at three tenths
-  //  of a cell an AI sprite reads as an orange blob, while a clean silhouette with
-  //  a dark outline still reads as an ant on a phone. Above every one of them sits
-  //  a marker in the colour its job wears on the jobs bar, so a glance at the
-  //  colony tells you who is doing what. The art slots are still resolved and the
-  //  fallback path is untouched, so a future card can put a sprite back.
+  //  AC13 — THE ANTS. Two halves, and they are deliberately kept apart:
+  //  `walkVisual` decides how an ant MOVES, and `drawAnt` decides how it
+  //  LOOKS. Swapping the art for a painted sprite later means replacing one
+  //  function and touching none of the movement.
+  //
+  //  What the motion lab taught (Sep 8, and none of it is optional):
+  //   1. FEET THAT GRIP. Every foot is stored in WORLD space and stays put
+  //      while the body walks past it, and the gait clock is driven by
+  //      DISTANCE TRAVELLED, never by a timer. An ant therefore cannot skate,
+  //      and an ant that has stopped is genuinely frozen with its feet down.
+  //   2. STOP AND GO. Walk, freeze for a beat, now and then dart.
+  //   3. A WOBBLY LANE. A slow drift either side of the trail, and a little
+  //      head casting on top.
+  //   4. TRAFFIC AND HELLOS. An ant steps around a slower ant in front, and
+  //      two ants passing the other way touch antennae.
+  //
+  //  None of this is allowed to change the colony. The counts-and-rates sim
+  //  in walkSample stays the only source of truth: it says where an ant is
+  //  MEANT to be, and this layer is the ant walking there like an animal. A
+  //  bigger colony costs more to PAINT, never more to think about.
   // ======================================================================
+  //  Its own seeded stream, so adding wobble cannot shift a single roll the
+  //  colony sim makes and quietly re-write a mission the robot has proved.
+  var _mseed = 77712026;
+  function mrand(){ _mseed = (_mseed + 0x9E3779B9)|0; var t = _mseed; t = Math.imul(t ^ (t>>>15), t|1); t ^= t + Math.imul(t ^ (t>>>7), t|61); return ((t ^ (t>>>14))>>>0) / 4294967296; }
+
+  //  The ant's unit, in CELLS: its body runs about 2.7 units long, so this is
+  //  the one number that makes every ant bigger or smaller. antScale is the
+  //  0.95x the lab locked, which is what puts a plain ant at about ten pixels.
+  function antU(){ return (GAME_CONFIG.antScale || 0.215) * 0.42; }
+  var MOT = {
+    stride:   1.25,   // units walked between one tripod step and the next
+    reach:    0.86,   // how far below the body a foot plants, in units
+    lane:     0.85,   // how far either side of the line it may drift, in units
+    maxLag:   0.9,    // cells it may fall behind the sim before it hurries
+    snap:     4.0,    // cells behind before it simply appears where it belongs
+    dead:     0.16,   // |cos(heading)| under this and the mirror is left alone
+    walkFor:  [0.55, 1.7],   // how long a walk lasts before the next decision
+    stopFor:  [0.14, 0.42],  // and a freeze
+    dartFor:  [0.22, 0.5],   // and a dart
+    dart:     1.85,   // a dart is this much quicker than a walk
+    hello:    0.42,   // how long two ants stand and touch antennae
+    leash:    3.0     // a foot further than this from the body has been left behind.
+                      // A trailing foot legitimately gets about two units back before
+                      // its turn to swing, so this has to sit clear of that or a
+                      // perfectly good walk would keep resetting its own feet.
+  };
+  function pick(r){ return r[0] + mrand()*(r[1]-r[0]); }
+
+  // one ant's motion, one step. Everything here is in CELL space, which is the
+  // world: a foot planted in cells stays on the same speck of dirt when the
+  // camera scrolls, which a foot planted in pixels would not.
+  function motInit(a){
+    a.dx = a.fc + (a.ox||0); a.dy = a.fr + (a.oy||0);
+    a.head = a.flip ? Math.PI : 0; a.mir = !!a.flip;
+    a.gait = 0; a.mode = "walk"; a.mt = pick(MOT.walkFor);
+    a.lane = 0; a.laneT = 0; a.laneW = 0; a.hello = 0; a.spd = 0;
+    a.ft = [0,0,0,0,0,0,0,0,0,0,0,0];      // six planted feet, x,y in cells
+    a.fp = [0,0,0,0,0,0,0,0,0,0,0,0];      // where each one was before that
+    a.phase = 0; a.planted = false;
+  }
+  // where leg `i` wants to put its foot, given the body pose. Three hips along
+  // the thorax, twice: legs 0,1,2 are the NEAR side and 3,4,5 the FAR side. The
+  // tripods are 0,2,4 and 1,3,5, which works out as near-front + near-back +
+  // far-middle pushing off together, exactly the way a real ant walks. Grouping
+  // by side instead would swing the whole near side at once, and that reads as
+  // two wedges flapping rather than an animal walking.
+  var HIPX = [-0.30, 0.02, 0.34, -0.30, 0.02, 0.34];
+  function footAim(a, i, u, ahead){
+    u *= (a.sc || 1);
+    var fx = Math.cos(a.head), fy = Math.sin(a.head);
+    var dxn = a.mir ? Math.sin(a.head) : -Math.sin(a.head);
+    var dyn = a.mir ? -Math.cos(a.head) : Math.cos(a.head);
+    // the foot lands under and BEYOND its own hip: the front legs reach forward,
+    // the back legs trail behind, which is what stops six legs at ten pixels from
+    // piling into one dark wedge under the middle of the ant.
+    var along = (HIPX[i]*1.9 + ahead) * u, out = MOT.reach * u;
+    return { x:a.dx + fx*along + dxn*out, y:a.dy + fy*along + dyn*out };
+  }
+  function plant(a, group, u, ahead){
+    for(var i=group;i<6;i+=2){
+      var p = footAim(a, i, u, ahead);
+      a.fp[i*2] = a.ft[i*2]; a.fp[i*2+1] = a.ft[i*2+1];
+      a.ft[i*2] = p.x; a.ft[i*2+1] = p.y;
+    }
+  }
+  function plantAll(a, u){ plant(a, 0, u, 0.20); plant(a, 1, u, -0.14);
+    for(var i=0;i<12;i++) a.fp[i] = a.ft[i]; a.planted = true; }
+
+  var _mgrid = {};
+  function mkey(x, y){ return Math.round(x*3) + "," + Math.round(y*3); }
+
+  function walkVisual(dt){
+    var u = antU(), pace = tune().pace, i, a;
+    // who is standing near whom, so an ant can see the one in front of it
+    _mgrid = {};
+    for(i=0;i<C.sample.length;i++){
+      a = C.sample[i]; if(a.dx == null) motInit(a);
+      var k = mkey(a.dx, a.dy); (_mgrid[k] || (_mgrid[k] = [])).push(a);
+    }
+    for(i=0;i<C.sample.length;i++){
+      a = C.sample[i];
+      // a soldier is a size up and the ant the guide is pointing at is bigger still,
+      // so its feet have to be planted at ITS size or the legs come out stretched
+      var sc = (a === starAnt) ? 1.75 : (a.job === "soldier" ? 1.18 : 1);
+      if(a.sc !== sc){ a.sc = sc; a.planted = false; }
+      if(!a.planted) plantAll(a, u);
+      var tx = a.fc + (a.ox||0), ty = a.fr + (a.oy||0);
+      var vx = tx - a.dx, vy = ty - a.dy, d = Math.sqrt(vx*vx + vy*vy);
+      // the camera jumped, or the sim moved this ant somewhere else entirely
+      if(d > MOT.snap){ a.dx = tx; a.dy = ty; plantAll(a, u); a.spd = 0; continue; }
+
+      // 2) STOP AND GO — a decision every so often, never a sine wave
+      a.mt -= dt;
+      if(a.mt <= 0){
+        var roll = mrand();
+        a.mode = roll < 0.70 ? "walk" : (roll < 0.90 ? "stop" : "dart");
+        a.mt = pick(a.mode === "walk" ? MOT.walkFor : (a.mode === "stop" ? MOT.stopFor : MOT.dartFor));
+      }
+      if(a.hello > 0) a.hello -= dt;
+
+      // 3) A WOBBLY LANE — a new sideways lean now and then, eased into
+      a.laneT -= dt;
+      if(a.laneT <= 0){ a.laneW = (mrand()*2 - 1) * MOT.lane * u; a.laneT = 0.9 + mrand()*1.8; }
+      a.lane += (a.laneW - a.lane) * Math.min(1, dt*2.2);
+
+      // how fast it is allowed to go: the same speed the sim gives it, so the
+      // drawn ant is never a different animal from the one being simulated
+      var base = (a.task ? GAME_CONFIG.forage.walkSpeed : 1.5) * pace;
+      var m = a.mode === "stop" ? 0 : (a.mode === "dart" ? MOT.dart : 1);
+      if(a.hello > 0) m *= 0.25;
+      if(d > MOT.maxLag) m = Math.max(m, 2.2);                 // fallen behind: hurry
+      if(d < u*0.35) m = 0;                                    // arrived: stand still
+
+      // 4) TRAFFIC AND HELLOS — look at whoever is sharing this patch of dirt
+      if(m > 0 && d > u){
+        var fx = vx/d, fy = vy/d, near = _mgrid[mkey(a.dx, a.dy)], n2;
+        if(near) for(var j=0;j<near.length;j++){
+          var b = near[j]; if(b === a || b.dx == null) continue;
+          var bx = b.dx - a.dx, by = b.dy - a.dy, bd = Math.sqrt(bx*bx + by*by);
+          if(bd > u*2.6 || bd < 0.00001) continue;
+          if((bx*fx + by*fy) / bd < 0.45) continue;            // not in front
+          var same = Math.cos(a.head - b.head) > 0;
+          if(same){                                            // a slower ant in the way: go around
+            if(b.spd < a.spd*0.75){ a.laneW = (bx*(-fy) + by*fx) > 0 ? -MOT.lane*u : MOT.lane*u; a.laneT = 0.8; m *= 0.75; }
+          } else if(bd < u*1.7 && a.hello <= 0 && b.hello <= 0){   // coming the other way: hello
+            a.hello = MOT.hello; b.hello = MOT.hello;
+          }
+        }
+      }
+
+      var stepd = base * m * dt;
+      if(stepd > d) stepd = d;
+      if(stepd > 0.000001){
+        var nx = vx/d, ny = vy/d;
+        a.dx += nx*stepd; a.dy += ny*stepd;
+        // the head ALWAYS faces the way it is going. An early demo crawled
+        // backwards, and that is never allowed to come back.
+        a.head = Math.atan2(ny, nx);
+        // NEVER ROTATE PAST VERTICAL: rotate by heading, then mirror, with a
+        // dead zone so an ant in a vertical shaft does not flicker.
+        var cs = Math.cos(a.head);
+        if(Math.abs(cs) > MOT.dead){
+          var want = cs < 0;
+          if(want !== a.mir){ a.mir = want; a.flip = want; plantAll(a, u); }
+        }
+        // 1) FEET THAT GRIP: the gait clock is DISTANCE, so it cannot skate
+        var was = Math.floor(a.gait / (MOT.stride*u));
+        a.gait += stepd;
+        var now = Math.floor(a.gait / (MOT.stride*u));
+        if(now !== was){ a.phase = now & 1; plant(a, a.phase, u, 0.22); }
+        a.spd = stepd / Math.max(0.00001, dt);
+      } else a.spd = 0;
+      // A FOOT LEFT BEHIND. The sim can move an ant outright — it swaps an idle
+      // one for a nearer one, or a post moves under it — and a foot planted where
+      // the ant used to be would then stretch into a long dark stick reaching off
+      // across the tunnel. So a foot that finds itself too far from its own body
+      // simply takes a step: the grip is a rule about walking, not a tether.
+      var lim = MOT.leash * u * (a.sc || 1), gone = false;
+      for(var f2=0; f2<6; f2++){
+        var lx = a.ft[f2*2] - a.dx, ly = a.ft[f2*2+1] - a.dy;
+        if(lx*lx + ly*ly > lim*lim){ gone = true; break; }
+      }
+      if(gone) plantAll(a, u);
+    }
+  }
+
   //  The body colour has to hold up against the dark of a tunnel, which is what the
   //  library sprite could not do at this size: it went to mud.
   var ANT_TINT = { "antcity/ant/classic-v1":"#c9853c", "antcity/ant/ruby-v1":"#cf5468", "antcity/ant/emerald-v1":"#49a877" };
   function antBody(){ return ANT_TINT[ART_IDS.ant] || "#c9853c"; }
+  function jobColor(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i].color; return "#fff"; }
+
+  //  How many ants may be PAINTED. A phone gets fewer than a desktop, and over
+  //  budget it is leg detail that goes first, never ants: the crowd IS the
+  //  progress meter, so thinning the crowd would be rubbing out the score.
+  function drawCap(){
+    var g = GAME_CONFIG;
+    return (W && W < 620) ? (g.sampleMaxPhone || 120) : (g.sampleMax || 150);
+  }
+  function antDetail(n){ return n > 105 ? 0 : (n > 62 ? 1 : 2); }
+
   function drawAnts(){
-    var base = GAME_CONFIG.antScale || 0.26, body = antBody();
-    for(var i=0;i<C.sample.length;i++){
-      var a = C.sample[i];
-      var px = fcToX(a.fc) + a.ox*CS, py = frToY(a.fr) + a.oy*CS;
-      if(py < -CS || py > H + CS) continue;
-      var idle = (a.state === "idle"), bob = 0;
-      if(!idle) bob = Math.sin((C.t*9) + a.bob) * CS*0.022;         // the walk
-      if(a.state === "hop") bob -= Math.sin(Math.max(0, Math.min(1, (0.45 - a.t)/0.45)) * Math.PI) * CS*0.28;
-      if(a.state === "work" && a.task){                              // the work itself
-        if(a.task.kind === "dig")        bob += Math.sin(C.t*22) * CS*0.05;
-        else if(a.task.kind === "build") bob += Math.sin(C.t*14) * CS*0.035;
-        else if(a.task.kind === "tend")  bob += Math.sin(C.t*5 + a.bob) * CS*0.018;
+    var u = antU(), body = antBody(), n = C.sample.length, det = antDetail(n), i, a;
+    var upx = u * CS;                                     // the ant's unit, in pixels
+    var edge = Math.max(0, Math.min(1, (16 - upx*2.7) / 9));   // the small-ant outline
+    // the legs of the whole crowd go down as two batched paths, one stroke each,
+    // which is what makes a hundred and fifty six-legged ants affordable at all
+    var lines = [];
+    for(i=0;i<n;i++){
+      a = C.sample[i]; if(a.dx == null) motInit(a);
+      var px = fcToX(a.dx), py = frToY(a.dy);
+      if(py < -CS*2 || py > H + CS*2) continue;
+      var sold = (a.job === "soldier"), star = (a === starAnt);
+      var s = upx * (a.sc || 1);
+      // the sideways lean, and the little lift of a working ant
+      var dxn = a.mir ? Math.sin(a.head) : -Math.sin(a.head);
+      var dyn = a.mir ? -Math.cos(a.head) : Math.cos(a.head);
+      px += dxn * a.lane * CS; py += dyn * a.lane * CS;
+      var lift = 0;
+      if(a.state === "work" && a.task){
+        if(a.task.kind === "dig")        lift = Math.sin(C.t*22) * s*0.30;
+        else if(a.task.kind === "build") lift = Math.sin(C.t*14) * s*0.22;
+        else if(a.task.kind === "tend")  lift = Math.sin(C.t*5 + (a.bob||0)) * s*0.12;
       }
-      // AC9: a soldier is the same ant, a size up, with a helmet and bigger jaws.
-      // Its marker is red, the same red the low meters use for "this needs you".
-      var sold = (a.job === "soldier");
-      var star = (a === starAnt), scale = base * (star ? 1.75 : (sold ? 1.18 : 1));
+      if(a.state === "hop") lift -= Math.sin(Math.max(0, Math.min(1, (0.45 - a.t)/0.45)) * Math.PI) * CS*0.28;
+      py += lift;
       if(star){                                           // a soft halo, no words, no emoji
         X.globalAlpha = 0.30 + 0.18*Math.sin(C.t*5); X.fillStyle = "#fff3d6";
-        X.beginPath(); X.arc(px, py+bob, CS*0.34, 0, 7); X.fill(); X.globalAlpha = 1;
+        X.beginPath(); X.arc(px, py, s*2.4, 0, 7); X.fill(); X.globalAlpha = 1;
       }
-      drawAntShape(px, py+bob, CS*scale*0.42, body, a.flip, idle, sold);
-      // what it is hauling, in its mandibles, drawn as the very same item
-      if(a.carry) drawItem(a.carry.kind, px + (a.flip ? CS*0.15 : -CS*0.15), py + bob - CS*0.12, CS*0.30);
-      jobMark(px, py + bob - CS*scale*0.85, CS*0.070, jobColor(a.job));
+      antLegs(a, px, py, s, u, det, lines);
+      drawAnt(px, py, a.head, s, C.t, { body:body, mirror:a.mir, soldier:sold, edge:edge,
+                                        hello:(a.hello > 0), carry:a.carry ? a.carry.kind : null,
+                                        job:a.job, dot:jobColor(a.job) });
+    }
+    strokeLegs(lines, upx, det);
+  }
+
+  // the six legs, in SCREEN space, because a planted foot belongs to the world
+  // and not to the ant's own turned-around frame of reference. Far-side legs are
+  // shorter and faded, near-side legs full strength: that is what makes a side
+  // view read as a side view instead of a spider seen from above.
+  function antLegs(a, px, py, s, u, det, out){
+    var swing = (a.gait % (MOT.stride*u)) / (MOT.stride*u);
+    var fx = Math.cos(a.head), fy = Math.sin(a.head);
+    var dxn = a.mir ? Math.sin(a.head) : -Math.sin(a.head);
+    var dyn = a.mir ? -Math.cos(a.head) : Math.cos(a.head);
+    for(var i=0;i<6;i++){
+      var far = (i > 2);                                // three near, three far
+      if(far && det < 2) continue;
+      var hx = px + fx*HIPX[i]*s + dxn*s*(far ? 0.10 : 0.22);
+      var hy = py + fy*HIPX[i]*s + dyn*s*(far ? 0.10 : 0.22);
+      var ftx, fty;
+      if(a.phase === (i & 1)){                           // planted: it does not move
+        ftx = fcToX(a.ft[i*2]); fty = frToY(a.ft[i*2+1]);
+      } else {                                           // in the air, swinging forward
+        var aim = footAim(a, i, u, 0.22);
+        var ox2 = a.fp[i*2] || aim.x, oy2 = a.fp[i*2+1] || aim.y;
+        var t2 = swing;
+        ftx = fcToX(ox2 + (aim.x - ox2)*t2);
+        fty = frToY(oy2 + (aim.y - oy2)*t2) - Math.sin(t2*Math.PI) * s*0.30;
+      }
+      if(far){ ftx = hx + (ftx-hx)*0.60; fty = hy + (fty-hy)*0.60; }
+      if(det >= 1){                                      // a knee, so a leg bends like a leg
+        var kx = (hx+ftx)/2 + fx*s*0.09 + dxn*s*0.10, ky = (hy+fty)/2 + fy*s*0.09 + dyn*s*0.10;
+        out.push(far?1:0, hx, hy, kx, ky, ftx, fty);
+      } else out.push(far?1:0, hx, hy, (hx+ftx)/2, (hy+fty)/2, ftx, fty);
     }
   }
-  // the job marker: the same four colours as the jobs bar, in a shape a kid can
-  // pick out at a glance. Drawn geometry, never a glyph.
-  function jobMark(x, y, r, col){
-    X.fillStyle = "rgba(30,18,8,.55)";
-    X.beginPath(); X.moveTo(x, y - r*1.45); X.lineTo(x + r*1.15, y); X.lineTo(x, y + r*1.45); X.lineTo(x - r*1.15, y); X.closePath(); X.fill();
+  function strokeLegs(L, upx, det){
+    var pass, i;
+    for(pass=1;pass>=0;pass--){                          // far legs first, under the bodies
+      X.beginPath();
+      for(i=0;i<L.length;i+=7){
+        if(L[i] !== pass) continue;
+        X.moveTo(L[i+1], L[i+2]); X.lineTo(L[i+3], L[i+4]); X.lineTo(L[i+5], L[i+6]);
+      }
+      X.strokeStyle = pass ? "rgba(66,44,20,.26)" : "rgba(46,28,10,.72)";
+      X.lineWidth = Math.max(0.9, upx * (pass ? 0.085 : 0.115));
+      X.lineCap = "round"; X.lineJoin = "round"; X.stroke();
+    }
+  }
+
+  // ======================================================================
+  //  drawAnt(x, y, angle, scale, t, opts) — ONE ant, and the only place its
+  //  LOOK is decided. Swap this function and the whole colony changes style
+  //  without a single line of movement code moving.
+  //    x, y    the middle of the body, in screen pixels
+  //    angle   the direction it is travelling, in radians
+  //    scale   its unit: the body runs about 2.7 units long and 0.95 tall,
+  //            which is the three-times-longer-than-tall an ant has to be
+  //            before it stops reading as a hermit crab
+  //    t       the colony clock, for the small living wobbles
+  //    opts    { body, mirror, soldier, queen, edge, hello, carry, job, dot }
+  //  THE LOOK, locked Sep 8: the GLOSSY ant. Warm brown, a soft shine along the
+  //  gaster, and NO hard comic outline once it is big. It keeps a thin dark edge
+  //  only while it is small, and that edge fades out as it grows, which is what
+  //  lets a ten-pixel ant stay readable without the crowd looking like scribble.
+  // ======================================================================
+  function drawAnt(x, y, angle, s, t, o){
+    o = o || {};
+    var col = o.body || "#c9853c", big = s > 4.6, edge = o.edge == null ? 0.6 : o.edge;
+    X.save(); X.translate(x, y); X.rotate(angle);
+    // NEVER PAST VERTICAL. Rotating by heading alone turns an ant walking left
+    // upside down, eye underneath and its berry hanging below its head.
+    if(o.mirror) X.scale(1, -1);
+    if(o.queen) s *= 1.55;
+    // the shadow it casts on the dirt
+    X.fillStyle = "rgba(0,0,0,.16)";
+    X.beginPath(); X.ellipse(-s*0.2, s*1.02, s*1.35, s*0.28, 0, 0, 7); X.fill();
+    // an ant drawn on its own — the queen in her chamber — has no world-planted
+    // feet to stand on, so it gets a still set of six here instead of no legs
+    if(o.still){
+      X.strokeStyle = "rgba(46,28,10,.72)"; X.lineWidth = Math.max(1, s*0.115); X.lineCap = "round";
+      for(var li=0;li<6;li++){
+        var hp = HIPX[li]*s, fr2 = (li > 2) ? 0.60 : 1, wob = Math.sin(t*1.6 + li)*s*0.04;
+        X.beginPath(); X.moveTo(hp, s*0.20*fr2);
+        X.lineTo(hp + (HIPX[li]*1.9 - HIPX[li])*s*0.5*fr2 + wob, s*0.60*fr2);
+        X.lineTo(hp + (HIPX[li]*1.9 - HIPX[li])*s*fr2 + wob, s*0.94*fr2); X.stroke();
+      }
+    }
+    if(edge > 0.02){
+      X.strokeStyle = "rgba(26,15,5," + (0.85*edge).toFixed(3) + ")";
+      X.lineWidth = Math.max(0.8, s*0.15);
+    }
+    var grad = null;
+    if(big){                                      // the shine, only where it can be seen
+      grad = X.createLinearGradient(0, -s*0.7, 0, s*0.6);
+      grad.addColorStop(0, "#f0c58a"); grad.addColorStop(0.45, col); grad.addColorStop(1, "#7d4d1c");
+    }
+    // gaster (the fat rear), waist, thorax, head — four pieces, nose to tail
+    X.fillStyle = grad || col;
+    X.beginPath(); X.ellipse(-s*1.02, -s*0.03, s*0.64, s*0.47, 0.10, 0, 7); X.fill(); if(edge > 0.02) X.stroke();
     X.fillStyle = col;
-    X.beginPath(); X.moveTo(x, y - r); X.lineTo(x + r*0.8, y); X.lineTo(x, y + r); X.lineTo(x - r*0.8, y); X.closePath(); X.fill();
-  }
-  function jobColor(id){ for(var i=0;i<JOBS.length;i++) if(JOBS[i].id===id) return JOBS[i].color; return "#fff"; }
-  // one ant: three segments, six legs, two antennae, a dark outline so the shape
-  // holds up small. An idle ant has its legs planted and does not move.
-  function drawAntShape(x, y, r, col, flip, idle, soldier){
-    var line = "rgba(28,16,6,.85)";
-    X.save(); X.translate(x,y); if(flip) X.scale(-1,1);
-    X.fillStyle = "rgba(0,0,0,.18)"; X.beginPath(); X.ellipse(0, r*0.95, r*1.15, r*0.32, 0, 0, 7); X.fill();
-    // legs
-    X.strokeStyle = line; X.lineWidth = Math.max(1.1, r*0.17); X.lineCap = "round";
-    var lg = r*0.8, sw = idle ? 0 : Math.sin(C.t*11 + x*0.3)*r*0.16, i;
-    for(i=-1;i<=1;i++){
-      X.beginPath(); X.moveTo(i*r*0.32, 0); X.lineTo(i*r*0.32 - lg*0.55 + (i?sw:-sw), lg*0.85); X.stroke();
-      X.beginPath(); X.moveTo(i*r*0.32, 0); X.lineTo(i*r*0.32 + lg*0.30 - (i?sw:-sw), lg*0.80); X.stroke();
+    X.beginPath(); X.ellipse(-s*0.45, s*0.02, s*0.16, s*0.14, 0, 0, 7); X.fill();
+    X.fillStyle = grad || col;
+    X.beginPath(); X.ellipse(-s*0.06, -s*0.01, s*0.44, s*0.33, 0, 0, 7); X.fill(); if(edge > 0.02) X.stroke();
+    X.beginPath(); X.ellipse(s*0.63, -s*0.06, s*0.42, s*0.37, 0, 0, 7); X.fill(); if(edge > 0.02) X.stroke();
+    if(big){                                      // the soft shine on the gaster
+      X.globalAlpha = 0.35; X.fillStyle = "#fff1d2";
+      X.beginPath(); X.ellipse(-s*1.14, -s*0.20, s*0.26, s*0.13, 0.2, 0, 7); X.fill(); X.globalAlpha = 1;
     }
-    // body: abdomen, thorax, head, each outlined so the silhouette survives at size
-    X.lineWidth = Math.max(1, r*0.16); X.strokeStyle = line; X.fillStyle = col;
-    X.beginPath(); X.ellipse(-r*0.88, -r*0.05, r*0.62, r*0.48, 0.15, 0, 7); X.fill(); X.stroke();
-    X.beginPath(); X.ellipse(-r*0.12, 0, r*0.34, r*0.30, 0, 0, 7); X.fill(); X.stroke();
-    X.beginPath(); X.arc(r*0.62, -r*0.08, r*0.42, 0, 7); X.fill(); X.stroke();
-    // AC9: a soldier wears a helmet and carries the bigger jaws real soldier ants have
-    if(soldier){
-      X.lineWidth = Math.max(1, r*0.18);
-      X.beginPath(); X.moveTo(r*0.98, -r*0.02); X.quadraticCurveTo(r*1.50, -r*0.16, r*1.30, -r*0.44); X.stroke();
-      X.beginPath(); X.moveTo(r*0.98, r*0.16); X.quadraticCurveTo(r*1.46, r*0.20, r*1.24, r*0.46); X.stroke();
-      X.fillStyle = "#e2685f"; X.lineWidth = Math.max(1, r*0.14);
-      X.beginPath(); X.arc(r*0.62, -r*0.18, r*0.46, Math.PI, 0); X.closePath(); X.fill(); X.stroke();
-      X.fillStyle = col;
+    // a soldier's helmet and the bigger jaws real soldier ants carry
+    if(o.soldier){
+      X.strokeStyle = "rgba(30,18,7,.9)"; X.lineWidth = Math.max(1, s*0.17);
+      X.beginPath(); X.moveTo(s*0.98, -s*0.02); X.quadraticCurveTo(s*1.50, -s*0.16, s*1.30, -s*0.44); X.stroke();
+      X.beginPath(); X.moveTo(s*0.98, s*0.16); X.quadraticCurveTo(s*1.46, s*0.20, s*1.24, s*0.46); X.stroke();
+      X.fillStyle = "#e2685f";
+      X.beginPath(); X.arc(s*0.63, -s*0.16, s*0.44, Math.PI, 0); X.closePath(); X.fill();
     }
-    // antennae
-    X.lineWidth = Math.max(1, r*0.13);
-    X.beginPath(); X.moveTo(r*0.80, -r*0.36); X.lineTo(r*1.20, -r*0.92); X.stroke();
-    X.beginPath(); X.moveTo(r*0.92, -r*0.20); X.lineTo(r*1.38, -r*0.56); X.stroke();
-    // eye
-    X.fillStyle = "#fff8ec"; X.beginPath(); X.arc(r*0.78, -r*0.14, r*0.15, 0, 7); X.fill();
-    X.fillStyle = "#241505"; X.beginPath(); X.arc(r*0.83, -r*0.14, r*0.08, 0, 7); X.fill();
+    // ANTENNAE. They never thin below one screen pixel, because they are the
+    // strongest sign that this is an ant and not a beetle.
+    var cast = Math.sin(t*3.4 + x*0.05) * s*0.08, up = o.hello ? s*0.42 : 0;
+    X.strokeStyle = "rgba(48,29,11,.80)"; X.lineWidth = Math.max(1, s*0.085); X.lineCap = "round";
+    X.beginPath(); X.moveTo(s*0.84, -s*0.28); X.quadraticCurveTo(s*1.02, -s*0.60 - up, s*1.14 + cast, -s*0.82 - up); X.stroke();
+    X.beginPath(); X.moveTo(s*0.92, -s*0.12); X.quadraticCurveTo(s*1.14, -s*0.32 - up*0.7, s*1.28 + cast, -s*0.48 - up*0.8); X.stroke();
+    // the eye, and the jaws. Only drawn when there is room for them: at swarm
+    // size a white eye is a smudge, so it becomes one plain dark dot.
+    if(big){
+      X.fillStyle = "#fff8ec"; X.beginPath(); X.arc(s*0.78, -s*0.12, s*0.15, 0, 7); X.fill();
+      X.fillStyle = "#241505"; X.beginPath(); X.arc(s*0.83, -s*0.12, s*0.08, 0, 7); X.fill();
+      if(!o.soldier){
+        X.strokeStyle = "rgba(38,22,8,.9)"; X.lineWidth = Math.max(1, s*0.10);
+        X.beginPath(); X.moveTo(s*0.98, s*0.02); X.quadraticCurveTo(s*1.22, s*0.06, s*1.16, s*0.24); X.stroke();
+      }
+    } else {
+      X.fillStyle = "#241505"; X.beginPath(); X.arc(s*0.80, -s*0.10, Math.max(0.7, s*0.13), 0, 7); X.fill();
+    }
     X.restore();
+    // what it is hauling, held ABOVE THE HEAD at the front, and the job dot.
+    // Both live outside the turned frame so a berry never hangs upside down.
+    var fx = Math.cos(angle), fy = Math.sin(angle);
+    var dxn = o.mirror ? Math.sin(angle) : -Math.sin(angle);
+    var dyn = o.mirror ? -Math.cos(angle) : Math.cos(angle);
+    if(o.carry) drawItem(o.carry, x + fx*s*0.95 - dxn*s*0.95, y + fy*s*0.95 - dyn*s*0.95, s*1.7);
+    if(o.dot){
+      var jy = y - s*1.35;                       // always straight up the SCREEN, so a
+      X.fillStyle = "rgba(28,17,7,.40)";         // dot never floats off sideways from an
+      X.beginPath(); X.arc(x, jy, Math.max(1.3, s*0.30), 0, 7); X.fill();   // ant in a shaft
+      X.fillStyle = o.dot; X.beginPath(); X.arc(x, jy, Math.max(0.9, s*0.20), 0, 7); X.fill();
+    }
+  }
+  // the queen, and anything else that wants one ant at a fixed size
+  function drawAntShape(x, y, r, col, flip, idle, soldier){
+    drawAnt(x, y, flip ? Math.PI : 0, r*0.62, C.t, { body:col, mirror:!!flip, soldier:!!soldier, edge:0.35, queen:true, still:true });
   }
   // ======================================================================
   //  AC9: the visitor. Drawn art first, and a hand-drawn fallback behind every
@@ -3246,7 +3655,19 @@ input,textarea{-webkit-user-select:text;user-select:text;}
                carry:a.carry ? a.carry.kind : null, idle:(a.state === "idle"),
                post:a.post ? (a.post.c + "," + a.post.r) : null,
                at:Math.round(a.fc) + "," + Math.round(a.fr),
+               // AC13: where it is really DRAWN, which way its head is pointing,
+               // how fast it is going, and where its six feet are planted.
+               dx:Math.round((a.dx == null ? a.fc : a.dx)*1000)/1000,
+               dy:Math.round((a.dy == null ? a.fr : a.dy)*1000)/1000,
+               head:Math.round((a.head||0)*1000)/1000, mir:!!a.mir,
+               spd:Math.round((a.spd||0)*1000)/1000, gait:Math.round((a.gait||0)*1000)/1000,
+               feet:(a.ft || []).map(function(v){ return Math.round(v*1000)/1000; }),
                inDirt:(a.fr > -0.2 && !isOpen(Math.round(a.fc), Math.round(a.fr))) }; }); },
+    // AC13: the painting budget and the ant's size, so the robot can prove the
+    // crowd tracks the colony and never goes over what the device can paint.
+    motion: function(){ return { cap:drawCap(), drawn:C.sample.length, ants:C.ants,
+                                 unit:antU(), scale:GAME_CONFIG.antScale, detail:antDetail(C.sample.length),
+                                 stride:MOT.stride, reach:MOT.reach }; },
     // --- AC7: the one hint line, the needs meters, the meadow and the build flow ---
     // hints() is the whole point of the AC7 hint rework: there is ONE surface, so
     // this can never return two, and the QA robot asserts exactly that.

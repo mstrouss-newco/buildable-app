@@ -520,9 +520,11 @@ for (let i = 0; i < 90 && (G.dbg().ants < 34 || G.dbg().dug < 40); i++) {
 }
 G.seconds(10);
 
-// the swarm: many small ants, not a handful of big ones
+// the swarm: many small ants, not a handful of big ones. AC13 moved the size
+// down to the 0.95x the motion lab locked, which is what makes a river of ants
+// possible at all: at the old 0.34 a hundred and fifty of them were a traffic jam.
 ok('the ants are drawn small enough to read as a swarm, big enough to read as ants',
-  G.antScale() >= 0.28 && G.antScale() <= 0.38, `scale=${G.antScale()}`);
+  G.antScale() >= 0.19 && G.antScale() <= 0.24, `scale=${G.antScale()}`);
 ok('the drawn crowd can hold a swarm', G._cfg().sampleMax >= 60, `sampleMax=${G._cfg().sampleMax}`);
 ok('a grown colony really shows a crowd, not a handful', G.crowd().length > 26, `${G.crowd().length} ants on screen of ${G.dbg().ants}`);
 
@@ -875,7 +877,7 @@ ok('three original drawn bad bugs, each a real file',
 ok('and a hand-drawn fallback stands behind every one of them',
   /function drawBugShape/.test(html) && /drawBugShape\(b\.kind/.test(html));
 ok('the soldier is a drawn worker variant, not a whole new sprite',
-  /drawAntShape\([^)]*sold\)/.test(html) && /function drawAntShape\(x, y, r, col, flip, idle, soldier\)/.test(html));
+  /soldier:\s*sold/.test(html) && /if\(o\.soldier\)/.test(html) && /function drawAntShape\(x, y, r, col, flip, idle, soldier\)/.test(html));
 ok('the manifest carries the bugs, so the recipe stays the recipe',
   !!(manifest.bugs && manifest.bugs.kinds && Object.keys(manifest.bugs.kinds).length === 3),
   Object.keys((manifest.bugs || {}).kinds || {}).join(','));
@@ -888,6 +890,143 @@ ok('every bad bug art id resolves to a real file',
   }), JSON.stringify(['beetle', 'caterpillar', 'grasshopper'].map((k) => G._art()['bug_' + k])));
 ok('the attention marker is drawn geometry, never a glyph',
   /function drawBugMark/.test(html) && !/textAlign[\s\S]{0,80}bugMark/.test(html));
+
+// --- 6b) AC13: the motion rig, the crowd, and food you can see ----------------
+// The card's four motion ingredients are all ON, and the two hard rules the lab
+// learned the painful way are the ones checked hardest here: an ant cannot skate
+// (its gait clock is DISTANCE, so a stopped ant is frozen with its feet down) and
+// an ant walking left is never upside down (rotate by heading, then MIRROR).
+console.log('\n--- AC13: THE SWARM, AND FOOD YOU CAN SEE ---');
+
+// one swappable draw function, so a painted ant can replace this one without a
+// single line of movement code moving
+ok('the look lives in one swappable draw function',
+  /function drawAnt\(x, y, angle, s, t, o\)/.test(html) && /drawAnt\(px, py, a\.head/.test(html));
+ok('and the movement lives somewhere else entirely',
+  /function walkVisual\(dt\)/.test(html) && /walkVisual\(dt\);/.test(html));
+ok('the motion layer has its own seeded stream, so wobble cannot shift a colony roll',
+  /function mrand\(\)/.test(html) && /_mseed/.test(html));
+
+G.play(3); G._openAll();
+G.digDown(16); G.assign('digger', 3); G.assign('forager', 2);
+G.seconds(90);
+let crowd13 = G.crowd(), mot = G.motion();
+
+ok('the crowd is a crowd', crowd13.length >= 8, `${crowd13.length} drawn, ${mot.ants} ants`);
+
+// (1) FEET THAT GRIP -----------------------------------------------------------
+// a walking ant keeps one tripod planted: three of its six feet do not move at
+// all while the body walks past them, which is the whole anti-skate rule
+const b13 = G.crowd(); G.step(1); const a13 = G.crowd();
+const walkers = b13.map((a, i) => [a, a13[i]]).filter(([a, b]) =>
+  b && a.job === b.job && b.spd > 0 && Math.hypot(b.dx - a.dx, b.dy - a.dy) < 0.5);
+const planted = walkers.filter(([a, b]) => {
+  let same = 0;
+  for (let i = 0; i < 6; i++) if (a.feet[i * 2] === b.feet[i * 2] && a.feet[i * 2 + 1] === b.feet[i * 2 + 1]) same++;
+  return same >= 3;
+});
+ok('a walking ant always has a tripod planted in the world, it never skates',
+  walkers.length > 0 && planted.length === walkers.length, `${planted.length}/${walkers.length} walking`);
+
+// the gait clock is DISTANCE TRAVELLED, never a timer: how far the clock moved
+// and how far the ant moved are the same number
+const drift = walkers.map(([a, b]) => Math.abs((b.gait - a.gait) - Math.hypot(b.dx - a.dx, b.dy - a.dy)));
+ok('the gait clock is distance travelled, not a timer',
+  drift.length > 0 && Math.max(...drift) < 0.002, `worst drift ${Math.max(...drift, 0).toFixed(5)} cells`);
+
+// a stopped ant is genuinely frozen: no speed, no gait, no foot moves
+const stills = b13.map((a, i) => [a, a13[i]]).filter(([a, b]) => b && a.idle && b.idle);
+ok('a stopped ant is frozen with its feet down',
+  stills.length > 0 && stills.every(([a, b]) =>
+    b.spd === 0 && b.gait === a.gait && a.feet.every((v, i) => v === b.feet[i])),
+  `${stills.length} standing still`);
+
+// (2) HEADS FACE THE WAY THEY ARE GOING ---------------------------------------
+// an early demo crawled backwards. It is never allowed back.
+const moved13 = walkers.filter(([a, b]) => Math.hypot(b.dx - a.dx, b.dy - a.dy) > 0.0005);
+const facing = moved13.filter(([a, b]) => {
+  const mx = b.dx - a.dx, my = b.dy - a.dy, d = Math.hypot(mx, my);
+  return (Math.cos(b.head) * mx + Math.sin(b.head) * my) / d > 0.9;
+});
+ok('every moving ant has its head pointing the way it is travelling',
+  moved13.length > 0 && facing.length === moved13.length, `${facing.length}/${moved13.length} moving`);
+
+// (3) NEVER ROTATED PAST VERTICAL ---------------------------------------------
+// rotating by heading alone turns an ant walking LEFT upside down. Rotate, then
+// mirror, with a dead zone so an ant in a vertical shaft does not flicker.
+const upright = a13.filter((a) => Math.abs(Math.cos(a.head)) > 0.16)
+  .every((a) => a.mir === (Math.cos(a.head) < 0));
+ok('an ant walking left is mirrored, never turned upside down', upright);
+ok('the mirror has a dead zone, so a vertical shaft cannot make it flicker',
+  /MOT\.dead/.test(html) && /dead:\s*0\.1/.test(html));
+ok('and its feet are replanted the moment the mirror flips', /a\.flip = want; plantAll/.test(html));
+
+// (4) THE CROWD IS THE SCORE ---------------------------------------------------
+// the number of ants on screen IS the progress meter, so it must track the colony
+ok('the drawn crowd never claims more ants than the colony really has',
+  crowd13.length <= mot.ants, `${crowd13.length} drawn of ${mot.ants}`);
+const wasDrawn = crowd13.length, wasAnts = mot.ants;
+G.assign('nursery', 4); G.seconds(400);
+const grown = G.crowd(), gmot = G.motion();
+ok('the crowd grows as the colony grows',
+  gmot.ants > wasAnts && grown.length > wasDrawn, `${wasDrawn}->${grown.length} drawn, ${wasAnts}->${gmot.ants} ants`);
+ok('and it never goes over what the device can paint',
+  grown.length <= gmot.cap, `${grown.length} of a ${gmot.cap} budget`);
+ok('a phone gets a smaller painting budget than a desktop',
+  G._cfg().sampleMaxPhone < G._cfg().sampleMax && G._cfg().sampleMax >= 150,
+  `phone ${G._cfg().sampleMaxPhone}, desktop ${G._cfg().sampleMax}`);
+ok('over budget it is leg detail that goes, never ants',
+  /function antDetail\(n\)/.test(html) && /if\(far && det < 2\) continue;/.test(html));
+
+// nothing is drawn on top of anything else
+let closest = Infinity;
+for (let i = 0; i < grown.length; i++) for (let j = i + 1; j < grown.length; j++) {
+  const d = Math.hypot(grown[i].dx - grown[j].dx, grown[i].dy - grown[j].dy);
+  if (d < closest) closest = d;
+}
+ok('no two ants are painted in the same spot', closest > gmot.unit * 0.5,
+  `closest pair ${closest.toFixed(3)} cells, ant unit ${gmot.unit.toFixed(3)}`);
+
+// the job mix has to be visible in the crowd, not just on the bar
+G.assign('forager', 1); G.seconds(30);
+const few = G.crowd().filter((a) => a.job === 'forager').length;
+G.assign('forager', Math.max(6, Math.floor(G.motion().ants * 0.6))); G.seconds(30);
+const many = G.crowd().filter((a) => a.job === 'forager').length;
+ok('moving the jobs slider really thickens and thins the crowd that is walking',
+  many > few, `${few} foragers -> ${many} foragers`);
+
+// (5) A CARRIED BERRY IS ONE REAL DELIVERY ------------------------------------
+// the bush loses the berry the instant an ant picks it up, and the store only
+// moves when that same ant walks through the door. A builder first: rain can
+// have shut the front door while all this growing was going on, and a colony
+// that cannot reach the meadow is not a test of carrying anything.
+G.assign('builder', 3); G.assign('forager', 8);
+let opened = false;
+for (let s3 = 0; s3 < 1800 && !opened; s3++) { G.step(1); if (G.floods() === 0) opened = true; }
+ok('builders really do open the way back out to the meadow', opened, `${G.floods()} still flooded`);
+let heldSeen = 0, badHold = 0;
+for (let s2 = 0; s2 < 1800; s2++) {
+  G.step(1);
+  const held = G.items().filter((it) => it.held && it.kind === 'berry').length;
+  const carried = G.crowd().filter((a) => a.carry === 'berry').length;
+  if (held > 0) heldSeen++;
+  if (carried > held) badHold++;
+}
+ok('a berry in an ant is a berry the bush has really lost',
+  heldSeen > 0 && badHold === 0, `${heldSeen} steps with a berry in transit`);
+
+// (6) FOOD YOU CAN SEE ---------------------------------------------------------
+ok('every kind of food is a chunky drawn thing, never a speck',
+  ['drawBerry', 'drawLeafBit', 'drawCrumb', 'drawMushroom'].every((f) => new RegExp('function ' + f + '\\(').test(html)));
+ok('a leaf bit is a real cut-leaf triangle', /drawLeafBit[\s\S]{0,400}moveTo\(0, -r\)[\s\S]{0,120}closePath/.test(html));
+ok('mushrooms grow through stages, and a ready one glows and bounces',
+  /function drawMushroom\(x, y, size, stage, ready, t\)/.test(html) && /ready \? Math\.sin/.test(html));
+ok('the garden clock only runs while the garden is really making food',
+  /C\.gardenT = \(C\.gardenT \|\| 0\) \+ used;/.test(html));
+ok('the pantry is the food meter made physical', /C\.food \/ Math\.max\(1, foodCap\(\)\)/.test(html));
+ok('the berry bush shows the next berry swelling on the branch',
+  /countItems\("berry"\) < md\.berryMax/.test(html) && /drawBerry\(bx, by/.test(html));
+ok('the drawing still runs clean with a full crowd on screen', G._draw() === 'ok', G._draw());
 
 // --- 6) AC4: the sounds, the music and the art leftovers ----------------------
 console.log('\n--- SOUND, MUSIC AND ART (AC4) ---');
