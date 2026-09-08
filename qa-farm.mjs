@@ -82,7 +82,7 @@ try {
 
   console.log('--- THE FARM: the scene stands up in a real browser ---');
   chk('the farm scene boots with a WebGL context and no page errors', errs.length === 0, errs.join(' | '));
-  chk('it is the FM6 build', (await ev(() => window.FARM.version)) === 'fm6');
+  chk('it is the FM6 island build', (await ev(() => window.FARM.version)) === 'fm6b');
 
   // ======================================================================
   //  FM4 — THE FIRST ORDER. This block runs BEFORE the robot collects
@@ -123,7 +123,12 @@ try {
     animals.every(a => a.state === 'hungry' && a.wanting));
 
   const before = animals.find(a => a.patrolling);
-  await page.waitForTimeout(1600);
+  // waits on the HEN, not on a stopwatch: the island is a heavier scene and on
+  // the software rasteriser a fixed 1600ms is however many frames it manages
+  await page.waitForFunction(b => {
+    const a = window.FARM.animals().find(x => x.patrolling);
+    return a && Math.hypot(a.x - b.x, a.z - b.z) > 0.35;
+  }, { x: before.x, z: before.z }, { timeout: 25000 }).catch(() => {});
   const later = (await ev(() => window.FARM.animals())).find(a => a.patrolling);
   chk('the walking chicken actually walks',
     Math.hypot(later.x - before.x, later.z - before.z) > 0.15,
@@ -545,7 +550,9 @@ try {
     })());
   chk('tapping an animal inside a pen walks her IN THROUGH THE GATE, not through the rails',
     await (async () => {
-      await ev(() => window.FARM.moveKidTo(-2, 6));
+      // open ground WEST of the field: FM6 moved the field to z=2, and the old
+      // spot for this ended up inside its own fence
+      await ev(() => window.FARM.moveKidTo(-12, 6));
       const cow = (await ev(() => window.FARM.animals())).find(a => a.kind === 'cow');
       const r = await drive(cow.x, cow.z, 4000);
       return r.t.what === 'animal' && r.t.legs > 1 && r.gate < 1.8 &&
@@ -647,7 +654,7 @@ try {
 
   await p5.goto(BASE, { waitUntil: 'load' });
   await boot5();
-  chk('it is the FM6 build', (await ev5(() => window.FARM.version)) === 'fm6');
+  chk('it is the FM6 island build', (await ev5(() => window.FARM.version)) === 'fm6b');
   chk('a farm nobody has played starts from the FM1 farm, not from someone else\'s',
     (await ev5(() => window.FARM.save.info())) === null &&
     (await ev5(() => window.FARM.patches().every(p => p.state === 'empty'))) === true);
@@ -670,7 +677,7 @@ try {
     saved: window.FARM.save.local()
   }; });
   chk('playing writes a save to this browser, even with the cloud unreachable',
-    !!before5.saved && before5.saved.v === 1 && before5.saved.patches.length === 9,
+    !!before5.saved && before5.saved.v === 1 && before5.saved.patches.length === 25,
     before5.saved ? 'v' + before5.saved.v : 'nothing saved');
   chk('the save is written the moment the page is hidden, not only on a timer',
     (await ev5(() => window.FARM.save.stats())).local > 0);
@@ -710,7 +717,7 @@ try {
       savedAt: Date.now() - 30 * 60 * 1000,          // half an hour ago
       // three crops mid-grow, one already ready before she left, five bare
       patches: [{ s: 'corn', left: 20 }, { s: 'wheat', left: 5 }, { s: null },
-                { s: 'corn', left: 0 }, { s: null }, { s: null }, { s: null }, { s: null }, { s: null }],
+                { s: 'corn', left: 0 }].concat(Array(21).fill({ s: null, lock: 1 })),
       // every animal was fed just before she went
       animals: A.map(a => ({ k: a.kind, st: 'making', left: 12 })),
       stack: [], basket: [],
@@ -769,7 +776,7 @@ try {
     await (async () => {
       const r = await ev5(() => window.FARM.save.load({
         v: window.FARM.save.snapshot().v, savedAt: Date.now() - 20 * 1000,
-        patches: [{ s: 'carrot', left: 40 }].concat(Array(8).fill({ s: null })),
+        patches: [{ s: 'carrot', left: 40 }].concat(Array(24).fill({ s: null, lock: 1 })),
         animals: [], stack: [], basket: [], collected: ['corn', 'carrot', 'wheat'],
         unlocks: [], duck: false, ordersDone: 0, order: null
       }));
@@ -780,7 +787,7 @@ try {
     await (async () => {
       const r = await ev5(() => window.FARM.save.load({
         v: window.FARM.save.snapshot().v, savedAt: Date.now() - 60 * 1000,
-        patches: [{ s: 'corn', left: 5 }].concat(Array(8).fill({ s: null })),
+        patches: [{ s: 'corn', left: 5 }].concat(Array(24).fill({ s: null, lock: 1 })),
         animals: [], stack: [], basket: [], collected: ['corn', 'carrot', 'wheat'],
         unlocks: [], duck: false, ordersDone: 0, order: null
       }));
@@ -857,7 +864,8 @@ try {
     un5.map(u => u.price).join(','));
   chk('the first present is the pumpkin seed, and it is the only one shown',
     await (async () => {
-      await ev5(() => { window.FARM.addCoins(900); window.FARM.openShop(); });
+      // well away from the barn, because the barn opens and closes its own copy
+      await ev5(() => { window.FARM.moveKidTo(-30, 20); window.FARM.addCoins(900); window.FARM.openShop(); });
       await p5.waitForTimeout(400);              // the card fades in
       const shown = await ev5(() => {
         const el = document.getElementById('buyPresent');
@@ -976,14 +984,17 @@ try {
 
   await p6.goto(BASE, { waitUntil: 'load' });
   await boot6();
-  chk('it is the FM6 build', (await ev6(() => window.FARM.version)) === 'fm6');
+  chk('it is the FM6 island build', (await ev6(() => window.FARM.version)) === 'fm6b');
   const seeds0 = await ev6(() => window.FARM.seedsOffered());
   chk('the seed pop-up offers the three starters and nothing else',
     seeds0.length === 3 && ['corn', 'carrot', 'wheat'].every(k => seeds0.includes(k)), seeds0.join(','));
   chk('the pop-up on screen shows exactly those three buttons',
     JSON.stringify(await ev6(() => window.FARM.seedRow())) === JSON.stringify(seeds0));
-  chk('the field is three rows of three', (await ev6(() => window.FARM.fieldRows())) === 3 &&
-    (await ev6(() => window.FARM.patches().length)) === 9);
+  chk('the field is three rows of three, and the other sixteen slots are not field yet',
+    (await ev6(() => window.FARM.fieldRows())) === 3 &&
+    (await ev6(() => window.FARM.patches().length)) === 25 &&
+    (await ev6(() => window.FARM.patches().filter(p => p.locked).length)) === 16 &&
+    (await ev6(() => window.FARM.coversLeft())) === 0);
   chk('there is no dog', (await ev6(() => window.FARM.dog())).there === false);
   chk('the pumpkin exists in the recipes but the farm cannot make one yet',
     (await ev6(() => !!window.FARM.cropRecipes().pumpkin)) === true &&
@@ -1046,41 +1057,72 @@ try {
              (await ev6(() => window.FARM.producibleNow('pumpkin'))) === true;
     })());
 
-  console.log('\n--- FM6: THE SECOND FIELD ROW ---');
-  const before6 = await ev6(() => window.FARM.patches().map(p => p.x + ',' + p.z));
+  console.log('\n--- FM6: THE FIELD GROWS 3x3 TO 5x5, UNDER STONES ---');
+  const before6 = await ev6(() => window.FARM.patches().slice(0, 9).map(p => p.x + ',' + p.z));
   const area0 = await ev6(() => window.FARM.fieldArea());
   const row6 = await ev6(() => {
     window.FARM.moveKidTo(-45, -45);
     window.FARM.givePresent('fieldrow');
-    return { rows: window.FARM.fieldRows(), n: window.FARM.patches().length,
-             pos: window.FARM.patches().map(p => p.x + ',' + p.z),
+    return { rows: window.FARM.fieldRows(), ring: window.FARM.fieldRing(),
+             n: window.FARM.patches().length,
+             pos: window.FARM.patches().slice(0, 9).map(p => p.x + ',' + p.z),
+             covers: window.FARM.covers(), locked: window.FARM.patches().filter(p => p.locked).length,
              area: window.FARM.fieldArea(), blockers: window.FARM.fieldBlockers() };
   });
-  chk('the field goes from nine patches to twelve', row6.rows === 4 && row6.n === 12, row6.n + ' patches');
-  chk('and NOT ONE crop she already planted moved an inch',
-    JSON.stringify(row6.pos.slice(0, 9)) === JSON.stringify(before6),
-    before6.join(' | ').slice(0, 90));
-  chk('the new row is to the SOUTH of the old three',
-    row6.pos.slice(9).every(s => +s.split(',')[1] > Math.max(...before6.map(b => +b.split(',')[1]))));
+  chk('the field goes from nine patches to twenty-five', row6.rows === 5 && row6.n === 25,
+    row6.rows + 'x' + row6.rows);
+  chk('and NOT ONE of the first nine moved an inch — an old save loads straight in',
+    JSON.stringify(row6.pos) === JSON.stringify(before6), before6.join(' | ').slice(0, 90));
+  chk('the sixteen new ones arrive UNDER STONES, not as bare dirt',
+    row6.covers.length === 16 && row6.locked === 16,
+    row6.covers.length + ' covered');
+  chk('and they are not all the same thing to look at',
+    new Set(row6.covers.map(c => c.kind)).size === 2,
+    [...new Set(row6.covers.map(c => c.kind))].join(' + '));
   chk('the fence came down and went back up around the bigger field',
-    row6.area.halfZ > area0.halfZ && row6.area.cz > area0.cz && row6.blockers > 0,
-    'halfZ ' + area0.halfZ + ' -> ' + row6.area.halfZ);
+    row6.area.halfZ > area0.halfZ && row6.blockers > 0,
+    'half ' + area0.halfZ + ' -> ' + row6.area.halfZ);
   chk('and it still has exactly ONE gate, on the same side',
     row6.area.side === area0.side && row6.area.side === 'W');
   chk('the coop and the cow pen were not disturbed by any of that',
     (await ev6(() => window.FARM.areas().length)) === 3);
-  chk('a line into the new row through the rails is blocked, and the gate is clear',
+  chk('a covered slot is not a patch — tapping one does NOT open the seed pop-up',
     await (async () => {
-      const a = row6.area, p = row6.pos[10].split(',').map(Number);
-      const throughRail = await ev6(([x1, z1, x2, z2]) => window.FARM.lineClear(x1, z1, x2, z2),
-        [p[0], a.cz + a.halfZ + 3, p[0], p[1]]);
-      const throughGate = await ev6(([gx, gz, x2, z2]) => window.FARM.lineClear(gx, gz, x2, z2),
-        [a.gate.x - 1.6, a.gate.z, a.gate.x + 1.2, a.gate.z]);
-      return throughRail === false && throughGate === true;
-    })());
+      const c = row6.covers[0];
+      const r = await ev6(([x, z]) => window.FARM.tapAt(x, z), [c.x, c.z]);
+      await ev6(() => window.FARM.closeSeedPicker());
+      return r.what !== 'seedCard';
+    })(), 'tap gave: ' + JSON.stringify(await ev6(([x, z]) => window.FARM.tapAt(x, z),
+      [row6.covers[0].x, row6.covers[0].z])));
+  chk('walking at one clears it, and pays her a few coins for tidying', await (async () => {
+    await ev6(() => window.FARM.closeSeedPicker());
+    const w0 = await ev6(() => window.FARM.wallet().balance);
+    const c = (await ev6(() => window.FARM.covers()))[0];
+    await ev6(([x, z]) => window.FARM.moveKidTo(x, z), [c.x, c.z]);
+    await p6.waitForFunction(n => window.FARM.coversLeft() < n, 16, { timeout: 9000 }).catch(() => {});
+    const w1 = await ev6(() => window.FARM.wallet().balance);
+    return (await ev6(() => window.FARM.coversLeft())) === 15 && w1 > w0;
+  })());
+  chk('and what is underneath is a real patch she can plant in', await (async () => {
+    const free = await ev6(() => window.FARM.patches()
+      .map((p, i) => ({ i, p })).filter(o => o.p.state === 'empty' && !o.p.locked).length);
+    return free === 10;                       // the nine she started with, plus the one she cleared
+  })());
+  chk('a covered slot counts as something she can do right now',
+    (await ev6(() => window.FARM.idle())).count >= 15);
+  chk('clearing them all is remembered across a reload', await (async () => {
+    await ev6(() => { window.FARM.moveKidTo(-45, -45); window.FARM.save.now(); });
+    const covers = await ev6(() => window.FARM.coversLeft());
+    await p6.reload({ waitUntil: 'load' });
+    await boot6();
+    return (await ev6(() => window.FARM.coversLeft())) === covers &&
+           (await ev6(() => window.FARM.fieldRows())) === 5;
+  })());
 
   console.log('\n--- FM6: THE FARM DOG, WHO TIDIES UP AND DOES NOT PLAY FOR HER ---');
-  await ev6(() => { window.FARM.moveKidTo(0, -14); window.FARM.clearStack();
+  // open ground SOUTH of the field: the barn is at z -16.5 and is solid, so
+  // the old spot for this stood her inside a building
+  await ev6(() => { window.FARM.moveKidTo(0, 14); window.FARM.clearStack();
     window.FARM.givePresent('farmdog'); });     // he appears where she is
   const dog0 = await ev6(() => window.FARM.dog());
   chk('the present puts a dog on the farm', dog0.there === true);
@@ -1090,28 +1132,49 @@ try {
     dog0.patience >= 10 && dog0.minAway >= 7, dog0.patience + 's / ' + dog0.minAway + ' units');
   chk('a crop that has JUST become ready is hers, and he leaves it alone',
     await (async () => {
-      await ev6(() => { window.FARM.plant(0, 'corn'); window.FARM.advanceTime(80); });
-      await p6.waitForFunction(() => window.FARM.patches()[0].state === 'ready', { timeout: 8000 });
+      // the NEAREST patch that is still beyond his seven-unit rule, so what is
+      // being timed is his behaviour and not the frame rate
+      await ev6(() => {
+        const k = window.FARM.kid(), ps = window.FARM.patches();
+        window.DOGPATCH = ps.map((p, i) => ({ i, d: Math.hypot(p.x - k.x, p.z - k.z), p }))
+          .filter(o => o.d > 8 && !o.p.locked && !o.p.cover)
+          .sort((a, b) => a.d - b.d)[0].i;
+        window.FARM.plant(window.DOGPATCH, 'corn');
+        window.FARM.advanceTime(80);
+      });
+      await p6.waitForFunction(() => window.FARM.patches()[window.DOGPATCH].state === 'ready',
+        { timeout: 15000 });
       await p6.waitForTimeout(1600);
       const d = await ev6(() => window.FARM.dog());
       return d.state === 'follow' && d.carry === null;
     })());
+  let DOGWHY = '';
   chk('but one she walked away from and forgot, he fetches and brings to her',
     await (async () => {
       await ev6(() => window.FARM.ageReady());
-      await p6.waitForFunction(() => window.FARM.dog().state === 'toItem', { timeout: 8000 })
+      // he looks for a job about once a second of GAME time, and this scene
+      // runs several times slower than that on the software rasteriser
+      await p6.waitForFunction(() => window.FARM.dog().state !== 'follow', { timeout: 30000 })
         .catch(() => {});
       const went = (await ev6(() => window.FARM.dog())).state;
-      // a round trip on the software rasteriser: eleven units out at 4.6 a
-      // second, and eleven back, so this waits on the STACK and not a clock
-      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'corn'), { timeout: 40000 })
+      // He PICKS IT UP, then walks it home. Both halves are checked, but they
+      // are waited on separately: the harness keeps more than one page of this
+      // island rendering at a time, so his walk home can take a while in wall
+      // clock even though it is four seconds of his own.
+      await p6.waitForFunction(() => window.FARM.dog().carry !== null, { timeout: 90000 })
         .catch(() => {});
+      const picked = await ev6(() => window.FARM.dog().carry);
+      await p6.waitForFunction(() => window.FARM.stack().some(s => s.kind === 'corn'),
+        { timeout: 180000 }).catch(() => {});
       const st = await ev6(() => window.FARM.stack());
       const d = await ev6(() => window.FARM.dog());
-      return went === 'toItem' && st.some(s => s.kind === 'corn') && d.carry === null;
-    })());
+      DOGWHY = 'went=' + went + ' picked=' + picked + ' stack=' + st.map(s => s.kind).join('+') +
+               ' dog=' + JSON.stringify(d);
+      return (went === 'toItem' || went === 'back') && picked === 'corn' &&
+             st.some(s => s.kind === 'corn') && d.carry === null;
+    })(), DOGWHY);
   chk('and the patch he cleared is empty and ready to be planted again',
-    (await ev6(() => window.FARM.patches()[0].state)) === 'empty');
+    (await ev6(() => window.FARM.patches()[window.DOGPATCH].state)) === 'empty');
   chk('he carries one thing at a time, so he can never empty the farm at once',
     (await ev6(() => window.FARM.dog())).carry === null);
 
@@ -1125,11 +1188,11 @@ try {
   chk('the presents she opened are still hers', back6.owned.includes('pumpkinseed') &&
     back6.owned.includes('farmdog') && back6.owned.includes('fieldrow'), back6.owned.join(','));
   chk('the pumpkin seed is still in the pop-up', back6.seeds.includes('pumpkin'));
-  chk('the field is still twelve patches inside the bigger fence',
-    back6.rows === 4 && back6.n === 12 && back6.area.halfZ > area0.halfZ);
+  chk('the field is still five by five inside the bigger fence',
+    back6.rows === 5 && back6.n === 25 && back6.area.halfZ > area0.halfZ);
   chk('and the dog is still there', back6.dog === true);
-  chk('the whole farm is saved with the row in it, not rebuilt back to nine',
-    (await ev6(() => window.FARM.save.local().patches.length)) === 12);
+  chk('the whole farm is saved with all of it in it, not rebuilt back to nine',
+    (await ev6(() => window.FARM.save.local().patches.length)) === 25);
 
   chk('no page errors in the whole FM6 run', e6.length === 0, e6.join(' | '));
   await p6.close();

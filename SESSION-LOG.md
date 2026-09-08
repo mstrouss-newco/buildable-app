@@ -1,3 +1,124 @@
+## 2026-09-08 (FM6): the land — a Quaternius island, and a field that grows
+
+**Phase FM, card FM6.** The farm stops being a flat green plane with things standing
+on it. Touched `public/skyflyer-farm.html`, `src/BuildableKids.jsx`, `qa-farm.mjs`,
+`qa-farm-shot.mjs`, `qa-skyflyer.mjs`.
+
+### The island
+Grass out to a radius of 46, a sand rim, a low edge dropping to the water, shallows and
+then open sea. The grass is FLAT on purpose: the kid walks at y=0 and a domed island
+would bury her feet in the middle of it. She cannot walk off it, and the 140-unit box
+FM1 clamped her to is gone.
+
+Sky is a dome with a warm horizon under a blue top, and the haze is tuned to the same
+horizon colour so the far shore fades into it rather than stopping at a hard line.
+
+**The wind is a shader, not a loop.** One uniform, updated once a frame, and the vertex
+program moves every blade of grass, every leaf and every flower. Doing it on the CPU
+would mean touching a matrix for every tuft on the island every frame; this way it is
+free. The grass itself is one InstancedMesh — 480 tufts in a single draw call.
+
+### The layout, from one table
+Everything is placed from an `ISLE` table, so a later session moves a building by
+changing a number. Barn centre-north with the shop inside it, pads reserved for the mill
+and the dairy just east of it, field directly south, well between them, coop yard east of
+the field and the cow pen north-east of that (both keeping their FM4 gates), pond and
+bridge south-east, orchard and flower beds and the beehive spot north-west, runway and
+crate west, a dirt road along the south edge for FM8's truck, stepping-stone paths
+linking all of it, hay and a log pile by the barn, boulders around the edge and pines
+along the back.
+
+**Nothing needed migrating.** The save stores patch INDEX, animal kind order, the stack,
+the order and the unlocks — not a single position — so the whole farm could be picked up
+and rearranged without touching a saved game.
+
+### The field grows 3x3 to 5x5, and the new land arrives under stones
+All twenty-five slots exist from the first frame, but only the middle nine are field, and
+**the middle nine are built first**, so patch index 0 to 8 are the same slots they always
+were and a save written yesterday loads straight back in. The present turns the outer
+sixteen into land she can see, each under a heap of pebbles or an old stump, and she
+clears them one at a time by walking up to them — the same "walk at it and it happens"
+as everything else on this farm.
+
+**A call I made for Mike:** clearing one PAYS her three coins rather than costing her
+anything. Being unable to afford your own field would be a strange thing to teach a
+four-year-old, and the free-seed floor already says the farm never blocks her.
+
+### The shop moved into the barn
+Walk up to the doors and it opens; walk away and it closes itself behind her. The button
+in the corner stays, because a kid already looking at it should not have to learn a
+second way in.
+
+### Four real bugs the work turned up
+1. **The kit rendered black.** GLTFLoader marks a base-colour texture as sRGB and expects
+   the renderer to gamma-encode on the way out. This renderer does not: the whole farm is
+   hand-built vertex colour, authored and signed off in linear. So every leaf and every
+   rock was decoded and never re-encoded. Turning the renderer's output encoding on would
+   have fixed the kit and changed every colour Mike has already approved, so the kit's
+   textures are put into the farm's space instead of the other way round.
+2. **A slot that was not field yet counted as somewhere to plant**, so the never-idle
+   count could never reach zero and its own test had stopped meaning anything.
+3. **The barn's auto-close was closing a shop she had opened with the button**, from
+   anywhere on the island, which made the button look broken.
+4. **The pathfinder could walk her into a fence she had no business entering.** FM4's two
+   legs — out of the pen you are in, in through the gate of the one you want — were
+   enough while nothing stood between them. The island puts the field squarely between
+   the west side and the animals, so a tap on the cow sent her into the field's rails to
+   slide along them. There is now one way-round waypoint at the best corner of anything
+   in the way.
+
+### The kit, and what could not be fetched
+**quaternius.com is blocked from this sandbox** (the proxy answers 403), so FM6 is built
+from the FOURTEEN pieces already in `public/models/nature` plus everything else in code.
+Used: CommonTree 1/3/5 (the orchard, with apples added in code so it reads as an orchard
+and not as seven trees), Pine 1/3, Bush_Common, Bush_Common_Flowers, Flower_3/4_Group,
+Fern_1, Mushroom_Common, Grass_Common_Tall, Rock_Medium 1/2.
+
+**Wanted from the full MegaKit and not available** — a session with a network can drop
+these in without redesigning anything, because everything is placed from the `ISLE`
+table:
+- proper **farm buildings**: a barn, a mill, a dairy, a shed (all hand-built here)
+- a **stone well**, a **wooden bridge**, a **log pile**, **path/stepping-stone** pieces
+  (all hand-built here)
+- more tree variety: **TwistedTree, BirchTree, Willow, PalmTree**, and a real fruit tree
+- **cattails and reeds** for the pond edge, and proper **lilypads**
+- **Rock_Small** and **Rock_Large**, and cliff/shore pieces for the island edge
+- **Grass_Common** (short) and **Grass_Wispy**, for variety against the one tall tuft
+- **Bush_Small** and **Bush_Large**
+- more flower groups than the two here
+
+One kit note: `Bush_Common` carries the twisted-tree texture, which is AUTUMN RED.
+Tinting it green multiplied red by green and put a black blob on the grass, so it is left
+as itself and placed deliberately as three red shrubs by the orchard.
+
+### Performance
+The harness caught the scene dropping to a few frames a second on the software
+rasteriser, so the counts were cut: grass 900 to 480, scatter 40 to 26, pines 16 to 12,
+boulders 14 to 10, and the sky dome halved. This is a kids' iPad product, so fewer
+objects is the right answer anyway.
+
+### QA
+`qa-farm.mjs` is **200 checks, all green**. `qa-skyflyer.mjs` is **776 green** with 17 new
+FM6 static assertions. `node qa-all.mjs` green. `qa-farm-shot.mjs` now shoots the island
+at phone, tablet and desktop widths, plus a whole-island view at each and the new land
+under its stones. `window.FARM.lookWide()` is a picture lever like `zoo()`: it holds the
+camera off the island so a layout can be judged in one frame. The game never uses it.
+
+**Harness note, again:** do not run `qa-farm.mjs` and `qa-all.mjs` at the same time.
+
+### Also this session
+- **Row Level Security POLICIES on `farm_saves`**, applied and verified: a signed-in kid
+  may read and write exactly one row, their own, matched on a `kid_profile_id` claim;
+  anon gets nothing; `/api/farm-save` keeps full access because the service key bypasses
+  RLS. There is no kid login in this product yet, so the per-kid policies match nothing
+  today — they are written now so the fence is already there the day one arrives.
+- **The pumpkin, the farm dog and the growable field were merged to `main`**, on Mike's
+  say-so, even though they belong to FM7 and FM8 rather than to a card of their own.
+  Neither card is ticked; both carry a note saying what exists.
+- **One probe row is still in `farm_saves`** at `kid_profile_id = 'rls-probe-fm6'`. The
+  guardrails forbid a DELETE, so it is left for Mike:
+  `delete from public.farm_saves where kid_profile_id = 'rls-probe-fm6';`
+
 ## 2026-09-07: the pumpkin, the farm dog and a growable field
 
 **NOT a card. Read this first.** This work was built as "FM6" against a scope Mike

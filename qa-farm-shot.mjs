@@ -165,6 +165,45 @@ try {
   await phone.waitForTimeout(800);
   await shot(phone, 'fm5-shop-phone');
   await phone.close();
+  // ------------------------------------- 6. FM6: the island, at three widths
+  // Mike judges the land at the sizes it is actually played at, so the same
+  // island is shot on a phone, on a tablet and on a desktop.
+  const WIDTHS = [
+    { name: 'phone',   w: 390,  h: 844, dpr: 2, mobile: true },
+    { name: 'tablet',  w: 1024, h: 768, dpr: 2, mobile: true },
+    { name: 'desktop', w: 1440, h: 900, dpr: 1, mobile: false }
+  ];
+  for (const W of WIDTHS) {
+    const pg = await browser.newPage({ viewport: { width: W.w, height: W.h },
+      deviceScaleFactor: W.dpr, isMobile: W.mobile, hasTouch: W.mobile });
+    await pg.goto(BASE, { waitUntil: 'load' });
+    await ready(pg);
+    await pg.evaluate(() => window.FARM.moveKidTo(0, 8));
+    await pg.waitForTimeout(2200);
+    await shot(pg, 'fm6-island-' + W.name);
+    // and the whole island in one frame, so the layout can be judged at all
+    await pg.evaluate(() => window.FARM.lookWide(true));
+    await pg.waitForTimeout(1400);
+    await shot(pg, 'fm6-island-wide-' + W.name);
+    await pg.close();
+  }
+
+  // the new land, under its stones, on a tablet
+  const land = await browser.newPage({ viewport: { width: 1024, height: 768 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await land.goto(BASE, { waitUntil: 'load' });
+  await ready(land);
+  const covered = await land.evaluate(() => {
+    window.FARM.givePresent('fieldrow');
+    window.FARM.moveKidTo(0, 15);
+    return window.FARM.coversLeft();
+  });
+  chk('the sixteen new slots really are under stones when the picture is taken',
+    covered === 16, covered + ' covered');
+  await land.waitForTimeout(1800);
+  await shot(land, 'fm6-new-land');
+  await land.close();
+
 } catch (e) {
   chk('the farm camera completed its run', false, e.message);
 } finally {

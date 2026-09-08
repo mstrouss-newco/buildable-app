@@ -2425,9 +2425,12 @@ chk('FM1: the stack never falls — items lerp toward their target Y every frame
   !/it\.position\.y \-= .*gravity|GRAVITY|it\.vel\.y/.test(farm));
 chk('FM1: harvest = a bounce onto the stack (arc from ground to head-top)',
   /hopT/.test(farm) && /Math\.sin\(u\*Math\.PI\) \* 1\.6/.test(farm));
-chk('FM1: the field is fenced (posts + rails around a 3x3 dirt-patch grid)',
+chk('FM1: the field is fenced (posts + rails around the dirt-patch grid)',
   /function buildFencePost\(\)/.test(farm) && /function buildFenceRail\(len\)/.test(farm) &&
-  /for\(j=-1;j<=1;j\+\+\)\{\s*for\(i=-1;i<=1;i\+\+\)\{/.test(farm));
+  // FM6 builds the grid from fieldSlots() instead of a nested loop, and the
+  // middle nine come FIRST so patch index 0 to 8 never move
+  /for\(j=-1;j<=1;j\+\+\) for\(i=-1;i<=1;i\+\+\) out\.push\(\{i:i, j:j, tier:0\}\);/.test(farm) &&
+  /function fieldSlots/.test(farm));
 chk('FM1: hand-built kid character (head + torso + arms + legs, all baked to one draw call)',
   /function buildKid\(\)/.test(farm) && /kid\.userData\.headTopY/.test(farm));
 chk('FM1: a QA handle (window.FARM) exposes patches, stack and seed picker so a robot can play it',
@@ -2644,7 +2647,7 @@ chk('FM2: the stand keeps the lights on (hiding them would show silhouettes)',
 
 // ---- the handle a robot plays it through
 chk('FM2: the QA handle exposes the animals, the feed and the model stand',
-  /version:\s*"fm6"/.test(farm) &&
+  /version:\s*"fm6b"/.test(farm) &&
   /animals:\s*function\(\)/.test(farm) &&
   /animalKinds:\s*function\(\)/.test(farm) &&
   /giveItem:\s*function\(kind, n\)/.test(farm) &&
@@ -2667,7 +2670,7 @@ chk('FM2: still no emojis, still no textures, after everything FM2 added',
 console.log('\n--- FM3: the crate, the plane, and the four gaps FM1 left open ---');
 
 chk('FM5: the farm reports itself as the FM5 build',
-  /version:\s*"fm6"/.test(farm));
+  /version:\s*"fm6b"/.test(farm));
 
 // ---- GAP 1: the door on the Play page --------------------------------------
 const jsxF = read('src/BuildableKids.jsx');
@@ -2683,7 +2686,7 @@ chk('FM3 gap 1: it routes to a screen of its own that frames the page',
   /function FarmScreen/.test(jsxF) &&
   /screen === SCREEN_FARM/.test(jsxF));
 chk('FM3 gap 1: the link carries its OWN cache-bust, not the flying engine\'s',
-  /skyflyer-farm\.html\?v=fm6/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm6b/.test(jsxF));
 chk('FM3 gap 1: the tile is DRAWN geometry, and there is not an emoji in it',
   (function(){
     const m = jsxF.match(/const TILE_ART = \{[\s\S]*?\n\};/);
@@ -2957,7 +2960,7 @@ chk('FM5: the small celebrations all go through the shared Feel Kit, so mute wor
   /heartPuff\(A\.x,/.test(farm) &&
   /if\(!quiet\)\{ sparklePuff/.test(farm));
 chk('FM5: the shell contract still holds — the door carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm6/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm6b/.test(jsxF));
 chk('FM5: the save endpoint and its migration both exist in the repo',
   fs.existsSync('api/farm-save.js') && fs.existsSync('db/create-farm-save.sql') &&
   /farm_saves/.test(read('db/create-farm-save.sql')) &&
@@ -3010,17 +3013,24 @@ chk('FM6: and he always gets where he is going — the easing has a floor under 
 chk('FM6: whatever is in his mouth rides home in the save, so nothing is lost',
   /if\(DOG\.carry\) S\.push\(DOG\.carry\);/.test(farm));
 
-chk('FM6: the second row goes SOUTH, so nothing she planted moves',
-  /function growFieldRow/.test(farm) &&
-  /addPatchRow\(fieldGroup, 2\)/.test(farm) &&
-  /var extra=\(rows-3\)\*PATCH_STEP;/.test(farm) &&
-  /FIELD_CZ\+extra\/2, FIELD_HALF_X, FIELD_HALF_Z0\+extra\/2, "W"/.test(farm));
+chk('FM6: the field grows 3x3 to 5x5 and NOT ONE of the first nine patches moves',
+  /function unlockFieldRing/.test(farm) &&
+  // the middle nine are built first, so index 0 to 8 are the same slots they
+  // always were and a save written before any of this loads with no migration
+  /for\(j=-1;j<=1;j\+\+\) for\(i=-1;i<=1;i\+\+\) out\.push\(\{i:i, j:j, tier:0\}\);/.test(farm) &&
+  /if\(Math\.abs\(i\)===2 \|\| Math\.abs\(j\)===2\) out\.push\(\{i:i, j:j, tier:1\}\);/.test(farm) &&
+  /function fieldHalf\(ring\)/.test(farm));
+chk('FM6: and the new land arrives under stones she clears by walking at them',
+  /function buildPebbles/.test(farm) && /function buildStump/.test(farm) &&
+  /function putCover/.test(farm) && /function clearCover/.test(farm) &&
+  /addCoins\(CLEAR_PAYS\)/.test(farm) &&
+  /n \+= coversLeft\(\);/.test(farm));
 chk('FM6: a blocker remembers its owner, so one fence can be replaced alone',
   /var BLOCKER_OWNER=/.test(farm) && /function dropBlockersOwnedBy/.test(farm) &&
   /BLOCKER_OWNER="field";/.test(farm) &&
   /own:BLOCKER_OWNER/.test(farm));
 chk('FM6: growing the field is idempotent — a save reloads it, it does not stack up',
-  /if\(FIELD_ROWS>=4 \|\| !fieldGroup\) return false;/.test(farm));
+  /if\(FIELD_RING>=1 \|\| !fieldGroup\) return false;/.test(farm));
 
 chk('FM6: opening a present changes the farm WITH the confetti',
   /applyUnlock\(U\.id\);/.test(farm) && /function applyUnlock/.test(farm) &&
@@ -3039,9 +3049,73 @@ chk('FM6: the first three presents are marked built; the rest are still boxes',
     return built.length === 8 && built.slice(0, 3).every(Boolean) && built.slice(3).every(b => !b);
   })());
 chk('FM6: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm6/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm6b/.test(jsxF));
 chk('FM6: still no timer, no countdown, no emoji, after all of that',
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
+
+// ==========================================================================
+//  FM6 — THE LAND. The half that reads the file: the island, the sky, the
+//  wind, the Quaternius kit, and the layout table everything is placed from.
+// ==========================================================================
+console.log('\n--- FM6: the island, the sky, the wind and the kit ---');
+
+chk('FM6: the flat green plane is GONE and there is an island in its place',
+  !/new THREE\.PlaneGeometry\(220,220/.test(farm) &&
+  /function buildIsland/.test(farm) && /var ISLAND_R\s*=\s*46/.test(farm) &&
+  /var SAND_W/.test(farm) && /var SHORE_Y/.test(farm));
+chk('FM6: grass, then a sand rim, then an edge that drops to the sea',
+  /RingGeometry\(ISLAND_R, ISLAND_R\+SAND_W/.test(farm) &&
+  /CylinderGeometry\(ISLAND_R\+SAND_W/.test(farm) &&
+  /hbPaint\(sea, SEA_C/.test(farm));
+chk('FM6: the island is FLAT on purpose — a domed one would bury her feet',
+  /FLAT, on purpose/.test(farm));
+chk('FM6: she cannot walk off it, and there is no 140-unit box any more',
+  !/clamp\(kid\.position\.x, ?-70, ?70\)/.test(farm) &&
+  /var edge=Math\.hypot\(kid\.position\.x, kid\.position\.z\), lim=ISLAND_R-2\.2;/.test(farm));
+chk('FM6: a sky with a warm horizon under a blue top, and haze to match it',
+  /function buildSky/.test(farm) && /side:THREE\.BackSide, fog:false/.test(farm) &&
+  /scene\.fog=new THREE\.Fog\(0xCFE9F2, 46, 165\)/.test(farm));
+chk('FM6: the wind is a SHADER, so every blade of grass moves and it costs nothing',
+  /function windify/.test(farm) && /onBeforeCompile/.test(farm) &&
+  /uniform float uWindTime/.test(farm) && /USE_INSTANCING/.test(farm) &&
+  /WIND\.time\.value = now;/.test(farm));
+chk('FM6: and the grass is one InstancedMesh, not nine hundred draw calls',
+  /function grassCarpet/.test(farm) && /new THREE\.InstancedMesh/.test(farm) &&
+  /grassCarpet\(\d+\)/.test(farm));
+chk('FM6: the kit is Quaternius and it is loaded, not hand-copied',
+  /var NAT_PIECES=\[/.test(farm) &&
+  /"\/models\/nature\/"\+name\+"\.gltf"/.test(farm) &&
+  (farm.match(/"(CommonTree_1|Pine_1|Rock_Medium_1|Grass_Common_Tall)"/g) || []).length >= 4);
+chk('FM6: NO KENNEY nature and no Kenney animals anywhere near the farm',
+  // the file MENTIONS Kenney twice, both times in a comment saying it is NOT
+  // using it, so this reads the code with the comments stripped out
+  !/kenney/i.test(farmCode));
+chk('FM6: the kit textures are put in the FARM\'s colour space, not the other way round',
+  /m\.map\.encoding = THREE\.LinearEncoding/.test(farm) &&
+  /This is why the rocks were black/.test(farm) &&
+  !/renderer\.outputEncoding/.test(farm));
+chk('FM6: one table says where everything is, so a building moves by one number',
+  /var ISLE = \{/.test(farm) &&
+  ['barn','mill','dairy','well','pond','orchard','road','start']
+    .every(function(k){ return new RegExp("\\b"+k+":").test(farm.slice(farm.indexOf('var ISLE = {'), farm.indexOf('var ISLE = {')+900)); }));
+chk('FM6: the barn, the well, the pond, the bridge, the road and the paths are all built here',
+  ['buildBarn','buildWell','buildPond','buildBridge','buildRoad','steppingStones','buildPad','buildLogPile']
+    .every(function(f){ return new RegExp("function "+f+"\\(").test(farm); }));
+chk('FM6: the mill and the dairy have their pads waiting, for FM7 to build on',
+  /\[ISLE\.mill, ISLE\.dairy\]\.forEach/.test(farm));
+chk('FM6: the shop is IN THE BARN — walk to the doors and it opens',
+  /function atTheBarn/.test(farm) && /var BARN_DOOR=/.test(farm) &&
+  /atTheBarn\(dt\);/.test(farm) && /tapUnlock\(\); openShop\(\);/.test(farm));
+chk('FM6: it closes itself behind her, but only ever its OWN card',
+  /if\(barnOpened && shopCardEl && shopCardEl\.classList\.contains\("up"\) && !REVEAL\.on\)\{/.test(farm) &&
+  /barnOpened=true; tapUnlock\(\); openShop\(\);/.test(farm));
+chk('FM6: the coop and the cow pen kept their FM4 gates through the move',
+  /buildPen\(COOP_C\.x, COOP_C\.z, 4\.6, 4\.2, "W"\)/.test(farm) &&
+  /buildPen\(PEN_C\.x, PEN_C\.z, 4\.8, 3\.6, "W"\)/.test(farm));
+chk('FM6: still no timer, no countdown, no emoji, after a whole island of it',
+  !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
+chk('FM6: the door on the Play page carries the new cache-bust',
+  /skyflyer-farm\.html\?v=fm6b/.test(jsxF));
 
 console.log(ok ? '\nALL CHECKS PASSED' : '\nSOME CHECKS FAILED');
 process.exit(ok?0:1);
