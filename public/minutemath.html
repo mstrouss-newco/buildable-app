@@ -193,7 +193,23 @@ main{flex:1;padding:0 16px 40px}
      font-weight:600;font-size:27px;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 #C9BB9C}
 .key:active{transform:translateY(2px);box-shadow:none}
 .key.act{background:#EFE8FF;color:var(--purple)}
-.key.next{background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;box-shadow:0 3px 0 #23854F}
+.key.back{background:#F1ECE1}
+/* Session MM15 - Next is OFF the keypad.
+   Mike: "he is missing a ton because he fat fingers it." The green arrow used
+   to sit in the bottom row right beside 0, so a thumb reaching for a digit
+   submitted a half-typed answer and there was no way back. Now the digit grid
+   contains only digits, delete and back, and Next is a separate full-width bar
+   with real space above it. A mis-tap inside the grid can no longer advance
+   anything, and the key where the arrow used to be is now BACK, so the most
+   likely fat-finger is also the undo. */
+.nextbar{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:330px;
+         margin:16px auto 0;border:none;border-radius:18px;height:62px;cursor:pointer;
+         background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;box-shadow:0 3px 0 #23854F;
+         font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px}
+.nextbar:active{transform:translateY(2px);box-shadow:none}
+.nextbar[disabled]{background:#DCD2BC;color:#95886F;box-shadow:0 3px 0 #C7BAA0;cursor:default}
+.quietrow{display:flex;gap:18px;max-width:330px;margin:0 auto;justify-content:center}
+.quietrow .small{width:auto;padding:16px 10px 8px}
 .key svg{width:27px;height:27px;vertical-align:middle}
 
 .score{text-align:center;padding:22px 18px}
@@ -307,6 +323,15 @@ main{flex:1;padding:0 16px 40px}
         <p class="help" style="margin:10px 0 0">Turn it off and the clock still runs, it just stays hidden. Kinder if a ticking timer makes you freeze.</p>
       </div>
 
+      <div class="card">
+        <div class="lab">Sound</div>
+        <div class="toggle"><span class="name">Music</span>
+          <button class="sw on" id="swMusic"><i></i></button></div>
+        <div class="toggle"><span class="name">Sound effects</span>
+          <button class="sw on" id="swSfx"><i></i></button></div>
+        <p class="help" style="margin:10px 0 0">Music is a quiet bed that keeps playing. Sound effects are the little ticks when you answer. The speaker at the top turns everything off at once.</p>
+      </div>
+
       <button class="big go" id="start">START</button>
       <button class="big ghost" id="toPrint">Print this sheet on paper</button>
       <button class="big ghost" id="toKey">Print sheet and answer key</button>
@@ -331,18 +356,26 @@ main{flex:1;padding:0 16px 40px}
         <svg class="mark tick" viewBox="0 0 24 24" fill="none" stroke="#2FAE68" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l6 6L20 6"/></svg>
         <svg class="mark dip" viewBox="0 0 24 24" fill="none" stroke="#D99B12" stroke-width="3.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
       </div>
-      <button class="stepback" id="stepback">Back one</button>
       <div class="pad">
         <div class="keys">
           <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
           <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
           <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
-          <button class="key act" data-k="del"><svg viewBox="0 0 24 24" fill="none" stroke="#7C5CFC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9L3 12z"/><path d="M12 10l4 4M16 10l-4 4"/></svg></button>
+          <button class="key act" data-k="del" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="#7C5CFC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9L3 12z"/><path d="M12 10l4 4M16 10l-4 4"/></svg></button>
           <button class="key" data-k="0">0</button>
-          <button class="key next" data-k="next"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg></button>
+          <button class="key back" data-k="back" aria-label="Back one"><svg viewBox="0 0 24 24" fill="none" stroke="#6E6684" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
         </div>
-        <button class="big ghost" id="finish" style="max-width:330px;margin:10px auto 0;display:block">I'm done</button>
-        <button class="small" id="bail">New quiz</button>
+        <button class="nextbar" data-k="next" id="nextBar">
+          <span>Next</span>
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg>
+        </button>
+        <!-- Session MM15 - "I'm done" ENDS the quiz, so it is deliberately not a
+             big button sitting directly under Next. Same fat-finger problem as
+             the green arrow, one step further along. -->
+        <div class="quietrow">
+          <button class="small" id="finish">I'm done</button>
+          <button class="small" id="bail">New quiz</button>
+        </div>
       </div>
     </main>
   </section>
@@ -420,7 +453,22 @@ var SCORE_KEY = "bk_minutemath_v1:" + (KID ? KID.id : "guest");
    a kid who will not open the app again.
    NOTE the minute_ prefix: mm_ already belongs to Music Maker. */
 var BA = window.BuildableAudio || null;
-var MUSIC_URL = "/api/chess-music?world=ocean";
+
+/* ---- the music playlist (Session MM13) -----------------------------------
+   Mike: "the songs start over every minute, and most quizzes are over 1 min."
+   He was hearing a real thing: EVERY music clip in this app is generated at
+   music_length_ms 30000, so a single looped track restarts twice a minute and
+   a three-minute quiz hears the same thirty seconds six times.
+
+   So this is a playlist, not a track: the calm end of the shared music library
+   (/api/library-music), shuffled per run, with the next one fading up as the
+   last fades out. Two and a half minutes of music before anything repeats, and
+   because the changeover is a crossfade there is no hard restart to hear even
+   when it does. No new generation: every one of these already exists and is
+   cached, so the playlist costs nothing. */
+var TRACKS = ["spa_heartbeat_warm","lofi_chill_upbeat","spa_heartbeat_bright",
+              "adventure_meadow_soft","sky_open_air"];
+var MUS_VOL = 0.34, FADE = 2.5;
 /* MEASURED, not guessed. Decoded off the live endpoint with an
    OfflineAudioContext: minute_right came back peaking at 0.041 and
    minute_wrong at 0.027, which is silence on a tablet in a kitchen. Generated
@@ -434,9 +482,58 @@ if(BA && BA.configure){
   BA.configure({ sfxBase:"/api/sfx?s=", peaks:SFX_PEAKS, map:{
     select:"minute_right", error:"minute_wrong", celebrate:"minute_done", win:"minute_best" } });
 }
-function sfx(n){ if(BA && BA.sfx && !BA.muted) try{ BA.sfx(n); }catch(e){} }
-function musicOn(){ if(!BA) return; try{ BA.unlock(); if(!BA._mmSet){ BA.setMusic(MUSIC_URL); BA._mmSet=true; } BA.playMusic(); }catch(e){} }
-function musicOff(){ if(BA && BA.stopMusic) try{ BA.stopMusic(); }catch(e){} }
+function sfx(n){ if(S.sfx && BA && BA.sfx && !BA.muted) try{ BA.sfx(n); }catch(e){} }
+var mus = { order:[], at:0, cur:null, nxt:null, tick:null, running:false };
+function trackUrl(n){ return "/api/library-music?name=" + encodeURIComponent(n); }
+function shuffled(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function makeTrack(name, vol){
+  var el = new Audio(trackUrl(name));
+  el.preload = "auto"; el.volume = vol; el.loop = false;
+  var pr = el.play(); if(pr && pr.catch) pr.catch(function(){});
+  return el;
+}
+function nextName(){ mus.at = (mus.at + 1) % mus.order.length; return mus.order[mus.at]; }
+function musicOn(){
+  if(!S.music || (BA && BA.muted)) return;
+  if(BA) try{ BA.unlock(); }catch(e){}
+  if(mus.running){ if(mus.cur) { var r=mus.cur.play(); if(r&&r.catch) r.catch(function(){}); } return; }
+  mus.running = true;
+  mus.order = shuffled(TRACKS); mus.at = 0;
+  mus.cur = makeTrack(mus.order[0], 0);
+  mus.nxt = null;
+  clearInterval(mus.tick);
+  mus.tick = setInterval(musicStep, 120);
+}
+/* One timer runs the whole thing: fade the new one up, the old one down, and
+   start the next when the current has FADE seconds left. Checking the clock
+   rather than waiting for "ended" is what makes it a crossfade instead of a
+   gap, and it survives a track whose duration the browser has not read yet. */
+function musicStep(){
+  if(!mus.running) return;
+  var c = mus.cur;
+  if(c){
+    if(c.volume < MUS_VOL) c.volume = Math.min(MUS_VOL, c.volume + MUS_VOL*0.12);
+    var d = c.duration;
+    if(!mus.nxt && isFinite(d) && d > 0 && (d - c.currentTime) <= FADE){
+      mus.nxt = makeTrack(nextName(), 0);
+    }
+  }
+  if(mus.nxt){
+    var step = MUS_VOL / (FADE * 8);
+    mus.nxt.volume = Math.min(MUS_VOL, mus.nxt.volume + step);
+    if(c) c.volume = Math.max(0, c.volume - step);
+    if(!c || c.ended || c.volume <= 0.001){
+      if(c){ try{ c.pause(); }catch(e){} }
+      mus.cur = mus.nxt; mus.nxt = null;
+    }
+  }
+}
+function musicOff(){
+  mus.running = false;
+  clearInterval(mus.tick); mus.tick = null;
+  [mus.cur, mus.nxt].forEach(function(el){ if(el) try{ el.pause(); }catch(e){} });
+  mus.cur = null; mus.nxt = null;
+}
 var SPK_ON  = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#7C5CFC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 8.5a5 5 0 010 7"/></svg>';
 var SPK_OFF = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#A79BBE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>';
 function paintSound(){
@@ -446,7 +543,8 @@ function paintSound(){
 function toggleSound(){
   if(!BA || !BA.toggleMute) return;
   BA.unlock(); BA.toggleMute();
-  if(!BA.muted && !$("s-sheet").classList.contains("hidden")) musicOn();
+  if(BA.muted) musicOff();
+  else if(!$("s-sheet").classList.contains("hidden")) musicOn();
   paintSound();
 }
 
@@ -458,14 +556,19 @@ var SIGN   = { add:"+", sub:"−", mul:"×", div:"÷" };
    thing they never ticked, and the picker would not let them reach zero
    anyway. Now it starts empty, it may BE empty, and START simply will not go
    until something is chosen. */
-var S = { ops:[], lo:1, hi:19, focus:null, timer:180, count:50, showTimer:true };
+var S = { ops:[], lo:1, hi:19, focus:null, timer:180, count:50, showTimer:true, music:true, sfx:true };
+try{
+  var savedSound = JSON.parse(localStorage.getItem("bk_minutemath_sound_v1")||"null");
+  if(savedSound){ if(savedSound.music===false) S.music=false; if(savedSound.sfx===false) S.sfx=false; }
+}catch(e){}
+function saveSound(){ try{ localStorage.setItem("bk_minutemath_sound_v1", JSON.stringify({music:S.music, sfx:S.sfx})); }catch(e){} }
 var RUN = null;                 /* the settings the current run is using */
 var probs = [], cur = 0, left = 60, tick = null, started = 0, hideClock = false;
 
 function $(id){ return document.getElementById(id); }
 function show(id){ ["s-setup","s-sheet","s-done","s-scores"].forEach(function(s){
     $(s).classList.toggle("hidden", s!==id); }); window.scrollTo(0,0); }
-function opsLabel(ops){ return ops.map(function(o){ return OPNAME[o]; }).join(" and "); }
+function opsLabel(ops){ return ops.map(function(o){ return OPNAME[o]; }).join(" & "); }
 function fmt(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
 function timeWord(t){ return t===0?"no timer":(t<60?t+" seconds":(t/60)+" minute"+(t>60?"s":"")); }
 
@@ -545,7 +648,9 @@ function rebuildFocus(){
   $("focusVal").textContent=focusLabel();
 }
 var TIMES=[{label:"Off",v:0},{label:"30s",v:30},{label:"1 min",v:60},{label:"2 min",v:120},{label:"3 min",v:180},{label:"5 min",v:300}];
-var COUNTS=[10,20,30,50,80,100].map(function(n){ return {label:String(n),v:n}; });
+/* 40 is in here because school fact tests are very often 40, which is also
+   the Sprint default on the practice page. */
+var COUNTS=[10,20,30,40,50,80,100].map(function(n){ return {label:String(n),v:n}; });
 
 rebuildFocus();
 chipRow($("timers"), TIMES, function(it){ return it.v===S.timer; }, function(it){ S.timer=it.v; });
@@ -583,6 +688,13 @@ function wireSw(id, get, set){
   var b=$(id); b.onclick=function(){ set(!get()); b.classList.toggle("on", get()); };
 }
 wireSw("swTimer", function(){return S.showTimer;}, function(v){S.showTimer=v;});
+wireSw("swMusic", function(){return S.music;}, function(v){
+  S.music=v; saveSound();
+  if(!v) musicOff(); else if(!$("s-sheet").classList.contains("hidden")) musicOn();
+});
+wireSw("swSfx", function(){return S.sfx;}, function(v){ S.sfx=v; saveSound(); });
+$("swMusic").classList.toggle("on", S.music);
+$("swSfx").classList.toggle("on", S.sfx);
 
 /* ---------- problem making ---------- */
 function rnd(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
@@ -607,16 +719,34 @@ function setCur(i){
   $("fb").textContent = p.b;
   $("count").textContent = (cur+1)+" of "+probs.length;
   $("progBar").style.width = Math.round(((cur)/probs.length)*100)+"%";
-  $("stepback").style.visibility = cur===0 ? "hidden" : "visible";
   paintBoxes();
 }
 function paintBoxes(){
   $("fbox").innerHTML = probs[cur].typed + '<span class="caret"></span>';
+  var go = $("nextBar"); if(go) go.disabled = probs[cur].typed === "";
+  var bk = document.querySelector('.key.back'); if(bk) bk.disabled = cur === 0;
 }
 /* Leaving a card tells you how it went, then moves on. You cannot go back and
    change it, so the score stays honest; you just are not left guessing for a
    whole minute. A blank is not marked at all - skipping is allowed. */
-var marking = false;
+/* Session MM14 - the mark, and what a FAST kid does during it.
+   Mike's son reported it "skipping a bunch of questions". Two separate faults,
+   both reproduced against the live page:
+
+   1. The green arrow moved on from an empty card. It is the biggest, greenest,
+      most inviting thing on the screen, so a kid taps it. Eight taps took card
+      1 to card 9 and left 49 blanks, which score zero and teach nothing.
+      Fixed: the arrow is dead until there is an answer in the box.
+
+   2. Anything typed during the brief right/wrong mark was thrown away, so a
+      kid who answered and immediately started the next one watched their first
+      digits vanish. Fixed: those presses are HELD and land on the next card
+      the moment it appears. Never drop a kid's input in a timed test.
+
+   The mark is also shorter now. It used to be 260ms on every card; across
+   fifty cards that is thirteen seconds of a three-minute run spent watching
+   an animation. */
+var marking = false, pending = "";
 function leaveCard(then){
   var p = probs[cur], card = $("flash");
   card.classList.remove("wasright","waswrong");
@@ -624,21 +754,33 @@ function leaveCard(then){
   var ok = parseInt(p.typed,10) === p.ans;
   card.classList.add(ok ? "wasright" : "waswrong");
   sfx(ok ? "select" : "error");
-  marking = true;
-  setTimeout(function(){ marking = false; card.classList.remove("wasright","waswrong"); then(); }, ok ? 260 : 420);
+  marking = true; pending = "";
+  setTimeout(function(){
+    marking = false;
+    card.classList.remove("wasright","waswrong");
+    then();
+    if(pending){ probs[cur].typed = pending.slice(0,3); pending = ""; paintBoxes(); }
+  }, ok ? 170 : 380);
 }
 function key(k){
-  if(marking) return;
+  if(marking){
+    /* held, not dropped */
+    if(k === "del") pending = pending.slice(0,-1);
+    else if(k !== "next" && pending.length < 3) pending += k;
+    return;
+  }
   var p=probs[cur];
   if(k==="del"){ p.typed=p.typed.slice(0,-1); paintBoxes(); return; }
+  if(k==="back"){ if(cur>0) setCur(cur-1); return; }
   if(k==="next"){
+    if(p.typed === "") return;          // no skipping: answer it or run the clock out
     leaveCard(function(){ if(cur<probs.length-1) setCur(cur+1); else finish(); });
     return;
   }
   if(p.typed.length<3) p.typed+=k;
   paintBoxes();
 }
-[].forEach.call(document.querySelectorAll(".key"),function(b){ b.onclick=function(){ key(b.dataset.k); }; });
+[].forEach.call(document.querySelectorAll(".key, .nextbar"),function(b){ b.onclick=function(){ key(b.dataset.k); }; });
 document.addEventListener("keydown",function(e){
   if($("s-sheet").classList.contains("hidden")) return;
   if(/^[0-9]$/.test(e.key)) key(e.key);
@@ -815,7 +957,6 @@ $("retry").onclick=function(){
 $("finish").onclick=function(){ clearInterval(tick); finish(); };
 $("quit").onclick=function(){ clearInterval(tick); musicOff(); show("s-setup"); };
 $("bail").onclick=function(){ clearInterval(tick); musicOff(); show("s-setup"); };
-$("stepback").onclick=function(){ if(!marking) setCur(cur-1); };
 $("focusHead").onclick=function(){ this.parentNode.classList.toggle("open"); };
 $("soundBtn").onclick=toggleSound;
 $("soundBtn2").onclick=toggleSound;
