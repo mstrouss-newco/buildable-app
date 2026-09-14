@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#FDFAF5">
 <title>Lessons - Buildable Kids</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +18,17 @@
     --grad:linear-gradient(90deg,#7C5CFC 0%,#FF6B6B 100%);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* Session MM12 - no double-tap zoom.
+   iOS waits after every tap to see whether a second one is coming, and if it
+   is, it zooms. On a keypad a kid hammers, that means the page lurches in and
+   out at random. touch-action:manipulation keeps scrolling and pinch, and
+   drops ONLY the double-tap zoom. Not touch-action:none, which the canvas
+   games use: this page has to scroll. user-scalable=no in the viewport covers
+   the standalone home-screen app, where iOS does honour it. */
+*{touch-action:manipulation}
+html,body{-webkit-text-size-adjust:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+
   html,body{margin:0;padding:0}
   body{background:var(--cream);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;
        font-weight:800;-webkit-font-smoothing:antialiased;overflow-x:hidden}
