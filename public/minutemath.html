@@ -651,8 +651,12 @@ function paintScores(){
     var row = all[k];
     h += '<div class="card"><div class="lab">' + (row.label || k) + '</div>' +
          '<div class="runs">';
+    var bestShown = false;
     row.runs.forEach(function(r){
-      var best = r.n === row.best;
+      // Only the FIRST run that hit the best score wears the crown. Two runs of
+      // ten out of ten should not both claim to be the best ever.
+      var best = !bestShown && r.n === row.best;
+      if(best) bestShown = true;
       h += '<div class="run' + (best ? " top" : "") + '">' +
              '<span class="sc">' + r.n + '</span>' +
              '<span class="when">' + (best ? "Best ever, " : "") +
