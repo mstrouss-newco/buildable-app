@@ -192,6 +192,43 @@ export async function signInParent(email, password) {
   return data;
 }
 
+/* ---- SY1: passwordless email sign-in --------------------------------------
+   A grown-up types their email, gets a six-digit code, types it back. No
+   password to invent, forget, or mistype into an invisible white-on-white box,
+   and nothing to reset later. The email is the thread that ties a parent's
+   phone to their kid's iPad, which is the whole reason this exists.
+
+   Deliberately the OTP flow and NOT a magic link: a link has to come back to an
+   allow-listed redirect URL, which is exactly the thing that ate three of
+   Mike's wife's sign-ins during onboarding. A code is typed into the page the
+   grown-up is already looking at, so no redirect is involved at all.
+
+   DEPENDS ON ONE DASHBOARD SETTING: Supabase decides link-vs-code purely by
+   what the Magic Link email template contains. With {{ .ConfirmationURL }} it
+   sends a link; with {{ .Token }} it sends the six digits. If codes ever stop
+   arriving and a link shows up instead, that template is what changed. */
+export async function sendEmailCode(email) {
+  await authFetch("otp", {
+    method: "POST",
+    body: JSON.stringify({ email: String(email || "").trim(), create_user: true }),
+  });
+  return { sent: true };
+}
+
+export async function verifyEmailCode(email, code) {
+  const data = await authFetch("verify", {
+    method: "POST",
+    body: JSON.stringify({
+      type: "email",
+      email: String(email || "").trim(),
+      token: String(code || "").replace(/\D/g, ""),
+    }),
+  });
+  saveSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+  await ensureParentRow();
+  return data;
+}
+
 export function signOut() {
   saveSession(null);
   setActiveKid(null);

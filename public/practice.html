@@ -350,6 +350,7 @@
 
 <script src="/buildable-practice.js"></script>
 <script src="/buildable-audio.js"></script>
+<script src="/buildable-sync.js"></script>
 <script>
 (function(){
   "use strict";
@@ -370,6 +371,48 @@
   var KID = activeKid();
   var KID_ID = KID ? KID.id : null;
   var KID_GRADE = (KID && KID.grade) ? String(KID.grade) : null;
+
+  /* ---- SY1: the boxes follow the kid, not the device ----------------------
+     Practice state lived only in this browser, so a kid's Leitner boxes were
+     stranded on whichever device they happened to use, and a parent on their
+     own phone saw an empty Practice card. The server merges per item, keeping
+     whichever record is NEWER, which is the only honest answer when the same
+     word was practised in two places. All of it is silent: if the network is
+     gone the local copy simply carries on, which is what a kid mid-session
+     needs. */
+  function syncSlice(){
+    try{ return BP.kidState(BP.loadState(), KID_ID); }catch(e){ return null; }
+  }
+  function syncUp(now){
+    if(!window.BuildableSync || !KID_ID) return;
+    var get = function(){ return { practice: syncSlice() }; };
+    if(now) BuildableSync.push(KID_ID, get());
+    else BuildableSync.queue(KID_ID, get, 4000);   // a whole session is one request
+  }
+  function syncDown(done){
+    if(!window.BuildableSync || !KID_ID){ if(done) done(); return; }
+    BuildableSync.pull(KID_ID).then(function(data){
+      try{
+        if(data && data.practice && data.practice.decks){
+          var state = BP.loadState(), kid = BP.kidState(state, KID_ID);
+          kid.decks = kid.decks || {};
+          var theirs = data.practice.decks;
+          Object.keys(theirs).forEach(function(d){
+            var mine = kid.decks[d] = kid.decks[d] || { items:{} };
+            mine.items = mine.items || {};
+            var ti = (theirs[d] || {}).items || {};
+            Object.keys(ti).forEach(function(id){
+              var a = mine.items[id], b = ti[id];
+              if(!a || (b && (b.last||0) > (a.last||0))) mine.items[id] = b;
+            });
+          });
+          BP.saveState(state);
+        }
+      }catch(e){}
+      syncUp(true);          // teach the server whatever only this device had
+      if(done) done();
+    });
+  }
 
   var $ = function(id){ return document.getElementById(id); };
   var SECTIONS = ["home","placeintro","placedone","intro","ask","done","sprintintro","sprint","sprintdone"];
@@ -782,6 +825,7 @@
   }
   function finishPlacement(){
     var res = BP.applyPlacement(KID_ID, place.decks, place.answers);
+    syncUp(true);
     var landing = place.decks.filter(function(d){ return d.id === res.landingDeckId; })[0];
     subject = "reading";
     deckId = res.landingDeckId;
@@ -999,6 +1043,7 @@
     var beforeBox = BP.clampBox(((BP.deckState(before, KID_ID, deck.id).items || {})[item.id] || {}).box || 1);
     var rec = BP.recordAnswer(KID_ID, deck.id, item.id, { correct: correct, ms: ms });
     if(rec.box > beforeBox && run.moved.indexOf(BP.answerOf(item)) === -1) run.moved.push(BP.answerOf(item));
+    syncUp(false);
     // A brand new bird: this item just reached box 5 for the first time.
     if(rec.box >= BP.MAX_BOX && beforeBox < BP.MAX_BOX){ run.newBirds += 1; cue("bird"); }
     run.answers.push({ itemId: item.id, correct: correct, ms: ms });
@@ -1246,9 +1291,15 @@
     deckId = pick ? pick.id : null;
     mode = modesFor(metaFor(deckId))[0].id;
     paintFlocks({});
+    // SY1: pull anything this device has not seen BEFORE deciding whether the
+    // kid still needs a placement check. A kid who was placed on the iPad must
+    // not be asked to do it all again on their dad's phone.
+    syncDown(function(){
+      paintAll();
+      window.PRACTICE_READY = true;
+      if(needsPlacement()){ show("placeintro"); }
+    });
     paintAll();
-    window.PRACTICE_READY = true;
-    if(needsPlacement()){ show("placeintro"); }
   }).catch(function(){
     $("homenote").textContent = "The sets would not load. Check you are online and try again.";
   });

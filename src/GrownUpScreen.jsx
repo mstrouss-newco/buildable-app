@@ -28,7 +28,7 @@
 // -------------------------------------------------------------
 import { useState, useEffect } from "react";
 import {
-  isConfigured, isSignedIn, signInParent, signUpParent, signOut,
+  isConfigured, isSignedIn, signInParent, signUpParent, signOut, sendEmailCode, verifyEmailCode,
   listKidProfiles, createKidProfile, renameKidProfile, deleteKidProfile,
   setActiveKid, getActiveKid,
   listFamilyProjects, assignProjectToKid,
@@ -176,6 +176,10 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
   const [mode, setMode] = useState("signup"); // 'signup' | 'signin'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // SY1: passwordless email. "email" = waiting for an address, "code" = a code
+  // has been sent and we are waiting for the six digits.
+  const [emailStage, setEmailStage] = useState("email");
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -346,7 +350,39 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
     catch (err) { setError((err && err.message) || "Could not start Google sign-in"); }
   }
 
-  // ---- email auth ----
+  // ---- SY1: passwordless email ----
+  async function handleSendCode(e) {
+    e.preventDefault();
+    setError(null); setNotice(null); setBusy(true);
+    try {
+      await sendEmailCode(email.trim());
+      setEmailStage("code");
+      setNotice("We sent a 6-digit code to " + email.trim() + ". It expires in about an hour.");
+    } catch (err) {
+      const m = (err && err.message) || "Could not send the code";
+      setError(/rate limit/i.test(m)
+        ? "That was a lot of tries. Give it a minute, then ask for another code."
+        : m);
+    } finally { setBusy(false); }
+  }
+
+  async function handleVerifyCode(e) {
+    e.preventDefault();
+    setError(null); setNotice(null); setBusy(true);
+    try {
+      await verifyEmailCode(email.trim(), code);
+      setSignedIn(true);
+      setStep("picker");
+      setCode(""); setEmailStage("email");
+    } catch (err) {
+      const m = (err && err.message) || "That code did not work";
+      setError(/expired|invalid/i.test(m)
+        ? "That code has expired or does not match. Ask for a new one."
+        : m);
+    } finally { setBusy(false); }
+  }
+
+  // ---- email auth (legacy password path, kept for existing accounts) ----
   async function handleAuth(e) {
     e.preventDefault();
     setError(null); setNotice(null); setBusy(true);
@@ -541,29 +577,48 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
               <GoogleG /> <span style={{ marginLeft: 10 }}>Continue with Google</span>
             </button>
             <div style={S.divider}><span style={S.dividerText}>or use email</span></div>
-            <form onSubmit={handleAuth} style={S.form}>
-              <label style={S.label}>Email
-                <input className="bk-light" style={S.input} type="email" autoComplete="email" required
-                  value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com" />
-              </label>
-              <label style={S.label}>Password
-                <input className="bk-light" style={S.input} type="password"
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                  required minLength={6} value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters" />
-              </label>
-              {error && <p style={S.error}>{error}</p>}
-              {notice && <p style={S.noticeBox}>{notice}</p>}
-              <button type="submit" style={S.primaryBig} disabled={busy}>
-                {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
-              </button>
-            </form>
-            <button style={S.linkBtn}
-              onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(null); setNotice(null); }}>
-              {mode === "signup" ? "Already have an account? Sign in" : "Need an account? Create one"}
-            </button>
+
+            {/* SY1: no password, ever. An address, then a six-digit code.
+                Nothing to invent, nothing to forget, and no link that has to
+                find its way back to an allow-listed URL. */}
+            {emailStage === "email" ? (
+              <form onSubmit={handleSendCode} style={S.form}>
+                <label style={S.label}>Email
+                  <input className="bk-light" style={S.input} type="email" autoComplete="email" required
+                    value={email} onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com" />
+                </label>
+                {error && <p style={S.error}>{error}</p>}
+                {notice && <p style={S.noticeBox}>{notice}</p>}
+                <button type="submit" style={S.primaryBig} disabled={busy || !configured}>
+                  {busy ? "Sending…" : "Email me a code"}
+                </button>
+                <p style={S.fineprint}>
+                  No password. We email you a 6-digit code and you type it in. Your
+                  email is what lets you see your kids' progress from any device.
+                </p>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyCode} style={S.form}>
+                <label style={S.label}>6-digit code
+                  <input className="bk-light" style={{ ...S.input, letterSpacing: "0.35em",
+                        fontSize: 22, textAlign: "center" }}
+                    type="text" inputMode="numeric" autoComplete="one-time-code"
+                    required maxLength={6} value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                    placeholder="000000" />
+                </label>
+                {error && <p style={S.error}>{error}</p>}
+                {notice && <p style={S.noticeBox}>{notice}</p>}
+                <button type="submit" style={S.primaryBig} disabled={busy || code.length < 6}>
+                  {busy ? "Checking…" : "Sign in"}
+                </button>
+                <button type="button" style={S.linkBtn} disabled={busy}
+                  onClick={() => { setEmailStage("email"); setCode(""); setError(null); setNotice(null); }}>
+                  Use a different email, or send a new code
+                </button>
+              </form>
+            )}
           </div>
         </>
       )}
@@ -766,6 +821,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
             {kids.length > 0 && <LearningProgressCard />}
 
             {kids.length > 0 && <PracticeCard kids={kids} />}
+
+            {kids.length > 0 && <ClaimProgressCard kids={kids} />}
 
             {kids.length > 0 && <MinuteMathCard kids={kids} />}
 
@@ -1094,6 +1151,33 @@ function PracticeCard({ kids }) {
   const [decks, setDecks] = useState(null);
   const [tick, setTick] = useState(0);
   const bump = () => setTick((t) => t + 1);
+  const { remote, loading: pulling } = useKidProgress(kids);
+
+  /* SY1 - fold whatever the server knows into this browser's copy before
+     rendering, so a parent on their own phone sees the boxes their kid filled
+     in on the iPad. Newer record wins per item, exactly as the server merges.
+     Local-only is left alone, so nothing this device knows is lost. */
+  useEffect(() => {
+    if (!BP || pulling) return;
+    let changed = false;
+    const state = BP.loadState();
+    for (const kid of kids) {
+      const theirs = (remote[kid.id] || {}).practice;
+      if (!theirs || !theirs.decks) continue;
+      const mine = BP.kidState(state, kid.id);
+      mine.decks = mine.decks || {};
+      for (const d of Object.keys(theirs.decks)) {
+        const dst = (mine.decks[d] = mine.decks[d] || { items: {} });
+        dst.items = dst.items || {};
+        const src = theirs.decks[d].items || {};
+        for (const id of Object.keys(src)) {
+          const a = dst.items[id], b = src[id];
+          if (!a || (b && (b.last || 0) > (a.last || 0))) { dst.items[id] = b; changed = true; }
+        }
+      }
+    }
+    if (changed) { BP.saveState(state); bump(); }
+  }, [BP, pulling, remote, kids]);
 
   useEffect(() => {
     let alive = true;
@@ -1237,6 +1321,115 @@ function PracticeCard({ kids }) {
 }
 
 // ---------------------------------------------------------------------------
+// SY1 - "this device has practice saved under a guest".
+//
+// THE PROBLEM THIS SOLVES, which is bigger than syncing. Progress is filed
+// against whichever kid profile was selected at the time, and a device that
+// never signed in uses a GUEST profile whose id exists nowhere but that
+// browser. Mike's own Chrome was running as a guest called "Player" while his
+// account had five real profiles. So a kid can practise for a week, a parent
+// can sign in, and the dashboard still shows nothing, because the work is
+// filed under a child who does not exist as far as the account is concerned.
+//
+// Syncing alone does not fix that; it would faithfully sync an orphan. So when
+// this device holds progress under an id the account does not own, we say so
+// and offer to move it onto a real child. One tap, and it is theirs.
+// ---------------------------------------------------------------------------
+const CLAIMED_KEY = "bk_progress_claimed_v1";
+
+function orphanProgress(kids) {
+  const mine = new Set((kids || []).map((k) => k.id));
+  let claimed = [];
+  try { claimed = JSON.parse(localStorage.getItem(CLAIMED_KEY) || "[]") || []; } catch { claimed = []; }
+  const found = {};
+
+  // Minute Math keeps one key per kid.
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith("bk_minutemath_v1:")) continue;
+      const id = key.slice("bk_minutemath_v1:".length);
+      if (mine.has(id) || claimed.includes(id)) continue;
+      let blob = null;
+      try { blob = JSON.parse(localStorage.getItem(key) || "null"); } catch { blob = null; }
+      const sheets = blob ? Object.values(blob).reduce((n, r) => n + ((r && r.runs) || []).length, 0) : 0;
+      if (sheets > 0) (found[id] = found[id] || {}).minutemath = blob;
+      if (sheets > 0) found[id].sheets = sheets;
+    }
+  } catch { /* storage blocked: nothing to offer */ }
+
+  // Practice keeps every kid inside one blob.
+  try {
+    const st = JSON.parse(localStorage.getItem("bk_practice_v1") || "null");
+    for (const id of Object.keys((st && st.kids) || {})) {
+      if (mine.has(id) || claimed.includes(id)) continue;
+      const slice = st.kids[id];
+      const items = Object.values((slice && slice.decks) || {})
+        .reduce((n, d) => n + Object.keys((d && d.items) || {}).length, 0);
+      if (items > 0) { (found[id] = found[id] || {}).practice = slice; found[id].items = items; }
+    }
+  } catch { /* same */ }
+
+  return Object.entries(found).map(([id, v]) => ({ id, ...v }));
+}
+
+function ClaimProgressCard({ kids }) {
+  const [orphans, setOrphans] = useState(() => orphanProgress(kids));
+  const [busy, setBusy] = useState(null);
+  const [done, setDone] = useState(null);
+  if (!orphans.length) return null;
+
+  async function claim(orphan, kid) {
+    setBusy(orphan.id);
+    try {
+      await fetch("/api/kid-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kidProfileId: kid.id,
+          data: { minutemath: orphan.minutemath || {}, practice: orphan.practice || {} },
+        }),
+      });
+      let claimed = [];
+      try { claimed = JSON.parse(localStorage.getItem(CLAIMED_KEY) || "[]") || []; } catch { claimed = []; }
+      claimed.push(orphan.id);
+      try { localStorage.setItem(CLAIMED_KEY, JSON.stringify(claimed)); } catch { /* ignore */ }
+      setDone(kid.display_name || "your child");
+      setOrphans(orphanProgress(kids));
+    } catch (e) { /* silent: the card simply stays */ }
+    finally { setBusy(null); }
+  }
+
+  return (
+    <div style={LP.wrap}>
+      <div style={LP.title}>Practice saved on this device</div>
+      <div style={LP.sub}>
+        Someone practised here before choosing a name, so this work is not attached to
+        any of your children yet. Say who it belongs to and it moves across, and it will
+        show up wherever you sign in.
+      </div>
+      {done && <div style={LP.empty}>Moved across to {done}.</div>}
+      {orphans.map((o) => (
+        <div key={o.id} style={PC.row}>
+          <div style={PC.meta}>
+            {[o.sheets ? o.sheets + (o.sheets === 1 ? " Minute Math sheet" : " Minute Math sheets") : null,
+              o.items ? o.items + (o.items === 1 ? " practice word or fact" : " practice words and facts") : null]
+              .filter(Boolean).join(" and ")}
+          </div>
+          <div style={PC.btnRow}>
+            {kids.map((kid) => (
+              <button key={kid.id} style={PC.btn} disabled={busy === o.id}
+                onClick={() => claim(o, kid)}>
+                {busy === o.id ? "Moving…" : "This is " + (kid.display_name || "them")}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Session MM2 - the Minute Math row, one per kid.
 //
 // Minute Math is the timed facts sheet at /minutemath. It writes its scores
@@ -1250,6 +1443,53 @@ function PracticeCard({ kids }) {
 // instead of "34 out of 50", which is the difference between a number and
 // something a parent can actually do tonight.
 // ---------------------------------------------------------------------------
+/* SY1 - the dashboard reads the SERVER, not just this browser.
+   This is the whole point of the sync: a parent is, almost by definition, not
+   holding the device their kid practises on. Local is still merged in, because
+   the grown-up might be on the family iPad, and because a device that has been
+   offline should still show what it knows. */
+function useKidProgress(kids) {
+  const [remote, setRemote] = useState({});
+  const [loading, setLoading] = useState(true);
+  const ids = (kids || []).map((k) => k.id).join(",");
+  useEffect(() => {
+    let alive = true;
+    const list = ids ? ids.split(",") : [];
+    if (!list.length) { setLoading(false); return; }
+    setLoading(true);
+    Promise.all(list.map((id) =>
+      fetch("/api/kid-progress?kidProfileId=" + encodeURIComponent(id), { cache: "no-store" })
+        .then((r) => r.json())
+        .then((j) => [id, (j && j.ok && j.data) || null])
+        .catch(() => [id, null])
+    )).then((pairs) => {
+      if (!alive) return;
+      setRemote(Object.fromEntries(pairs));
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [ids]);
+  return { remote, loading };
+}
+
+// Same rules the server uses: runs are deduped on their timestamp, best is
+// recomputed from what survives, missed facts merge by max.
+function mmCombine(local, remote) {
+  const out = {};
+  for (const k of new Set([...Object.keys(local || {}), ...Object.keys(remote || {})])) {
+    const a = (local || {})[k] || {}, b = (remote || {})[k] || {};
+    const seen = new Map();
+    for (const r of [...(a.runs || []), ...(b.runs || [])]) if (r && r.at) seen.set(r.at, r);
+    const runs = [...seen.values()].sort((x, y) => y.at - x.at);
+    const misses = {};
+    for (const src of [a.misses || {}, b.misses || {}])
+      for (const f of Object.keys(src)) misses[f] = Math.max(misses[f] || 0, src[f] || 0);
+    out[k] = { label: b.label || a.label || k, runs, misses,
+               best: runs.reduce((m, r) => Math.max(m, r.n || 0), 0) };
+  }
+  return out;
+}
+
 function mmRead(kidId) {
   try {
     const raw = localStorage.getItem("bk_minutemath_v1:" + kidId);
@@ -1287,25 +1527,29 @@ function mmWhen(ms) {
 }
 
 function MinuteMathCard({ kids }) {
-  const anyData = kids.some((k) => Object.keys(mmRead(k.id)).length > 0);
+  const { remote, loading } = useKidProgress(kids);
+  const dataFor = (kid) => mmCombine(mmRead(kid.id), (remote[kid.id] || {}).minutemath);
+  const anyData = kids.some((k) => Object.keys(dataFor(k)).length > 0);
 
   return (
     <div style={LP.wrap}>
       <div style={LP.title}>Minute Math</div>
       <div style={LP.sub}>
-        The timed facts sheet, the same shape school sends home. Scores are kept on this
-        device, so what you see here is what was practiced here.
+        The timed facts sheet, the same shape school sends home. Scores follow your kid
+        to any device they sign in on, so this is everything they have done.
       </div>
 
-      {!anyData && (
+      {loading && <div style={LP.empty}>Looking for their scores…</div>}
+
+      {!loading && !anyData && (
         <div style={LP.empty}>
-          Nothing yet. As soon as a sheet is finished on this device, the scores and the
-          tricky numbers show up here.
+          Nothing yet. As soon as your kid finishes a sheet, on any device, the scores
+          and the tricky numbers show up here.
         </div>
       )}
 
-      {kids.map((kid) => {
-        const store = mmRead(kid.id);
+      {!loading && kids.map((kid) => {
+        const store = dataFor(kid);
         const rows = Object.keys(store)
           .map((k) => store[k])
           .filter((r) => r && (r.runs || []).length)

@@ -459,6 +459,7 @@ main{flex:1;padding:0 16px 40px}
 
 
 <script src="/buildable-audio.js"></script>
+<script src="/buildable-sync.js"></script>
 <script src="/buildable-gamenav.js"></script>
 <script>
 /* ---- shell awareness (the lessons.html / weather.html pattern) ---- */
@@ -627,6 +628,43 @@ function bestFor(cfg){ var r=readScores()[runKey(cfg)]; return r ? r.best : 0; }
    ("7x8": 3) on the same row as the scores, so the parent card can name the
    numbers a kid is slowest on without any server or any account. */
 function factId(p){ return p.a + SIGN[p.op] + p.b; }
+/* SY1 - after every finished sheet, hand the scores to the server so the same
+   kid sees them on any device and a grown-up sees them at all. The server
+   merges rather than overwrites, and it hands back the merged result, so a
+   device that has been offline picks up whatever the other one did. All of it
+   is silent: a failure just leaves the local copy in charge. */
+function syncUp(){
+  if(!window.BuildableSync || !KID) return;
+  BuildableSync.push(KID.id, { minutemath: readScores() }).then(function(merged){
+    if(merged && merged.minutemath) writeScores(merged.minutemath);
+  });
+}
+function syncDown(){
+  if(!window.BuildableSync || !KID) return;
+  BuildableSync.pull(KID.id).then(function(data){
+    if(!data || !data.minutemath) return;
+    // Anything the server knows that this device does not, adopt. Then push
+    // straight back so the server learns whatever only this device had.
+    var mine = readScores(), theirs = data.minutemath, changed = false;
+    Object.keys(theirs).forEach(function(k){
+      if(!mine[k]){ mine[k] = theirs[k]; changed = true; return; }
+      var a = mine[k], b = theirs[k], seen = {};
+      (a.runs||[]).concat(b.runs||[]).forEach(function(r){ if(r && r.at) seen[r.at] = r; });
+      var runs = Object.keys(seen).map(function(t){ return seen[t]; })
+                   .sort(function(x,y){ return y.at - x.at; }).slice(0,25);
+      if(runs.length !== (a.runs||[]).length) changed = true;
+      a.runs = runs;
+      a.best = runs.reduce(function(m,r){ return Math.max(m, r.n||0); }, 0);
+      a.misses = a.misses || {};
+      Object.keys(b.misses||{}).forEach(function(f){
+        a.misses[f] = Math.max(a.misses[f]||0, b.misses[f]||0);
+      });
+    });
+    if(changed) writeScores(mine);
+    syncUp();
+  });
+}
+
 function saveRun(cfg, right, total, secs, missList){
   var all=readScores(), k=runKey(cfg);
   var row=all[k]||{ label:runLabel(cfg), best:0, runs:[], misses:{} };
@@ -882,7 +920,7 @@ function finish(){
      history, and the missed-fact tally still feeds the grown-ups' tricky
      numbers - it just is not shouted at the kid mid-celebration. */
   var pb = RUN.practice ? 0 : bestFor(RUN);
-  if(!RUN.practice) saveRun(RUN, right, probs.length, secs, missed);
+  if(!RUN.practice){ saveRun(RUN, right, probs.length, secs, missed); syncUp(); }
   $("retry").classList.toggle("hidden", missed.length===0);
   $("retry").textContent = "Practice the "+missed.length+" you missed";
   drawBirds(right);
@@ -1053,6 +1091,7 @@ $("mergeNo").onclick=function(){
 };
 offerMerge();
 syncStart();
+syncDown();
 $("setupBack").onclick=function(){ location.href = "/lessons"; };
 </script>
 </body>
