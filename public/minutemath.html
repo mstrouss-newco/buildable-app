@@ -136,6 +136,14 @@ main{flex:1;padding:0 16px 40px}
       box-shadow:0 2px 4px rgba(0,0,0,.18)}
 .sw.on{background:var(--mint)}
 .sw.on i{left:27px}
+/* Session MM2 - the "try the 7s next" nudge. One chip, easy to ignore: the
+   settings stay wide open and nothing is ever locked to it. */
+.nudge{background:#FFF7E3;border:2px solid #F3E2B6;border-radius:20px;padding:15px 16px;text-align:center;margin-bottom:14px}
+.nudge p{margin:0 0 11px;font-size:15px;color:#5C4A18;line-height:1.35}
+.nudge button{border:none;border-radius:14px;padding:13px 22px;background:var(--gold);color:#5C4A18;
+              font-family:'Fredoka',sans-serif;font-weight:600;font-size:17px;cursor:pointer;
+              box-shadow:0 3px 0 #D99B12}
+.nudge button:active{transform:translateY(2px);box-shadow:none}
 .hidden{display:none!important}
 .mocknote{max-width:560px;margin:0 auto;padding:14px 16px 26px;font-size:13px;color:var(--sub);font-weight:800;line-height:1.5}
 </style>
@@ -154,6 +162,12 @@ main{flex:1;padding:0 16px 40px}
       <div class="buddyrow">
         <svg class="buddyart" viewBox="0 0 64 64"><circle cx="32" cy="34" r="22" fill="#FFC542" stroke="#D99B12" stroke-width="3"/><circle cx="25" cy="31" r="3.4" fill="#0F0E17"/><circle cx="39" cy="31" r="3.4" fill="#0F0E17"/><path d="M25 41c4 4 10 4 14 0" stroke="#0F0E17" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M32 12l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L32 28.5l-6.5 3.4 1.3-7.2-5.3-5.1 7.3-1z" fill="#FF6B6B" stroke="#D6453F" stroke-width="2" stroke-linejoin="round"/></svg>
         <div class="bubble">Set it up how you like, then answer as many as you can before the time runs out.</div>
+      </div>
+
+      <div class="nudge hidden" id="mergeCard">
+        <p id="mergeText"></p>
+        <button id="mergeYes">Yes, keep them</button>
+        <button class="small" id="mergeNo" style="color:#8A7550">No thanks</button>
       </div>
 
       <div class="card">
@@ -247,6 +261,7 @@ main{flex:1;padding:0 16px 40px}
         </div>
         <div class="best" id="rBest"></div>
       </div>
+      <div class="nudge hidden" id="nudge"><p id="nudgeText"></p><button id="nudgeBtn"></button></div>
       <button class="big" id="retry">Practise the ones you missed</button>
       <div class="lab" style="padding-left:4px;margin-top:18px">Your sheet</div>
       <div class="sheet" id="marked"></div>
@@ -302,17 +317,46 @@ function timeWord(t){ return t===0?"no timer":(t<60?t+" seconds":(t/60)+" minute
    1-minute sheet against a 5-minute one does not, so they never share a row. */
 function readScores(){ try{ return JSON.parse(localStorage.getItem(SCORE_KEY)||"{}")||{}; }catch(e){ return {}; } }
 function writeScores(o){ try{ localStorage.setItem(SCORE_KEY, JSON.stringify(o)); }catch(e){} }
-function runKey(cfg){ return cfg.ops.slice().sort().join("+")+"|"+cfg.lo+"-"+cfg.hi+"|"+cfg.timer; }
-function runLabel(cfg){ return opsLabel(cfg.ops)+", "+cfg.lo+" to "+cfg.hi+", "+timeWord(cfg.timer); }
+function focusOf(cfg){ return (cfg.focus===null || cfg.focus===undefined) ? "" : cfg.focus; }
+function runKey(cfg){ return cfg.ops.slice().sort().join("+")+"|"+cfg.lo+"-"+cfg.hi+"|"+focusOf(cfg)+"|"+cfg.timer; }
+function runLabel(cfg){
+  /* A sheet of nothing but 7s is a different job from a mixed sheet, so it gets
+     its own row and its own best. Beating yourself only means something when
+     the two sheets are the same shape. */
+  var where = focusOf(cfg)==="" ? cfg.lo+" to "+cfg.hi : "just the "+cfg.focus+"s";
+  return opsLabel(cfg.ops)+", "+where+", "+timeWord(cfg.timer);
+}
 function bestFor(cfg){ var r=readScores()[runKey(cfg)]; return r ? r.best : 0; }
-function saveRun(cfg, right, total, secs){
+
+/* Session MM2 - remember WHICH facts go wrong, not just how many.
+   "34 out of 50" tells a grown-up nothing they can act on. "7x8 keeps going
+   wrong" tells them what to do tonight. Stored as a plain tally of fact ids
+   ("7x8": 3) on the same row as the scores, so the parent card can name the
+   numbers a kid is slowest on without any server or any account. */
+function factId(p){ return p.a + SIGN[p.op] + p.b; }
+function saveRun(cfg, right, total, secs, missList){
   var all=readScores(), k=runKey(cfg);
-  var row=all[k]||{ label:runLabel(cfg), best:0, runs:[] };
+  var row=all[k]||{ label:runLabel(cfg), best:0, runs:[], misses:{} };
   row.label=runLabel(cfg);
+  row.ops=cfg.ops.slice().sort().join("+");
+  if(!row.misses) row.misses={};
+  (missList||[]).forEach(function(p){ var id=factId(p); row.misses[id]=(row.misses[id]||0)+1; });
   row.runs.unshift({ n:right, total:total, secs:secs, at:Date.now() });
   row.runs=row.runs.slice(0,10);
   if(right>row.best) row.best=right;
   all[k]=row; writeScores(all);
+}
+
+/* Which single number is dragging THIS sheet down. Counts how often each
+   number appears in the problems that went wrong, and only speaks up if one
+   of them turns up at least twice - otherwise it is noise, not a pattern. */
+function suggestNumber(missList){
+  if(!missList || missList.length < 3) return null;
+  var t = {};
+  missList.forEach(function(p){ t[p.a]=(t[p.a]||0)+1; t[p.b]=(t[p.b]||0)+1; });
+  var pick=null, high=0;
+  Object.keys(t).forEach(function(k){ if(t[k]>high){ high=t[k]; pick=parseInt(k,10); } });
+  return high >= 2 ? pick : null;
 }
 function whenWord(ms){
   var d=Math.floor((Date.now()-ms)/86400000);
@@ -492,7 +536,7 @@ function finish(){
   $("rMsg").textContent = right>=probs.length*0.8 ? "You are flying!" : right>=probs.length*0.4 ? "Nice work!" : "Good try. Go again?";
   var pb = RUN.practice ? 0 : bestFor(RUN);
   if(!RUN.practice){
-    saveRun(RUN, right, probs.length, secs);
+    saveRun(RUN, right, probs.length, secs, missed);
     $("rBest").textContent = (pb===0) ? "First go at "+runLabel(RUN)+". That is the score to beat."
       : (right>pb) ? "A new best at "+opsLabel(RUN.ops)+"! Your old best was "+pb+"."
                    : "Your best at "+runLabel(RUN)+" is "+pb+".";
@@ -501,6 +545,19 @@ function finish(){
   }
   $("retry").classList.toggle("hidden", missed.length===0);
   $("retry").textContent = "Practise the "+missed.length+" you missed";
+
+  /* The nudge. Never on a practice round, never when the sheet is already
+     focused on one number, and never unless a number actually repeats. */
+  var pick = RUN.practice || (RUN.focus!==null && RUN.focus!==undefined) ? null : suggestNumber(missed);
+  $("nudge").classList.toggle("hidden", pick===null);
+  if(pick!==null){
+    $("nudgeText").textContent = "The "+pick+"s came up a few times. Want a sheet of just those?";
+    $("nudgeBtn").textContent = "Try the "+pick+"s";
+    $("nudgeBtn").onclick = function(){
+      var cfg = Object.assign({}, RUN, { focus:pick, practice:false, count:S.count, timer:S.timer });
+      startRun(cfg);
+    };
+  }
   drawBirds(right);
   show("s-done");
 }
@@ -570,6 +627,53 @@ $("change").onclick=function(){ show("s-setup"); };
 $("doneBack").onclick=function(){ show("s-setup"); };
 $("toScores").onclick=function(){ paintScores(); show("s-scores"); };
 $("scoresBack").onclick=function(){ show("s-setup"); };
+
+/* ---- Session MM2: a guest who signs in keeps the sheets they already did ----
+   Scores are saved against whichever kid is chosen, and against "guest" when
+   nobody is. A kid who practised for a week before anyone picked their profile
+   should not lose that week, so we offer to carry it across - once, with a
+   plain question, and never silently. "No thanks" is remembered so it never
+   nags again. */
+var GUEST_KEY = "bk_minutemath_v1:guest";
+var MERGE_ASKED = "bk_minutemath_merge_asked_v1";
+function guestRuns(){
+  if(!KID) return 0;
+  try{
+    var g=JSON.parse(localStorage.getItem(GUEST_KEY)||"{}")||{};
+    return Object.keys(g).reduce(function(n,k){ return n + ((g[k].runs||[]).length); },0);
+  }catch(e){ return 0; }
+}
+function offerMerge(){
+  if(!KID) return;
+  try{ if(localStorage.getItem(MERGE_ASKED)) return; }catch(e){ return; }
+  var n = guestRuns();
+  if(n<1) return;
+  $("mergeText").textContent = "You did "+n+" sheet"+(n===1?"":"s")+" before picking a name. Keep "+
+                               (n===1?"it":"them")+" with "+(KID.name || KID.display_name || "you")+"?";
+  $("mergeCard").classList.remove("hidden");
+}
+$("mergeYes").onclick=function(){
+  try{
+    var g=JSON.parse(localStorage.getItem(GUEST_KEY)||"{}")||{}, mine=readScores();
+    Object.keys(g).forEach(function(k){
+      var from=g[k], to=mine[k];
+      if(!to){ mine[k]=from; return; }
+      to.runs=(to.runs||[]).concat(from.runs||[]).sort(function(a,b){ return b.at-a.at; }).slice(0,10);
+      to.best=Math.max(to.best||0, from.best||0);
+      to.misses=to.misses||{};
+      Object.keys(from.misses||{}).forEach(function(f){ to.misses[f]=(to.misses[f]||0)+from.misses[f]; });
+    });
+    writeScores(mine);
+    localStorage.removeItem(GUEST_KEY);
+    localStorage.setItem(MERGE_ASKED,"1");
+  }catch(e){}
+  $("mergeCard").classList.add("hidden");
+};
+$("mergeNo").onclick=function(){
+  try{ localStorage.setItem(MERGE_ASKED,"1"); }catch(e){}
+  $("mergeCard").classList.add("hidden");
+};
+offerMerge();
 $("setupBack").onclick=function(){ location.href = "/lessons"; };
 </script>
 <script src="/buildable-gamenav.js"></script>
