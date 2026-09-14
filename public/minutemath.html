@@ -157,7 +157,10 @@ main{flex:1;padding:0 16px 40px}
    The whole 50 still exist and still get marked together at the end. */
 .prog{height:9px;border-radius:6px;background:#EBE3D3;overflow:hidden;margin:4px 0 7px}
 .prog i{display:block;height:100%;background:var(--grad);transition:width .2s}
-.count{text-align:center;font-size:13px;font-weight:900;color:var(--sub);letter-spacing:.04em;margin-bottom:12px}
+.countrow{display:flex;align-items:center;margin-bottom:12px}
+.count{flex:1;text-align:center;font-size:13px;font-weight:900;color:var(--sub);letter-spacing:.04em;
+       padding-left:64px}
+.countrow .small{width:auto;flex:none;padding:4px 0 4px 10px;font-size:12.5px;min-width:54px;text-align:right}
 
 .flash{background:#fff;border:2px solid var(--line);border-radius:26px;padding:26px 26px 22px;
        box-shadow:0 8px 22px rgba(15,14,23,.07);max-width:330px;margin:0 auto;text-align:right}
@@ -208,8 +211,6 @@ main{flex:1;padding:0 16px 40px}
          font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px}
 .nextbar:active{transform:translateY(2px);box-shadow:none}
 .nextbar[disabled]{background:#DCD2BC;color:#95886F;box-shadow:0 3px 0 #C7BAA0;cursor:default}
-.quietrow{display:flex;gap:18px;max-width:330px;margin:0 auto;justify-content:center}
-.quietrow .small{width:auto;padding:16px 10px 8px}
 .key svg{width:27px;height:27px;vertical-align:middle}
 
 .score{text-align:center;padding:22px 18px}
@@ -348,7 +349,15 @@ main{flex:1;padding:0 16px 40px}
     </div>
     <main>
       <div class="prog"><i id="progBar" style="width:0%"></i></div>
-      <div class="count" id="count">1 of 50</div>
+      <!-- Session MM16 - Mike: "I don't think you should have the I'm done and
+           new quiz next to the entry pad either." Right: everything that ENDS
+           a quiz now lives at the top of the screen, nowhere near the thumbs.
+           New quiz is gone from here altogether, because the back arrow in the
+           top bar already does it. -->
+      <div class="countrow">
+        <span class="count" id="count">1 of 50</span>
+        <button class="small" id="finish">I'm done</button>
+      </div>
       <div class="flash" id="flash">
         <div class="fn" id="fa">0</div>
         <div class="fn"><span class="fsign" id="fsign">+</span><span id="fb">0</span></div>
@@ -369,13 +378,7 @@ main{flex:1;padding:0 16px 40px}
           <span>Next</span>
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg>
         </button>
-        <!-- Session MM15 - "I'm done" ENDS the quiz, so it is deliberately not a
-             big button sitting directly under Next. Same fat-finger problem as
-             the green arrow, one step further along. -->
-        <div class="quietrow">
-          <button class="small" id="finish">I'm done</button>
-          <button class="small" id="bail">New quiz</button>
-        </div>
+
       </div>
     </main>
   </section>
@@ -956,7 +959,6 @@ $("retry").onclick=function(){
 };
 $("finish").onclick=function(){ clearInterval(tick); finish(); };
 $("quit").onclick=function(){ clearInterval(tick); musicOff(); show("s-setup"); };
-$("bail").onclick=function(){ clearInterval(tick); musicOff(); show("s-setup"); };
 $("focusHead").onclick=function(){ this.parentNode.classList.toggle("open"); };
 $("soundBtn").onclick=toggleSound;
 $("soundBtn2").onclick=toggleSound;
