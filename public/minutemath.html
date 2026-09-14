@@ -110,15 +110,43 @@ main{flex:1;padding:0 16px 40px}
 .prob .fix{font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:var(--sub);padding-right:6px;
            height:17px;line-height:17px}
 
-.pad{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(253,250,245,0) 0%,var(--cream) 22%);
-     padding:14px 0 10px;margin-top:12px}
-.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:330px;margin:0 auto}
-.key{border:2px solid var(--line);background:#fff;border-radius:16px;height:54px;font-family:'Fredoka',sans-serif;
-     font-weight:600;font-size:26px;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 #E7DFCF}
+/* Session MM5 - ONE CARD AT A TIME.
+   Mike: "it's hard for them to see all 50, and then the entrypad at the bottom,
+   it's confusing." Fifty problems on a phone is a wall, and a kid then has to
+   work out which of the fifty the keypad is even talking to. So the sheet is
+   dealt out like flashcards: one big problem, one big answer well, one keypad
+   directly underneath it, and a count so nobody feels lost in the deck.
+   The whole 50 still exist and still get marked together at the end. */
+.prog{height:9px;border-radius:6px;background:#EBE3D3;overflow:hidden;margin:4px 0 7px}
+.prog i{display:block;height:100%;background:var(--grad);transition:width .2s}
+.count{text-align:center;font-size:13px;font-weight:900;color:var(--sub);letter-spacing:.04em;margin-bottom:12px}
+
+.flash{background:#fff;border:2px solid var(--line);border-radius:26px;padding:26px 26px 22px;
+       box-shadow:0 8px 22px rgba(15,14,23,.07);max-width:330px;margin:0 auto;text-align:right}
+.flash .fn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:52px;line-height:1.1;padding-right:10px}
+.flash .fn .fsign{float:left;color:var(--sub)}
+.flash .fbox{margin-top:10px;border-top:4px solid var(--ink);height:72px;display:flex;align-items:center;
+             justify-content:flex-end;padding-right:10px;font-family:'Fredoka',sans-serif;font-weight:600;
+             font-size:52px;color:var(--purple);background:#F1EAFF;border-radius:0 0 16px 16px;
+             box-shadow:inset 0 3px 7px rgba(124,92,252,.16)}
+.flash .fbox:empty::after{content:"";width:46px;height:5px;border-radius:3px;background:#C3B2FF}
+.flash .fbox .caret{display:inline-block;width:4px;height:44px;background:var(--purple);margin-left:3px;
+                    animation:blink 1s steps(2) infinite}
+.stepback{display:block;margin:12px auto 0;background:none;border:none;color:var(--sub);font-size:13.5px;
+          font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
+
+/* The keypad gets its OWN surface. White keys on a cream page read as more
+   page; white keys on a sand panel read as keys. */
+.pad{position:sticky;bottom:0;background:#EBE1CD;border-top:2px solid #DCCFB4;
+     border-radius:26px 26px 0 0;padding:14px 14px 12px;margin:18px -16px 0;
+     box-shadow:0 -6px 18px rgba(15,14,23,.07)}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;max-width:330px;margin:0 auto}
+.key{border:none;background:#fff;border-radius:16px;height:58px;font-family:'Fredoka',sans-serif;
+     font-weight:600;font-size:27px;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 #C9BB9C}
 .key:active{transform:translateY(2px);box-shadow:none}
-.key.act{background:#F1ECFF;color:var(--purple)}
-.key.next{background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;border-color:#2FAE68;box-shadow:0 3px 0 #23854F}
-.key svg{width:26px;height:26px;vertical-align:middle}
+.key.act{background:#EFE8FF;color:var(--purple)}
+.key.next{background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;box-shadow:0 3px 0 #23854F}
+.key svg{width:27px;height:27px;vertical-align:middle}
 
 .score{text-align:center;padding:22px 18px}
 .score .num{font-family:'Fredoka',sans-serif;font-weight:600;font-size:64px;line-height:1;
@@ -238,7 +266,14 @@ main{flex:1;padding:0 16px 40px}
       <div class="timepill" id="clock">1:00</div>
     </div>
     <main>
-      <div class="sheet" id="sheet"></div>
+      <div class="prog"><i id="progBar" style="width:0%"></i></div>
+      <div class="count" id="count">1 of 50</div>
+      <div class="flash" id="flash">
+        <div class="fn" id="fa">0</div>
+        <div class="fn"><span class="fsign" id="fsign">+</span><span id="fb">0</span></div>
+        <div class="fbox" id="fbox"></div>
+      </div>
+      <button class="stepback" id="stepback">Back one</button>
       <div class="pad">
         <div class="keys">
           <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
@@ -466,28 +501,26 @@ function makeProblem(cfg){
 function makeSet(cfg,n){ var out=[]; for(var i=0;i<n;i++) out.push(makeProblem(cfg)); return out; }
 
 /* ---------- the sheet ---------- */
-function renderSheet(){
-  var el=$("sheet"); el.innerHTML="";
-  probs.forEach(function(p,i){
-    var d=document.createElement("div"); d.className="prob";
-    d.innerHTML='<div class="n">'+p.a+'</div><div class="n"><span class="sign">'+SIGN[p.op]+'</span>'+p.b+'</div><div class="box"></div>';
-    d.onclick=function(){ setCur(i); };
-    el.appendChild(d);
-  });
-  setCur(0);
+function renderSheet(){ setCur(0); }
+function setCur(i){
+  cur = Math.max(0, Math.min(probs.length-1, i));
+  var p = probs[cur];
+  $("fa").textContent = p.a;
+  $("fsign").textContent = SIGN[p.op];
+  $("fb").textContent = p.b;
+  $("count").textContent = (cur+1)+" of "+probs.length;
+  $("progBar").style.width = Math.round(((cur)/probs.length)*100)+"%";
+  $("stepback").style.visibility = cur===0 ? "hidden" : "visible";
+  paintBoxes();
 }
-function setCur(i){ cur=i; [].forEach.call($("sheet").children,function(c,n){ c.classList.toggle("on",n===i); }); paintBoxes(); }
 function paintBoxes(){
-  [].forEach.call($("sheet").children,function(c,n){
-    c.querySelector(".box").innerHTML = probs[n].typed + (n===cur?'<span class="caret"></span>':'');
-  });
+  $("fbox").innerHTML = probs[cur].typed + '<span class="caret"></span>';
 }
 function key(k){
   var p=probs[cur];
   if(k==="del"){ p.typed=p.typed.slice(0,-1); paintBoxes(); return; }
   if(k==="next"){
-    if(cur<probs.length-1){ setCur(cur+1); $("sheet").children[cur].scrollIntoView({block:"center",behavior:"smooth"}); }
-    else finish();
+    if(cur<probs.length-1) setCur(cur+1); else finish();
     return;
   }
   if(p.typed.length<3) p.typed+=k;
@@ -643,6 +676,7 @@ $("retry").onclick=function(){
 $("finish").onclick=function(){ clearInterval(tick); finish(); };
 $("quit").onclick=function(){ clearInterval(tick); show("s-setup"); };
 $("bail").onclick=function(){ clearInterval(tick); show("s-setup"); };
+$("stepback").onclick=function(){ setCur(cur-1); };
 $("change").onclick=function(){ show("s-setup"); };
 $("doneBack").onclick=function(){ show("s-setup"); };
 $("toScores").onclick=function(){ paintScores(); show("s-scores"); };
