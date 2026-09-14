@@ -628,6 +628,46 @@ function bestFor(cfg){ var r=readScores()[runKey(cfg)]; return r ? r.best : 0; }
    ("7x8": 3) on the same row as the scores, so the parent card can name the
    numbers a kid is slowest on without any server or any account. */
 function factId(p){ return p.a + SIGN[p.op] + p.b; }
+/* RESTORED. These two were collateral damage from a careless index-based
+   deletion when the "try the 7s" nudge was removed: the cut ran from the
+   comment above suggestNumber to the next blank line, which swallowed
+   whenWord and paintScores with it. The Your Scores button has been opening an
+   empty page ever since, silently, because a missing function only shows up
+   when someone actually taps the thing. Every screen gets clicked in the tests
+   now. */
+function whenWord(ms){
+  var d = Math.floor((Date.now() - ms) / 86400000);
+  if(d <= 0) return "Today";
+  if(d === 1) return "Yesterday";
+  if(d < 7) return d + " days ago";
+  return new Date(ms).toLocaleDateString();
+}
+function paintScores(){
+  var all = readScores(), keys = Object.keys(all), h = "";
+  keys = keys.filter(function(k){ return ((all[k].runs) || []).length; });
+  if(!keys.length){
+    h = '<div class="card"><p class="help" style="margin:0">No scores yet. ' +
+        'Finish a quiz and it shows up here, so you can try to beat yourself next time.</p></div>';
+  }
+  keys.sort(function(a,b){ return ((all[b].runs[0]||{}).at||0) - ((all[a].runs[0]||{}).at||0); });
+  keys.forEach(function(k){
+    var row = all[k];
+    h += '<div class="card"><div class="lab">' + (row.label || k) + '</div>' +
+         '<div class="runs">';
+    row.runs.forEach(function(r){
+      var best = r.n === row.best;
+      h += '<div class="run' + (best ? " top" : "") + '">' +
+             '<span class="sc">' + r.n + '</span>' +
+             '<span class="when">' + (best ? "Best ever, " : "") +
+               whenWord(r.at).toLowerCase().replace(/^t/, "T") +
+               ', out of ' + r.total + '</span>' +
+           '</div>';
+    });
+    h += '</div></div>';
+  });
+  document.getElementById("scoreList").innerHTML = h;
+}
+
 /* SY1 - after every finished sheet, hand the scores to the server so the same
    kid sees them on any device and a grown-up sees them at all. The server
    merges rather than overwrites, and it hands back the merged result, so a
