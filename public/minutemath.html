@@ -381,8 +381,17 @@ var SCORE_KEY = "bk_minutemath_v1:" + (KID ? KID.id : "guest");
    NOTE the minute_ prefix: mm_ already belongs to Music Maker. */
 var BA = window.BuildableAudio || null;
 var MUSIC_URL = "/api/chess-music?world=ocean";
+/* MEASURED, not guessed. Decoded off the live endpoint with an
+   OfflineAudioContext: minute_right came back peaking at 0.041 and
+   minute_wrong at 0.027, which is silence on a tablet in a kitchen. Generated
+   clips arrive at wildly different levels, so every game declares the level
+   its clips should SIT at and the buffer is scaled once on decode.
+   The ladder matters as much as the numbers: "right" fires up to fifty times
+   in a minute so it sits lowest, and the finish sounds happen once so they
+   sit high. That ladder is most of what stops a drill feeling abrasive. */
+var SFX_PEAKS = { minute_right:0.26, minute_wrong:0.34, minute_done:0.80, minute_best:0.90 };
 if(BA && BA.configure){
-  BA.configure({ sfxBase:"/api/sfx?s=", map:{
+  BA.configure({ sfxBase:"/api/sfx?s=", peaks:SFX_PEAKS, map:{
     select:"minute_right", error:"minute_wrong", celebrate:"minute_done", win:"minute_best" } });
 }
 function sfx(n){ if(BA && BA.sfx && !BA.muted) try{ BA.sfx(n); }catch(e){} }
