@@ -980,6 +980,14 @@
       "dest": "/minutemath.html"
     },
     {
+      "src": "/minutemath.webmanifest",
+      "dest": "/minutemath.webmanifest",
+      "headers": {
+        "content-type": "application/manifest+json",
+        "cache-control": "no-cache, must-revalidate"
+      }
+    },
+    {
       "src": "/g/favicon.ico",
       "dest": "/favicon.ico",
       "headers": {
