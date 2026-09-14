@@ -86,16 +86,27 @@ main{flex:1;padding:0 16px 40px}
 .prob.on{border-color:var(--purple);background:#F7F4FF;box-shadow:0 0 0 3px rgba(124,92,252,.15)}
 .prob .n{font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;line-height:1.15;padding-right:6px}
 .prob .n .sign{float:left;padding-left:4px;color:var(--sub)}
-.prob .box{margin-top:4px;border-top:2px solid var(--ink);height:30px;display:flex;align-items:center;
-           justify-content:flex-end;padding-right:6px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px}
-.prob.on .box{border-top-color:var(--purple)}
-.prob .box .caret{display:inline-block;width:2px;height:20px;background:var(--purple);margin-left:2px;
+/* Session MM4 - the answer well.
+   On paper the answer space is blank, and blank works because the rest of the
+   page is ink on white. On screen a white box on a white card is invisible:
+   the kid cannot see where the typing goes, and their own answer looks exactly
+   like the printed problem above it. So the well gets its own sunken tint, and
+   the number the KID types is purple while the problem stays black. */
+.prob .box{margin-top:5px;border-top:2.5px solid var(--ink);height:34px;display:flex;align-items:center;
+           justify-content:flex-end;padding-right:7px;font-family:'Fredoka',sans-serif;font-weight:600;
+           font-size:22px;color:var(--purple);background:#F4EFE4;border-radius:0 0 10px 10px;
+           box-shadow:inset 0 2px 4px rgba(15,14,23,.08)}
+.prob.on .box{border-top-color:var(--purple);background:#EBE3FF;box-shadow:inset 0 2px 5px rgba(124,92,252,.18)}
+/* An empty well shows a faint writing tick, so a blank never reads as finished. */
+.prob .box:empty::after{content:"";width:24px;height:3px;border-radius:2px;background:#D6CAB2}
+.prob.on .box:empty::after{background:#BFAEFF}
+.prob .box .caret{display:inline-block;width:2.5px;height:22px;background:var(--purple);margin-left:2px;
                   animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:0}}
 .prob.right{background:#E9F9F0;border-color:var(--mint)}
-.prob.right .box{color:#1C7A45;border-top-color:var(--mint)}
+.prob.right .box{color:#1C7A45;border-top-color:var(--mint);background:#D5F2E2;box-shadow:none}
 .prob.wrong{background:#FFF4F4;border-color:#FFC9C9}
-.prob.wrong .box{color:#C0392B;border-top-color:#FFC9C9;text-decoration:line-through}
+.prob.wrong .box{color:#C0392B;border-top-color:#FFC9C9;background:#FFE1E1;box-shadow:none;text-decoration:line-through}
 .prob .fix{font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:var(--sub);padding-right:6px;
            height:17px;line-height:17px}
 
@@ -268,7 +279,7 @@ main{flex:1;padding:0 16px 40px}
            scroll past fifty problems to press "go again" is the single thing
            that made this feel like it had no way back. -->
       <button class="big go" id="again">Go again</button>
-      <button class="big ghost" id="retry">Practise the ones you missed</button>
+      <button class="big ghost" id="retry">Practice the ones you missed</button>
       <button class="big ghost" id="change">Change the sheet</button>
 
       <div class="lab" style="padding-left:4px;margin-top:22px">Your sheet</div>
@@ -551,7 +562,7 @@ function finish(){
     $("rBest").textContent = "Practice round, this one does not count towards your best.";
   }
   $("retry").classList.toggle("hidden", missed.length===0);
-  $("retry").textContent = "Practise the "+missed.length+" you missed";
+  $("retry").textContent = "Practice the "+missed.length+" you missed";
 
   /* The nudge. Never on a practice round, never when the sheet is already
      focused on one number, and never unless a number actually repeats. */
@@ -639,7 +650,7 @@ $("scoresBack").onclick=function(){ show("s-setup"); };
 
 /* ---- Session MM2: a guest who signs in keeps the sheets they already did ----
    Scores are saved against whichever kid is chosen, and against "guest" when
-   nobody is. A kid who practised for a week before anyone picked their profile
+   nobody is. A kid who practiced for a week before anyone picked their profile
    should not lose that week, so we offer to carry it across - once, with a
    plain question, and never silently. "No thanks" is remembered so it never
    nags again. */

@@ -1240,7 +1240,7 @@ function PracticeCard({ kids }) {
 // Session MM2 - the Minute Math row, one per kid.
 //
 // Minute Math is the timed facts sheet at /minutemath. It writes its scores
-// to localStorage on whatever device the kid practises on, keyed by kid id,
+// to localStorage on whatever device the kid practices on, keyed by kid id,
 // exactly like the practice engine above. So this card needs NO account and
 // NO server: a grown-up on the family iPad sees everything. What an account
 // would add later is only carrying the history to a SECOND device.
@@ -1294,7 +1294,7 @@ function MinuteMathCard({ kids }) {
       <div style={LP.title}>Minute Math</div>
       <div style={LP.sub}>
         The timed facts sheet, the same shape school sends home. Scores are kept on this
-        device, so what you see here is what was practised here.
+        device, so what you see here is what was practiced here.
       </div>
 
       {!anyData && (
