@@ -195,15 +195,14 @@ main{flex:1;padding:0 16px 40px}
              font-size:clamp(26px,6.2vh,52px);color:var(--purple);background:#F1EAFF;border-radius:0 0 14px 14px;
              box-shadow:inset 0 3px 7px rgba(124,92,252,.16)}
 .flash .fbox:empty::after{content:"";width:1em;height:5px;border-radius:3px;background:#C3B2FF}
-/* Session MM7 - the card answers back. A tick or a soft dip, matched to the
-   sound, so a kid who has the volume off still gets told. It is feedback, not
-   a verdict: nothing is red, nothing shakes, and the card moves on either way. */
-.flash.wasright{border-color:var(--mint);background:#F2FCF6}
-.flash.wasright .fbox{background:#DCF5E7;color:#1C7A45;box-shadow:inset 0 3px 7px rgba(47,174,104,.18)}
-.flash.waswrong{border-color:#F3E2B6;background:#FFFBF2}
-.flash.waswrong .fbox{background:#FCEFD5;color:#9A6A00;box-shadow:inset 0 3px 7px rgba(217,155,18,.18)}
-.flash .mark{position:absolute;right:16px;top:14px;width:30px;height:30px;opacity:0;transition:opacity .12s}
-.flash.wasright .mark.tick,.flash.waswrong .mark.dip{opacity:1}
+/* Session MM18 - THE QUIZ DOES NOT GRADE YOU WHILE YOU ARE TAKING IT.
+   It used to flash green or amber on every card. Mike, watching his son use
+   it: "my son keeps restarting to get a perfect score, so it's not helpful."
+   Exactly right. Telling a kid mid-quiz turns a one-minute fact test into a
+   retry-until-perfect game, and what gets measured stops being what they know
+   and becomes how many attempts they were willing to make. Marking belongs at
+   the end, where it already is, on the sheet they look over once the clock has
+   stopped. */
 .flash{position:relative}
 .flash .fbox .caret{display:inline-block;width:4px;height:.85em;background:var(--purple);margin-left:3px;
                     animation:blink 1s steps(2) infinite}
@@ -391,8 +390,6 @@ main{flex:1;padding:0 16px 40px}
           <div class="fb" id="fb">0</div>
           <div class="fbox" id="fbox"></div>
         </div>
-        <svg class="mark tick" viewBox="0 0 24 24" fill="none" stroke="#2FAE68" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l6 6L20 6"/></svg>
-        <svg class="mark dip" viewBox="0 0 24 24" fill="none" stroke="#D99B12" stroke-width="3.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
       </div></div>
       <div class="pad">
         <div class="keys">
@@ -839,55 +836,23 @@ function paintBoxes(){
 /* Leaving a card tells you how it went, then moves on. You cannot go back and
    change it, so the score stays honest; you just are not left guessing for a
    whole minute. A blank is not marked at all - skipping is allowed. */
-/* Session MM14 - the mark, and what a FAST kid does during it.
-   Mike's son reported it "skipping a bunch of questions". Two separate faults,
-   both reproduced against the live page:
-
-   1. The green arrow moved on from an empty card. It is the biggest, greenest,
-      most inviting thing on the screen, so a kid taps it. Eight taps took card
-      1 to card 9 and left 49 blanks, which score zero and teach nothing.
-      Fixed: the arrow is dead until there is an answer in the box.
-
-   2. Anything typed during the brief right/wrong mark was thrown away, so a
-      kid who answered and immediately started the next one watched their first
-      digits vanish. Fixed: those presses are HELD and land on the next card
-      the moment it appears. Never drop a kid's input in a timed test.
-
-   The mark is also shorter now. It used to be 260ms on every card; across
-   fifty cards that is thirteen seconds of a three-minute run spent watching
-   an animation. */
-var marking = false, pending = "";
-function leaveCard(then){
-  var p = probs[cur], card = $("flash");
-  card.classList.remove("wasright","waswrong");
-  if(p.typed === ""){ then(); return; }
-  var ok = parseInt(p.typed,10) === p.ans;
-  card.classList.add(ok ? "wasright" : "waswrong");
-  sfx(ok ? "select" : "error");
-  marking = true; pending = "";
-  setTimeout(function(){
-    marking = false;
-    card.classList.remove("wasright","waswrong");
-    then();
-    if(pending){ probs[cur].typed = pending.slice(0,3); pending = ""; paintBoxes(); }
-  }, ok ? 170 : 380);
-}
+/* Session MM18 - moving on is instant, and tells you nothing.
+   No pause and no verdict: one soft neutral tick so the tap feels answered,
+   then the next card. The tick is the same sound whether you were right or
+   wrong, on purpose. Losing the pause also hands the seconds back: the old
+   mark was 170ms on every card, which across fifty cards was a real slice of a
+   three-minute quiz. */
 function key(k){
-  if(marking){
-    /* held, not dropped */
-    if(k === "del") pending = pending.slice(0,-1);
-    else if(k !== "next" && pending.length < 3) pending += k;
+  var p = probs[cur];
+  if(k === "del"){ p.typed = p.typed.slice(0,-1); paintBoxes(); return; }
+  if(k === "back"){ if(cur > 0) setCur(cur-1); return; }
+  if(k === "next"){
+    if(p.typed === "") return;        // no skipping: answer it or run the clock out
+    sfx("select");
+    if(cur < probs.length - 1) setCur(cur+1); else finish();
     return;
   }
-  var p=probs[cur];
-  if(k==="del"){ p.typed=p.typed.slice(0,-1); paintBoxes(); return; }
-  if(k==="back"){ if(cur>0) setCur(cur-1); return; }
-  if(k==="next"){
-    if(p.typed === "") return;          // no skipping: answer it or run the clock out
-    leaveCard(function(){ if(cur<probs.length-1) setCur(cur+1); else finish(); });
-    return;
-  }
-  if(p.typed.length<3) p.typed+=k;
+  if(p.typed.length < 3) p.typed += k;
   paintBoxes();
 }
 [].forEach.call(document.querySelectorAll(".key, .nextbar"),function(b){ b.onclick=function(){ key(b.dataset.k); }; });
@@ -922,7 +887,6 @@ function startRun(cfg, list){
       if(left<=0){ clearInterval(tick); finish(); }
     },1000);
   }
-  $("flash").classList.remove("wasright","waswrong");
   musicOn(); paintSound();
   show("s-sheet");
 }
