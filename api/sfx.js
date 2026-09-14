@@ -446,10 +446,22 @@ const SOUNDS = {
   antcity_hatch: "Short gentle warm chime with a soft papery crackle, a tiny egg opening and something new arriving, cosy and happy, single hit, no music, no voices",
   antcity_munch: "Short soft tiny nibble crunch, a very small creature eating a crumb, light and cute, single hit, no music, no voices",
   antcity_rain:  "Short soft patter of raindrops arriving on soil with a gentle low rumble far away, calm and cosy, never alarming, no music, no voices",
+
+  // ---- Minute Math (the timed facts sheet) ----
+  // NOTE the prefix: mm_ is Music Maker's, so these are minute_*.
+  // A kid hears "right" up to fifty times in one minute, so it has to be the
+  // quietest, shortest, least eventful sound in the library, and "wrong" must
+  // never be a buzzer: a fact test is exactly where a harsh noise turns into a
+  // kid who does not want to open the app again.
+  minute_right: "A single soft warm wooden tick with one tiny bright ping on top, quick and light, the friendly sound of a correct answer, single hit, dry, no reverb, no music, no voices",
+  minute_wrong: "A single soft low rounded wooden thud with a gentle short downward two-note hum, sympathetic and mild, never harsh, never a buzzer, never comedic, single hit, dry, no music, no voices",
+  minute_done:  "Warm gentle finish celebration on soft marimba and a low rounded bell, cosy and happy, calm and unhurried, never shrill or piercing, short, no voices",
+  minute_best:  "Short warm happy fanfare on glockenspiel and soft rounded brass with a light sparkle, a personal-best moment, celebratory but never blaring or metallic, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
   ocean:15,
+  minute_right:0.5, minute_wrong:0.8, minute_done:2.5, minute_best:2.5,
   hailplink:0.5, snowhush:12,
   mm_style_pop:2.0, mm_style_disco:2.0, mm_style_rock:2.0, mm_style_country:2.0, mm_style_sleepy:2.2, mm_style_marching:2.0, mm_style_kpop:2.0, mm_style_reggae:2.0,
   mm_drums_big:1.0, mm_drums_soft:1.0, mm_drums_marching:1.1, mm_drums_bongos:1.0, mm_drums_electro:1.0,
@@ -458,6 +470,7 @@ const DURATIONS = {
   mm_sing_boy:1.2, mm_sing_girl:1.2, mm_sing_group:1.3, mm_sing_both:1.3, mm_sing_robot:1.2,
   hop_jump:0.5, hop_land:0.5, hop_coin:0.5, hop_coinrun:0.7, hop_star:0.8, hop_power:0.8,
   hop_bounce:0.5, hop_bonk:0.5, hop_stomp:0.5, hop_hurt:0.6, hop_flag:1.4, hop_win:1.8,
+  minute_right:0.45, minute_wrong:0.5, minute_done:1.3, minute_best:1.5,
   practice_right:0.5, practice_oops:0.5, practice_new:0.7, practice_bird:0.6, practice_flock:1.8,
   practice_place:0.6, practice_go:0.5, practice_time:0.8, practice_best:1.4,
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,
