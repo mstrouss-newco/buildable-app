@@ -64,6 +64,17 @@ main{flex:1;padding:0 16px 40px}
              font-weight:600;color:var(--purple);cursor:pointer}
 .step button:active{background:#F1ECFF}
 .step span{min-width:44px;text-align:center;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px}
+/* Session MM10 - a card that stays folded until you want it.
+   Thirteen number chips sitting open by default made the settings look like a
+   form. Almost nobody changes this, so it reads as one quiet line saying what
+   it is currently doing, and opens only if you tap it. */
+.foldhead{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;padding:0;
+          cursor:pointer;font-family:inherit;text-align:left}
+.foldhead .val{margin-left:auto;font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:var(--purple)}
+.foldhead .chev{flex:none;transition:transform .18s}
+.card.open .foldhead .chev{transform:rotate(180deg)}
+.foldbody{display:none;padding-top:4px}
+.card.open .foldbody{display:block}
 .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
 .chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:15px;
       font-family:'Fredoka',sans-serif;font-weight:600;cursor:pointer;color:var(--ink)}
@@ -240,19 +251,25 @@ main{flex:1;padding:0 16px 40px}
 
       <div class="card">
         <div class="lab">How big are the numbers</div>
-        <p class="help">Most school sheets use 1 to 12.</p>
+        <p class="help">1 to 12 is the classic times-table range. 1 to 19 brings in the bigger ones.</p>
         <div class="row"><span class="name">Smallest number</span>
           <div class="step"><button data-adj="lo-1">&minus;</button><span id="v-lo">1</span><button data-adj="lo+1">+</button></div>
         </div>
         <div class="row"><span class="name">Biggest number</span>
-          <div class="step"><button data-adj="hi-1">&minus;</button><span id="v-hi">12</span><button data-adj="hi+1">+</button></div>
+          <div class="step"><button data-adj="hi-1">&minus;</button><span id="v-hi">19</span><button data-adj="hi+1">+</button></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="lab">Stick to one number</div>
-        <p class="help">Pick a number and every question will use it, like a sheet of nothing but 7s. Leave it on <b>Mix them up</b> for all of them.</p>
-        <div class="chips" id="focus"></div>
+        <button type="button" class="foldhead" id="focusHead">
+          <span class="lab" style="margin:0">Stick to one number</span>
+          <span class="val" id="focusVal">Mix them up</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C5CFC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="foldbody">
+          <p class="help" style="margin-top:10px">Pick a number and every question will use it, like a sheet of nothing but 7s. Leave it on <b>Mix them up</b> for all of them.</p>
+          <div class="chips" id="focus"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -301,7 +318,7 @@ main{flex:1;padding:0 16px 40px}
           <button class="key next" data-k="next"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg></button>
         </div>
         <button class="big ghost" id="finish" style="max-width:330px;margin:10px auto 0;display:block">I'm done</button>
-        <button class="small" id="bail">Change the sheet</button>
+        <button class="small" id="bail">New quiz</button>
       </div>
     </main>
   </section>
@@ -323,16 +340,15 @@ main{flex:1;padding:0 16px 40px}
           <div class="stat"><b id="rMiss">0</b><i>Missed</i></div>
           <div class="stat"><b id="rSkip">0</b><i>Blank</i></div>
         </div>
-        <div class="best" id="rBest"></div>
+
       </div>
-      <div class="nudge hidden" id="nudge"><p id="nudgeText"></p><button id="nudgeBtn"></button></div>
 
       <!-- Session MM3: every way out sits ABOVE the marked sheet. Having to
            scroll past fifty problems to press "go again" is the single thing
            that made this feel like it had no way back. -->
       <button class="big go" id="again">Go again</button>
       <button class="big ghost" id="retry">Practice the ones you missed</button>
-      <button class="big ghost" id="change">Change the sheet</button>
+      <button class="big ghost" id="change">New quiz</button>
 
       <div class="lab" style="padding-left:4px;margin-top:22px">Your sheet</div>
       <div class="sheet" id="marked"></div>
@@ -418,7 +434,7 @@ var SIGN   = { add:"+", sub:"−", mul:"×", div:"÷" };
    thing they never ticked, and the picker would not let them reach zero
    anyway. Now it starts empty, it may BE empty, and START simply will not go
    until something is chosen. */
-var S = { ops:[], lo:1, hi:12, focus:null, timer:60, count:50, showTimer:true };
+var S = { ops:[], lo:1, hi:19, focus:null, timer:180, count:50, showTimer:true };
 var RUN = null;                 /* the settings the current run is using */
 var probs = [], cur = 0, left = 60, tick = null, started = 0, hideClock = false;
 
@@ -465,43 +481,6 @@ function saveRun(cfg, right, total, secs, missList){
   all[k]=row; writeScores(all);
 }
 
-/* Which single number is dragging THIS sheet down. Counts how often each
-   number appears in the problems that went wrong, and only speaks up if one
-   of them turns up at least twice - otherwise it is noise, not a pattern. */
-function suggestNumber(missList){
-  if(!missList || missList.length < 3) return null;
-  var t = {};
-  missList.forEach(function(p){ t[p.a]=(t[p.a]||0)+1; t[p.b]=(t[p.b]||0)+1; });
-  var pick=null, high=0;
-  Object.keys(t).forEach(function(k){ if(t[k]>high){ high=t[k]; pick=parseInt(k,10); } });
-  return high >= 2 ? pick : null;
-}
-function whenWord(ms){
-  var d=Math.floor((Date.now()-ms)/86400000);
-  if(d<=0) return "Today"; if(d===1) return "Yesterday";
-  if(d<7) return d+" days ago";
-  return new Date(ms).toLocaleDateString();
-}
-function paintScores(){
-  var all=readScores(), keys=Object.keys(all), h="";
-  if(!keys.length){
-    h='<div class="card"><p class="help" style="margin:0">No scores yet. Finish a sheet and it will show up here, so you can try to beat yourself next time.</p></div>';
-  }
-  keys.sort(function(a,b){ return (all[b].runs[0]||{}).at - (all[a].runs[0]||{}).at; });
-  keys.forEach(function(k){
-    var row=all[k];
-    h+='<div class="card"><div class="lab">'+row.label+'</div><div class="runs">';
-    row.runs.forEach(function(r,i){
-      var top = r.n===row.best && i===row.runs.indexOf(row.runs.filter(function(x){return x.n===row.best;})[0]);
-      h+='<div class="run'+(top?" top":"")+'"><span class="sc">'+r.n+'</span>'+
-         '<span class="when">'+(top?"Best ever, ":"")+whenWord(r.at).toLowerCase().replace(/^t/,"T")+
-         ', out of '+r.total+'</span></div>';
-    });
-    h+='</div></div>';
-  });
-  document.getElementById("scoreList").innerHTML=h;
-}
-
 /* ---------- chip builders ---------- */
 /* Nothing picked, nothing to start. The button says why rather than just
    sitting there dead. */
@@ -525,11 +504,26 @@ function chipRow(wrap, items, isOn, pick){
     wrap.appendChild(b);
   });
 }
-var FOCUS=[{label:"Mix them up",v:null,wide:true}]; for(var i=0;i<=12;i++) FOCUS.push({label:i+"s",v:i});
+/* The chips follow the range above rather than being a fixed 0-12 list, so a
+   sheet that goes up to 19 can be focused on the 17s. */
+function focusItems(){
+  var out=[{label:"Mix them up",v:null,wide:true}];
+  for(var i=S.lo;i<=S.hi;i++) out.push({label:i+"s",v:i});
+  return out;
+}
+function focusLabel(){ return S.focus===null ? "Mix them up" : "Just the "+S.focus+"s"; }
+function rebuildFocus(){
+  if(S.focus!==null && (S.focus<S.lo || S.focus>S.hi)) S.focus=null;
+  chipRow($("focus"), focusItems(), function(it){ return it.v===S.focus; }, function(it){
+    S.focus=it.v; $("focusVal").textContent=focusLabel();
+    $("focusHead").parentNode.classList.remove("open");
+  });
+  $("focusVal").textContent=focusLabel();
+}
 var TIMES=[{label:"Off",v:0},{label:"30s",v:30},{label:"1 min",v:60},{label:"2 min",v:120},{label:"3 min",v:180},{label:"5 min",v:300}];
 var COUNTS=[10,20,30,50,80,100].map(function(n){ return {label:String(n),v:n}; });
 
-chipRow($("focus"), FOCUS, function(it){ return it.v===S.focus; }, function(it){ S.focus=it.v; });
+rebuildFocus();
 chipRow($("timers"), TIMES, function(it){ return it.v===S.timer; }, function(it){ S.timer=it.v; });
 chipRow($("counts"), COUNTS, function(it){ return it.v===S.count; }, function(it){ S.count=it.v; });
 
@@ -554,6 +548,7 @@ function wireStep(sel, attr, target, loEl, hiEl){
       target[k]=Math.max(0,Math.min(20,target[k]+d));
       if(target.lo>target.hi){ if(k==="lo") target.hi=target.lo; else target.lo=target.hi; }
       $(loEl).textContent=target.lo; $(hiEl).textContent=target.hi;
+      if(target===S) rebuildFocus();
     };
   });
 }
@@ -680,30 +675,18 @@ function finish(){
   $("rMiss").textContent=miss;
   $("rSkip").textContent=blank;
   $("rMsg").textContent = right>=probs.length*0.8 ? "You are flying!" : right>=probs.length*0.4 ? "Nice work!" : "Good try. Go again?";
+  /* Session MM9 - the finish screen says how you did and gets out of the way.
+     It used to also announce "your best at Subtraction, 1 to 12, 1 minute is
+     31" and offer "the 3s came up a few times, want a sheet of just those?".
+     Mike cut both: at the moment a kid finishes they want to know how they did
+     and then either go again or leave, and two more paragraphs of admin is
+     not that. The data behind both is still kept - the scores screen shows the
+     history, and the missed-fact tally still feeds the grown-ups' tricky
+     numbers - it just is not shouted at the kid mid-celebration. */
   var pb = RUN.practice ? 0 : bestFor(RUN);
-  if(!RUN.practice){
-    saveRun(RUN, right, probs.length, secs, missed);
-    $("rBest").textContent = (pb===0) ? "First go at "+runLabel(RUN)+". That is the score to beat."
-      : (right>pb) ? "A new best at "+opsLabel(RUN.ops)+"! Your old best was "+pb+"."
-                   : "Your best at "+runLabel(RUN)+" is "+pb+".";
-  } else {
-    $("rBest").textContent = "Practice round, this one does not count towards your best.";
-  }
+  if(!RUN.practice) saveRun(RUN, right, probs.length, secs, missed);
   $("retry").classList.toggle("hidden", missed.length===0);
   $("retry").textContent = "Practice the "+missed.length+" you missed";
-
-  /* The nudge. Never on a practice round, never when the sheet is already
-     focused on one number, and never unless a number actually repeats. */
-  var pick = RUN.practice || (RUN.focus!==null && RUN.focus!==undefined) ? null : suggestNumber(missed);
-  $("nudge").classList.toggle("hidden", pick===null);
-  if(pick!==null){
-    $("nudgeText").textContent = "The "+pick+"s came up a few times. Want a sheet of just those?";
-    $("nudgeBtn").textContent = "Try the "+pick+"s";
-    $("nudgeBtn").onclick = function(){
-      var cfg = Object.assign({}, RUN, { focus:pick, practice:false, count:S.count, timer:S.timer });
-      startRun(cfg);
-    };
-  }
   drawBirds(right);
   musicOff();
   if(!RUN.practice) sfx(right > pb && pb > 0 ? "win" : "celebrate");
@@ -809,6 +792,7 @@ $("finish").onclick=function(){ clearInterval(tick); finish(); };
 $("quit").onclick=function(){ clearInterval(tick); musicOff(); show("s-setup"); };
 $("bail").onclick=function(){ clearInterval(tick); musicOff(); show("s-setup"); };
 $("stepback").onclick=function(){ if(!marking) setCur(cur-1); };
+$("focusHead").onclick=function(){ this.parentNode.classList.toggle("open"); };
 $("soundBtn").onclick=toggleSound;
 $("soundBtn2").onclick=toggleSound;
 paintSound();
