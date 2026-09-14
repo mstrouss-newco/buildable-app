@@ -679,6 +679,10 @@
       "dest": "/buildable-audio.js"
     },
     {
+      "src": "/buildable-sync.js",
+      "dest": "/buildable-sync.js"
+    },
+    {
       "src": "/buildable-wincard.js",
       "dest": "/buildable-wincard.js"
     },
