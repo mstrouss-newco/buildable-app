@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
-/* minutemath.html (session MM1) - a one-minute maths-facts sheet, the thing
+/* minutemath.html (session MM1) - a one-minute math-facts sheet, the thing
    school actually hands out. Modelled on Web Math Minute's online practice:
    you set it up yourself, a whole worksheet appears, the clock runs, you type
    into every box, and it marks the lot at the end.
@@ -39,7 +39,8 @@ body.in-app .top{padding-left:96px}
 main{flex:1;padding:0 16px 40px}
 
 .buddyrow{display:flex;gap:11px;align-items:flex-end;margin:2px 0 15px}
-.buddyart{width:60px;height:60px;flex:none}
+.buddyart{width:74px;height:74px;flex:none;object-fit:contain;
+          filter:drop-shadow(0 5px 10px rgba(15,14,23,.16))}
 .bubble{background:#fff;border:2px solid var(--line);border-radius:19px;border-bottom-left-radius:5px;
         padding:12px 14px;font-size:15.5px;line-height:1.35;flex:1}
 
@@ -74,6 +75,8 @@ main{flex:1;padding:0 16px 40px}
 .big:active{transform:scale(.985)}
 .big.ghost{background:#fff;color:var(--purple);border:2px solid var(--line);margin-top:10px}
 .big.go{background:linear-gradient(180deg,#57D48B,#2FAE68);font-size:22px;padding:20px}
+.big.off{background:#E7DFCF;color:#9C907C;cursor:default;box-shadow:none;font-size:17px}
+.big.ghost.off{background:#F4EFE4;color:#A3977F;border-color:#E7DFCF}
 .small{display:block;width:100%;text-align:center;background:none;border:none;color:var(--sub);font-size:13.5px;
        font-weight:900;padding:14px 0 4px;cursor:pointer;font-family:'Nunito',sans-serif}
 
@@ -159,8 +162,8 @@ main{flex:1;padding:0 16px 40px}
 .stat i{font-style:normal;font-size:11.5px;color:var(--sub);font-weight:900;letter-spacing:.05em;text-transform:uppercase}
 .best{background:#FFF7E3;border:2px solid #F3E2B6;border-radius:15px;padding:11px;margin-top:12px;
       font-size:14.5px;color:#5C4A18;text-align:center}
-.wire{height:56px;margin:2px 0 8px}
-.wire svg{width:100%;height:56px;display:block}
+.wire{margin:2px 0 10px}
+.wire svg{width:100%;height:auto;display:block}
 
 .runs{display:flex;flex-direction:column;gap:8px}
 .run{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--line);border-radius:15px;padding:10px 13px}
@@ -199,7 +202,7 @@ main{flex:1;padding:0 16px 40px}
     </div>
     <main>
       <div class="buddyrow">
-        <svg class="buddyart" viewBox="0 0 64 64"><circle cx="32" cy="34" r="22" fill="#FFC542" stroke="#D99B12" stroke-width="3"/><circle cx="25" cy="31" r="3.4" fill="#0F0E17"/><circle cx="39" cy="31" r="3.4" fill="#0F0E17"/><path d="M25 41c4 4 10 4 14 0" stroke="#0F0E17" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M32 12l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L32 28.5l-6.5 3.4 1.3-7.2-5.3-5.1 7.3-1z" fill="#FF6B6B" stroke="#D6453F" stroke-width="2" stroke-linejoin="round"/></svg>
+        <img class="buddyart" src="/lessons/art/buddy-star.png" alt="Your lesson buddy">
         <div class="bubble">Set it up how you like, then answer as many as you can before the time runs out.</div>
       </div>
 
@@ -210,10 +213,10 @@ main{flex:1;padding:0 16px 40px}
       </div>
 
       <div class="card">
-        <div class="lab">What kind of maths</div>
-        <p class="help">Tap one. You can tap more than one to mix them together.</p>
+        <div class="lab">What kind of math</div>
+        <p class="help">Tap one to pick it. Tap more than one to mix them together, and tap again to unpick.</p>
         <div class="ops">
-          <button class="op on" data-op="add">
+          <button class="op" data-op="add">
             <svg viewBox="0 0 40 40" fill="none" stroke="#7C5CFC" stroke-width="5" stroke-linecap="round"><path d="M20 9v22M9 20h22"/></svg>Addition</button>
           <button class="op" data-op="sub">
             <svg viewBox="0 0 40 40" fill="none" stroke="#FF6B6B" stroke-width="5" stroke-linecap="round"><path d="M9 20h22"/></svg>Subtraction</button>
@@ -353,7 +356,12 @@ var SCORE_KEY = "bk_minutemath_v1:" + (KID ? KID.id : "guest");
 var OPNAME = { add:"Addition", sub:"Subtraction", mul:"Multiplication", div:"Division" };
 var SIGN   = { add:"+", sub:"−", mul:"×", div:"÷" };
 
-var S = { ops:["add"], lo:1, hi:12, focus:null, timer:60, count:50, showTimer:true };
+/* Session MM6 - nothing is picked to start with. Pre-ticking Addition meant a
+   kid who wanted multiplication had to work out that they must first UNtick a
+   thing they never ticked, and the picker would not let them reach zero
+   anyway. Now it starts empty, it may BE empty, and START simply will not go
+   until something is chosen. */
+var S = { ops:[], lo:1, hi:12, focus:null, timer:60, count:50, showTimer:true };
 var RUN = null;                 /* the settings the current run is using */
 var probs = [], cur = 0, left = 60, tick = null, started = 0, hideClock = false;
 
@@ -438,6 +446,18 @@ function paintScores(){
 }
 
 /* ---------- chip builders ---------- */
+/* Nothing picked, nothing to start. The button says why rather than just
+   sitting there dead. */
+function syncStart(){
+  var none = S.ops.length===0;
+  ["start","toPrint","toKey"].forEach(function(id){
+    var b=$(id); if(!b) return;
+    b.disabled = none;
+    b.classList.toggle("off", none);
+  });
+  $("start").textContent = none ? "Pick one above to start" : "START";
+}
+
 function chipRow(wrap, items, isOn, pick){
   wrap.innerHTML="";
   items.forEach(function(it){
@@ -461,9 +481,10 @@ function wireOps(sel, attr, target){
   [].forEach.call(document.querySelectorAll(sel),function(b){
     b.onclick=function(){
       var op=b.dataset[attr], i=target.ops.indexOf(op);
-      if(i>=0){ if(target.ops.length>1) target.ops.splice(i,1); } else target.ops.push(op);
+      if(i>=0) target.ops.splice(i,1); else target.ops.push(op);
       [].forEach.call(document.querySelectorAll(sel),function(o){
         o.classList.toggle("on", target.ops.indexOf(o.dataset[attr])>=0); });
+      syncStart();
     };
   });
 }
@@ -613,22 +634,57 @@ function finish(){
   show("s-done");
 }
 
-/* ---------- birds ---------- */
+/* ---------- the collection --------------------------------------------------
+   One bird per right answer, on a sagging telephone wire. This is the SAME
+   bird and the same wire the Practice page uses (renderFlock / birdPath in
+   practice.html) rather than a second, worse bird drawn just for this page:
+   a kid should recognize their flock wherever it turns up. */
+var VB_W = 320;
+var TINTS = ["#7C5CFC","#37B6F5","#FF6B6B","#2FAE68","#F0972A","#B06BE0"];
+function birdPath(x, y, r, tint){
+  var s = r / 6;
+  return '<g class="bird">' +
+    '<path d="M' + (x - 2*s) + ' ' + y + ' l0 ' + (2.2*s) + ' M' + (x + 1.4*s) + ' ' + y + ' l0 ' + (2.2*s) + '" ' +
+      'stroke="#8A7F6B" stroke-width="' + Math.max(0.6, 0.55*s) + '" stroke-linecap="round"/>' +
+    '<ellipse cx="' + x + '" cy="' + (y - 2.2*s) + '" rx="' + (3.4*s) + '" ry="' + (2.4*s) + '" fill="' + tint + '"/>' +
+    '<circle cx="' + (x + 2.9*s) + '" cy="' + (y - 4.1*s) + '" r="' + (1.7*s) + '" fill="' + tint + '"/>' +
+    '<path d="M' + (x + 4.4*s) + ' ' + (y - 4.2*s) + ' l' + (1.8*s) + ' ' + (0.7*s) + ' l' + (-1.8*s) + ' ' + (0.7*s) + ' z" fill="#F0A02C"/>' +
+    '<ellipse cx="' + (x - 0.2*s) + '" cy="' + (y - 2.2*s) + '" rx="' + (1.9*s) + '" ry="' + (1.2*s) + '" fill="rgba(255,255,255,.34)"/>' +
+    '<path d="M' + (x - 3.2*s) + ' ' + (y - 2.6*s) + ' l' + (-2.6*s) + ' ' + (-1.5*s) + ' l' + (0.6*s) + ' ' + (2.6*s) + ' z" fill="' + tint + '"/>' +
+    '</g>';
+}
 function drawBirds(n){
-  var w=320, y=40, k=Math.min(n,14), s='';
-  s+='<path d="M0 '+y+' Q160 '+(y+9)+' 320 '+y+'" stroke="#C9BFAC" stroke-width="2.5" fill="none"/>';
-  for(var i=0;i<k;i++){
-    var x=16+i*((w-32)/Math.max(1,(k-1)||1));
-    var yy=y+8*Math.sin(Math.PI*(x/w));
-    s+='<g transform="translate('+x.toFixed(1)+','+(yy-9).toFixed(1)+')">'+
-       '<ellipse cx="0" cy="0" rx="6.5" ry="5" fill="#7C5CFC"/>'+
-       '<circle cx="4.5" cy="-3.5" r="3.6" fill="#7C5CFC"/>'+
-       '<circle cx="5.6" cy="-4.2" r="0.9" fill="#fff"/>'+
-       '<path d="M8 -3.4l3 1.2-3 1.1z" fill="#FFC542"/>'+
-       '<path d="M-6 1l-3 5" stroke="#7C5CFC" stroke-width="1.6" stroke-linecap="round"/>'+
-       '<path d="M0 4v5M2 4v5" stroke="#6E6684" stroke-width="1.3" stroke-linecap="round"/></g>';
+  n = Math.max(0, n|0);
+  var wires = Math.max(1, Math.min(3, Math.ceil(n / 14) || 1));
+  var perWire = n ? Math.ceil(n / wires) : 0;
+  var pad = 24, span = VB_W - pad*2;
+  var gap = perWire > 0 ? span / (perWire + 1) : span;
+  var r = Math.max(4, Math.min(13, gap * 0.62));
+  var rowH = Math.max(22, r * 2.6);
+  var top = 14, H = top + wires * rowH + 12;
+
+  var out = '';
+  for(var w = 0; w < wires; w++){
+    var y = top + rowH * (w + 1) - 6;
+    out += '<path d="M' + (pad-12) + ' ' + (y-10) + ' Q' + (VB_W/2) + ' ' + (y+7) + ' ' + (VB_W-pad+12) + ' ' + (y-10) +
+           '" fill="none" stroke="#B9AF9B" stroke-width="2" stroke-linecap="round"/>';
   }
-  $("birds").innerHTML=s;
+  var made = 0;
+  for(var wi = 0; wi < wires && made < n; wi++){
+    var yy = top + rowH * (wi + 1) - 6;
+    for(var i = 0; i < perWire && made < n; i++){
+      var x = pad + gap * (i + 1);
+      var t = (x - (pad-12)) / ((VB_W-pad+12) - (pad-12));
+      var sag = (1 - Math.pow(2*t - 1, 2)) * 8.5;
+      out += birdPath(x, (yy-10) + sag, r, TINTS[made % TINTS.length]);
+      made++;
+    }
+  }
+  var svg = $("birds");
+  svg.setAttribute("viewBox", "0 0 " + VB_W + " " + H);
+  svg.parentNode.style.height = "auto";
+  svg.style.height = "auto";
+  svg.innerHTML = out;
 }
 
 /* ---------- printing ---------- */
@@ -728,6 +784,7 @@ $("mergeNo").onclick=function(){
   $("mergeCard").classList.add("hidden");
 };
 offerMerge();
+syncStart();
 $("setupBack").onclick=function(){ location.href = "/lessons"; };
 </script>
 <script src="/buildable-gamenav.js"></script>
