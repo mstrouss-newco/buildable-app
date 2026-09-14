@@ -311,5 +311,57 @@
         "gone": "The grasshopper sprang away and left a crumb."
       }
     }
+  },
+  "world": {
+    "note": "AC10: the meadow is composed from these, back to front. Every one has a drawn fallback in the engine, so a missing file costs detail and never a world.",
+    "far": [
+      "antcity/world/tree-pine-1-v1",
+      "antcity/world/tree-pine-2-v1",
+      "antcity/world/tree-round-1-v1",
+      "antcity/world/tree-round-2-v1",
+      "antcity/world/tree-round-3-v1"
+    ],
+    "mid": [
+      "antcity/world/tree-round-1-v1",
+      "antcity/world/tree-round-3-v1",
+      "antcity/world/tree-pine-1-v1",
+      "antcity/world/bush-flowers-v1"
+    ],
+    "near": [
+      "antcity/world/grass-tall-v1",
+      "antcity/world/flowers-1-v1",
+      "antcity/world/flowers-2-v1",
+      "antcity/world/fern-v1",
+      "antcity/world/rock-1-v1",
+      "antcity/world/rock-2-v1",
+      "antcity/world/mushroom-v1",
+      "antcity/world/bush-flowers-v1"
+    ],
+    "soil": [
+      {
+        "id": "topsoil",
+        "to": 5,
+        "art": "antcity/soil/sandy-v1",
+        "find": "root"
+      },
+      {
+        "id": "loam",
+        "to": 14,
+        "art": "antcity/soil/loam-v1",
+        "find": "acorn"
+      },
+      {
+        "id": "clay",
+        "to": 30,
+        "art": "antcity/soil/loam-v1",
+        "find": "root"
+      },
+      {
+        "id": "stone",
+        "to": 0,
+        "art": "antcity/soil/deep-v1",
+        "find": "pebble"
+      }
+    ]
   }
 }

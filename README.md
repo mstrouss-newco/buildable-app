@@ -6,27 +6,44 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
-<<<<<<< HEAD
-## The tile shots go live (September 7 2026)
-`src/BuildableKids.jsx`, `scripts/tile-shot.mjs`, `public/tile-shots/`
+## AC10 — Ant City: a real meadow, real soil, and food is the only drop (September 8 2026)
+`public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/world/`,
+`scripts/nature-shot.mjs`, `db/register-antcity-world-sprites.sql`, `qa-antcity.mjs`.
+Phase **AC**, card **AC10**, branch `claude/ac-13-start-4w0q36`.
 
-Seventeen of nineteen game tiles now show a photograph of the real game. `GameTileArt`
-carries a `TILE_SHOTS` map keyed by `imgId` and prefers `/tile-shots/<id>.jpg`; that map is
-the rollout switch, per game, in one line.
+**Droppable water is gone.** It overlapped with food and muddled the story, since rain
+water is also the setback villain. No Water tool, no water meter, no water in upkeep or
+in the hatch maths. Rain floods stay and are now the only water in the game. The hatch
+rate came down from 0.14 to 0.115 so a colony grows at the pace it grew at when a kid was
+keeping the water topped up; what is gone is the punishment for letting it run dry, and
+that was measured across three job mixes rather than guessed. An old save with a water
+drop on the meadow gets it back as a crumb.
 
-**No `image_cache` row was written.** Overwriting each game's cached painting would have
-destroyed it; instead the app asks for a different URL, every painting stays cached behind
-`/api/images`, and both render sites fall back to the painting if a photo fails to load.
+**A model camera.** `scripts/nature-shot.mjs` turns the CC0 Quaternius nature models
+already in the repo into flat, side-on, transparent sprites: three.js, an orthographic
+camera, one fixed lighting rig, margins trimmed. Headless, no GPU, no network, about a
+minute for thirteen pieces. Orthographic matters because a sprite with a vanishing point
+cannot be repeated across a scene; one rig matters because thirteen models shot together
+look like one set of art rather than thirteen downloads. All thirteen are registered to
+the shared library so every project can use them.
 
-**Tiles are JPEG.** PNG would have put 8.3 MB on the Play grid (up to 1 MB a tile, eighteen
-at once). At quality 82 the whole set is 1.3 MB, largest tile 160 KB, indistinguishable at
-226 pixels wide.
+**The meadow is a place.** Sky, far hills, a far tree line standing on them, a nearer
+hill, mid trees, the grass bank the door is cut into, the worn forager trail, and near
+props on the trail line. Composed once into an offscreen canvas and blitted, so forty
+pieces of art cost one drawImage a frame, and every piece is placed by a hash of its own
+index so the meadow is the same one every time.
 
-Tennis and Riley's Garden deliberately keep their paintings — their photos are worse tiles.
-See the comment above `TILE_SHOTS` for why and how to switch them on.
+**The ground is layers.** Topsoil with roots, loam with buried acorns, clay, and pebbly
+stone with the rare little fossil. Data in GAME_CONFIG and in the manifest, the deepest
+layer with no bottom, and the three soil tiles that had sat unused since AC4 finally
+wired up one per layer.
+
+Three bugs came out of looking at the screenshots: a pale band that read as a lake the
+far trees were standing in, a row of grass blades that read as rain falling on a sunny
+day, and a soil gradient restarted every row that read as corrugated cardboard.
 
 ---
-=======
+
 ## AC13 — Ant City: the swarm walks like ants, and food you can see (September 8 2026)
 `public/antcity-engine.html`, `qa-antcity.mjs`, `antcity-README.md`. Phase **AC**, card
 **AC13**, branch `claude/ac-13-start-4w0q36`.
@@ -142,7 +159,25 @@ folding it into `qa-paper-route.mjs` would have dropped the whole game out of th
 gate.
 
 The `soon: true` gate on the tile is untouched.
->>>>>>> origin/main
+## The tile shots go live (September 7 2026)
+`src/BuildableKids.jsx`, `scripts/tile-shot.mjs`, `public/tile-shots/`
+
+Seventeen of nineteen game tiles now show a photograph of the real game. `GameTileArt`
+carries a `TILE_SHOTS` map keyed by `imgId` and prefers `/tile-shots/<id>.jpg`; that map is
+the rollout switch, per game, in one line.
+
+**No `image_cache` row was written.** Overwriting each game's cached painting would have
+destroyed it; instead the app asks for a different URL, every painting stays cached behind
+`/api/images`, and both render sites fall back to the painting if a photo fails to load.
+
+**Tiles are JPEG.** PNG would have put 8.3 MB on the Play grid (up to 1 MB a tile, eighteen
+at once). At quality 82 the whole set is 1.3 MB, largest tile 160 KB, indistinguishable at
+226 pixels wide.
+
+Tennis and Riley's Garden deliberately keep their paintings — their photos are worse tiles.
+See the comment above `TILE_SHOTS` for why and how to switch them on.
+
+---
 
 ## TS1-TS3 — the whole catalogue gets a real tile shot (September 7 2026)
 `scripts/tile-shot.mjs`, `public/tile-shots.html`, `public/tile-shots/`

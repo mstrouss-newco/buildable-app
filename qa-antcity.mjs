@@ -482,15 +482,25 @@ ok('every ant on a job is walking to it or working it, never milling about',
 // --- the needs panel, and the panel that no longer eats the screen ------------
 console.log('\n  .. needs, and a panel that stays out of the way');
 const needs = G.needs();
-ok('the needs panel reads food, water, rest and eggs',
-  ['food', 'water', 'rest', 'eggs'].every((k) => needs[k] && typeof needs[k].v === 'number'), JSON.stringify(needs));
+// AC10 cut droppable water, so the panel is food, rest and eggs. Water is not a
+// store any more: the only water left in the game is the rain that floods a tunnel.
+ok('the needs panel reads food, rest and eggs, and no longer a water store',
+  ['food', 'rest', 'eggs'].every((k) => needs[k] && typeof needs[k].v === 'number') && !needs.water,
+  JSON.stringify(needs));
 ok('the meters read the real colony', needs.food.v > 0 && needs.food.v <= 1 && needs.rest.v <= 1, JSON.stringify(needs));
 G._reset(); G.play();
 playTutorial('mouse');                               // past the first minute: no lesson running
 // nobody fetching: every ant hatched joins the foragers, so keep moving them off it
 for (let i = 0; i < 60 && !G.needs().food.low; i++) { G.assign('forager', 0); G.seconds(5); }
 ok('a store running low flags itself', G.needs().food.low === true, JSON.stringify(G.needs().food));
-const lowNow = Object.keys(G.needs()).filter((k) => G.needs()[k].low);
+// a message that just fired owns the line for its few seconds, so let it finish
+// before asking what the line says
+let lowNow = [];
+for (let i = 0; i < 40; i++) {
+  lowNow = Object.keys(G.needs()).filter((k) => G.needs()[k].low);
+  if (lowNow.some((k) => new RegExp(k, 'i').test(G.coach()))) break;
+  G.seconds(2);
+}
 ok('and the one hint line names a store that really is low',
   lowNow.some((k) => new RegExp(k, 'i').test(G.coach())), `${lowNow.join(',')} :: ${G.coach()}`);
 ok('there is still only one hint saying it', G.hints().length === 1, G.hints().join(' | '));
@@ -607,15 +617,16 @@ ok('the old row of word buttons is gone',
 ok('the old unexplained mode tabs are gone', !/id="toolDig"/.test(html) && !/id="toolJobs"/.test(html));
 // what replaced it: one bar of pictures. Four meters with icons, the tool in hand,
 // and a round button that opens a sheet of picture cards.
-['food', 'water', 'rest', 'eggs'].forEach((k) =>
+['food', 'rest', 'eggs'].forEach((k) =>
   ok(`the ${k} meter is a bar with a picture on it`,
     new RegExp(`id="mtr_${k}"[^>]*>\\s*<span class="bar"><i id="fill_${k}"></i></span><svg class="mic"`).test(html)));
 ok('a meter that runs low wears a tag and wiggles', /\.mt\.low \.tag\{display:block/.test(html) && /@keyframes wig/.test(html));
 ok('the big button carries a picture of every tool it can hold',
-  ['dig', 'food', 'water', 'build'].every((k) => new RegExp(`class="ic ic-${k}"`).test(html)));
+  ['dig', 'food', 'build'].every((k) => new RegExp(`class="ic ic-${k}"`).test(html)));
+ok('and Water is not one of them any more', !/ic-water/.test(html) && !/id="tool_water"/.test(html));
 ok('and only the one in hand is showing', /#actMain\.t-dig \.ic-dig/.test(html) && /#actMain \.ic\{display:none/.test(html));
 ok('the round swap button opens a sheet of picture cards',
-  /id="actSwap"/.test(html) && ['dig', 'food', 'water', 'build'].every((k) => new RegExp(`id="tool_${k}"[^>]*>\\s*<svg class="tic"`).test(html)));
+  /id="actSwap"/.test(html) && ['dig', 'food', 'build'].every((k) => new RegExp(`id="tool_${k}"[^>]*>\\s*<svg class="tic"`).test(html)));
 ok('the build menu rooms are pictures, not a list of words',
   /var ROOM_ART = \{/.test(html) && ['nursery', 'storage', 'den', 'fungus'].every((k) => new RegExp(`${k}: *'<svg`).test(html)));
 ok('a room costs apples you can count, not a number you have to read',
@@ -935,8 +946,10 @@ ok('the gait clock is distance travelled, not a timer',
   drift.length > 0 && Math.max(...drift) < 0.002, `worst drift ${Math.max(...drift, 0).toFixed(5)} cells`);
 
 // a stopped ant is genuinely frozen: no speed, no gait, no foot moves
-const stills = b13.map((a, i) => [a, a13[i]]).filter(([a, b]) => b && a.idle && b.idle);
-ok('a stopped ant is frozen with its feet down',
+// with room around it. An ant being stood on takes a real sidestep, feet and all,
+// which is the one thing allowed to move an otherwise stopped ant.
+const stills = b13.map((a, i) => [a, a13[i]]).filter(([a, b]) => b && a.idle && b.idle && !a.crowded && !b.crowded);
+ok('a stopped ant with room around it is frozen, with its feet down',
   stills.length > 0 && stills.every(([a, b]) =>
     b.spd === 0 && b.gait === a.gait && a.feet.every((v, i) => v === b.feet[i])),
   `${stills.length} standing still`);
@@ -978,14 +991,19 @@ ok('a phone gets a smaller painting budget than a desktop',
 ok('over budget it is leg detail that goes, never ants',
   /function antDetail\(n\)/.test(html) && /if\(far && det < 2\) continue;/.test(html));
 
-// nothing is drawn on top of anything else
+// ants never PILE UP. Two ants walking past each other may cross, the way two
+// real ants do; two ants standing still on the same speck of dirt is the bug, and
+// the elbow-room rule in walkVisual is what stops it.
+const still = grown.filter((a) => a.spd === 0);
 let closest = Infinity;
-for (let i = 0; i < grown.length; i++) for (let j = i + 1; j < grown.length; j++) {
-  const d = Math.hypot(grown[i].dx - grown[j].dx, grown[i].dy - grown[j].dy);
+for (let i = 0; i < still.length; i++) for (let j = i + 1; j < still.length; j++) {
+  const d = Math.hypot(still[i].dx - still[j].dx, still[i].dy - still[j].dy);
   if (d < closest) closest = d;
 }
-ok('no two ants are painted in the same spot', closest > gmot.unit * 0.5,
-  `closest pair ${closest.toFixed(3)} cells, ant unit ${gmot.unit.toFixed(3)}`);
+ok('no two standing ants are painted in the same spot', still.length < 2 || closest > gmot.unit,
+  `${still.length} standing, closest pair ${closest.toFixed(3)} cells, ant unit ${gmot.unit.toFixed(3)}`);
+ok('an ant makes room when another stands on its toes',
+  /MOT\.elbow/.test(html) && /elbow:\s*1\.6/.test(html));
 
 // the job mix has to be visible in the crowd, not just on the bar
 G.assign('forager', 1); G.seconds(30);
@@ -1027,6 +1045,109 @@ ok('the pantry is the food meter made physical', /C\.food \/ Math\.max\(1, foodC
 ok('the berry bush shows the next berry swelling on the branch',
   /countItems\("berry"\) < md\.berryMax/.test(html) && /drawBerry\(bx, by/.test(html));
 ok('the drawing still runs clean with a full crowd on screen', G._draw() === 'ok', G._draw());
+
+// --- 6c) AC10: the world above, the ground below, and no more droppable water --
+console.log('\n--- AC10: A REAL MEADOW, REAL SOIL, AND FOOD IS THE ONLY DROP ---');
+
+// -- part 2 first: water is gone, and gone properly --------------------------
+ok('there is no Water tool anywhere in the game',
+  !/id="tool_water"/.test(html) && !/ic-water/.test(html) && !/water: *\{ *name:"Water"/.test(html));
+ok('the tool order is dig, food, build', /TOOL_ORDER = \["dig","food","build"\]/.test(html));
+ok('water is not a store the colony keeps',
+  !/waterCap/.test(html) && !/startWater/.test(html) && !/waterPerAntPerSec/.test(html) && !/waterBase/.test(html));
+ok('and it is not an item a kid can drop', !/water: *\{ *give:"water"/.test(html));
+ok('hatching asks about food and nothing else',
+  /\* pace \* roomMul\("nursery"\) \* dt \* \(C\.food > 0 \? 1 : 0\.3\)/.test(html));
+ok('the hatch rate came down with it, so growth feels the same',
+  /hatchPerAntPerSec: 0\.115/.test(html));
+
+G.play(3); G._openAll();
+ok('the needs panel has three meters, and none of them is water',
+  !G.needs().water && !!G.needs().food && !!G.needs().rest && !!G.needs().eggs,
+  Object.keys(G.needs()).join(','));
+ok('the toolbox offers three tools', G.tools().join(',') === 'dig,food,build', G.tools().join(','));
+G.drop('water', 120);
+ok('asking for water gets a crumb, because that is the only thing there is to drop',
+  G.items().every((it) => it.kind !== 'water'), G.items().map((i) => i.kind).join(','));
+
+// rain is the ONE water left in the game, and builders still clear it
+G.setDifficulty(5);                       // the dial that makes setbacks come sooner
+G.digDown(10); G.assign('digger', 4); G.assign('builder', 0);
+let sawFlood = false;
+for (let i = 0; i < 30000 && !sawFlood; i++) { G.step(1); if (G.floods() > 0) sawFlood = true; }
+ok('rain still floods a tunnel: it is the only water the game has left', sawFlood, `${G.floods()} flooded`);
+G.assign('builder', 4);
+let cleared = false;
+for (let i = 0; i < 3000 && !cleared; i++) { G.step(1); if (G.floods() === 0) cleared = true; }
+ok('and builders still clear it', cleared);
+
+// an older save with a water drop on the meadow comes back as a crumb
+ok('a water drop saved by an older version is migrated to a crumb, never left stranded',
+  /GAME_CONFIG\.items\[o\.kind\] \? o\.kind : "crumb"/.test(html) && /v:2, cells:C\.cells/.test(html));
+
+// -- part 1: the world above -------------------------------------------------
+const world = G.world();
+ok('the meadow is composed once and kept, not painted from scratch every frame',
+  /function composeWorld\(\)/.test(html) && /if\(worldLayer && key === worldKey\) return worldLayer;/.test(html) && world.cached);
+ok('and it is rebuilt exactly when it has to be',
+  /function worldNeedsKey\(\)/.test(html) && /floodCount\(\) \? "rain" : "sun"/.test(html));
+ok('every piece is placed by a hash of its own index, never by a random roll',
+  /function hsh\(i, salt\)/.test(html) && !/composeWorld[\s\S]{0,4000}Math\.random/.test(html));
+ok('the world is layered back to front, and each band has its own baseline',
+  ['the crest of the far hills', 'where the far trees stand', 'where the mid trees stand']
+    .every((t) => html.includes(t)));
+
+const WORLD_FILES = ['tree-pine-1', 'tree-pine-2', 'tree-round-1', 'tree-round-2', 'tree-round-3',
+  'bush-flowers', 'fern', 'grass-tall', 'flowers-1', 'flowers-2', 'mushroom', 'rock-1', 'rock-2'];
+const missingWorld = WORLD_FILES.filter((f) => !fs.existsSync(dir + '/public/antcity/art/world/' + f + '.png'));
+ok('thirteen world sprites, each a real file', missingWorld.length === 0, missingWorld.join(',') || 'all present');
+ok('the engine resolves every one of them from a manifest id',
+  world.pieces.length === 13 && world.pieces.every((k) => {
+    const u = G._art()[k];
+    return typeof u === 'string' && fs.existsSync(dir + '/public' + u);
+  }), JSON.stringify(world.pieces.map((k) => G._art()[k]).filter((u) => !u || !fs.existsSync(dir + '/public' + u))));
+ok('the recipe names the world, so the engine only arranges it',
+  !!(manifest.world && manifest.world.far && manifest.world.mid && manifest.world.near && manifest.world.soil),
+  Object.keys(manifest.world || {}).join(','));
+ok('a missing sprite costs detail and never a world',
+  /function drawTreeShape/.test(html) && /function drawTuftShape/.test(html) &&
+  /else\s+drawTreeShape\(g, bx, by, hh/.test(html));
+ok('the forager route is a worn trail baked into the ground',
+  /THE WORN TRAIL/.test(html) && /plantX\("berry"\)\]\.sort/.test(html));
+ok('the trail is on the line the ants really walk on',
+  /function groundY\(\)\{ return SKY \+ \(SURF_R \+ 0\.5\) \* CS; \}/.test(html) &&
+  Math.abs(world.ground - (G.geom().sky - 0.42 * G.geom().cs)) < 1.5,
+  `trail at ${world.ground}, sky ${G.geom().sky}, cell ${G.geom().cs}`);
+ok('the camera that made the sprites is committed with them', fs.existsSync(dir + '/scripts/nature-shot.mjs'));
+ok('and it shoots the CC0 pack that is in the repo, not something downloaded at run time',
+  /public\/models\/nature/.test(fs.readFileSync(dir + '/scripts/nature-shot.mjs', 'utf8')) &&
+  fs.existsSync(dir + '/public/models/nature/CommonTree_1.gltf'));
+
+// -- part 1: the ground below ------------------------------------------------
+const layers = G.soil();
+ok('the soil is layers, and the layers are recipe data', Array.isArray(layers) && layers.length === 4,
+  layers.map((l) => l.id).join(','));
+ok('they go topsoil, loam, clay, stone',
+  layers.map((l) => l.id).join(',') === 'topsoil,loam,clay,stone');
+ok('the deepest one has no bottom, because a free-build colony has none either',
+  layers[3].to >= 1e9, String(layers[3].to));
+ok('every row lands in exactly one layer, all the way down',
+  [0, 3, 5, 9, 14, 20, 30, 80, 400, 5000].every((r) => !!G.soil(r).id));
+ok('digging down really goes through them',
+  G.soil(2).id === 'topsoil' && G.soil(8).id === 'loam' && G.soil(20).id === 'clay' && G.soil(200).id === 'stone',
+  [2, 8, 20, 200].map((r) => r + ':' + G.soil(r).id).join(' '));
+ok('each layer has its own tile art, and each one is a real file',
+  layers.every((l) => { const u = G._art()[l.art]; return typeof u === 'string' && fs.existsSync(dir + '/public' + u); }),
+  layers.map((l) => l.art + '=' + G._art()[l.art]).join(' '));
+ok('what is buried down there is drawn geometry, and roots, acorns and pebbles by layer',
+  /function drawBuried\(kind, x, y, s, v\)/.test(html) &&
+  ['root', 'acorn', 'pebble'].every((k) => layers.some((l) => l.find === k)),
+  layers.map((l) => l.id + ':' + l.find).join(' '));
+ok('and none of it changes what a cell does',
+  !/drawBuried[\s\S]{0,60}C\.(food|ants|dug)/.test(html));
+ok('a layer is one gradient, not one per row',
+  /One gradient per LAYER, not per row/.test(html));
+ok('the world and the ground both still draw clean', G._draw() === 'ok', G._draw());
 
 // --- 6) AC4: the sounds, the music and the art leftovers ----------------------
 console.log('\n--- SOUND, MUSIC AND ART (AC4) ---');

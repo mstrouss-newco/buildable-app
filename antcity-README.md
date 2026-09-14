@@ -251,6 +251,56 @@ The numbers (how often, what it pays, every word each bug says) live in
 `GAME_CONFIG.bug` and in `public/antcity/manifest.json`, so the recipe can retune the
 visits, or add a fourth visitor, without touching the engine.
 
+## The world above, and the ground below (AC10)
+
+**The meadow is a place now, not a green stripe.** Back to front: sky with a sun and
+three clouds, far hills, a far tree line standing on them, a nearer hill, mid trees,
+the grass bank the colony's door is cut into, the worn forager trail, and near props
+standing on that trail line. Two rules keep it affordable and calm:
+
+1. **Composed once, not painted every frame.** The whole strip is drawn into an
+   offscreen canvas and blitted. It is rebuilt only when the layout changes, the rain
+   starts or stops, or a sprite finishes loading. Forty pieces of art cost one
+   `drawImage` per frame.
+2. **Every piece is placed by a hash of its own index**, never by a random roll, so
+   the meadow a kid closes is the meadow they come back to and the QA robot sees the
+   same one every run.
+
+The art is the CC0 Quaternius Stylized Nature MegaKit, shot into flat side-on
+sprites by `scripts/nature-shot.mjs` under one lighting rig, so the world is one
+family rather than thirteen downloads. Every piece has a drawn fallback: a missing
+file costs detail, never a world. See `ANTCITY-ASSET-PLAN.md`.
+
+**The worn trail** is the route the foragers really walk, rubbed into the ground and
+baked into the world layer: out of the anthill door, along the bank, past every plant
+they visit. It is on the exact line an ant stands on when it is up on the meadow, so
+the stream of ants has something to follow and the meadow looks lived in even while
+they are all below.
+
+**The ground is layers.** Digging down goes through topsoil (roots), loam (buried
+acorns), clay, and pebbly stone (and, once in a long while, a little fossil curled up
+in a pebble). The layers are DATA in `GAME_CONFIG.soil` and in the manifest, so a
+recipe can retune how deep each one runs without touching the engine, and the last
+one has no bottom because a free-build colony has none either. Each layer is ONE
+gradient over its whole depth, not one per row: a gradient restarted every row drew a
+faint line at every cell edge, and forty of those read as corrugated cardboard.
+Everything buried down there is decoration and never changes what a cell does.
+
+## Food is the only thing a kid drops (AC10)
+
+Droppable water is gone (Mike's call, 2026-09-07). It overlapped with food and
+muddled the story, since rain water is also the setback villain. So:
+
+- No Water tool, no water meter, no water in upkeep or in the hatch maths. The
+  needs panel is food, rest and eggs.
+- The hatch rate came down with it (0.14 to 0.115 per nursery ant per second) so a
+  colony grows at the pace it used to grow at when a kid was keeping the water
+  topped up. What is gone is the penalty for letting it run dry.
+- **Rain floods stay, and are now the only water in the game.** Builders clear
+  them, stored food carries the colony through, nothing is ever lost.
+- An old save with a water drop sitting on the meadow gets it back as a crumb.
+  Nothing is stranded and nothing is left that no ant knows what to do with.
+
 ## How an ant moves, and how it looks (AC13)
 
 Two halves, kept deliberately apart. `walkVisual` decides how an ant **moves**;

@@ -2,14 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#FDFAF5">
+<!-- Session MM11 - saving this to an iPad home screen used to open Safari with
+     the address bar and tabs still there, because this page carried none of the
+     tags that tell iOS "launch me as an app": no manifest, no apple-touch-icon,
+     no capable flag. It has its own manifest rather than the app's, so the icon
+     opens straight into Minute Math instead of the app home. -->
+<link rel="manifest" href="/minutemath.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4">
+<link rel="icon" href="/favicon.ico?v=4" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4">
+<meta name="apple-mobile-web-app-title" content="Minute Math">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Minute Math - Buildable Kids</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
-/* minutemath.html (session MM1) - a one-minute maths-facts sheet, the thing
+/* minutemath.html (session MM1) - a one-minute math-facts sheet, the thing
    school actually hands out. Modelled on Web Math Minute's online practice:
    you set it up yourself, a whole worksheet appears, the clock runs, you type
    into every box, and it marks the lot at the end.
@@ -20,6 +33,17 @@
   --grad:linear-gradient(90deg,#7C5CFC 0%,#FF6B6B 100%);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* Session MM12 - no double-tap zoom.
+   iOS waits after every tap to see whether a second one is coming, and if it
+   is, it zooms. On a keypad a kid hammers, that means the page lurches in and
+   out at random. touch-action:manipulation keeps scrolling and pinch, and
+   drops ONLY the double-tap zoom. Not touch-action:none, which the canvas
+   games use: this page has to scroll. user-scalable=no in the viewport covers
+   the standalone home-screen app, where iOS does honour it. */
+*{touch-action:manipulation}
+html,body{-webkit-text-size-adjust:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+
 html,body{margin:0;padding:0}
 body{background:var(--cream);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-weight:800;
      -webkit-font-smoothing:antialiased;overflow-x:hidden}
@@ -39,7 +63,8 @@ body.in-app .top{padding-left:96px}
 main{flex:1;padding:0 16px 40px}
 
 .buddyrow{display:flex;gap:11px;align-items:flex-end;margin:2px 0 15px}
-.buddyart{width:60px;height:60px;flex:none}
+.buddyart{width:74px;height:74px;flex:none;object-fit:contain;
+          filter:drop-shadow(0 5px 10px rgba(15,14,23,.16))}
 .bubble{background:#fff;border:2px solid var(--line);border-radius:19px;border-bottom-left-radius:5px;
         padding:12px 14px;font-size:15.5px;line-height:1.35;flex:1}
 
@@ -63,6 +88,17 @@ main{flex:1;padding:0 16px 40px}
              font-weight:600;color:var(--purple);cursor:pointer}
 .step button:active{background:#F1ECFF}
 .step span{min-width:44px;text-align:center;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px}
+/* Session MM10 - a card that stays folded until you want it.
+   Thirteen number chips sitting open by default made the settings look like a
+   form. Almost nobody changes this, so it reads as one quiet line saying what
+   it is currently doing, and opens only if you tap it. */
+.foldhead{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;padding:0;
+          cursor:pointer;font-family:inherit;text-align:left}
+.foldhead .val{margin-left:auto;font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:var(--purple)}
+.foldhead .chev{flex:none;transition:transform .18s}
+.card.open .foldhead .chev{transform:rotate(180deg)}
+.foldbody{display:none;padding-top:4px}
+.card.open .foldbody{display:block}
 .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
 .chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:15px;
       font-family:'Fredoka',sans-serif;font-weight:600;cursor:pointer;color:var(--ink)}
@@ -74,6 +110,8 @@ main{flex:1;padding:0 16px 40px}
 .big:active{transform:scale(.985)}
 .big.ghost{background:#fff;color:var(--purple);border:2px solid var(--line);margin-top:10px}
 .big.go{background:linear-gradient(180deg,#57D48B,#2FAE68);font-size:22px;padding:20px}
+.big.off{background:#E7DFCF;color:#9C907C;cursor:default;box-shadow:none;font-size:17px}
+.big.ghost.off{background:#F4EFE4;color:#A3977F;border-color:#E7DFCF}
 .small{display:block;width:100%;text-align:center;background:none;border:none;color:var(--sub);font-size:13.5px;
        font-weight:900;padding:14px 0 4px;cursor:pointer;font-family:'Nunito',sans-serif}
 
@@ -86,28 +124,120 @@ main{flex:1;padding:0 16px 40px}
 .prob.on{border-color:var(--purple);background:#F7F4FF;box-shadow:0 0 0 3px rgba(124,92,252,.15)}
 .prob .n{font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;line-height:1.15;padding-right:6px}
 .prob .n .sign{float:left;padding-left:4px;color:var(--sub)}
-.prob .box{margin-top:4px;border-top:2px solid var(--ink);height:30px;display:flex;align-items:center;
-           justify-content:flex-end;padding-right:6px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px}
-.prob.on .box{border-top-color:var(--purple)}
-.prob .box .caret{display:inline-block;width:2px;height:20px;background:var(--purple);margin-left:2px;
+/* Session MM4 - the answer well.
+   On paper the answer space is blank, and blank works because the rest of the
+   page is ink on white. On screen a white box on a white card is invisible:
+   the kid cannot see where the typing goes, and their own answer looks exactly
+   like the printed problem above it. So the well gets its own sunken tint, and
+   the number the KID types is purple while the problem stays black. */
+.prob .box{margin-top:5px;border-top:2.5px solid var(--ink);height:34px;display:flex;align-items:center;
+           justify-content:flex-end;padding-right:7px;font-family:'Fredoka',sans-serif;font-weight:600;
+           font-size:22px;color:var(--purple);background:#F4EFE4;border-radius:0 0 10px 10px;
+           box-shadow:inset 0 2px 4px rgba(15,14,23,.08)}
+.prob.on .box{border-top-color:var(--purple);background:#EBE3FF;box-shadow:inset 0 2px 5px rgba(124,92,252,.18)}
+/* An empty well shows a faint writing tick, so a blank never reads as finished. */
+.prob .box:empty::after{content:"";width:24px;height:3px;border-radius:2px;background:#D6CAB2}
+.prob.on .box:empty::after{background:#BFAEFF}
+.prob .box .caret{display:inline-block;width:2.5px;height:22px;background:var(--purple);margin-left:2px;
                   animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:0}}
 .prob.right{background:#E9F9F0;border-color:var(--mint)}
-.prob.right .box{color:#1C7A45;border-top-color:var(--mint)}
+.prob.right .box{color:#1C7A45;border-top-color:var(--mint);background:#D5F2E2;box-shadow:none}
 .prob.wrong{background:#FFF4F4;border-color:#FFC9C9}
-.prob.wrong .box{color:#C0392B;border-top-color:#FFC9C9;text-decoration:line-through}
+.prob.wrong .box{color:#C0392B;border-top-color:#FFC9C9;background:#FFE1E1;box-shadow:none;text-decoration:line-through}
 .prob .fix{font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;color:var(--sub);padding-right:6px;
            height:17px;line-height:17px}
 
-.pad{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(253,250,245,0) 0%,var(--cream) 22%);
-     padding:14px 0 10px;margin-top:12px}
-.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:330px;margin:0 auto}
-.key{border:2px solid var(--line);background:#fff;border-radius:16px;height:54px;font-family:'Fredoka',sans-serif;
-     font-weight:600;font-size:26px;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 #E7DFCF}
+/* Session MM5 - ONE CARD AT A TIME.
+   Mike: "it's hard for them to see all 50, and then the entrypad at the bottom,
+   it's confusing." Fifty problems on a phone is a wall, and a kid then has to
+   work out which of the fifty the keypad is even talking to. So the sheet is
+   dealt out like flashcards: one big problem, one big answer well, one keypad
+   directly underneath it, and a count so nobody feels lost in the deck.
+   The whole 50 still exist and still get marked together at the end. */
+.prog{height:9px;border-radius:6px;background:#EBE3D3;overflow:hidden;margin:4px 0 clamp(3px,.8vh,7px)}
+.prog i{display:block;height:100%;background:var(--grad);transition:width .2s}
+.countrow{display:flex;align-items:center;margin-bottom:clamp(5px,1.2vh,12px)}
+.count{flex:1;text-align:center;font-size:13px;font-weight:900;color:var(--sub);letter-spacing:.04em;
+       padding-left:64px}
+.countrow .small{width:auto;flex:none;padding:4px 0 4px 10px;font-size:12.5px;min-width:54px;text-align:right}
+
+/* Session MM17 - the sheet screen is a fixed three-part layout, not a scroll.
+   On an iPhone, with Safari's own bars top and bottom, a fixed-size card and a
+   sticky keypad were both claiming the same pixels and the answer well ended
+   up underneath the keypad. Now the screen is: header, then a card area that
+   takes whatever room is left, then the keypad. The card scales with the
+   height of the screen so it always fits rather than overlapping. */
+#s-sheet{flex:1;display:flex;flex-direction:column;min-height:0}
+#s-sheet main{flex:1;display:flex;flex-direction:column;min-height:0;padding-bottom:0;overflow:hidden}
+.cardwrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.flash{background:#fff;border:2px solid var(--line);border-radius:26px;
+       padding:clamp(10px,2.2vh,24px) clamp(16px,5vw,26px) clamp(10px,1.8vh,20px);
+       box-shadow:0 8px 22px rgba(15,14,23,.07);width:100%;max-width:330px;margin:0 auto}
+
+/* Session MM17 - the sign sits NEXT to the number, not on the far wall.
+   It used to be float:left inside a right-aligned block, so on a 330px card a
+   minus sign sat four centimetres from the 10 it belonged to. A worksheet puts
+   the operator immediately left of the lower number, and the rule under both.
+   Two grid columns do exactly that: a narrow one for the sign, and one for the
+   digits that is at least two digits wide so single digits still line up. */
+.fsum{display:grid;grid-template-columns:auto minmax(2.05em,auto);
+      column-gap:.16em;justify-content:center;align-items:end}
+.fa,.fb{font-family:'Fredoka',sans-serif;font-weight:600;line-height:1.08;text-align:right;
+        font-size:clamp(26px,6.2vh,52px)}
+.fa{grid-area:1/2}
+.fb{grid-area:2/2}
+.fsign{grid-area:2/1;justify-self:start;color:var(--sub);font-family:'Fredoka',sans-serif;
+       font-weight:600;line-height:1.08;font-size:clamp(26px,6.2vh,52px)}
+.flash .fbox{grid-area:3/1/4/3;margin-top:8px;border-top:4px solid var(--ink);
+             height:clamp(38px,8.4vh,72px);display:flex;align-items:center;
+             justify-content:flex-end;padding-right:.14em;font-family:'Fredoka',sans-serif;font-weight:600;
+             font-size:clamp(26px,6.2vh,52px);color:var(--purple);background:#F1EAFF;border-radius:0 0 14px 14px;
+             box-shadow:inset 0 3px 7px rgba(124,92,252,.16)}
+.flash .fbox:empty::after{content:"";width:1em;height:5px;border-radius:3px;background:#C3B2FF}
+/* Session MM7 - the card answers back. A tick or a soft dip, matched to the
+   sound, so a kid who has the volume off still gets told. It is feedback, not
+   a verdict: nothing is red, nothing shakes, and the card moves on either way. */
+.flash.wasright{border-color:var(--mint);background:#F2FCF6}
+.flash.wasright .fbox{background:#DCF5E7;color:#1C7A45;box-shadow:inset 0 3px 7px rgba(47,174,104,.18)}
+.flash.waswrong{border-color:#F3E2B6;background:#FFFBF2}
+.flash.waswrong .fbox{background:#FCEFD5;color:#9A6A00;box-shadow:inset 0 3px 7px rgba(217,155,18,.18)}
+.flash .mark{position:absolute;right:16px;top:14px;width:30px;height:30px;opacity:0;transition:opacity .12s}
+.flash.wasright .mark.tick,.flash.waswrong .mark.dip{opacity:1}
+.flash{position:relative}
+.flash .fbox .caret{display:inline-block;width:4px;height:.85em;background:var(--purple);margin-left:3px;
+                    animation:blink 1s steps(2) infinite}
+.stepback{display:block;margin:12px auto 0;background:none;border:none;color:var(--sub);font-size:13.5px;
+          font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
+
+/* The keypad gets its OWN surface. White keys on a cream page read as more
+   page; white keys on a sand panel read as keys. */
+.pad{flex:none;background:#EBE1CD;border-top:2px solid #DCCFB4;
+     border-radius:26px 26px 0 0;padding:clamp(9px,1.6vh,14px) 14px calc(clamp(8px,1.4vh,12px) + env(safe-area-inset-bottom));
+     margin:10px -16px 0;box-shadow:0 -6px 18px rgba(15,14,23,.07)}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,1.1vh,9px);max-width:330px;margin:0 auto}
+.key{border:none;background:#fff;border-radius:16px;height:clamp(38px,6.2vh,58px);
+     font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(21px,3vh,27px);cursor:pointer;
+     color:var(--ink);box-shadow:0 3px 0 #C9BB9C}
 .key:active{transform:translateY(2px);box-shadow:none}
-.key.act{background:#F1ECFF;color:var(--purple)}
-.key.next{background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;border-color:#2FAE68;box-shadow:0 3px 0 #23854F}
-.key svg{width:26px;height:26px;vertical-align:middle}
+.key.act{background:#EFE8FF;color:var(--purple)}
+.key.back{background:#F1ECE1}
+/* Session MM15 - Next is OFF the keypad.
+   Mike: "he is missing a ton because he fat fingers it." The green arrow used
+   to sit in the bottom row right beside 0, so a thumb reaching for a digit
+   submitted a half-typed answer and there was no way back. Now the digit grid
+   contains only digits, delete and back, and Next is a separate full-width bar
+   with real space above it. A mis-tap inside the grid can no longer advance
+   anything, and the key where the arrow used to be is now BACK, so the most
+   likely fat-finger is also the undo. */
+.nextbar{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:330px;
+         margin:clamp(8px,1.8vh,16px) auto 0;border:none;border-radius:18px;
+         height:clamp(42px,6.8vh,62px);cursor:pointer;
+         background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;box-shadow:0 3px 0 #23854F;
+         font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(17px,2.6vh,21px)}
+.nextbar:active{transform:translateY(2px);box-shadow:none}
+.nextbar[disabled]{background:#DCD2BC;color:#95886F;box-shadow:0 3px 0 #C7BAA0;cursor:default}
+.key svg{width:27px;height:27px;vertical-align:middle}
 
 .score{text-align:center;padding:22px 18px}
 .score .num{font-family:'Fredoka',sans-serif;font-weight:600;font-size:64px;line-height:1;
@@ -120,8 +250,8 @@ main{flex:1;padding:0 16px 40px}
 .stat i{font-style:normal;font-size:11.5px;color:var(--sub);font-weight:900;letter-spacing:.05em;text-transform:uppercase}
 .best{background:#FFF7E3;border:2px solid #F3E2B6;border-radius:15px;padding:11px;margin-top:12px;
       font-size:14.5px;color:#5C4A18;text-align:center}
-.wire{height:56px;margin:2px 0 8px}
-.wire svg{width:100%;height:56px;display:block}
+.wire{margin:2px 0 10px}
+.wire svg{width:100%;height:auto;display:block}
 
 .runs{display:flex;flex-direction:column;gap:8px}
 .run{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--line);border-radius:15px;padding:10px 13px}
@@ -136,6 +266,14 @@ main{flex:1;padding:0 16px 40px}
       box-shadow:0 2px 4px rgba(0,0,0,.18)}
 .sw.on{background:var(--mint)}
 .sw.on i{left:27px}
+/* Session MM2 - the "try the 7s next" nudge. One chip, easy to ignore: the
+   settings stay wide open and nothing is ever locked to it. */
+.nudge{background:#FFF7E3;border:2px solid #F3E2B6;border-radius:20px;padding:15px 16px;text-align:center;margin-bottom:14px}
+.nudge p{margin:0 0 11px;font-size:15px;color:#5C4A18;line-height:1.35}
+.nudge button{border:none;border-radius:14px;padding:13px 22px;background:var(--gold);color:#5C4A18;
+              font-family:'Fredoka',sans-serif;font-weight:600;font-size:17px;cursor:pointer;
+              box-shadow:0 3px 0 #D99B12}
+.nudge button:active{transform:translateY(2px);box-shadow:none}
 .hidden{display:none!important}
 .mocknote{max-width:560px;margin:0 auto;padding:14px 16px 26px;font-size:13px;color:var(--sub);font-weight:800;line-height:1.5}
 </style>
@@ -148,19 +286,26 @@ main{flex:1;padding:0 16px 40px}
     <div class="top">
       <button class="iconbtn" id="setupBack" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0F0E17" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
       <h1>Minute Math</h1>
+      <button class="iconbtn" id="soundBtn" aria-label="Sound"></button>
       <button class="iconbtn" id="toScores" aria-label="Scores"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#7C5CFC" stroke-width="3" stroke-linecap="round"><path d="M5 19V11M12 19V5M19 19v-6"/></svg></button>
     </div>
     <main>
       <div class="buddyrow">
-        <svg class="buddyart" viewBox="0 0 64 64"><circle cx="32" cy="34" r="22" fill="#FFC542" stroke="#D99B12" stroke-width="3"/><circle cx="25" cy="31" r="3.4" fill="#0F0E17"/><circle cx="39" cy="31" r="3.4" fill="#0F0E17"/><path d="M25 41c4 4 10 4 14 0" stroke="#0F0E17" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M32 12l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L32 28.5l-6.5 3.4 1.3-7.2-5.3-5.1 7.3-1z" fill="#FF6B6B" stroke="#D6453F" stroke-width="2" stroke-linejoin="round"/></svg>
+        <img class="buddyart" src="/lessons/art/buddy-star.png" alt="Your lesson buddy">
         <div class="bubble">Set it up how you like, then answer as many as you can before the time runs out.</div>
       </div>
 
+      <div class="nudge hidden" id="mergeCard">
+        <p id="mergeText"></p>
+        <button id="mergeYes">Yes, keep them</button>
+        <button class="small" id="mergeNo" style="color:#8A7550">No thanks</button>
+      </div>
+
       <div class="card">
-        <div class="lab">What kind of maths</div>
-        <p class="help">Tap one. You can tap more than one to mix them together.</p>
+        <div class="lab">What kind of math</div>
+        <p class="help">Tap one to pick it. Tap more than one to mix them together, and tap again to unpick.</p>
         <div class="ops">
-          <button class="op on" data-op="add">
+          <button class="op" data-op="add">
             <svg viewBox="0 0 40 40" fill="none" stroke="#7C5CFC" stroke-width="5" stroke-linecap="round"><path d="M20 9v22M9 20h22"/></svg>Addition</button>
           <button class="op" data-op="sub">
             <svg viewBox="0 0 40 40" fill="none" stroke="#FF6B6B" stroke-width="5" stroke-linecap="round"><path d="M9 20h22"/></svg>Subtraction</button>
@@ -173,19 +318,25 @@ main{flex:1;padding:0 16px 40px}
 
       <div class="card">
         <div class="lab">How big are the numbers</div>
-        <p class="help">Most school sheets use 1 to 12.</p>
+        <p class="help">1 to 12 is the classic times-table range. 1 to 19 brings in the bigger ones.</p>
         <div class="row"><span class="name">Smallest number</span>
           <div class="step"><button data-adj="lo-1">&minus;</button><span id="v-lo">1</span><button data-adj="lo+1">+</button></div>
         </div>
         <div class="row"><span class="name">Biggest number</span>
-          <div class="step"><button data-adj="hi-1">&minus;</button><span id="v-hi">12</span><button data-adj="hi+1">+</button></div>
+          <div class="step"><button data-adj="hi-1">&minus;</button><span id="v-hi">19</span><button data-adj="hi+1">+</button></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="lab">Stick to one number</div>
-        <p class="help">Pick a number and every question will use it, like a sheet of nothing but 7s. Leave it on <b>Mix them up</b> for all of them.</p>
-        <div class="chips" id="focus"></div>
+        <button type="button" class="foldhead" id="focusHead">
+          <span class="lab" style="margin:0">Stick to one number</span>
+          <span class="val" id="focusVal">Mix them up</span>
+          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C5CFC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="foldbody">
+          <p class="help" style="margin-top:10px">Pick a number and every question will use it, like a sheet of nothing but 7s. Leave it on <b>Mix them up</b> for all of them.</p>
+          <div class="chips" id="focus"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -199,6 +350,15 @@ main{flex:1;padding:0 16px 40px}
         <p class="help" style="margin:10px 0 0">Turn it off and the clock still runs, it just stays hidden. Kinder if a ticking timer makes you freeze.</p>
       </div>
 
+      <div class="card">
+        <div class="lab">Sound</div>
+        <div class="toggle"><span class="name">Music</span>
+          <button class="sw on" id="swMusic"><i></i></button></div>
+        <div class="toggle"><span class="name">Sound effects</span>
+          <button class="sw on" id="swSfx"><i></i></button></div>
+        <p class="help" style="margin:10px 0 0">Music is a quiet bed that keeps playing. Sound effects are the little ticks when you answer. The speaker at the top turns everything off at once.</p>
+      </div>
+
       <button class="big go" id="start">START</button>
       <button class="big ghost" id="toPrint">Print this sheet on paper</button>
       <button class="big ghost" id="toKey">Print sheet and answer key</button>
@@ -210,20 +370,44 @@ main{flex:1;padding:0 16px 40px}
     <div class="top">
       <button class="iconbtn" id="quit" aria-label="Stop"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0F0E17" stroke-width="3" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
       <h1 id="sheetTitle">Multiplication, 1 to 12</h1>
+      <button class="iconbtn" id="soundBtn2" aria-label="Sound"></button>
       <div class="timepill" id="clock">1:00</div>
     </div>
     <main>
-      <div class="sheet" id="sheet"></div>
+      <div class="prog"><i id="progBar" style="width:0%"></i></div>
+      <!-- Session MM16 - Mike: "I don't think you should have the I'm done and
+           new quiz next to the entry pad either." Right: everything that ENDS
+           a quiz now lives at the top of the screen, nowhere near the thumbs.
+           New quiz is gone from here altogether, because the back arrow in the
+           top bar already does it. -->
+      <div class="countrow">
+        <span class="count" id="count">1 of 50</span>
+        <button class="small" id="finish">I'm done</button>
+      </div>
+      <div class="cardwrap"><div class="flash" id="flash">
+        <div class="fsum">
+          <div class="fa" id="fa">0</div>
+          <div class="fsign" id="fsign">+</div>
+          <div class="fb" id="fb">0</div>
+          <div class="fbox" id="fbox"></div>
+        </div>
+        <svg class="mark tick" viewBox="0 0 24 24" fill="none" stroke="#2FAE68" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l6 6L20 6"/></svg>
+        <svg class="mark dip" viewBox="0 0 24 24" fill="none" stroke="#D99B12" stroke-width="3.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+      </div></div>
       <div class="pad">
         <div class="keys">
           <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
           <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
           <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
-          <button class="key act" data-k="del"><svg viewBox="0 0 24 24" fill="none" stroke="#7C5CFC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9L3 12z"/><path d="M12 10l4 4M16 10l-4 4"/></svg></button>
+          <button class="key act" data-k="del" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="#7C5CFC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11v12H9L3 12z"/><path d="M12 10l4 4M16 10l-4 4"/></svg></button>
           <button class="key" data-k="0">0</button>
-          <button class="key next" data-k="next"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg></button>
+          <button class="key back" data-k="back" aria-label="Back one"><svg viewBox="0 0 24 24" fill="none" stroke="#6E6684" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
         </div>
-        <button class="big ghost" id="finish" style="max-width:330px;margin:10px auto 0;display:block">I'm done</button>
+        <button class="nextbar" data-k="next" id="nextBar">
+          <span>Next</span>
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg>
+        </button>
+
       </div>
     </main>
   </section>
@@ -245,13 +429,19 @@ main{flex:1;padding:0 16px 40px}
           <div class="stat"><b id="rMiss">0</b><i>Missed</i></div>
           <div class="stat"><b id="rSkip">0</b><i>Blank</i></div>
         </div>
-        <div class="best" id="rBest"></div>
+
       </div>
-      <button class="big" id="retry">Practise the ones you missed</button>
-      <div class="lab" style="padding-left:4px;margin-top:18px">Your sheet</div>
+
+      <!-- Session MM3: every way out sits ABOVE the marked sheet. Having to
+           scroll past fifty problems to press "go again" is the single thing
+           that made this feel like it had no way back. -->
+      <button class="big go" id="again">Go again</button>
+      <button class="big ghost" id="retry">Practice the ones you missed</button>
+      <button class="big ghost" id="change">New quiz</button>
+
+      <div class="lab" style="padding-left:4px;margin-top:22px">Your sheet</div>
       <div class="sheet" id="marked"></div>
-      <button class="big ghost" id="again">Go again</button>
-      <button class="small" id="change">Back to the start</button>
+      <button class="big ghost" id="again2">Go again</button>
     </main>
   </section>
 
@@ -268,6 +458,8 @@ main{flex:1;padding:0 16px 40px}
 </div>
 
 
+<script src="/buildable-audio.js"></script>
+<script src="/buildable-gamenav.js"></script>
 <script>
 /* ---- shell awareness (the lessons.html / weather.html pattern) ---- */
 function iframed(){ try{ return window.parent && window.parent !== window; }catch(e){ return false; } }
@@ -282,17 +474,133 @@ function activeKid(){
 var KID = activeKid();
 var SCORE_KEY = "bk_minutemath_v1:" + (KID ? KID.id : "guest");
 
+/* ---- sound (Session MM7) -------------------------------------------------
+   Real ElevenLabs clips through the shared audio library, never the synth
+   fallback. The bed is the calm ocean pad from the shared music endpoint, not
+   a new generation: it is already made, already cached, and "dreamy ambient,
+   soft warm synth pads, no drums" is exactly the right thing to think over.
+   The one-shots are bespoke and deliberately gentle. "Right" fires up to fifty
+   times in a minute so it is the quietest thing here, and "wrong" is a soft
+   dip, never a buzzer: a fact test is precisely where a harsh noise turns into
+   a kid who will not open the app again.
+   NOTE the minute_ prefix: mm_ already belongs to Music Maker. */
+var BA = window.BuildableAudio || null;
+
+/* ---- the music playlist (Session MM13) -----------------------------------
+   Mike: "the songs start over every minute, and most quizzes are over 1 min."
+   He was hearing a real thing: EVERY music clip in this app is generated at
+   music_length_ms 30000, so a single looped track restarts twice a minute and
+   a three-minute quiz hears the same thirty seconds six times.
+
+   So this is a playlist, not a track: the calm end of the shared music library
+   (/api/library-music), shuffled per run, with the next one fading up as the
+   last fades out. Two and a half minutes of music before anything repeats, and
+   because the changeover is a crossfade there is no hard restart to hear even
+   when it does. No new generation: every one of these already exists and is
+   cached, so the playlist costs nothing. */
+var TRACKS = ["spa_heartbeat_warm","lofi_chill_upbeat","spa_heartbeat_bright",
+              "adventure_meadow_soft","sky_open_air"];
+var MUS_VOL = 0.34, FADE = 2.5;
+/* MEASURED, not guessed. Decoded off the live endpoint with an
+   OfflineAudioContext: minute_right came back peaking at 0.041 and
+   minute_wrong at 0.027, which is silence on a tablet in a kitchen. Generated
+   clips arrive at wildly different levels, so every game declares the level
+   its clips should SIT at and the buffer is scaled once on decode.
+   The ladder matters as much as the numbers: "right" fires up to fifty times
+   in a minute so it sits lowest, and the finish sounds happen once so they
+   sit high. That ladder is most of what stops a drill feeling abrasive. */
+var SFX_PEAKS = { minute_right:0.26, minute_wrong:0.34, minute_done:0.80, minute_best:0.90 };
+if(BA && BA.configure){
+  BA.configure({ sfxBase:"/api/sfx?s=", peaks:SFX_PEAKS, map:{
+    select:"minute_right", error:"minute_wrong", celebrate:"minute_done", win:"minute_best" } });
+}
+function sfx(n){ if(S.sfx && BA && BA.sfx && !BA.muted) try{ BA.sfx(n); }catch(e){} }
+var mus = { order:[], at:0, cur:null, nxt:null, tick:null, running:false };
+function trackUrl(n){ return "/api/library-music?name=" + encodeURIComponent(n); }
+function shuffled(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function makeTrack(name, vol){
+  var el = new Audio(trackUrl(name));
+  el.preload = "auto"; el.volume = vol; el.loop = false;
+  var pr = el.play(); if(pr && pr.catch) pr.catch(function(){});
+  return el;
+}
+function nextName(){ mus.at = (mus.at + 1) % mus.order.length; return mus.order[mus.at]; }
+function musicOn(){
+  if(!S.music || (BA && BA.muted)) return;
+  if(BA) try{ BA.unlock(); }catch(e){}
+  if(mus.running){ if(mus.cur) { var r=mus.cur.play(); if(r&&r.catch) r.catch(function(){}); } return; }
+  mus.running = true;
+  mus.order = shuffled(TRACKS); mus.at = 0;
+  mus.cur = makeTrack(mus.order[0], 0);
+  mus.nxt = null;
+  clearInterval(mus.tick);
+  mus.tick = setInterval(musicStep, 120);
+}
+/* One timer runs the whole thing: fade the new one up, the old one down, and
+   start the next when the current has FADE seconds left. Checking the clock
+   rather than waiting for "ended" is what makes it a crossfade instead of a
+   gap, and it survives a track whose duration the browser has not read yet. */
+function musicStep(){
+  if(!mus.running) return;
+  var c = mus.cur;
+  if(c){
+    if(c.volume < MUS_VOL) c.volume = Math.min(MUS_VOL, c.volume + MUS_VOL*0.12);
+    var d = c.duration;
+    if(!mus.nxt && isFinite(d) && d > 0 && (d - c.currentTime) <= FADE){
+      mus.nxt = makeTrack(nextName(), 0);
+    }
+  }
+  if(mus.nxt){
+    var step = MUS_VOL / (FADE * 8);
+    mus.nxt.volume = Math.min(MUS_VOL, mus.nxt.volume + step);
+    if(c) c.volume = Math.max(0, c.volume - step);
+    if(!c || c.ended || c.volume <= 0.001){
+      if(c){ try{ c.pause(); }catch(e){} }
+      mus.cur = mus.nxt; mus.nxt = null;
+    }
+  }
+}
+function musicOff(){
+  mus.running = false;
+  clearInterval(mus.tick); mus.tick = null;
+  [mus.cur, mus.nxt].forEach(function(el){ if(el) try{ el.pause(); }catch(e){} });
+  mus.cur = null; mus.nxt = null;
+}
+var SPK_ON  = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#7C5CFC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 8.5a5 5 0 010 7"/></svg>';
+var SPK_OFF = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#A79BBE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>';
+function paintSound(){
+  var off = !!(BA && BA.muted), html = off ? SPK_OFF : SPK_ON;
+  ["soundBtn","soundBtn2"].forEach(function(id){ var b=document.getElementById(id); if(b) b.innerHTML=html; });
+}
+function toggleSound(){
+  if(!BA || !BA.toggleMute) return;
+  BA.unlock(); BA.toggleMute();
+  if(BA.muted) musicOff();
+  else if(!$("s-sheet").classList.contains("hidden")) musicOn();
+  paintSound();
+}
+
 var OPNAME = { add:"Addition", sub:"Subtraction", mul:"Multiplication", div:"Division" };
 var SIGN   = { add:"+", sub:"−", mul:"×", div:"÷" };
 
-var S = { ops:["add"], lo:1, hi:12, focus:null, timer:60, count:50, showTimer:true };
+/* Session MM6 - nothing is picked to start with. Pre-ticking Addition meant a
+   kid who wanted multiplication had to work out that they must first UNtick a
+   thing they never ticked, and the picker would not let them reach zero
+   anyway. Now it starts empty, it may BE empty, and START simply will not go
+   until something is chosen. */
+var S = { ops:[], lo:1, hi:19, focus:null, timer:180, count:50, showTimer:true, music:true, sfx:true };
+try{
+  var savedSound = JSON.parse(localStorage.getItem("bk_minutemath_sound_v1")||"null");
+  if(savedSound){ if(savedSound.music===false) S.music=false; if(savedSound.sfx===false) S.sfx=false; }
+}catch(e){}
+function saveSound(){ try{ localStorage.setItem("bk_minutemath_sound_v1", JSON.stringify({music:S.music, sfx:S.sfx})); }catch(e){} }
 var RUN = null;                 /* the settings the current run is using */
 var probs = [], cur = 0, left = 60, tick = null, started = 0, hideClock = false;
 
 function $(id){ return document.getElementById(id); }
 function show(id){ ["s-setup","s-sheet","s-done","s-scores"].forEach(function(s){
     $(s).classList.toggle("hidden", s!==id); }); window.scrollTo(0,0); }
-function opsLabel(ops){ return ops.map(function(o){ return OPNAME[o]; }).join(" and "); }
+function opsLabel(ops){ return ops.map(function(o){ return OPNAME[o]; }).join(" & "); }
 function fmt(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
 function timeWord(t){ return t===0?"no timer":(t<60?t+" seconds":(t/60)+" minute"+(t>60?"s":"")); }
 
@@ -302,45 +610,49 @@ function timeWord(t){ return t===0?"no timer":(t<60?t+" seconds":(t/60)+" minute
    1-minute sheet against a 5-minute one does not, so they never share a row. */
 function readScores(){ try{ return JSON.parse(localStorage.getItem(SCORE_KEY)||"{}")||{}; }catch(e){ return {}; } }
 function writeScores(o){ try{ localStorage.setItem(SCORE_KEY, JSON.stringify(o)); }catch(e){} }
-function runKey(cfg){ return cfg.ops.slice().sort().join("+")+"|"+cfg.lo+"-"+cfg.hi+"|"+cfg.timer; }
-function runLabel(cfg){ return opsLabel(cfg.ops)+", "+cfg.lo+" to "+cfg.hi+", "+timeWord(cfg.timer); }
+function focusOf(cfg){ return (cfg.focus===null || cfg.focus===undefined) ? "" : cfg.focus; }
+function runKey(cfg){ return cfg.ops.slice().sort().join("+")+"|"+cfg.lo+"-"+cfg.hi+"|"+focusOf(cfg)+"|"+cfg.timer; }
+function runLabel(cfg){
+  /* A sheet of nothing but 7s is a different job from a mixed sheet, so it gets
+     its own row and its own best. Beating yourself only means something when
+     the two sheets are the same shape. */
+  var where = focusOf(cfg)==="" ? cfg.lo+" to "+cfg.hi : "just the "+cfg.focus+"s";
+  return opsLabel(cfg.ops)+", "+where+", "+timeWord(cfg.timer);
+}
 function bestFor(cfg){ var r=readScores()[runKey(cfg)]; return r ? r.best : 0; }
-function saveRun(cfg, right, total, secs){
+
+/* Session MM2 - remember WHICH facts go wrong, not just how many.
+   "34 out of 50" tells a grown-up nothing they can act on. "7x8 keeps going
+   wrong" tells them what to do tonight. Stored as a plain tally of fact ids
+   ("7x8": 3) on the same row as the scores, so the parent card can name the
+   numbers a kid is slowest on without any server or any account. */
+function factId(p){ return p.a + SIGN[p.op] + p.b; }
+function saveRun(cfg, right, total, secs, missList){
   var all=readScores(), k=runKey(cfg);
-  var row=all[k]||{ label:runLabel(cfg), best:0, runs:[] };
+  var row=all[k]||{ label:runLabel(cfg), best:0, runs:[], misses:{} };
   row.label=runLabel(cfg);
+  row.ops=cfg.ops.slice().sort().join("+");
+  if(!row.misses) row.misses={};
+  (missList||[]).forEach(function(p){ var id=factId(p); row.misses[id]=(row.misses[id]||0)+1; });
   row.runs.unshift({ n:right, total:total, secs:secs, at:Date.now() });
   row.runs=row.runs.slice(0,10);
   if(right>row.best) row.best=right;
   all[k]=row; writeScores(all);
 }
-function whenWord(ms){
-  var d=Math.floor((Date.now()-ms)/86400000);
-  if(d<=0) return "Today"; if(d===1) return "Yesterday";
-  if(d<7) return d+" days ago";
-  return new Date(ms).toLocaleDateString();
-}
-function paintScores(){
-  var all=readScores(), keys=Object.keys(all), h="";
-  if(!keys.length){
-    h='<div class="card"><p class="help" style="margin:0">No scores yet. Finish a sheet and it will show up here, so you can try to beat yourself next time.</p></div>';
-  }
-  keys.sort(function(a,b){ return (all[b].runs[0]||{}).at - (all[a].runs[0]||{}).at; });
-  keys.forEach(function(k){
-    var row=all[k];
-    h+='<div class="card"><div class="lab">'+row.label+'</div><div class="runs">';
-    row.runs.forEach(function(r,i){
-      var top = r.n===row.best && i===row.runs.indexOf(row.runs.filter(function(x){return x.n===row.best;})[0]);
-      h+='<div class="run'+(top?" top":"")+'"><span class="sc">'+r.n+'</span>'+
-         '<span class="when">'+(top?"Best ever, ":"")+whenWord(r.at).toLowerCase().replace(/^t/,"T")+
-         ', out of '+r.total+'</span></div>';
-    });
-    h+='</div></div>';
-  });
-  document.getElementById("scoreList").innerHTML=h;
-}
 
 /* ---------- chip builders ---------- */
+/* Nothing picked, nothing to start. The button says why rather than just
+   sitting there dead. */
+function syncStart(){
+  var none = S.ops.length===0;
+  ["start","toPrint","toKey"].forEach(function(id){
+    var b=$(id); if(!b) return;
+    b.disabled = none;
+    b.classList.toggle("off", none);
+  });
+  $("start").textContent = none ? "Pick one above to start" : "START";
+}
+
 function chipRow(wrap, items, isOn, pick){
   wrap.innerHTML="";
   items.forEach(function(it){
@@ -351,11 +663,28 @@ function chipRow(wrap, items, isOn, pick){
     wrap.appendChild(b);
   });
 }
-var FOCUS=[{label:"Mix them up",v:null,wide:true}]; for(var i=0;i<=12;i++) FOCUS.push({label:i+"s",v:i});
+/* The chips follow the range above rather than being a fixed 0-12 list, so a
+   sheet that goes up to 19 can be focused on the 17s. */
+function focusItems(){
+  var out=[{label:"Mix them up",v:null,wide:true}];
+  for(var i=S.lo;i<=S.hi;i++) out.push({label:i+"s",v:i});
+  return out;
+}
+function focusLabel(){ return S.focus===null ? "Mix them up" : "Just the "+S.focus+"s"; }
+function rebuildFocus(){
+  if(S.focus!==null && (S.focus<S.lo || S.focus>S.hi)) S.focus=null;
+  chipRow($("focus"), focusItems(), function(it){ return it.v===S.focus; }, function(it){
+    S.focus=it.v; $("focusVal").textContent=focusLabel();
+    $("focusHead").parentNode.classList.remove("open");
+  });
+  $("focusVal").textContent=focusLabel();
+}
 var TIMES=[{label:"Off",v:0},{label:"30s",v:30},{label:"1 min",v:60},{label:"2 min",v:120},{label:"3 min",v:180},{label:"5 min",v:300}];
-var COUNTS=[10,20,30,50,80,100].map(function(n){ return {label:String(n),v:n}; });
+/* 40 is in here because school fact tests are very often 40, which is also
+   the Sprint default on the practice page. */
+var COUNTS=[10,20,30,40,50,80,100].map(function(n){ return {label:String(n),v:n}; });
 
-chipRow($("focus"), FOCUS, function(it){ return it.v===S.focus; }, function(it){ S.focus=it.v; });
+rebuildFocus();
 chipRow($("timers"), TIMES, function(it){ return it.v===S.timer; }, function(it){ S.timer=it.v; });
 chipRow($("counts"), COUNTS, function(it){ return it.v===S.count; }, function(it){ S.count=it.v; });
 
@@ -364,9 +693,10 @@ function wireOps(sel, attr, target){
   [].forEach.call(document.querySelectorAll(sel),function(b){
     b.onclick=function(){
       var op=b.dataset[attr], i=target.ops.indexOf(op);
-      if(i>=0){ if(target.ops.length>1) target.ops.splice(i,1); } else target.ops.push(op);
+      if(i>=0) target.ops.splice(i,1); else target.ops.push(op);
       [].forEach.call(document.querySelectorAll(sel),function(o){
         o.classList.toggle("on", target.ops.indexOf(o.dataset[attr])>=0); });
+      syncStart();
     };
   });
 }
@@ -379,6 +709,7 @@ function wireStep(sel, attr, target, loEl, hiEl){
       target[k]=Math.max(0,Math.min(20,target[k]+d));
       if(target.lo>target.hi){ if(k==="lo") target.hi=target.lo; else target.lo=target.hi; }
       $(loEl).textContent=target.lo; $(hiEl).textContent=target.hi;
+      if(target===S) rebuildFocus();
     };
   });
 }
@@ -389,6 +720,13 @@ function wireSw(id, get, set){
   var b=$(id); b.onclick=function(){ set(!get()); b.classList.toggle("on", get()); };
 }
 wireSw("swTimer", function(){return S.showTimer;}, function(v){S.showTimer=v;});
+wireSw("swMusic", function(){return S.music;}, function(v){
+  S.music=v; saveSound();
+  if(!v) musicOff(); else if(!$("s-sheet").classList.contains("hidden")) musicOn();
+});
+wireSw("swSfx", function(){return S.sfx;}, function(v){ S.sfx=v; saveSound(); });
+$("swMusic").classList.toggle("on", S.music);
+$("swSfx").classList.toggle("on", S.sfx);
 
 /* ---------- problem making ---------- */
 function rnd(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
@@ -404,34 +742,77 @@ function makeProblem(cfg){
 function makeSet(cfg,n){ var out=[]; for(var i=0;i<n;i++) out.push(makeProblem(cfg)); return out; }
 
 /* ---------- the sheet ---------- */
-function renderSheet(){
-  var el=$("sheet"); el.innerHTML="";
-  probs.forEach(function(p,i){
-    var d=document.createElement("div"); d.className="prob";
-    d.innerHTML='<div class="n">'+p.a+'</div><div class="n"><span class="sign">'+SIGN[p.op]+'</span>'+p.b+'</div><div class="box"></div>';
-    d.onclick=function(){ setCur(i); };
-    el.appendChild(d);
-  });
-  setCur(0);
+function renderSheet(){ setCur(0); }
+function setCur(i){
+  cur = Math.max(0, Math.min(probs.length-1, i));
+  var p = probs[cur];
+  $("fa").textContent = p.a;
+  $("fsign").textContent = SIGN[p.op];
+  $("fb").textContent = p.b;
+  $("count").textContent = (cur+1)+" of "+probs.length;
+  $("progBar").style.width = Math.round(((cur)/probs.length)*100)+"%";
+  paintBoxes();
 }
-function setCur(i){ cur=i; [].forEach.call($("sheet").children,function(c,n){ c.classList.toggle("on",n===i); }); paintBoxes(); }
 function paintBoxes(){
-  [].forEach.call($("sheet").children,function(c,n){
-    c.querySelector(".box").innerHTML = probs[n].typed + (n===cur?'<span class="caret"></span>':'');
-  });
+  $("fbox").innerHTML = probs[cur].typed + '<span class="caret"></span>';
+  var go = $("nextBar"); if(go) go.disabled = probs[cur].typed === "";
+  var bk = document.querySelector('.key.back'); if(bk) bk.disabled = cur === 0;
+}
+/* Leaving a card tells you how it went, then moves on. You cannot go back and
+   change it, so the score stays honest; you just are not left guessing for a
+   whole minute. A blank is not marked at all - skipping is allowed. */
+/* Session MM14 - the mark, and what a FAST kid does during it.
+   Mike's son reported it "skipping a bunch of questions". Two separate faults,
+   both reproduced against the live page:
+
+   1. The green arrow moved on from an empty card. It is the biggest, greenest,
+      most inviting thing on the screen, so a kid taps it. Eight taps took card
+      1 to card 9 and left 49 blanks, which score zero and teach nothing.
+      Fixed: the arrow is dead until there is an answer in the box.
+
+   2. Anything typed during the brief right/wrong mark was thrown away, so a
+      kid who answered and immediately started the next one watched their first
+      digits vanish. Fixed: those presses are HELD and land on the next card
+      the moment it appears. Never drop a kid's input in a timed test.
+
+   The mark is also shorter now. It used to be 260ms on every card; across
+   fifty cards that is thirteen seconds of a three-minute run spent watching
+   an animation. */
+var marking = false, pending = "";
+function leaveCard(then){
+  var p = probs[cur], card = $("flash");
+  card.classList.remove("wasright","waswrong");
+  if(p.typed === ""){ then(); return; }
+  var ok = parseInt(p.typed,10) === p.ans;
+  card.classList.add(ok ? "wasright" : "waswrong");
+  sfx(ok ? "select" : "error");
+  marking = true; pending = "";
+  setTimeout(function(){
+    marking = false;
+    card.classList.remove("wasright","waswrong");
+    then();
+    if(pending){ probs[cur].typed = pending.slice(0,3); pending = ""; paintBoxes(); }
+  }, ok ? 170 : 380);
 }
 function key(k){
+  if(marking){
+    /* held, not dropped */
+    if(k === "del") pending = pending.slice(0,-1);
+    else if(k !== "next" && pending.length < 3) pending += k;
+    return;
+  }
   var p=probs[cur];
   if(k==="del"){ p.typed=p.typed.slice(0,-1); paintBoxes(); return; }
+  if(k==="back"){ if(cur>0) setCur(cur-1); return; }
   if(k==="next"){
-    if(cur<probs.length-1){ setCur(cur+1); $("sheet").children[cur].scrollIntoView({block:"center",behavior:"smooth"}); }
-    else finish();
+    if(p.typed === "") return;          // no skipping: answer it or run the clock out
+    leaveCard(function(){ if(cur<probs.length-1) setCur(cur+1); else finish(); });
     return;
   }
   if(p.typed.length<3) p.typed+=k;
   paintBoxes();
 }
-[].forEach.call(document.querySelectorAll(".key"),function(b){ b.onclick=function(){ key(b.dataset.k); }; });
+[].forEach.call(document.querySelectorAll(".key, .nextbar"),function(b){ b.onclick=function(){ key(b.dataset.k); }; });
 document.addEventListener("keydown",function(e){
   if($("s-sheet").classList.contains("hidden")) return;
   if(/^[0-9]$/.test(e.key)) key(e.key);
@@ -463,6 +844,8 @@ function startRun(cfg, list){
       if(left<=0){ clearInterval(tick); finish(); }
     },1000);
   }
+  $("flash").classList.remove("wasright","waswrong");
+  musicOn(); paintSound();
   show("s-sheet");
 }
 
@@ -490,37 +873,75 @@ function finish(){
   $("rMiss").textContent=miss;
   $("rSkip").textContent=blank;
   $("rMsg").textContent = right>=probs.length*0.8 ? "You are flying!" : right>=probs.length*0.4 ? "Nice work!" : "Good try. Go again?";
+  /* Session MM9 - the finish screen says how you did and gets out of the way.
+     It used to also announce "your best at Subtraction, 1 to 12, 1 minute is
+     31" and offer "the 3s came up a few times, want a sheet of just those?".
+     Mike cut both: at the moment a kid finishes they want to know how they did
+     and then either go again or leave, and two more paragraphs of admin is
+     not that. The data behind both is still kept - the scores screen shows the
+     history, and the missed-fact tally still feeds the grown-ups' tricky
+     numbers - it just is not shouted at the kid mid-celebration. */
   var pb = RUN.practice ? 0 : bestFor(RUN);
-  if(!RUN.practice){
-    saveRun(RUN, right, probs.length, secs);
-    $("rBest").textContent = (pb===0) ? "First go at "+runLabel(RUN)+". That is the score to beat."
-      : (right>pb) ? "A new best at "+opsLabel(RUN.ops)+"! Your old best was "+pb+"."
-                   : "Your best at "+runLabel(RUN)+" is "+pb+".";
-  } else {
-    $("rBest").textContent = "Practice round, this one does not count towards your best.";
-  }
+  if(!RUN.practice) saveRun(RUN, right, probs.length, secs, missed);
   $("retry").classList.toggle("hidden", missed.length===0);
-  $("retry").textContent = "Practise the "+missed.length+" you missed";
+  $("retry").textContent = "Practice the "+missed.length+" you missed";
   drawBirds(right);
+  musicOff();
+  if(!RUN.practice) sfx(right > pb && pb > 0 ? "win" : "celebrate");
   show("s-done");
 }
 
-/* ---------- birds ---------- */
+/* ---------- the collection --------------------------------------------------
+   One bird per right answer, on a sagging telephone wire. This is the SAME
+   bird and the same wire the Practice page uses (renderFlock / birdPath in
+   practice.html) rather than a second, worse bird drawn just for this page:
+   a kid should recognize their flock wherever it turns up. */
+var VB_W = 320;
+var TINTS = ["#7C5CFC","#37B6F5","#FF6B6B","#2FAE68","#F0972A","#B06BE0"];
+function birdPath(x, y, r, tint){
+  var s = r / 6;
+  return '<g class="bird">' +
+    '<path d="M' + (x - 2*s) + ' ' + y + ' l0 ' + (2.2*s) + ' M' + (x + 1.4*s) + ' ' + y + ' l0 ' + (2.2*s) + '" ' +
+      'stroke="#8A7F6B" stroke-width="' + Math.max(0.6, 0.55*s) + '" stroke-linecap="round"/>' +
+    '<ellipse cx="' + x + '" cy="' + (y - 2.2*s) + '" rx="' + (3.4*s) + '" ry="' + (2.4*s) + '" fill="' + tint + '"/>' +
+    '<circle cx="' + (x + 2.9*s) + '" cy="' + (y - 4.1*s) + '" r="' + (1.7*s) + '" fill="' + tint + '"/>' +
+    '<path d="M' + (x + 4.4*s) + ' ' + (y - 4.2*s) + ' l' + (1.8*s) + ' ' + (0.7*s) + ' l' + (-1.8*s) + ' ' + (0.7*s) + ' z" fill="#F0A02C"/>' +
+    '<ellipse cx="' + (x - 0.2*s) + '" cy="' + (y - 2.2*s) + '" rx="' + (1.9*s) + '" ry="' + (1.2*s) + '" fill="rgba(255,255,255,.34)"/>' +
+    '<path d="M' + (x - 3.2*s) + ' ' + (y - 2.6*s) + ' l' + (-2.6*s) + ' ' + (-1.5*s) + ' l' + (0.6*s) + ' ' + (2.6*s) + ' z" fill="' + tint + '"/>' +
+    '</g>';
+}
 function drawBirds(n){
-  var w=320, y=40, k=Math.min(n,14), s='';
-  s+='<path d="M0 '+y+' Q160 '+(y+9)+' 320 '+y+'" stroke="#C9BFAC" stroke-width="2.5" fill="none"/>';
-  for(var i=0;i<k;i++){
-    var x=16+i*((w-32)/Math.max(1,(k-1)||1));
-    var yy=y+8*Math.sin(Math.PI*(x/w));
-    s+='<g transform="translate('+x.toFixed(1)+','+(yy-9).toFixed(1)+')">'+
-       '<ellipse cx="0" cy="0" rx="6.5" ry="5" fill="#7C5CFC"/>'+
-       '<circle cx="4.5" cy="-3.5" r="3.6" fill="#7C5CFC"/>'+
-       '<circle cx="5.6" cy="-4.2" r="0.9" fill="#fff"/>'+
-       '<path d="M8 -3.4l3 1.2-3 1.1z" fill="#FFC542"/>'+
-       '<path d="M-6 1l-3 5" stroke="#7C5CFC" stroke-width="1.6" stroke-linecap="round"/>'+
-       '<path d="M0 4v5M2 4v5" stroke="#6E6684" stroke-width="1.3" stroke-linecap="round"/></g>';
+  n = Math.max(0, n|0);
+  var wires = Math.max(1, Math.min(3, Math.ceil(n / 14) || 1));
+  var perWire = n ? Math.ceil(n / wires) : 0;
+  var pad = 24, span = VB_W - pad*2;
+  var gap = perWire > 0 ? span / (perWire + 1) : span;
+  var r = Math.max(4, Math.min(13, gap * 0.62));
+  var rowH = Math.max(22, r * 2.6);
+  var top = 14, H = top + wires * rowH + 12;
+
+  var out = '';
+  for(var w = 0; w < wires; w++){
+    var y = top + rowH * (w + 1) - 6;
+    out += '<path d="M' + (pad-12) + ' ' + (y-10) + ' Q' + (VB_W/2) + ' ' + (y+7) + ' ' + (VB_W-pad+12) + ' ' + (y-10) +
+           '" fill="none" stroke="#B9AF9B" stroke-width="2" stroke-linecap="round"/>';
   }
-  $("birds").innerHTML=s;
+  var made = 0;
+  for(var wi = 0; wi < wires && made < n; wi++){
+    var yy = top + rowH * (wi + 1) - 6;
+    for(var i = 0; i < perWire && made < n; i++){
+      var x = pad + gap * (i + 1);
+      var t = (x - (pad-12)) / ((VB_W-pad+12) - (pad-12));
+      var sag = (1 - Math.pow(2*t - 1, 2)) * 8.5;
+      out += birdPath(x, (yy-10) + sag, r, TINTS[made % TINTS.length]);
+      made++;
+    }
+  }
+  var svg = $("birds");
+  svg.setAttribute("viewBox", "0 0 " + VB_W + " " + H);
+  svg.parentNode.style.height = "auto";
+  svg.style.height = "auto";
+  svg.innerHTML = out;
 }
 
 /* ---------- printing ---------- */
@@ -559,19 +980,80 @@ $("start").onclick=function(){ startRun(S); };
 $("toPrint").onclick=function(){ printSheet(S,false); };
 $("toKey").onclick=function(){ printSheet(S,true); };
 $("again").onclick=function(){ startRun(RUN); };
+$("again2").onclick=function(){ startRun(RUN); };
 $("retry").onclick=function(){
   var list = missed.map(function(p){ return {op:p.op,a:p.a,b:p.b,ans:p.ans,typed:""}; });
   var cfg = Object.assign({}, RUN, {count:list.length, timer:0, practice:true});
   startRun(cfg, list);
 };
 $("finish").onclick=function(){ clearInterval(tick); finish(); };
-$("quit").onclick=function(){ clearInterval(tick); show("s-setup"); };
+$("quit").onclick=function(){ clearInterval(tick); musicOff(); show("s-setup"); };
+$("focusHead").onclick=function(){ this.parentNode.classList.toggle("open"); };
+$("soundBtn").onclick=toggleSound;
+$("soundBtn2").onclick=toggleSound;
+paintSound();
+/* The shell's own sound pill drives the same switch, so a kid never finds two
+   different mute buttons disagreeing with each other. */
+if(window.BuildableGameNav && window.BuildableGameNav.register){
+  try{ window.BuildableGameNav.register({
+    hide:["soundBtn","soundBtn2"],
+    onSound: toggleSound,
+    soundOn: function(){ return !(BA && BA.muted); }
+  }); }catch(e){}
+}
 $("change").onclick=function(){ show("s-setup"); };
 $("doneBack").onclick=function(){ show("s-setup"); };
 $("toScores").onclick=function(){ paintScores(); show("s-scores"); };
 $("scoresBack").onclick=function(){ show("s-setup"); };
+
+/* ---- Session MM2: a guest who signs in keeps the sheets they already did ----
+   Scores are saved against whichever kid is chosen, and against "guest" when
+   nobody is. A kid who practiced for a week before anyone picked their profile
+   should not lose that week, so we offer to carry it across - once, with a
+   plain question, and never silently. "No thanks" is remembered so it never
+   nags again. */
+var GUEST_KEY = "bk_minutemath_v1:guest";
+var MERGE_ASKED = "bk_minutemath_merge_asked_v1";
+function guestRuns(){
+  if(!KID) return 0;
+  try{
+    var g=JSON.parse(localStorage.getItem(GUEST_KEY)||"{}")||{};
+    return Object.keys(g).reduce(function(n,k){ return n + ((g[k].runs||[]).length); },0);
+  }catch(e){ return 0; }
+}
+function offerMerge(){
+  if(!KID) return;
+  try{ if(localStorage.getItem(MERGE_ASKED)) return; }catch(e){ return; }
+  var n = guestRuns();
+  if(n<1) return;
+  $("mergeText").textContent = "You did "+n+" sheet"+(n===1?"":"s")+" before picking a name. Keep "+
+                               (n===1?"it":"them")+" with "+(KID.name || KID.display_name || "you")+"?";
+  $("mergeCard").classList.remove("hidden");
+}
+$("mergeYes").onclick=function(){
+  try{
+    var g=JSON.parse(localStorage.getItem(GUEST_KEY)||"{}")||{}, mine=readScores();
+    Object.keys(g).forEach(function(k){
+      var from=g[k], to=mine[k];
+      if(!to){ mine[k]=from; return; }
+      to.runs=(to.runs||[]).concat(from.runs||[]).sort(function(a,b){ return b.at-a.at; }).slice(0,10);
+      to.best=Math.max(to.best||0, from.best||0);
+      to.misses=to.misses||{};
+      Object.keys(from.misses||{}).forEach(function(f){ to.misses[f]=(to.misses[f]||0)+from.misses[f]; });
+    });
+    writeScores(mine);
+    localStorage.removeItem(GUEST_KEY);
+    localStorage.setItem(MERGE_ASKED,"1");
+  }catch(e){}
+  $("mergeCard").classList.add("hidden");
+};
+$("mergeNo").onclick=function(){
+  try{ localStorage.setItem(MERGE_ASKED,"1"); }catch(e){}
+  $("mergeCard").classList.add("hidden");
+};
+offerMerge();
+syncStart();
 $("setupBack").onclick=function(){ location.href = "/lessons"; };
 </script>
-<script src="/buildable-gamenav.js"></script>
 </body>
 </html>

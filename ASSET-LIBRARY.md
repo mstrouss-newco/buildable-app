@@ -163,6 +163,7 @@ do NOT add new ones; put new moods in `library-music` so every game shares them.
 | Reusable named music (shared, any game) | `GET /api/library-music?name=<name>` | `narration_cache` |
 | Per-game music (legacy: breaker/chess/maze/runner/tennis) | `GET /api/<game>-music?...` | `narration_cache` |
 | Kids' saved songs | `GET /api/list-songs` | `saved_songs` |
+| Side-on nature cutouts (trees, bushes, grass, flowers, rocks, mushrooms) | `community_sprites` where `asset_id like 'nature/world/%'`, files in `public/antcity/art/world/` | `community_sprites` |
 | Shared drawing code (always-available fallback) | `public/buildable-renders.js` (`window.BuildableRenders`) | — |
 | Shared audio PLAYER + offline-fallback synth | `public/buildable-audio.js` (`window.BuildableAudio`) — plays created sounds; synth is fallback only | — |
 
@@ -194,6 +195,29 @@ Existing write paths already follow this: `api/generate-creature.js` → charact
 `api/generate-game.js` / `api/generate-level.js` → layers + sprites,
 `api/save-song.js` → songs. New asset-producing code must route through the same
 tables — **do not invent a new siloed store.**
+
+---
+
+## Turning a 3D model into a 2D sprite (the model camera)
+
+`scripts/nature-shot.mjs` (card AC10) turns a `.gltf` model into a flat,
+transparent, side-on PNG. It renders the model in three.js through an
+**orthographic** camera under one fixed lighting rig — a sky fill, a warm key and a
+cool rim — then trims the transparent margins so the file is exactly the piece.
+
+Two things make it worth reusing rather than reinventing:
+
+- **One rig means one family.** Thirteen models shot in a single run look like one
+  set of art. Shooting them a few at a time, with the lights nudged in between, is
+  how you end up with thirteen downloads that happen to be in the same folder.
+- **Orthographic, not perspective.** A perspective camera gives a tree a vanishing
+  point, and a sprite with a vanishing point cannot be repeated across a scene
+  without every copy pointing somewhere different.
+
+It runs headless (Playwright plus SwiftShader, no GPU needed), serves the repo
+itself and touches no network, so it works anywhere. Thirteen pieces take about a
+minute. The first set shot with it is the Ant City meadow, registered by
+`db/register-antcity-world-sprites.sql`.
 
 ---
 

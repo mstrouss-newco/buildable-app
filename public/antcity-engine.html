@@ -48,14 +48,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
          picture cards. Words are tiny labels on top of pictures, never the message. */
   #smart{display:flex;align-items:stretch;gap:8px;margin:0 2px 6px;}
 
-  /* the meter cluster: four little vertical bars. A low one wiggles and flags itself. */
+  /* the meter cluster: three little vertical bars (AC10 took the water one out).
+     A low one wiggles and flags itself. */
   #meters{flex:0 0 auto;display:flex;gap:5px;align-items:flex-end;}
   .mt{position:relative;width:16px;display:flex;flex-direction:column;align-items:center;gap:2px;}
   .mt .bar{position:relative;display:block;width:11px;height:28px;border-radius:6px;background:rgba(0,0,0,.42);
            box-shadow:inset 0 1px 2px rgba(0,0,0,.5);overflow:hidden;}
   .mt .bar i{position:absolute;left:0;right:0;bottom:0;height:0%;border-radius:6px;transition:height .3s;}
   #mtr_food .bar i{background:#63b34a;}
-  #mtr_water .bar i{background:#62b6f2;}
   #mtr_rest .bar i{background:#f2a2c0;}
   #mtr_eggs .bar i{background:#e9c46a;}
   .mt .mic{width:15px;height:15px;display:block;}
@@ -71,7 +71,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
            padding:7px 10px;background:#ffd166;box-shadow:0 2px 0 rgba(0,0,0,.18);
            font-family:inherit;color:#4a2f10;cursor:pointer;text-align:left;min-width:0;}
   #actMain .ic{display:none;flex:0 0 30px;width:30px;height:30px;}
-  #actMain.t-dig .ic-dig,#actMain.t-food .ic-food,#actMain.t-water .ic-water,#actMain.t-build .ic-build{display:block;}
+  #actMain.t-dig .ic-dig,#actMain.t-food .ic-food,#actMain.t-build .ic-build{display:block;}
   #actMain .at{min-width:0;display:flex;flex-direction:column;line-height:1.15;}
   #actName{font-size:15px;font-weight:800;}
   #actHint{font-size:11px;font-weight:700;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -175,7 +175,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     <div id="sheet"><div id="sheetCard">
       <button class="toolcard" id="tool_dig" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v9h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/><path d="M8.5 2h7v2.6h-7z" fill="#8a5a2b"/><path d="M7.6 11h8.8v4.4a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span>Dig</span></button>
       <button class="toolcard" id="tool_food" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4S5.4 16 5.4 11c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/><path d="M12 7.4V4" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 5.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg><span>Food</span></button>
-      <button class="toolcard" id="tool_water" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><span>Water</span></button>
       <button class="toolcard" id="tool_build" type="button"><svg class="tic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 9.6l3.8 3.8-6.1 6.1a2.7 2.7 0 0 1-3.8-3.8z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.5"/><path d="M12.4 3.2l8.4 4.2-2.6 4.2-8.4-4.2z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span>Build</span></button>
     </div></div>
     <!-- AC8: ONE smart bar. Meters on the left, what is in your hand in the middle,
@@ -184,12 +183,11 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     <div id="smart">
       <div id="meters">
         <div class="mt" id="mtr_food"><span class="bar"><i id="fill_food"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5c1.3-1.4 4.4-1.1 4.4 2.4 0 3.3-2.1 6.3-4.4 6.3S3.6 10.7 3.6 7.4C3.6 3.9 6.7 3.6 8 5z" fill="#63b34a"/><path d="M8 5V2.6" stroke="#3f7a2f" stroke-width="1.3" stroke-linecap="round"/></svg><span class="tag">!</span></div>
-        <div class="mt" id="mtr_water"><span class="bar"><i id="fill_water"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6c2.8 4 4.4 6.1 4.4 8.1a4.4 4.4 0 0 1-8.8 0c0-2 1.6-4.1 4.4-8.1z" fill="#62b6f2"/></svg><span class="tag">!</span></div>
         <div class="mt" id="mtr_rest"><span class="bar"><i id="fill_rest"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><path d="M12.6 9.8A5.4 5.4 0 0 1 6.2 3.4a5.4 5.4 0 1 0 6.4 6.4z" fill="#f2a2c0"/></svg><span class="tag">!</span></div>
         <div class="mt" id="mtr_eggs"><span class="bar"><i id="fill_eggs"></i></span><svg class="mic" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="9" rx="4.2" ry="5.4" fill="#e9c46a"/></svg><span class="tag">!</span></div>
       </div>
-      <button id="actMain" class="t-dig" type="button"><svg class="ic ic-dig" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v9h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/><path d="M8.5 2h7v2.6h-7z" fill="#8a5a2b"/><path d="M7.6 11h8.8v4.4a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><svg class="ic ic-food" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4S5.4 16 5.4 11c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/><path d="M12 7.4V4" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 5.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg><svg class="ic ic-water" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c4.2 6 6.6 9.1 6.6 12.1a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.1 6.6-12.1z" fill="#62b6f2" stroke="#2f6f9c" stroke-width="1.6"/><circle cx="9.4" cy="15.4" r="2" fill="#bfe6ff"/></svg><svg class="ic ic-build" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 9.6l3.8 3.8-6.1 6.1a2.7 2.7 0 0 1-3.8-3.8z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.5"/><path d="M12.4 3.2l8.4 4.2-2.6 4.2-8.4-4.2z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span class="at"><span id="actName">Dig</span><span id="actHint">drag in the dirt</span></span></button>
-      <button id="actSwap" type="button" aria-label="Change tool"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2.5" fill="#8a5a2b"/><rect x="13" y="3" width="8" height="8" rx="2.5" fill="#63b34a"/><rect x="3" y="13" width="8" height="8" rx="2.5" fill="#62b6f2"/><rect x="13" y="13" width="8" height="8" rx="2.5" fill="#cfd6dc"/></svg></button>
+      <button id="actMain" class="t-dig" type="button"><svg class="ic ic-dig" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 2h2v9h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/><path d="M8.5 2h7v2.6h-7z" fill="#8a5a2b"/><path d="M7.6 11h8.8v4.4a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><svg class="ic ic-food" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4S5.4 16 5.4 11c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/><path d="M12 7.4V4" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 5.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg><svg class="ic ic-build" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 9.6l3.8 3.8-6.1 6.1a2.7 2.7 0 0 1-3.8-3.8z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.5"/><path d="M12.4 3.2l8.4 4.2-2.6 4.2-8.4-4.2z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg><span class="at"><span id="actName">Dig</span><span id="actHint">drag in the dirt</span></span></button>
+      <button id="actSwap" type="button" aria-label="Change tool"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2.5" fill="#8a5a2b"/><rect x="13" y="3" width="8" height="8" rx="2.5" fill="#63b34a"/><rect x="3" y="13" width="8" height="8" rx="2.5" fill="#e9c46a"/><rect x="13" y="13" width="8" height="8" rx="2.5" fill="#cfd6dc"/></svg></button>
     </div>
     <div id="jobsStrip">
       <div id="stripRow">
@@ -273,7 +271,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     startRow: 2,              // the queen's first chamber
     startAnts: 6,
     startFood: 12,
-    startWater: 8,
     // ---- AC13: the crowd IS the score --------------------------------------
     //  The number of ants on screen is the progress meter, with no words at all.
     //  So the cap is a PAINTING budget, not a design choice: a grown colony is a
@@ -289,11 +286,31 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     dig:     { perAntPerSec: 0.55 },   // cells opened per digger per second
     forage:  { walkSpeed: 3.0, storageSpeedMax: 1.8 },   // AC7: a forager's pay is the TRIP, not a rate
     build:   { perAntPerSec: 0.42 },   // room progress per builder per second
-    nursery: { hatchPerAntPerSec: 0.14, layPerSec: 0.22, eggFood: 1 },
-    upkeep:  { foodPerAntPerSec: 0.035, waterPerAntPerSec: 0.018 },
+    // AC10 cut droppable water, so a fed colony is now a colony that hatches. The
+    // hatch rate came down with it (0.14 -> 0.115) so the pace a kid feels is the
+    // same as the day water was still there to keep topped up.
+    nursery: { hatchPerAntPerSec: 0.115, layPerSec: 0.22, eggFood: 1 },
+    upkeep:  { foodPerAntPerSec: 0.035 },
     hungryRate: 0.4,          // how much slower a hungry colony works (never stops, never punishes)
 
-    capacity: { foodBase: 25, foodPerStorage: 40, waterBase: 20, eggBase: 2, eggPerNursery: 8 },
+    capacity: { foodBase: 25, foodPerStorage: 40, eggBase: 2, eggPerNursery: 8 },
+
+    // ---- AC10: what is under the meadow ------------------------------------
+    //  The ground is layers now, and digging down goes through them. `to` is the
+    //  row the layer ends at; the last one has no bottom, because a free-build
+    //  colony has none either. `stuff` is how much of the layer has something
+    //  buried in it and `find` is what that something is. All decoration: none of
+    //  it changes what a cell does, costs anything, or can be collected.
+    soil: [
+      { id:"topsoil", to:5,   top:"#c9975c", bot:"#b07f42", speck:"#e3bb8a",
+        art:"soilTop",  stuff:0.16, find:"root" },
+      { id:"loam",    to:14,  top:"#ab7940", bot:"#8f6130", speck:"#c69257",
+        art:"soilLoam", stuff:0.13, find:"acorn" },
+      { id:"clay",    to:30,  top:"#9a6338", bot:"#7d4d2a", speck:"#b57a4c",
+        art:"soilLoam", stuff:0.10, find:"root" },
+      { id:"stone",   to:1e9, top:"#7f6a56", bot:"#5d4c3d", speck:"#a2917d",
+        art:"soilDeep", stuff:0.20, find:"pebble" }
+    ],
 
     // ---- AC7 pillar 1: food is CARRIED, never counted -----------------------
     //  Every edible thing on the meadow is a real item an ant walks to, picks up
@@ -303,7 +320,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     //  first (the kid's own crumbs always come before the colony's own foraging).
     items: {
       crumb: { give:"food",  n:4, pri:0 },
-      water: { give:"water", n:4, pri:0 },
       berry: { give:"food",  n:3, pri:1 },
       dew:   { give:"food",  n:2, pri:2 },
       leaf:  { give:"leaf",  n:1, pri:3 }
@@ -485,6 +501,21 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     "antcity/bug/beetle-v1":      "/antcity/art/bug-beetle.svg",
     "antcity/bug/caterpillar-v1": "/antcity/art/bug-caterpillar.svg",
     "antcity/bug/grasshopper-v1": "/antcity/art/bug-grasshopper.svg",
+    // AC10: the world above. CC0 Quaternius Stylized Nature MegaKit, shot into
+    // flat side-on sprites by scripts/nature-shot.mjs under one lighting rig.
+    "antcity/world/tree-pine-1-v1":  "/antcity/art/world/tree-pine-1.png",
+    "antcity/world/tree-pine-2-v1":  "/antcity/art/world/tree-pine-2.png",
+    "antcity/world/tree-round-1-v1": "/antcity/art/world/tree-round-1.png",
+    "antcity/world/tree-round-2-v1": "/antcity/art/world/tree-round-2.png",
+    "antcity/world/tree-round-3-v1": "/antcity/art/world/tree-round-3.png",
+    "antcity/world/bush-flowers-v1": "/antcity/art/world/bush-flowers.png",
+    "antcity/world/fern-v1":         "/antcity/art/world/fern.png",
+    "antcity/world/grass-tall-v1":   "/antcity/art/world/grass-tall.png",
+    "antcity/world/flowers-1-v1":    "/antcity/art/world/flowers-1.png",
+    "antcity/world/flowers-2-v1":    "/antcity/art/world/flowers-2.png",
+    "antcity/world/mushroom-v1":     "/antcity/art/world/mushroom.png",
+    "antcity/world/rock-1-v1":       "/antcity/art/world/rock-1.png",
+    "antcity/world/rock-2-v1":       "/antcity/art/world/rock-2.png",
     "antcity/soil/sandy-v1":      "/antcity/art/soil-tile.svg",
     "antcity/soil/deep-v1":       "/antcity/art/soil-deep.svg",
     "antcity/soil/loam-v1":       "/antcity/art/soil-loam.svg",
@@ -562,7 +593,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
   function freshColony(diff){
     var g = GAME_CONFIG, col = {
-      cells:{}, plan:[], ants:g.startAnts, eggs:0, food:g.startFood, water:g.startWater,
+      cells:{}, plan:[], ants:g.startAnts, eggs:0, food:g.startFood,
       jobs:{ digger:2, forager:2, nursery:1, builder:1, soldier:0 },
       surface:[], sample:[],
       layProg:0, hatchProg:0, deepest:g.startRow, difficulty:diff||3,
@@ -621,7 +652,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // capacities grow with the rooms the kid builds
   function roomCount(kind){ var n=0; for(var k in C.cells){ var x=C.cells[k]; if(x.kind==="room" && x.done && x.room===kind) n++; } return n; }
   function foodCap(){ return GAME_CONFIG.capacity.foodBase + roomCount("storage")*GAME_CONFIG.capacity.foodPerStorage; }
-  function waterCap(){ return GAME_CONFIG.capacity.waterBase + roomCount("storage")*20; }
   function eggCap(){ return GAME_CONFIG.capacity.eggBase + roomCount("nursery")*GAME_CONFIG.capacity.eggPerNursery; }
   function paceMul(){
     var dens = Math.min(GAME_CONFIG.denMax, roomCount("den"));
@@ -686,7 +716,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
   // ======================================================================
   //  AC7: the things on the meadow. A crumb the kid taps out, a berry the bush
-  //  grew, a leaf, a drop of honeydew, a drop of water. Each one is a REAL item
+  //  grew, a leaf, a drop of honeydew. Each one is a REAL item
   //  in a real place. A forager claims it, walks to it, picks it up (which is
   //  the moment the bush visibly loses its berry), and carries it home. Only the
   //  arrival puts anything in a store — see deliver().
@@ -749,8 +779,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     it.gone = true; it.claim = null;
     var i = C.surface.indexOf(it); if(i >= 0) C.surface.splice(i, 1);
     var got = 0;
-    if(it.give === "water"){ got = Math.min(it.n, Math.max(0, waterCap() - C.water)); C.water += got; }
-    else if(it.give === "leaf"){
+    if(it.give === "leaf"){
       got = Math.min(it.n, Math.max(0, GAME_CONFIG.chain.leafStore - C.leaves));
       C.leaves += got; C.leavesCut += got;
     } else {
@@ -867,7 +896,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
     if(C.eggs > 0){
       var tend = jobCount("nursery") * (1 - gardenShare()) * g.nursery.hatchPerAntPerSec
-                 * pace * roomMul("nursery") * dt * ((C.food > 0 && C.water > 0) ? 1 : 0.3);
+                 * pace * roomMul("nursery") * dt * (C.food > 0 ? 1 : 0.3);
       C.hatchProg += tend;
       while(C.hatchProg >= 1 && C.eggs > 0){
         C.hatchProg -= 1; C.eggs--; C.ants++; C.born++;
@@ -879,7 +908,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
     // --- upkeep: the colony eats. Empty stores only slow it down, they never punish.
     C.food  = Math.max(0, C.food  - C.ants * g.upkeep.foodPerAntPerSec  * dt);
-    C.water = Math.max(0, C.water - C.ants * g.upkeep.waterPerAntPerSec * dt);
 
     // --- tiredness: it creeps in slowly, and a resting den brings it back
     var dens2 = Math.min(g.denMax, roomCount("den"));
@@ -1736,54 +1764,367 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       X.setLineDash([]); X.globalAlpha = 1;
     }
   }
-  function drawSky(){
-    // AC4: the meadow is a picture now, and it turns rainy while a flood is sitting
-    // there. The drawn meadow underneath is still the fallback for a missing file.
-    var art = (floodCount() && IMG.rainSurface) ? IMG.rainSurface : IMG.surface;
-    if(art){
-      var iw = art.naturalWidth || art.width, ih = art.naturalHeight || art.height;
-      if(iw && ih){
-        var h = SKY, w = h * (iw/ih), x0 = 0;
-        while(x0 < W){ X.drawImage(art, x0, 0, w, h); x0 += w - 1; }
-        return;
-      }
+  // ======================================================================
+  //  AC10 — THE WORLD ABOVE. The meadow used to be one flat green stripe with
+  //  three drawn mushrooms on it. It is a place now: sky, far hills, a mid band
+  //  of trees, a grass bank, and near props sitting on the ground in front.
+  //
+  //  Two rules make it affordable and keep it calm:
+  //
+  //  1. IT IS COMPOSED ONCE, NOT PAINTED EVERY FRAME. The whole strip is drawn
+  //     into an offscreen canvas and blitted, and it is only rebuilt when the
+  //     layout changes, the rain starts or stops, or a sprite finishes loading.
+  //     A meadow with forty pieces of art in it costs one drawImage a frame.
+  //  2. EVERY PIECE IS PLACED BY A HASH OF ITS OWN INDEX, never by a random
+  //     roll, so the meadow a kid closes is the meadow they come back to, and
+  //     the QA robot sees the same one every run.
+  //
+  //  The art is the CC0 Quaternius Stylized Nature MegaKit, shot into flat
+  //  side-on sprites by scripts/nature-shot.mjs under one lighting rig, so the
+  //  whole world is one family rather than thirteen downloads. Every one of them
+  //  has a drawn fallback underneath: a missing file costs detail, never a world.
+  // ======================================================================
+  //  a small deterministic hash: same index, same number, on every device
+  function hsh(i, salt){
+    var t = (i * 2654435761 + (salt|0) * 40503) >>> 0;
+    t ^= t >>> 15; t = Math.imul(t, 2246822519); t ^= t >>> 13;
+    return ((t >>> 0) % 100000) / 100000;
+  }
+  //  Which sprite goes in which band. Far pieces are small and hazed, near pieces
+  //  are full size and sharp, and that difference IS the depth.
+  var WORLD_FAR  = ["tree_pine1","tree_pine2","tree_round1","tree_round2","tree_round3"];
+  var WORLD_MID  = ["tree_round1","tree_round3","tree_pine1","bush_flowers"];
+  var WORLD_NEAR = ["grass_tall","flowers1","flowers2","fern","rock1","rock2","mushroom","bush_flowers"];
+
+  var worldLayer = null, worldKey = "";
+  function worldNeedsKey(){
+    // everything the composed strip depends on, so it is rebuilt exactly when it
+    // has to be and never once more than that
+    var loaded = 0;
+    for(var i=0;i<WORLD_ART.length;i++) if(IMG[WORLD_ART[i]]) loaded++;
+    return W + "x" + SKY + "|" + CS + "|" + OX + "|" + (floodCount() ? "rain" : "sun") +
+           "|" + C.queen.c + "|" + loaded + "|" + (IMG.surface ? 1 : 0);
+  }
+  var WORLD_ART = ["tree_pine1","tree_pine2","tree_round1","tree_round2","tree_round3",
+                   "bush_flowers","fern","grass_tall","flowers1","flowers2","mushroom","rock1","rock2"];
+
+  //  the line the ants walk on when they are up on the meadow, which is also where
+  //  the worn trail goes and where every near prop stands
+  function groundY(){ return SKY + (SURF_R + 0.5) * CS; }
+
+  function composeWorld(){
+    var key = worldNeedsKey();
+    if(worldLayer && key === worldKey) return worldLayer;
+    worldKey = key;
+    var cv = worldLayer && worldLayer.width === W && worldLayer.height === SKY
+      ? worldLayer : (worldLayer = document.createElement("canvas"));
+    cv.width = W; cv.height = SKY;
+    var g = cv.getContext("2d");
+    g.clearRect(0, 0, W, SKY);
+    var wet = floodCount() > 0, gy = groundY();
+
+    // ---- 1) the sky, and the weather it is in -------------------------------
+    var sky = g.createLinearGradient(0, 0, 0, SKY);
+    if(wet){ sky.addColorStop(0, "#7e93a6"); sky.addColorStop(1, "#b8c6bd"); }
+    else   { sky.addColorStop(0, "#7fd0f5"); sky.addColorStop(0.72, "#c8ecf6"); sky.addColorStop(1, "#e8f4d8"); }
+    g.fillStyle = sky; g.fillRect(0, 0, W, SKY);
+    if(!wet){                                        // the sun, with a soft halo
+      var sx = W - SKY*0.30, sy = SKY*0.22, sr = SKY*0.10;
+      g.globalAlpha = 0.35; g.fillStyle = "#fff6cf";
+      g.beginPath(); g.arc(sx, sy, sr*2.1, 0, 7); g.fill(); g.globalAlpha = 1;
+      g.fillStyle = "#ffeba6"; g.beginPath(); g.arc(sx, sy, sr, 0, 7); g.fill();
     }
-    var gsky = X.createLinearGradient(0,0,0,SKY);
-    gsky.addColorStop(0,"#8fd8f7"); gsky.addColorStop(1,"#d9f2ce");
-    X.fillStyle = gsky; X.fillRect(0,0,W,SKY);
-    // sun
-    X.fillStyle = "#ffe9a8"; X.beginPath(); X.arc(W-52, 44, 26, 0, 7); X.fill();
-    // meadow band + mushrooms and tufts (drawn, so the meadow is never a missing file)
-    var gy = SKY - 26;
-    X.fillStyle = "#79c46a"; X.fillRect(0, gy, W, 26 + 4);
-    X.fillStyle = "#63ad57";
-    for(var i=0;i<W;i+=26){ X.beginPath(); X.moveTo(i, gy+2); X.lineTo(i+7, gy-8); X.lineTo(i+13, gy+2); X.closePath(); X.fill(); }
-    for(var m=0;m<3;m++){
-      var mx = 40 + m*(W/3);
-      X.fillStyle = "#f6f1e2"; X.fillRect(mx-3, gy-12, 6, 12);
-      X.fillStyle = "#e2685f"; X.beginPath(); X.arc(mx, gy-12, 11, Math.PI, 0); X.fill();
-      X.fillStyle = "#fff4ea"; X.beginPath(); X.arc(mx-3, gy-15, 2.2, 0, 7); X.arc(mx+4, gy-13, 1.8, 0, 7); X.fill();
+    // clouds: three soft ones, always in the same places
+    g.fillStyle = wet ? "rgba(230,236,240,.55)" : "rgba(255,255,255,.72)";
+    for(var cI=0; cI<3; cI++){
+      var cx = W * (0.14 + hsh(cI, 7) * 0.72), cy = SKY * (0.12 + hsh(cI, 11) * 0.22);
+      var cr = SKY * (0.07 + hsh(cI, 13) * 0.05);
+      g.beginPath();
+      g.arc(cx, cy, cr, 0, 7); g.arc(cx + cr*0.9, cy + cr*0.16, cr*0.78, 0, 7);
+      g.arc(cx - cr*0.85, cy + cr*0.2, cr*0.66, 0, 7); g.fill();
+    }
+
+    // ---- 2) the horizon: two soft hill bands, and the far tree line standing
+    //      ON them rather than floating above them. The whole strip is only about
+    //      a hundred and fifty pixels tall, so every layer's baseline is worked out
+    //      from the ant walking line down, and nothing is left hanging in the air.
+    var hz = SKY * 0.50;                 // the crest of the far hills
+    var fb = SKY * 0.70;                 // where the far trees stand
+    var mb = gy - CS * 0.30;             // where the mid trees stand
+    // each band gets its own gradient rather than one flat colour: a flat pale
+    // green filling half the strip read as fog, or worse as a lake the far trees
+    // were standing in
+    var far = g.createLinearGradient(0, hz, 0, SKY);
+    if(wet){ far.addColorStop(0, "#96ae99"); far.addColorStop(1, "#7d9480"); }
+    else   { far.addColorStop(0, "#a3cb92"); far.addColorStop(1, "#82b473"); }
+    g.fillStyle = far;
+    g.beginPath(); g.moveTo(-10, hz + SKY*0.10);
+    g.quadraticCurveTo(W*0.22, hz - SKY*0.08, W*0.52, hz + SKY*0.04);
+    g.quadraticCurveTo(W*0.80, hz - SKY*0.06, W+10, hz + SKY*0.08);
+    g.lineTo(W+10, SKY); g.lineTo(-10, SKY); g.closePath(); g.fill();
+
+    // ---- 3) the far tree line, small, standing on the hill, washed back --------
+    var n = Math.max(6, Math.round(W / 70)), i, k, art, hh, bx;
+    for(i=0;i<n;i++){
+      k = WORLD_FAR[Math.floor(hsh(i, 3) * WORLD_FAR.length) % WORLD_FAR.length];
+      art = IMG[k];
+      bx = W * ((i + 0.5 + (hsh(i, 5) - 0.5) * 0.8) / n);
+      hh = SKY * (0.17 + hsh(i, 9) * 0.07);
+      var by = fb + hsh(i, 17) * SKY*0.02;
+      if(art) drawArtBase(g, art, bx, by, hh);
+      else    drawTreeShape(g, bx, by, hh, wet ? "#6f8f6c" : "#79a86a");
+    }
+    // the haze that pushes them back is a GRADIENT, not a band: a flat rectangle of
+    // pale blue over the far half drew a hard line across the sky that read as the
+    // shore of a lake the trees were standing in
+    var haze = g.createLinearGradient(0, 0, 0, fb + SKY*0.04);
+    var hc = wet ? "174,191,198" : "223,241,251";
+    haze.addColorStop(0, "rgba(" + hc + "," + (wet ? 0.36 : 0.26) + ")");
+    haze.addColorStop(0.75, "rgba(" + hc + "," + (wet ? 0.28 : 0.18) + ")");
+    haze.addColorStop(1, "rgba(" + hc + ",0)");
+    g.fillStyle = haze; g.fillRect(0, 0, W, fb + SKY*0.04);
+
+    // ---- 4) the near hill the meadow itself sits on, then the mid trees on it --
+    var nearH = g.createLinearGradient(0, fb, 0, SKY);
+    if(wet){ nearH.addColorStop(0, "#7a9878"); nearH.addColorStop(1, "#5f7d5c"); }
+    else   { nearH.addColorStop(0, "#84bc70"); nearH.addColorStop(1, "#639f52"); }
+    g.fillStyle = nearH;
+    g.beginPath(); g.moveTo(-10, fb + SKY*0.10);
+    g.quadraticCurveTo(W*0.34, fb + SKY*0.01, W*0.66, fb + SKY*0.09);
+    g.quadraticCurveTo(W*0.86, fb + SKY*0.14, W+10, fb + SKY*0.05);
+    g.lineTo(W+10, SKY); g.lineTo(-10, SKY); g.closePath(); g.fill();
+    var m = Math.max(3, Math.round(W / 190));
+    for(i=0;i<m;i++){
+      k = WORLD_MID[Math.floor(hsh(i, 23) * WORLD_MID.length) % WORLD_MID.length];
+      art = IMG[k];
+      bx = W * ((i + 0.5 + (hsh(i, 29) - 0.5) * 0.7) / m);
+      hh = SKY * (0.30 + hsh(i, 31) * 0.12);
+      if(art) drawArtBase(g, art, bx, mb, hh);
+      else    drawTreeShape(g, bx, mb, hh, wet ? "#5f7f5d" : "#67995a");
+    }
+    var haze2 = g.createLinearGradient(0, 0, 0, mb);
+    haze2.addColorStop(0, "rgba(" + hc + "," + (wet ? 0.22 : 0.13) + ")");
+    haze2.addColorStop(1, "rgba(" + hc + ",0)");
+    g.fillStyle = haze2; g.fillRect(0, 0, W, mb);
+
+    // ---- 5) the grass bank the colony's door is cut into --------------------
+    var bank = SKY - gy + CS*0.80;
+    var gg = g.createLinearGradient(0, gy - CS*0.80, 0, SKY);
+    if(wet){ gg.addColorStop(0, "#69946a"); gg.addColorStop(1, "#39562f"); }
+    else   { gg.addColorStop(0, "#7cc65c"); gg.addColorStop(1, "#3d7a30"); }
+    g.fillStyle = gg;
+    g.beginPath(); g.moveTo(-10, gy - CS*0.52);
+    g.quadraticCurveTo(W*0.30, gy - CS*0.80, W*0.58, gy - CS*0.56);
+    g.quadraticCurveTo(W*0.84, gy - CS*0.34, W+10, gy - CS*0.62);
+    g.lineTo(W+10, SKY+2); g.lineTo(-10, SKY+2); g.closePath(); g.fill();
+    // a bright rim along the very top of the bank, where the sun catches it. The
+    // grass texture itself comes from the near props: a row of drawn blades across
+    // the whole width read as rain falling on a sunny day, which is worse than none.
+    g.strokeStyle = wet ? "rgba(150,186,140,.55)" : "rgba(178,232,140,.75)";
+    g.lineWidth = Math.max(1.5, CS*0.06);
+    g.beginPath(); g.moveTo(-10, gy - CS*0.52);
+    g.quadraticCurveTo(W*0.30, gy - CS*0.80, W*0.58, gy - CS*0.56);
+    g.quadraticCurveTo(W*0.84, gy - CS*0.34, W+10, gy - CS*0.62);
+    g.stroke();
+    // the painted meadow strip, if the recipe still has one, blended into the bank
+    // so the manifest's own art is part of the world rather than replaced by it
+    var strip = (wet && IMG.rainSurface) ? IMG.rainSurface : IMG.surface;
+    if(strip && (strip.naturalWidth || strip.width)){
+      var iw = strip.naturalWidth || strip.width, ih = strip.naturalHeight || strip.height;
+      var sw = bank * (iw/ih), x0 = 0;
+      g.globalAlpha = 0.30;
+      while(x0 < W){ g.drawImage(strip, x0, SKY - bank, sw, bank); x0 += sw - 1; }
+      g.globalAlpha = 1;
+    }
+
+    // ---- 6) THE WORN TRAIL. The route the foragers really walk, rubbed into the
+    //      ground: out of the door, along the bank, past every plant they visit.
+    //      It is baked into the world layer, so the stream of ants has something
+    //      to follow and the meadow looks lived in even while they are all below.
+    var door = fcToX(C.queen.c);
+    g.save();
+    g.beginPath(); g.rect(0, gy - CS*0.34, W, CS*0.62); g.clip();
+    var stops = [door, plantX("leaf"), plantX("aphid"), plantX("berry")].sort(function(a,b){ return a-b; });
+    g.strokeStyle = wet ? "rgba(78,58,34,.30)" : "rgba(150,116,66,.34)";
+    g.lineWidth = CS*0.20; g.lineCap = "round";
+    g.beginPath(); g.moveTo(stops[0] - CS*0.4, gy + CS*0.04);
+    for(i=1;i<stops.length;i++) g.lineTo(stops[i], gy + CS*0.04 + (hsh(i, 41) - 0.5) * CS*0.10);
+    g.lineTo(stops[stops.length-1] + CS*0.4, gy + CS*0.04);
+    g.stroke();
+    g.strokeStyle = wet ? "rgba(92,70,42,.22)" : "rgba(184,150,96,.30)";
+    g.lineWidth = CS*0.09;
+    g.stroke();
+    // the little spur that goes down into the anthill door
+    g.strokeStyle = wet ? "rgba(78,58,34,.30)" : "rgba(150,116,66,.34)";
+    g.lineWidth = CS*0.16;
+    g.beginPath(); g.moveTo(door, gy - CS*0.02); g.lineTo(door, SKY); g.stroke();
+    g.restore();
+
+    // ---- 7) the near props, sitting on the trail line, sharp and full size ---
+    var p = Math.max(7, Math.round(W / 62));
+    for(i=0;i<p;i++){
+      k = WORLD_NEAR[Math.floor(hsh(i, 53) * WORLD_NEAR.length) % WORLD_NEAR.length];
+      bx = W * ((i + 0.5 + (hsh(i, 59) - 0.5) * 0.8) / p);
+      if(Math.abs(bx - door) < CS*0.9) continue;                  // never over the door
+      if(Math.abs(bx - plantX("berry")) < CS*0.8) continue;        // nor over a food plant
+      if(Math.abs(bx - plantX("leaf")) < CS*0.8) continue;
+      hh = SKY * (0.09 + hsh(i, 61) * 0.10);
+      art = IMG[k];
+      if(art) drawArtBase(g, art, bx, gy + CS*0.10 + hsh(i, 67)*CS*0.06, hh);
+      else    drawTuftShape(g, bx, gy + CS*0.10, hh, wet ? "#5e8a52" : "#6fae5c");
+    }
+    if(wet) drawRainInto(g);
+    return worldLayer;
+  }
+  // one sprite, standing on a point: x is its middle, y is the ground under it
+  function drawArtBase(g, art, x, y, h){
+    var iw = art.naturalWidth || art.width, ih = art.naturalHeight || art.height;
+    if(!iw || !ih) return;
+    var w = h * (iw/ih);
+    g.drawImage(art, x - w/2, y - h, w, h);
+  }
+  // the drawn stand-ins, so a world with no files at all is still a world
+  function drawTreeShape(g, x, y, h, col){
+    g.fillStyle = "#7a5636"; g.fillRect(x - h*0.05, y - h*0.34, h*0.10, h*0.34);
+    g.fillStyle = col;
+    g.beginPath(); g.arc(x, y - h*0.60, h*0.30, 0, 7); g.fill();
+    g.beginPath(); g.arc(x - h*0.20, y - h*0.44, h*0.22, 0, 7); g.fill();
+    g.beginPath(); g.arc(x + h*0.21, y - h*0.46, h*0.21, 0, 7); g.fill();
+  }
+  function drawTuftShape(g, x, y, h, col){
+    g.strokeStyle = col; g.lineWidth = Math.max(1.5, h*0.14); g.lineCap = "round";
+    for(var i=-1;i<=1;i++){
+      g.beginPath(); g.moveTo(x + i*h*0.16, y);
+      g.quadraticCurveTo(x + i*h*0.30, y - h*0.55, x + i*h*0.46, y - h*0.90); g.stroke();
     }
   }
-  function drawSoil(){
-    var top = SKY, h = H - SKY;
-    var gd = X.createLinearGradient(0, top, 0, top + h);
-    gd.addColorStop(0, "#c58f52"); gd.addColorStop(1, "#7a4f26");
-    X.fillStyle = gd; X.fillRect(0, top, W, h);
-    // soil texture: either the tile art or drawn speckle, never nothing
-    var tile = IMG.soil;
-    if(tile){
-      var r0 = Math.floor(camY / CS), rN = r0 + Math.ceil(h / CS) + 1;
-      X.globalAlpha = 0.5;
-      for(var r=r0; r<rN; r++) for(var c=0;c<GAME_CONFIG.cols;c++) X.drawImage(tile, cellX(c), cellY(r), CS, CS);
-      X.globalAlpha = 1;
-    } else {
-      X.fillStyle = "rgba(255,255,255,.07)";
-      for(var i=0;i<160;i++){
-        var sx = ((i*97)%W), sy = top + ((i*53 + Math.floor(camY*0.4)) % h);
-        X.fillRect(sx, sy, 3, 3);
-      }
+  // rain, drawn into the world layer rather than over it every frame
+  function drawRainInto(g){
+    g.strokeStyle = "rgba(226,240,255,.55)"; g.lineWidth = 1.6; g.lineCap = "round";
+    for(var i=0;i<46;i++){
+      var rx = (hsh(i, 71) * (W + 60)) - 30, ry = hsh(i, 73) * SKY;
+      g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 3, ry + SKY*0.09); g.stroke();
     }
+  }
+  function drawSky(){
+    var layer = composeWorld();
+    if(layer) X.drawImage(layer, 0, 0);
+  }
+
+  // ======================================================================
+  //  AC10 — THE GROUND BELOW. Digging used to go down through one brown
+  //  gradient for ever. There are real layers under the meadow now, and going
+  //  deeper takes the colony through them: topsoil with roots in it, loam with
+  //  buried acorns, clay, and pebbly stone with the occasional fossil.
+  //
+  //  The layers are DATA in GAME_CONFIG, so a recipe can retune how deep each
+  //  one runs without touching the engine, and they tile cleanly for ever: the
+  //  last one has no bottom, because a free-build colony has no bottom either.
+  //  Everything down here is decoration. It never changes what a cell does.
+  // ======================================================================
+  function soilAt(r){
+    var L = GAME_CONFIG.soil, i;
+    for(i=0;i<L.length;i++) if(r < L[i].to) return L[i];
+    return L[L.length-1];
+  }
+  function drawSoil(){
+    var L = GAME_CONFIG.soil, r0 = Math.max(0, Math.floor(camY / CS) - 1);
+    var rN = r0 + Math.ceil((H - SKY) / CS) + 2, r, c, i, lay, from = 0;
+    // 1) THE BANDS. One gradient per LAYER, not per row: a gradient restarted every
+    //    row drew a faint line at every cell edge, and forty of those read as
+    //    corrugated cardboard rather than as ground.
+    for(i=0;i<L.length;i++){
+      lay = L[i];
+      var to = Math.min(lay.to, rN + 1);
+      if(to <= from || from > rN){ from = lay.to; continue; }
+      if(lay.to <= r0){ from = lay.to; continue; }
+      var yA = cellY(from), yB = cellY(to);
+      var yTop = Math.max(SKY, yA), yBot = Math.min(H, yB);
+      if(yBot > yTop){
+        X.fillStyle = lay.bot; X.fillRect(0, yTop, W, yBot - yTop + 1);
+        // the top of a layer fades in from its lighter colour over a few rows, and
+        // then it is flat for as deep as it goes, which is for ever in the last one
+        var fadeTo = Math.min(yB, yA + CS*14);
+        if(fadeTo > yA){
+          var gd = X.createLinearGradient(0, yA, 0, fadeTo);
+          gd.addColorStop(0, lay.top); gd.addColorStop(1, lay.bot);
+          X.fillStyle = gd; X.fillRect(0, Math.max(SKY, yA), W, Math.max(0, Math.min(H, fadeTo) - Math.max(SKY, yA)) + 1);
+        }
+        // the seam where this layer ends and the next begins
+        if(i < L.length - 1 && yB > SKY && yB < H){
+          X.fillStyle = "rgba(0,0,0,.16)"; X.fillRect(0, yB - 3, W, 4);
+          X.fillStyle = "rgba(255,255,255,.10)"; X.fillRect(0, yB + 1, W, 2);
+        }
+      }
+      from = lay.to;
+    }
+    // 2) the tile art for each row's layer, if the recipe gave that layer one
+    for(r = r0; r <= rN; r++){
+      var y = cellY(r);
+      if(y > H || y + CS < SKY) continue;
+      lay = soilAt(r);
+      var tile = IMG[lay.art];
+      if(tile){
+        X.globalAlpha = 0.34;
+        for(c=0;c<GAME_CONFIG.cols;c++) X.drawImage(tile, cellX(c), y, CS, CS);
+        X.globalAlpha = 1;
+      }
+      // 3) what is buried here. Placed by a hash of the cell, so the same acorn is
+      //    always in the same place, on every device and on every run.
+      for(c = -1; c <= GAME_CONFIG.cols; c++){
+        var key = r * 61 + c;
+        if(hsh(key, 101) > lay.stuff) continue;
+        drawBuried(lay.find,
+                   cellX(c) + CS * (0.18 + hsh(key, 103) * 0.64),
+                   y + CS * (0.18 + hsh(key, 107) * 0.64),
+                   CS * (0.13 + hsh(key, 109) * 0.10),
+                   hsh(key, 113));
+      }
+      // 4) the speckle that keeps a flat band from looking like paper
+      X.fillStyle = lay.speck; X.globalAlpha = 0.45;
+      for(i=0;i<9;i++){
+        X.beginPath();
+        X.ellipse(hsh(r*23 + i, 127) * W, y + hsh(r*23 + i, 131) * CS, CS*0.06, CS*0.035, 0, 0, 7);
+        X.fill();
+      }
+      X.globalAlpha = 1;
+    }
+  }
+  //  the things a digger turns up: a root, an acorn, a pebble, and once in a
+  //  long while a little fossil. Drawn geometry, no emoji, nothing to collect —
+  //  they are there so that going deeper LOOKS like going somewhere.
+  function drawBuried(kind, x, y, s, v){
+    if(kind === "root"){
+      X.strokeStyle = "rgba(112,78,42,.62)"; X.lineWidth = Math.max(1.4, s*0.26); X.lineCap = "round";
+      X.beginPath(); X.moveTo(x - s, y - s*0.5);
+      X.quadraticCurveTo(x, y + s*0.3, x + s*1.1, y - s*0.2); X.stroke();
+      X.lineWidth = Math.max(1, s*0.16);
+      X.beginPath(); X.moveTo(x + s*0.2, y + s*0.02); X.lineTo(x + s*0.5, y + s*0.7); X.stroke();
+      return;
+    }
+    if(kind === "acorn"){
+      X.fillStyle = "#c08a4e"; X.beginPath(); X.ellipse(x, y + s*0.15, s*0.42, s*0.55, 0, 0, 7); X.fill();
+      X.fillStyle = "#7d5227"; X.beginPath(); X.ellipse(x, y - s*0.32, s*0.46, s*0.26, 0, 0, 7); X.fill();
+      X.strokeStyle = "#7d5227"; X.lineWidth = Math.max(1, s*0.13);
+      X.beginPath(); X.moveTo(x, y - s*0.52); X.lineTo(x + s*0.10, y - s*0.80); X.stroke();
+      return;
+    }
+    if(kind === "pebble"){
+      X.fillStyle = "rgba(154,148,138,.75)";
+      X.beginPath(); X.ellipse(x, y, s*0.50, s*0.36, v*2, 0, 7); X.fill();
+      X.fillStyle = "rgba(216,212,203,.55)";
+      X.beginPath(); X.ellipse(x - s*0.12, y - s*0.12, s*0.20, s*0.12, v*2, 0, 7); X.fill();
+      // one pebble in eight is a little shell curled up in the stone
+      if(v > 0.875){
+        X.strokeStyle = "rgba(246,240,224,.85)"; X.lineWidth = Math.max(1, s*0.11);
+        X.beginPath();
+        for(var a=0;a<3.2;a+=0.25){ var rr = s*0.07 + a*s*0.11; X.lineTo(x + Math.cos(a*2)*rr, y + Math.sin(a*2)*rr); }
+        X.stroke();
+      }
+      return;
+    }
+    X.fillStyle = "rgba(196,168,120,.55)";
+    X.beginPath(); X.ellipse(x, y, s*0.42, s*0.28, v*2, 0, 7); X.fill();
   }
   function drawCells(){
     for(var k in C.cells){
@@ -1997,12 +2338,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   // one item, drawn wherever it is: waiting on the meadow, or in an ant's mandibles
   function drawItem(kind, x, y, size){
-    if(kind === "water"){
-      X.fillStyle = "#62b6f2";
-      X.beginPath(); X.moveTo(x, y-size*0.6); X.quadraticCurveTo(x+size*0.45, y+size*0.07, x, y+size*0.45);
-      X.quadraticCurveTo(x-size*0.45, y+size*0.07, x, y-size*0.6); X.fill();
-      return;
-    }
     if(kind === "berry"){ drawBerry(x, y, size); return; }
     if(kind === "leaf"){
       if(IMG.leaf){ drawImg(IMG.leaf, x, y, size); return; }
@@ -2086,6 +2421,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     dartFor:  [0.22, 0.5],   // and a dart
     dart:     1.85,   // a dart is this much quicker than a walk
     hello:    0.42,   // how long two ants stand and touch antennae
+    elbow:    1.6,     // units a second an ant sidesteps to get out of another's way
     leash:    3.0     // a foot further than this from the body has been left behind.
                       // A trailing foot legitimately gets about two units back before
                       // its turn to swing, so this has to sit clear of that or a
@@ -2178,16 +2514,26 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       if(d > MOT.maxLag) m = Math.max(m, 2.2);                 // fallen behind: hurry
       if(d < u*0.35) m = 0;                                    // arrived: stand still
 
-      // 4) TRAFFIC AND HELLOS — look at whoever is sharing this patch of dirt
-      if(m > 0 && d > u){
-        var fx = vx/d, fy = vy/d, near = _mgrid[mkey(a.dx, a.dy)], n2;
-        if(near) for(var j=0;j<near.length;j++){
-          var b = near[j]; if(b === a || b.dx == null) continue;
-          var bx = b.dx - a.dx, by = b.dy - a.dy, bd = Math.sqrt(bx*bx + by*by);
-          if(bd > u*2.6 || bd < 0.00001) continue;
-          if((bx*fx + by*fy) / bd < 0.45) continue;            // not in front
+      // 4) TRAFFIC, HELLOS, AND ELBOW ROOM — look at whoever is sharing this
+      //    patch of dirt. Two ants may never be painted in the same place: an ant
+      //    with somebody standing on its toes takes a real sidestep, feet and all,
+      //    because that is what an ant does and because a pile of ants is a bug a
+      //    kid can see. It is the ONE thing that moves an otherwise stopped ant.
+      var fx = d > 0.00001 ? vx/d : Math.cos(a.head), fy = d > 0.00001 ? vy/d : Math.sin(a.head);
+      var near = _mgrid[mkey(a.dx, a.dy)], sepx = 0, sepy = 0;
+      a.crowd = 0;
+      if(near) for(var j=0;j<near.length;j++){
+        var b = near[j]; if(b === a || b.dx == null) continue;
+        var bx = b.dx - a.dx, by = b.dy - a.dy, bd = Math.sqrt(bx*bx + by*by);
+        if(bd > u*2.6) continue;
+        if(bd < u*1.5) a.crowd++;
+        if(bd < u*1.15){                                   // too close: make room
+          if(bd < 0.00001){ sepx -= Math.sin(a.head + j); sepy += Math.cos(a.head + j); }
+          else { sepx -= bx/bd; sepy -= by/bd; }
+        }
+        if(m > 0 && d > u && bd > 0.00001 && (bx*fx + by*fy)/bd >= 0.45){
           var same = Math.cos(a.head - b.head) > 0;
-          if(same){                                            // a slower ant in the way: go around
+          if(same){                                        // a slower ant in the way: go around
             if(b.spd < a.spd*0.75){ a.laneW = (bx*(-fy) + by*fx) > 0 ? -MOT.lane*u : MOT.lane*u; a.laneT = 0.8; m *= 0.75; }
           } else if(bd < u*1.7 && a.hello <= 0 && b.hello <= 0){   // coming the other way: hello
             a.hello = MOT.hello; b.hello = MOT.hello;
@@ -2197,6 +2543,15 @@ input,textarea{-webkit-user-select:text;user-select:text;}
 
       var stepd = base * m * dt;
       if(stepd > d) stepd = d;
+      // the sidestep, added to whatever else it was doing. It counts as real
+      // movement: it advances the gait and it shows up in the ant's speed, because
+      // an ant shuffling out of another's way is walking, not standing still.
+      var sepd = Math.sqrt(sepx*sepx + sepy*sepy), sm = 0;
+      if(sepd > 0.00001){
+        sm = MOT.elbow * u * dt;
+        a.dx += sepx/sepd*sm; a.dy += sepy/sepd*sm;
+        a.gait += sm;
+      }
       if(stepd > 0.000001){
         var nx = vx/d, ny = vy/d;
         a.dx += nx*stepd; a.dy += ny*stepd;
@@ -2215,8 +2570,8 @@ input,textarea{-webkit-user-select:text;user-select:text;}
         a.gait += stepd;
         var now = Math.floor(a.gait / (MOT.stride*u));
         if(now !== was){ a.phase = now & 1; plant(a, a.phase, u, 0.22); }
-        a.spd = stepd / Math.max(0.00001, dt);
-      } else a.spd = 0;
+        a.spd = (stepd + sm) / Math.max(0.00001, dt);
+      } else a.spd = sm / Math.max(0.00001, dt);
       // A FOOT LEFT BEHIND. The sim can move an ant outright — it swaps an idle
       // one for a nearer one, or a post moves under it — and a foot planted where
       // the ant used to be would then stretch into a long dark stick reaching off
@@ -2703,8 +3058,6 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var NEEDS = [
     { id:"food",  val:function(){ return C.food / Math.max(1, foodCap()); },   low:0.25,
       line:"Your ants need more food. Tap the meadow to drop a crumb." },
-    { id:"water", val:function(){ return C.water / Math.max(1, waterCap()); }, low:0.25,
-      line:"Your ants need more water. Tap Drop Water, then tap the meadow." },
     { id:"rest",  val:function(){ return C.rest; },                            low:0.25,
       line:"Your ants are getting tired. A resting den gives them a break." },
     { id:"eggs",  val:function(){ return C.eggs / Math.max(1, eggCap()); },    low:-1, line:"" }
@@ -2922,10 +3275,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var TOOLS = {
     dig:   { name:"Dig",   hint:"drag in the dirt" },
     food:  { name:"Food",  hint:"tap the grass" },
-    water: { name:"Water", hint:"tap the grass" },
     build: { name:"Build", hint:"tap to choose" }
   };
-  var TOOL_ORDER = ["dig","food","water","build"];
+  var TOOL_ORDER = ["dig","food","build"];
   var TOOL = "dig";                       // a new colony starts with the shovel out
   function setTool(t, quiet){
     if(!TOOLS[t]) t = "dig";
@@ -2979,7 +3331,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   $("jobsToggle").addEventListener("click", function(){ BA.unlock(); bumpIdle(); setJobsOpen(!jobsOpen); });
 
   // ======================================================================
-  //  Input — drag in the dirt to dig, tap the meadow to leave food or water,
+  //  Input — drag in the dirt to dig, tap the meadow to leave food,
   //  tap Build (or a tunnel) to make a room. Mouse and touch run the same path.
   // ======================================================================
   var drag = null;
@@ -3031,7 +3383,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       return;
     }
     if(g.surface){
-      if(TOOL !== "food" && TOOL !== "water"){ hint("Hold the apple or the drop first"); return; }
+      if(TOOL !== "food"){ hint("Hold the apple first"); return; }
       var it = dropSurface(TOOL, g.x, true);          // a crumb you can SEE, worth nothing until it is carried in
       if(Feel){ try{ Feel.tap(); }catch(e){} }
       if(it && !jobCount("forager")) hint("Put an ant on Foragers so somebody fetches it");
@@ -3202,7 +3554,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     saveT = 0;
     try{
       localStorage.setItem(SAVE_KEY, JSON.stringify({
-        v:1, cells:C.cells, plan:C.plan, ants:C.ants, eggs:C.eggs, food:C.food, water:C.water,
+        v:2, cells:C.cells, plan:C.plan, ants:C.ants, eggs:C.eggs, food:C.food,
         jobs:C.jobs, deepest:C.deepest, difficulty:C.difficulty, queen:C.queen,
         born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface,
         mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
@@ -3221,7 +3573,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(!list || !list.length) return out;
     for(i=0;i<list.length;i++){
       var o = list[i]; if(!o || (o.x == null && o.fx == null)) continue;
-      var kind = o.kind === "water" ? "water" : (GAME_CONFIG.items[o.kind] ? o.kind : "crumb");
+      // AC10: a water drop saved by an older version comes back as a crumb. Nothing
+      // is lost and nothing is left on the meadow that no ant knows what to do with.
+      var kind = GAME_CONFIG.items[o.kind] ? o.kind : "crumb";
       var def = itemDef(kind);
       var fx = o.fx != null ? o.fx : Math.max(0.02, Math.min(0.98, o.x / Math.max(1, W)));
       out.push({ kind:kind, fx:fx, n:(o.n || def.n), give:def.give, pri:def.pri,
@@ -3235,7 +3589,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var s = JSON.parse(raw); if(!s || s.v !== 1 || !s.cells) return null;
       var col = freshColony(s.difficulty || 3);
       col.cells = s.cells; col.plan = s.plan || []; col.ants = s.ants || col.ants; col.eggs = s.eggs || 0;
-      col.food = s.food || 0; col.water = s.water || 0; col.jobs = s.jobs || col.jobs;
+      col.food = s.food || 0; col.jobs = s.jobs || col.jobs;
       col.deepest = s.deepest || col.deepest; col.queen = s.queen || col.queen;
       col.born = s.born||0; col.dug = s.dug||0; col.rooms = s.rooms||0;
       col.surface = reviveSurface(s.surface);
@@ -3319,7 +3673,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var c = C.queen.c + (Math.floor(srand()*3) - 1), r = C.deepest + 1;
       c = Math.max(0, Math.min(GAME_CONFIG.cols-1, c));
       if(!planCell(c, r)) planCell(C.queen.c, r);
-      if(srand() < 0.5) dropSurface(srand() < 0.7 ? "food" : "water", 40 + srand()*(W-80));
+      if(srand() < 0.5) dropSurface("food", 40 + srand()*(W-80));
     }
   }
 
@@ -3432,7 +3786,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   // the one control this step is about gets a soft pulse; everything else is left alone
   function setGuideHi(){
-    var ids = ["actMain","actSwap","tool_dig","tool_food","tool_water","tool_build","bar","jobsToggle",
+    var ids = ["actMain","actSwap","tool_dig","tool_food","tool_build","bar","jobsToggle",
                "job_forager_up","job_digger_up","job_nursery_up","job_builder_up"], i;
     for(i=0;i<ids.length;i++){ var e = $(ids[i]); if(e && e.classList) e.classList.remove("pulse"); }
     if(!guide.on) return;
@@ -3503,6 +3857,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     // still comes from the manifest and still picks the body colour, and the art file
     // behind it is untouched, so putting a sprite back is a one-line change.
     ant:"antcity/ant/classic-v1", queen:"antcity/hero/queen-v1", soil:"antcity/soil/sandy-v1",
+    // AC10: a tile per soil layer, and the thirteen pieces the meadow is built from
+    soilTop:"antcity/soil/sandy-v1", soilLoam:"antcity/soil/loam-v1", soilDeep:"antcity/soil/deep-v1",
+    tree_pine1:"antcity/world/tree-pine-1-v1", tree_pine2:"antcity/world/tree-pine-2-v1",
+    tree_round1:"antcity/world/tree-round-1-v1", tree_round2:"antcity/world/tree-round-2-v1",
+    tree_round3:"antcity/world/tree-round-3-v1", bush_flowers:"antcity/world/bush-flowers-v1",
+    fern:"antcity/world/fern-v1", grass_tall:"antcity/world/grass-tall-v1",
+    flowers1:"antcity/world/flowers-1-v1", flowers2:"antcity/world/flowers-2-v1",
+    mushroom:"antcity/world/mushroom-v1", rock1:"antcity/world/rock-1-v1", rock2:"antcity/world/rock-2-v1",
     egg:"antcity/prop/egg-v1", crumb:"antcity/prop/crumb-v1", find:"antcity/prop/buried-find-v1",
     surface:"antcity/surface/meadow-v1", rainSurface:"antcity/surface/meadow-rain-v1",
     flood:"antcity/prop/flood-v1", colony:"antcity/prop/colony-v1", loading:"antcity/loading/v1",
@@ -3625,7 +3987,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     seconds: function(s){ var n = Math.round((s||1)/STEP); for(var i=0;i<n;i++) step(); return this.dbg(); },
     dig: function(c, r){ return planCell(c, r); },
     digDown: function(n){ var made = 0; for(var i=0;i<(n||1);i++){ if(planCell(C.queen.c, C.deepest + 1 + i)) made++; } return made; },
-    drop: function(kind, x){ dropSurface(kind === "water" ? "water" : "food", x != null ? x : W/2, true); return C.surface.length; },
+    // AC10: food is the only thing a kid drops. An older caller asking for water
+    // gets a crumb, because that is now the only thing there is to drop.
+    drop: function(kind, x){ dropSurface("food", x != null ? x : W/2, true); return C.surface.length; },
     assign: function(job, n){ if(!(job in C.jobs)) return null; var d = (n|0) - (C.jobs[job]|0); for(var i=0;i<Math.abs(d);i++) moveAnt(job, d > 0 ? 1 : -1); return C.jobs[job]; },
     build: function(c, r, room){ var cell = cellAt(c, r); if(!cell || cell.kind !== "tunnel") return false;
       var def = GAME_CONFIG.rooms[room]; if(!def || C.food < def.food) return false;
@@ -3661,8 +4025,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
                dy:Math.round((a.dy == null ? a.fr : a.dy)*1000)/1000,
                head:Math.round((a.head||0)*1000)/1000, mir:!!a.mir,
                spd:Math.round((a.spd||0)*1000)/1000, gait:Math.round((a.gait||0)*1000)/1000,
+               crowded:((a.crowd|0) > 0),
                feet:(a.ft || []).map(function(v){ return Math.round(v*1000)/1000; }),
                inDirt:(a.fr > -0.2 && !isOpen(Math.round(a.fc), Math.round(a.fr))) }; }); },
+    // AC10: the world above and the ground below, so the robot can prove the
+    // meadow is composed once and that digging really goes through layers.
+    world: function(){
+      var o = { far:WORLD_FAR.slice(), mid:WORLD_MID.slice(), near:WORLD_NEAR.slice(),
+                pieces:WORLD_ART.slice(), loaded:0, key:worldKey, cached:!!worldLayer,
+                ground:Math.round(groundY()), sky:SKY, rain:floodCount() > 0 };
+      for(var i=0;i<WORLD_ART.length;i++) if(IMG[WORLD_ART[i]]) o.loaded++;
+      return o;
+    },
+    soil: function(r){
+      if(r == null) return GAME_CONFIG.soil.map(function(l){
+        return { id:l.id, to:l.to, art:l.art, find:l.find, stuff:l.stuff }; });
+      var l = soilAt(r); return { id:l.id, to:l.to, art:l.art, find:l.find };
+    },
     // AC13: the painting budget and the ant's size, so the robot can prove the
     // crowd tracks the colony and never goes over what the device can paint.
     motion: function(){ return { cap:drawCap(), drawn:C.sample.length, ants:C.ants,
@@ -3735,7 +4114,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     bugMark: function(){ return bugMark ? { x:Math.round(bugMark.x), y:Math.round(bugMark.y), r:Math.round(bugMark.r) } : null; },
     looking: function(){ return (camLook != null && C.t < camLookT) ? camLook : null; },
     guards: function(){ return countTask(function(t){ return t && t.kind === "scare"; }); },
-    dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10, water:Math.round(C.water*10)/10,
+    dbg: function(){ return { ants:C.ants, eggs:C.eggs, food:Math.round(C.food*10)/10,
                               jobs:JSON.parse(JSON.stringify(C.jobs)), deepest:C.deepest, planned:C.plan.length,
                               dug:C.dug, rooms:this.rooms(), born:C.born, state:state, paused:paused,
                               mission:C.mission, free:!!C.freeBuild, carried:Math.round(C.carried*10)/10,

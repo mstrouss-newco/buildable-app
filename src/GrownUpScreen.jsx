@@ -767,6 +767,8 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
 
             {kids.length > 0 && <PracticeCard kids={kids} />}
 
+            {kids.length > 0 && <MinuteMathCard kids={kids} />}
+
             {signedIn && kids.length > 0 && (
               <button style={S.linkBtn} onClick={goProjects}>Organize creations by child →</button>
             )}
@@ -1229,6 +1231,136 @@ function PracticeCard({ kids }) {
         Sprint is a 60-second timed round that mirrors a school fact test. It only opens once
         practice shows a kid is already fluent, and it is always beat-your-own-best - kids are
         never compared with each other. Practice itself is never timed.
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Session MM2 - the Minute Math row, one per kid.
+//
+// Minute Math is the timed facts sheet at /minutemath. It writes its scores
+// to localStorage on whatever device the kid practices on, keyed by kid id,
+// exactly like the practice engine above. So this card needs NO account and
+// NO server: a grown-up on the family iPad sees everything. What an account
+// would add later is only carrying the history to a SECOND device.
+//
+// The useful half is not the score, it is the weak spots. The sheet already
+// records which individual facts went wrong, so we can say "the 7s and 8s"
+// instead of "34 out of 50", which is the difference between a number and
+// something a parent can actually do tonight.
+// ---------------------------------------------------------------------------
+function mmRead(kidId) {
+  try {
+    const raw = localStorage.getItem("bk_minutemath_v1:" + kidId);
+    const o = raw ? JSON.parse(raw) : null;
+    return o && typeof o === "object" ? o : {};
+  } catch { return {}; }
+}
+
+// Count how often each number turns up in the facts a kid gets wrong, across
+// every sheet shape they have tried. Two names at most: a list of six numbers
+// is not a weak spot, it is a shrug.
+function mmWeakNumbers(store) {
+  const tally = {};
+  Object.keys(store).forEach((k) => {
+    const misses = store[k].misses || {};
+    Object.keys(misses).forEach((factId) => {
+      const hits = misses[factId];
+      factId.split(/[^0-9]+/).forEach((bit) => {
+        const n = parseInt(bit, 10);
+        if (!isNaN(n)) tally[n] = (tally[n] || 0) + hits;
+      });
+    });
+  });
+  const ranked = Object.keys(tally).map(Number).sort((a, b) => tally[b] - tally[a]);
+  const top = ranked.filter((n) => tally[n] >= 3).slice(0, 2);
+  return { top, tally };
+}
+
+function mmWhen(ms) {
+  const days = Math.floor((Date.now() - ms) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return days + " days ago";
+  return new Date(ms).toLocaleDateString();
+}
+
+function MinuteMathCard({ kids }) {
+  const anyData = kids.some((k) => Object.keys(mmRead(k.id)).length > 0);
+
+  return (
+    <div style={LP.wrap}>
+      <div style={LP.title}>Minute Math</div>
+      <div style={LP.sub}>
+        The timed facts sheet, the same shape school sends home. Scores are kept on this
+        device, so what you see here is what was practiced here.
+      </div>
+
+      {!anyData && (
+        <div style={LP.empty}>
+          Nothing yet. As soon as a sheet is finished on this device, the scores and the
+          tricky numbers show up here.
+        </div>
+      )}
+
+      {kids.map((kid) => {
+        const store = mmRead(kid.id);
+        const rows = Object.keys(store)
+          .map((k) => store[k])
+          .filter((r) => r && (r.runs || []).length)
+          .sort((a, b) => (b.runs[0] || {}).at - (a.runs[0] || {}).at);
+        if (!rows.length) return null;
+
+        const { top } = mmWeakNumbers(store);
+        const sheets = rows.reduce((n, r) => n + r.runs.length, 0);
+
+        return (
+          <div key={kid.id} data-minutemath-kid={kid.id} style={PC.row}>
+            <div style={PC.head}>
+              <AvatarMark kid={kid} size={34} />
+              <div style={{ minWidth: 0 }}>
+                <div style={PC.name}>{kid.display_name || "Your kid"}</div>
+                <div style={PC.meta}>
+                  {sheets + (sheets === 1 ? " sheet finished" : " sheets finished")}
+                </div>
+              </div>
+            </div>
+
+            {rows.map((r, i) => (
+              <div key={i} style={PC.bars}>
+                <div style={LP.trendLabel}>{r.label}</div>
+                <div style={PC.line}>
+                  <span style={PC.lineLabel}>Best</span>
+                  <span style={PC.lineValue}>{r.best} right</span>
+                </div>
+                {r.runs.slice(0, 3).map((run, j) => (
+                  <div key={j} style={LP.skillRow}>
+                    <span style={LP.skillLabel}>{mmWhen(run.at)}</span>
+                    <span style={LP.skillNum}>{run.n} of {run.total}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            <div style={PC.line}>
+              <span style={PC.lineLabel}>Tricky numbers</span>
+              <span style={PC.lineValue}>
+                {top.length === 0
+                  ? "Nothing standing out"
+                  : top.length === 1
+                    ? "the " + top[0] + "s"
+                    : "the " + top[0] + "s and " + top[1] + "s"}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+
+      <div style={LP.lessonNote}>
+        The tricky numbers come from the facts that actually went wrong, not from the score.
+        A sheet of just those is one tap away for the kid on the results screen, and you can
+        set one up any time from the Minute Math page.
       </div>
     </div>
   );
