@@ -155,22 +155,46 @@ main{flex:1;padding:0 16px 40px}
    dealt out like flashcards: one big problem, one big answer well, one keypad
    directly underneath it, and a count so nobody feels lost in the deck.
    The whole 50 still exist and still get marked together at the end. */
-.prog{height:9px;border-radius:6px;background:#EBE3D3;overflow:hidden;margin:4px 0 7px}
+.prog{height:9px;border-radius:6px;background:#EBE3D3;overflow:hidden;margin:4px 0 clamp(3px,.8vh,7px)}
 .prog i{display:block;height:100%;background:var(--grad);transition:width .2s}
-.countrow{display:flex;align-items:center;margin-bottom:12px}
+.countrow{display:flex;align-items:center;margin-bottom:clamp(5px,1.2vh,12px)}
 .count{flex:1;text-align:center;font-size:13px;font-weight:900;color:var(--sub);letter-spacing:.04em;
        padding-left:64px}
 .countrow .small{width:auto;flex:none;padding:4px 0 4px 10px;font-size:12.5px;min-width:54px;text-align:right}
 
-.flash{background:#fff;border:2px solid var(--line);border-radius:26px;padding:26px 26px 22px;
-       box-shadow:0 8px 22px rgba(15,14,23,.07);max-width:330px;margin:0 auto;text-align:right}
-.flash .fn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:52px;line-height:1.1;padding-right:10px}
-.flash .fn .fsign{float:left;color:var(--sub)}
-.flash .fbox{margin-top:10px;border-top:4px solid var(--ink);height:72px;display:flex;align-items:center;
-             justify-content:flex-end;padding-right:10px;font-family:'Fredoka',sans-serif;font-weight:600;
-             font-size:52px;color:var(--purple);background:#F1EAFF;border-radius:0 0 16px 16px;
+/* Session MM17 - the sheet screen is a fixed three-part layout, not a scroll.
+   On an iPhone, with Safari's own bars top and bottom, a fixed-size card and a
+   sticky keypad were both claiming the same pixels and the answer well ended
+   up underneath the keypad. Now the screen is: header, then a card area that
+   takes whatever room is left, then the keypad. The card scales with the
+   height of the screen so it always fits rather than overlapping. */
+#s-sheet{flex:1;display:flex;flex-direction:column;min-height:0}
+#s-sheet main{flex:1;display:flex;flex-direction:column;min-height:0;padding-bottom:0;overflow:hidden}
+.cardwrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.flash{background:#fff;border:2px solid var(--line);border-radius:26px;
+       padding:clamp(10px,2.2vh,24px) clamp(16px,5vw,26px) clamp(10px,1.8vh,20px);
+       box-shadow:0 8px 22px rgba(15,14,23,.07);width:100%;max-width:330px;margin:0 auto}
+
+/* Session MM17 - the sign sits NEXT to the number, not on the far wall.
+   It used to be float:left inside a right-aligned block, so on a 330px card a
+   minus sign sat four centimetres from the 10 it belonged to. A worksheet puts
+   the operator immediately left of the lower number, and the rule under both.
+   Two grid columns do exactly that: a narrow one for the sign, and one for the
+   digits that is at least two digits wide so single digits still line up. */
+.fsum{display:grid;grid-template-columns:auto minmax(2.05em,auto);
+      column-gap:.16em;justify-content:center;align-items:end}
+.fa,.fb{font-family:'Fredoka',sans-serif;font-weight:600;line-height:1.08;text-align:right;
+        font-size:clamp(26px,6.2vh,52px)}
+.fa{grid-area:1/2}
+.fb{grid-area:2/2}
+.fsign{grid-area:2/1;justify-self:start;color:var(--sub);font-family:'Fredoka',sans-serif;
+       font-weight:600;line-height:1.08;font-size:clamp(26px,6.2vh,52px)}
+.flash .fbox{grid-area:3/1/4/3;margin-top:8px;border-top:4px solid var(--ink);
+             height:clamp(38px,8.4vh,72px);display:flex;align-items:center;
+             justify-content:flex-end;padding-right:.14em;font-family:'Fredoka',sans-serif;font-weight:600;
+             font-size:clamp(26px,6.2vh,52px);color:var(--purple);background:#F1EAFF;border-radius:0 0 14px 14px;
              box-shadow:inset 0 3px 7px rgba(124,92,252,.16)}
-.flash .fbox:empty::after{content:"";width:46px;height:5px;border-radius:3px;background:#C3B2FF}
+.flash .fbox:empty::after{content:"";width:1em;height:5px;border-radius:3px;background:#C3B2FF}
 /* Session MM7 - the card answers back. A tick or a soft dip, matched to the
    sound, so a kid who has the volume off still gets told. It is feedback, not
    a verdict: nothing is red, nothing shakes, and the card moves on either way. */
@@ -181,19 +205,20 @@ main{flex:1;padding:0 16px 40px}
 .flash .mark{position:absolute;right:16px;top:14px;width:30px;height:30px;opacity:0;transition:opacity .12s}
 .flash.wasright .mark.tick,.flash.waswrong .mark.dip{opacity:1}
 .flash{position:relative}
-.flash .fbox .caret{display:inline-block;width:4px;height:44px;background:var(--purple);margin-left:3px;
+.flash .fbox .caret{display:inline-block;width:4px;height:.85em;background:var(--purple);margin-left:3px;
                     animation:blink 1s steps(2) infinite}
 .stepback{display:block;margin:12px auto 0;background:none;border:none;color:var(--sub);font-size:13.5px;
           font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
 
 /* The keypad gets its OWN surface. White keys on a cream page read as more
    page; white keys on a sand panel read as keys. */
-.pad{position:sticky;bottom:0;background:#EBE1CD;border-top:2px solid #DCCFB4;
-     border-radius:26px 26px 0 0;padding:14px 14px 12px;margin:18px -16px 0;
-     box-shadow:0 -6px 18px rgba(15,14,23,.07)}
-.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;max-width:330px;margin:0 auto}
-.key{border:none;background:#fff;border-radius:16px;height:58px;font-family:'Fredoka',sans-serif;
-     font-weight:600;font-size:27px;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 #C9BB9C}
+.pad{flex:none;background:#EBE1CD;border-top:2px solid #DCCFB4;
+     border-radius:26px 26px 0 0;padding:clamp(9px,1.6vh,14px) 14px calc(clamp(8px,1.4vh,12px) + env(safe-area-inset-bottom));
+     margin:10px -16px 0;box-shadow:0 -6px 18px rgba(15,14,23,.07)}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,1.1vh,9px);max-width:330px;margin:0 auto}
+.key{border:none;background:#fff;border-radius:16px;height:clamp(38px,6.2vh,58px);
+     font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(21px,3vh,27px);cursor:pointer;
+     color:var(--ink);box-shadow:0 3px 0 #C9BB9C}
 .key:active{transform:translateY(2px);box-shadow:none}
 .key.act{background:#EFE8FF;color:var(--purple)}
 .key.back{background:#F1ECE1}
@@ -206,9 +231,10 @@ main{flex:1;padding:0 16px 40px}
    anything, and the key where the arrow used to be is now BACK, so the most
    likely fat-finger is also the undo. */
 .nextbar{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:330px;
-         margin:16px auto 0;border:none;border-radius:18px;height:62px;cursor:pointer;
+         margin:clamp(8px,1.8vh,16px) auto 0;border:none;border-radius:18px;
+         height:clamp(42px,6.8vh,62px);cursor:pointer;
          background:linear-gradient(180deg,#57D48B,#2FAE68);color:#fff;box-shadow:0 3px 0 #23854F;
-         font-family:'Fredoka',sans-serif;font-weight:600;font-size:21px}
+         font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(17px,2.6vh,21px)}
 .nextbar:active{transform:translateY(2px);box-shadow:none}
 .nextbar[disabled]{background:#DCD2BC;color:#95886F;box-shadow:0 3px 0 #C7BAA0;cursor:default}
 .key svg{width:27px;height:27px;vertical-align:middle}
@@ -358,13 +384,16 @@ main{flex:1;padding:0 16px 40px}
         <span class="count" id="count">1 of 50</span>
         <button class="small" id="finish">I'm done</button>
       </div>
-      <div class="flash" id="flash">
-        <div class="fn" id="fa">0</div>
-        <div class="fn"><span class="fsign" id="fsign">+</span><span id="fb">0</span></div>
-        <div class="fbox" id="fbox"></div>
+      <div class="cardwrap"><div class="flash" id="flash">
+        <div class="fsum">
+          <div class="fa" id="fa">0</div>
+          <div class="fsign" id="fsign">+</div>
+          <div class="fb" id="fb">0</div>
+          <div class="fbox" id="fbox"></div>
+        </div>
         <svg class="mark tick" viewBox="0 0 24 24" fill="none" stroke="#2FAE68" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l6 6L20 6"/></svg>
         <svg class="mark dip" viewBox="0 0 24 24" fill="none" stroke="#D99B12" stroke-width="3.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
-      </div>
+      </div></div>
       <div class="pad">
         <div class="keys">
           <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
