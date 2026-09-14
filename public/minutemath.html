@@ -238,6 +238,7 @@ main{flex:1;padding:0 16px 40px}
           <button class="key next" data-k="next"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 6l6 6-6 6"/></svg></button>
         </div>
         <button class="big ghost" id="finish" style="max-width:330px;margin:10px auto 0;display:block">I'm done</button>
+        <button class="small" id="bail">Change the sheet</button>
       </div>
     </main>
   </section>
@@ -262,11 +263,17 @@ main{flex:1;padding:0 16px 40px}
         <div class="best" id="rBest"></div>
       </div>
       <div class="nudge hidden" id="nudge"><p id="nudgeText"></p><button id="nudgeBtn"></button></div>
-      <button class="big" id="retry">Practise the ones you missed</button>
-      <div class="lab" style="padding-left:4px;margin-top:18px">Your sheet</div>
+
+      <!-- Session MM3: every way out sits ABOVE the marked sheet. Having to
+           scroll past fifty problems to press "go again" is the single thing
+           that made this feel like it had no way back. -->
+      <button class="big go" id="again">Go again</button>
+      <button class="big ghost" id="retry">Practise the ones you missed</button>
+      <button class="big ghost" id="change">Change the sheet</button>
+
+      <div class="lab" style="padding-left:4px;margin-top:22px">Your sheet</div>
       <div class="sheet" id="marked"></div>
-      <button class="big ghost" id="again">Go again</button>
-      <button class="small" id="change">Back to the start</button>
+      <button class="big ghost" id="again2">Go again</button>
     </main>
   </section>
 
@@ -616,6 +623,7 @@ $("start").onclick=function(){ startRun(S); };
 $("toPrint").onclick=function(){ printSheet(S,false); };
 $("toKey").onclick=function(){ printSheet(S,true); };
 $("again").onclick=function(){ startRun(RUN); };
+$("again2").onclick=function(){ startRun(RUN); };
 $("retry").onclick=function(){
   var list = missed.map(function(p){ return {op:p.op,a:p.a,b:p.b,ans:p.ans,typed:""}; });
   var cfg = Object.assign({}, RUN, {count:list.length, timer:0, practice:true});
@@ -623,6 +631,7 @@ $("retry").onclick=function(){
 };
 $("finish").onclick=function(){ clearInterval(tick); finish(); };
 $("quit").onclick=function(){ clearInterval(tick); show("s-setup"); };
+$("bail").onclick=function(){ clearInterval(tick); show("s-setup"); };
 $("change").onclick=function(){ show("s-setup"); };
 $("doneBack").onclick=function(){ show("s-setup"); };
 $("toScores").onclick=function(){ paintScores(); show("s-scores"); };
