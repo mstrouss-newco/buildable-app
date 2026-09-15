@@ -1,3 +1,39 @@
+## 2026-09-15 — CB-FIX: the Cobuild switch had nothing left reading it
+
+**Found by the release gate, not by a card.** `qa-grownups.mjs` had been red on `main`,
+with two checks failing about the landing page's Start buttons. It was not a stale test.
+
+**What had happened.** CB4 built the real door: while `app_flags.cobuild_live` is false
+(the safe default) every Start button on `public/cobuild.html` takes a name for the
+waitlist, and when the owner flips it true the same buttons go to real Stripe checkout
+instead — with the click logged either way, and a fall back to the waitlist if the flag is
+on but the checkout is not configured yet, so nobody ever meets a dead end.
+
+A later look-and-feel pass to that page (`141d68b`, the slingshot in the hero phone)
+rewrote the whole `<script>` block and **dropped that wiring with it**. `LIVE`,
+`startSignup`, `planOf` and the fallback all went. From that commit on, `cobuild_live` had
+nothing reading it on the landing page at all: flipping the switch would have done
+nothing, and the page would have gone on taking waitlist names forever while the owner
+believed the door was open. `api/cobuild-billing.js` was never touched and still answers
+`op:"checkout"` exactly as it did, so this was only ever the client half.
+
+**The fix is a restore, not a new build.** The CB4 wiring is back in today's page, word for
+word where it still fits, with a note saying it was dropped once so the next look-and-feel
+pass does not quietly do it again. Nothing a visitor sees changes while the switch is off.
+
+**And a stronger check, because a regex could not have caught this.** The source checks in
+`qa-grownups.mjs` did go red, which is what they are for. But they can only tell you the
+text changed. New `qa-cobuild-door.mjs` CLICKS the real Start buttons in real Chromium and
+follows where they go, against stubbed `/api/app-flags`, `/api/cobuild-lead` and
+`/api/cobuild-billing` — no Stripe, no Supabase, no key. Three paths, all green: switch
+off opens the waitlist and logs the click and the lead; switch on with no checkout
+configured asks for one, gets nothing, and falls back to the waitlist rather than a dead
+end; switch on with a checkout really leaves for it. It SKIPS loudly without Playwright,
+so `qa-all.mjs` leaves it out unless you pass `--with-browser`.
+
+**`node qa-all.mjs` is green again** — the first time the whole gate has been green since
+that commit.
+
 ## 2026-09-15 — AC3: the colony is hers, and it keeps working while she is away
 
 **Phase AC, card AC3, the last one open.** Touched `public/antcity-engine.html`,

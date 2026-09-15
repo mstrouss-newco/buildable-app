@@ -6,6 +6,31 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## CB-FIX — the Cobuild switch had nothing left reading it (September 15 2026)
+`public/cobuild.html`, `qa-cobuild-door.mjs` (new). Found by the release gate:
+`qa-grownups.mjs` had been red on `main` and it was right to be.
+
+CB4 built the real door — while `app_flags.cobuild_live` is false every Start button takes
+a name for the waitlist, and when the owner flips it true the same buttons go to real
+Stripe checkout, with the click logged either way and a fall back to the waitlist if the
+flag is on before the checkout is configured. A later look-and-feel pass to that page
+(`141d68b`) rewrote its whole `<script>` block and **dropped that wiring with it**. From
+then on `cobuild_live` had nothing reading it on the landing page: **flipping the switch
+would have done nothing**, and the page would have gone on collecting waitlist names while
+the owner believed the door was open. `api/cobuild-billing.js` was untouched, so it was
+only ever the client half.
+
+Restored word for word where it still fits, with a note so the next look-and-feel pass does
+not quietly do it again. Nothing a visitor sees changes while the switch is off.
+
+New `qa-cobuild-door.mjs` guards the behaviour rather than the text: it CLICKS the real
+Start buttons in real Chromium against stubbed flags, lead and billing endpoints — no
+Stripe, no Supabase, no key — and proves all three paths (waitlist; switch on with no
+checkout falling back rather than dead-ending; switch on with a checkout really leaving for
+it). Skips loudly without Playwright. `node qa-all.mjs` green.
+
+---
+
 ## AC3 — Ant City: the colony is hers, and it keeps working while she is away (September 15 2026)
 `public/antcity-engine.html`, `api/kid-save.js` (new), `db/create-kid-game-saves.sql` (new,
 and APPLIED), `qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`. Phase **AC**,
