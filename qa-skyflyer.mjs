@@ -2358,6 +2358,20 @@ chk('FL13: nothing here can be hit, nothing chases, no lose state',
 // ==========================================================================
 console.log('\n--- FM1 STATIC: the farm scene is built to the recipe ---');
 const farm = read('public/skyflyer-farm.html');
+// THE FARM'S BUILD TAG LIVES IN ONE PLACE AND EVERY CHECK READS IT FROM THERE.
+// It used to be typed out in six: `version: "fm8"` twice in this file, `?v=fm10`
+// four times, and three more in qa-farm.mjs. FM12 bumped the engine and the door
+// and left the assertions behind, so nine checks went red on a build that was
+// perfectly fine — and the fix, every card, was to find and retype the number in
+// all six places. The door in BuildableKids.jsx is the one that matters (it is
+// what a kid's browser actually fetches), so that is the one we read.
+const farmDoor = read('src/BuildableKids.jsx');
+const FARM_V = (farmDoor.match(/skyflyer-farm\.html\?v=([a-z0-9]+)/) || [])[1] || '';
+chk('the farm has a cache-bust on its door at all', /^fm\d+$/.test(FARM_V), 'v=' + FARM_V);
+chk('and the engine agrees with the door about which build it is',
+  new RegExp('version:\\s*"' + FARM_V + '"').test(farm),
+  'door says ' + FARM_V + ', engine says ' +
+  ((farm.match(/version:\s*"([a-z0-9]+)"/) || [])[1] || '?'));
 // the file with its explaining comments stripped out, because a comment saying
 // "there is no countdown here" must not make a countdown check go green
 const farmCode = farm.replace(/<!--[\s\S]*?-->/g, '')
@@ -2664,7 +2678,7 @@ chk('FM2: the stand keeps the lights on (hiding them would show silhouettes)',
 
 // ---- the handle a robot plays it through
 chk('FM2: the QA handle exposes the animals, the feed and the model stand',
-  /version:\s*"fm8"/.test(farm) &&
+  new RegExp('version:\\s*"' + FARM_V + '"').test(farm) &&
   /animals:\s*function\(\)/.test(farm) &&
   /animalKinds:\s*function\(\)/.test(farm) &&
   /giveItem:\s*function\(kind, n\)/.test(farm) &&
@@ -2687,7 +2701,7 @@ chk('FM2: still no emojis, still no textures, after everything FM2 added',
 console.log('\n--- FM3: the crate, the plane, and the four gaps FM1 left open ---');
 
 chk('FM5: the farm reports itself as the FM5 build',
-  /version:\s*"fm8"/.test(farm));
+new RegExp('version:\\s*"' + FARM_V + '"').test(farm));
 
 // ---- GAP 1: the door on the Play page --------------------------------------
 const jsxF = read('src/BuildableKids.jsx');
@@ -2703,7 +2717,7 @@ chk('FM3 gap 1: it routes to a screen of its own that frames the page',
   /function FarmScreen/.test(jsxF) &&
   /screen === SCREEN_FARM/.test(jsxF));
 chk('FM3 gap 1: the link carries its OWN cache-bust, not the flying engine\'s',
-  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
+  jsxF.indexOf('skyflyer-farm.html?v=' + FARM_V) >= 0);
 chk('FM3 gap 1: the tile is DRAWN geometry, and there is not an emoji in it',
   (function(){
     const m = jsxF.match(/const TILE_ART = \{[\s\S]*?\n\};/);
@@ -3002,7 +3016,7 @@ chk('FM5: the small celebrations all go through the shared Feel Kit, so mute wor
   /heartPuff\(A\.x,/.test(farm) &&
   /if\(!quiet\)\{ sparklePuff/.test(farm));
 chk('FM5: the shell contract still holds — the door carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
+  jsxF.indexOf('skyflyer-farm.html?v=' + FARM_V) >= 0);
 chk('FM5: the save endpoint and its migration both exist in the repo',
   fs.existsSync('api/farm-save.js') && fs.existsSync('db/create-farm-save.sql') &&
   /farm_saves/.test(read('db/create-farm-save.sql')) &&
@@ -3096,7 +3110,7 @@ chk('FM7: and every built present has a model to hop out of the box',
   ['pumpkinseed', 'farmdog', 'fieldrow', 'strawberry', 'mill', 'bees', 'pig', 'tractor', 'farmhand']
     .every(id => new RegExp('id===\"' + id + '\"').test(farm.slice(farm.indexOf('function unlockModel')))));
 chk('FM6: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
+  jsxF.indexOf('skyflyer-farm.html?v=' + FARM_V) >= 0);
 chk('FM6: still no timer, no countdown, no emoji, after all of that',
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
 
@@ -3151,9 +3165,14 @@ chk('FM6: one table says where everything is, so a building moves by one number'
   /var ISLE = \{/.test(farm) &&
   ['barn','mill','dairy','well','pond','orchard','road','start']
     .every(function(k){ return new RegExp("\\b"+k+":").test(farm.slice(farm.indexOf('var ISLE = {'), farm.indexOf('var ISLE = {')+900)); }));
-chk('FM6: the barn, the well, the pond, the bridge, the road and the paths are all built here',
-  ['buildBarn','buildWell','buildPond','buildBridge','buildRoad','steppingStones','buildPad','buildLogPile']
-    .every(function(f){ return new RegExp("function "+f+"\\(").test(farm); }));
+// FM12 pulled the bridge out and put a DOCK in its place — Mike looked at the
+// live farm and said a pond that size wants a dock you can stand on the end of,
+// not a full bridge. So the check asks for a way onto the water, not for that
+// one particular way onto it.
+chk('FM6: the barn, the well, the pond, a way onto it, the road and the paths are all built here',
+  ['buildBarn','buildWell','buildPond','buildRoad','steppingStones','buildPad','buildLogPile']
+    .every(function(f){ return new RegExp("function "+f+"\\(").test(farm); }) &&
+  (/function buildDock\(/.test(farm) || /function buildBridge\(/.test(farm)));
 chk('FM6: the mill and the dairy have their pads waiting, for FM7 to build on',
   /\[ISLE\.mill, ISLE\.dairy\]\.forEach/.test(farm));
 chk('FM6: the shop is IN THE BARN — walk to the doors and it opens',
@@ -3168,7 +3187,7 @@ chk('FM6: the coop and the cow pen kept their FM4 gates through the move',
 chk('FM6: still no timer, no countdown, no emoji, after a whole island of it',
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
 chk('FM6: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
+  jsxF.indexOf('skyflyer-farm.html?v=' + FARM_V) >= 0);
 
 // ==========================================================================
 //  FM7 — MORE TO DO. Crops, a pig, a hive, the mill, the dairy, the watering
@@ -3276,7 +3295,7 @@ chk('FM7: still no timer, no countdown, no emoji, and nothing that can be failed
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) &&
   !emoji.test(farm) && !/gameOver|youLose|starv|\bdied\b/i.test(farmCode));
 chk('FM7: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
+  jsxF.indexOf('skyflyer-farm.html?v=' + FARM_V) >= 0);
 
 // ==========================================================================
 //  FM8 — HELPERS, A CAST WHO COME BACK, THE STICKER BOOK AND THE PICTURE.
@@ -3446,7 +3465,10 @@ chk('FM10: the asked-for item is the same model, washed cool and soft',
   /var m=askMesh\(hbBake\(r\.parts/.test(farm));
 chk('FM10: a give wears an arrow, and the arrow only ever points up',
   /function giveArrow\(s\)/.test(farm) && /function beatArrow\(ar, baseY, now, i\)/.test(farm) &&
-  /ar\.position\.y=baseY\+u\*0\.38;/.test(farm) &&
+  // UP is the rule and the height is a dial. Pinning the exact hop meant FM12
+  // could not make the arrow calmer without turning this red, which teaches
+  // people to edit the check rather than read it.
+  /ar\.position\.y=baseY\+u\*0\.\d+;/.test(farm) &&
   // one beat shared by the ready crop and the ready egg, not two near-copies
   /beatArrow\(A\.arrow, 1\.05, now, i\)/.test(farm) &&
   /beatArrow\(P\.arrow, 1\.10, now, i\)/.test(farm) &&

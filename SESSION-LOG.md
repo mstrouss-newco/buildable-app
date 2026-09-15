@@ -301,6 +301,44 @@ once before reporting. And `npm ci` removes the unsaved `playwright`, which then
 a newer one than the browsers in `/opt/pw-browsers`; if a harness suddenly cannot find
 chromium, that mismatch is why.
 
+### 6. And then FM12 landed on main while this was in flight, red
+
+Merging `main` in brought FM12, CB6 and CB7, and with them **twelve fresh failures that
+had been pushed to main and deployed**: nine in `qa-skyflyer.mjs` and three in
+`qa-farm.mjs`. Checked on a pristine `origin/main` worktree before anything was touched,
+and they fail there identically, so this is not the merge. Every one of them is the
+harness being stale rather than the game being broken, and they are all the same shape
+as the bugs above: **a check that names a number somebody has to remember to retype**.
+
+- **The build tag was typed out in EIGHT places.** `version: "fm8"` twice in the static
+  half and five times in the farm robot, plus `?v=fm10` four times over. FM12 bumped the
+  engine and the door and left all eight behind. There is now ONE source of truth — the
+  cache-bust on the door in `BuildableKids.jsx`, which is what a kid's browser actually
+  fetches — and every check reads the tag from there and asks the engine to agree with
+  it. A card that bumps the build no longer has to find eight places, and a build where
+  the door and the engine disagree now goes red with both numbers in the message, which
+  is a genuinely useful check and is not one we had.
+- **The bridge became a dock, on Mike's word.** He looked at the live farm and said a
+  pond that size wants a dock you can stand on the end of, not a full bridge, so FM12
+  replaced `buildBridge` with `buildDock` and the check that greps for the bridge by
+  name went red on the thing it asked for. It asks for **a way onto the water** now.
+- **The arrow's hop was pinned to the pixel.** `ar.position.y=baseY+u*0.38` was written
+  into the check, so FM12 could not calm the arrow to `0.30` without turning FM10 red.
+  UP is the rule and the height is a dial: the check reads the shape and lets the number
+  move.
+
+**Two more flaky checks, both fixed at the premise rather than the assertion.** `an egg
+left on the ground is collected once she walks up to it` demanded a chicken that
+happened to be HUNGRY at that moment and returned a bare `false` when there wasn't one —
+a coin toss decided by whatever the blocks above left behind. It now takes an egg that
+is already lying there if there is one, and feeds whichever hen can take the corn if
+there isn't. `the animal she is nearest to STOPS pacing and turns to face her` waited
+for a patrolling hen to go loud, but FM10's rule is that only a HUNGRY animal gets
+loud, and the patrolling hen has usually been fed and ripened by the blocks above, so it
+was waiting twenty-five seconds for something that could not happen. It waits for the
+hen to come back round to hungry first. Both now carry a reason in their message, so a
+future red says what it saw instead of nothing at all.
+
 ## 2026-09-15 (FM11): fix how she moves
 
 **Phase FM, card FM11.** Mike's playtest: "you have to use the button controller now

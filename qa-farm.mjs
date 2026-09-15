@@ -28,6 +28,13 @@ import { createRequire } from 'node:module';
 
 const dir = process.argv[2] || '.';
 const root = path.resolve(dir, 'public');
+// THE BUILD TAG IS READ, NEVER TYPED. This said 'fm8' in three places and FM12
+// bumped the engine without them, so three checks went red on a build that was
+// fine. The door in BuildableKids.jsx is what a kid's browser actually fetches,
+// so the engine is asked to agree with THAT rather than with a number somebody
+// remembered to update here.
+const FARM_V = (fs.readFileSync(path.resolve(dir, 'src/BuildableKids.jsx'), 'utf8')
+  .match(/skyflyer-farm\.html\?v=([a-z0-9]+)/) || [])[1] || '';
 let ok = true;
 const chk = (name, cond, extra = '') => {
   console.log((cond ? 'PASS' : 'FAIL') + '  ' + name + (extra ? '  ::  ' + extra : ''));
@@ -89,7 +96,9 @@ try {
 
   console.log('--- THE FARM: the scene stands up in a real browser ---');
   chk('the farm scene boots with a WebGL context and no page errors', errs.length === 0, errs.join(' | '));
-  chk('it is the FM8 build', (await ev(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev(() => window.FARM.version)));
 
   // ======================================================================
   //  FM4 — THE FIRST ORDER. This block runs BEFORE the robot collects
@@ -547,14 +556,26 @@ try {
     await (async () => {
       await park();
       await ev(() => { window.FARM.clearStack(); window.FARM.giveItem('corn', 1); });
-      const hen = (await ev(() => window.FARM.animals()))
-        .find(a => a.kind === 'chicken' && a.state === 'hungry');
-      if (!hen) return false;
-      await ev(([x, z]) => window.FARM.moveKidTo(x, z), [hen.x, hen.z]);
-      await page.waitForFunction(() => window.FARM.animals().some(a => a.state === 'making'), null,
-        { timeout: 15000 }).catch(() => {});
-      await ev(() => window.FARM.advanceTime(40));
-      await page.waitForFunction(() => window.FARM.produceSpots().length > 0, null, { timeout: 20000 });
+      // GET AN EGG ONTO THE GROUND, whatever state the farm is in. This used to
+      // demand a chicken that happened to be HUNGRY right now and return a bare
+      // false when there wasn't one, which is a coin toss decided by whatever
+      // the blocks above left behind. If an egg is already lying there, that IS
+      // the premise; otherwise feed whichever hen can take the corn; and if the
+      // farm somehow offers neither, say which.
+      if ((await ev(() => window.FARM.produceSpots().length)) === 0) {
+        const hen = (await ev(() => window.FARM.animals()))
+          .find(a => a.kind === 'chicken' && a.state === 'hungry') ||
+          (await ev(() => window.FARM.animals())).find(a => a.kind === 'chicken');
+        if (!hen) return false;
+        await ev(([x, z]) => window.FARM.moveKidTo(x, z), [hen.x, hen.z]);
+        await page.waitForFunction(() => window.FARM.animals()
+          .some(a => a.state === 'making' || a.state === 'ready'), null,
+          { timeout: 15000 }).catch(() => {});
+        await ev(() => window.FARM.advanceTime(40));
+      }
+      await page.waitForFunction(() => window.FARM.produceSpots().length > 0, null, { timeout: 25000 })
+        .catch(() => {});
+      if ((await ev(() => window.FARM.produceSpots().length)) === 0) return false;
       const sp = (await ev(() => window.FARM.produceSpots()))[0];
       await park();
       const before = await ev(() => window.FARM.stackHeight());
@@ -790,7 +811,9 @@ try {
 
   await p5.goto(BASE, { waitUntil: 'load' });
   await boot5();
-  chk('it is the FM8 build', (await ev5(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev5(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev5(() => window.FARM.version)));
   chk('a farm nobody has played starts from the FM1 farm, not from someone else\'s',
     (await ev5(() => window.FARM.save.info())) === null &&
     (await ev5(() => window.FARM.patches().every(p => p.state === 'empty'))) === true);
@@ -1149,7 +1172,9 @@ try {
 
   await p6.goto(BASE, { waitUntil: 'load' });
   await boot6();
-  chk('it is the FM8 build', (await ev6(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev6(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev6(() => window.FARM.version)));
   const seeds0 = await ev6(() => window.FARM.seedsOffered());
   chk('the seed pop-up offers the three starters and nothing else',
     seeds0.length === 3 && ['corn', 'carrot', 'wheat'].every(k => seeds0.includes(k)), seeds0.join(','));
@@ -1389,7 +1414,9 @@ try {
     { timeout: 25000 });
   await p7.goto(BASE, { waitUntil: 'load' });
   await boot7();
-  chk('the farm page is the FM8 build now', (await ev7(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev7(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev7(() => window.FARM.version)));
 
   chk('none of the three is plantable before she has its seed',
     await (async () => {
@@ -1711,7 +1738,9 @@ try {
   await p9.waitForFunction(
     () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
     null, { timeout: 25000 });
-  chk('it is the FM8 build', (await ev9(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev9(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev9(() => window.FARM.version)));
   // she has picked who she is, so the card is out of the way of everything below
   await ev9(() => window.FARM.pickLook('girl'));
 
@@ -2091,11 +2120,27 @@ try {
              A.filter(a => a.state === 'hungry' && a.wanting).length > 1;
     })());
 
+  let pacedWhy = '';
   chk('the animal she is nearest to STOPS pacing and turns to face her',
     await (async () => {
       const hen = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
-      if (!hen) return false;
-      await ev10(([x, z]) => window.FARM.moveKidTo(x + 1.1, z + 1.1), [hen.x, hen.z]);
+      if (!hen) { pacedWhy = 'nothing on this farm is patrolling'; return false; }
+      // ONLY A HUNGRY ANIMAL GETS LOUD — that is FM10's rule, one voice at a
+      // time and only from something that is actually asking. The patrolling
+      // hen has usually been fed and ripened by the blocks above, so waiting
+      // for a full hen to go loud is waiting for something that will never
+      // happen. Wait for it to come back round to hungry first, and if it will
+      // not, SAY SO rather than going red with no reason attached.
+      await p10.waitForFunction(() => {
+        const a = window.FARM.animals().find(x => x.patrolling);
+        return a && a.state === 'hungry';
+      }, null, { timeout: 25000 }).catch(() => {});
+      const fresh = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
+      if (fresh.state !== 'hungry') {
+        pacedWhy = 'the patrolling hen is ' + fresh.state + ', so it has nothing to ask for';
+        return false;
+      }
+      await ev10(([x, z]) => window.FARM.moveKidTo(x + 1.1, z + 1.1), [fresh.x, fresh.z]);
       await p10.waitForFunction(() => {
         const a = window.FARM.animals().find(x => x.patrolling);
         return a && a.loud;
@@ -2105,8 +2150,11 @@ try {
       // have walked anywhere, because it is busy asking her for something
       await p10.waitForTimeout(1500);
       const after = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
-      return at.loud && Math.hypot(after.x - at.x, after.z - at.z) < 0.05;
-    })());
+      const moved = Math.hypot(after.x - at.x, after.z - at.z);
+      pacedWhy = 'hen ' + at.state + (at.loud ? ', loud' : ', NOT loud') +
+                 ', drifted ' + moved.toFixed(3) + 'u';
+      return at.loud && moved < 0.05;
+    })(), pacedWhy);
   chk('and it starts pacing again the moment she is not the one it is asking',
     await (async () => {
       await ev10(() => window.FARM.moveKidTo(0, 20));
