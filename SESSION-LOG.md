@@ -1,3 +1,88 @@
+## 2026-09-15 — AC3: the colony is hers, and it keeps working while she is away
+
+**Phase AC, card AC3, the last one open.** Touched `public/antcity-engine.html`,
+`api/kid-save.js` (new), `db/create-kid-game-saves.sql` (new, and APPLIED),
+`qa-antcity.mjs`, `qa-antcity-shot.mjs`, `antcity-README.md`.
+
+### The part I was not expecting: the save did not work at all
+Two separate bugs, either one of which was enough on its own, and both of them silent.
+
+1. **The blob said v2 and the loader demanded v1.** That has been true since AC7. Every
+   visit to Ant City quietly started a brand new anthill. Nothing a kid built had come
+   back since. The version is a named constant now and the loader accepts every version
+   the game has ever written.
+2. **The save was a circular structure.** A crumb an ant has claimed holds a reference to
+   that ant, and the ant's task holds one straight back to the crumb. Handing the live
+   meadow to `JSON.stringify` throws on that circle, and it threw INSIDE a `try/catch`,
+   so the save failed with no sign of it any time a forager was mid-trip, which is most
+   of the time. The snapshot is plain data now, and the robot takes one while ants are
+   carrying things and proves it lands in storage.
+
+So AC3 did not put a save on top of a working one. It made the save work.
+
+### Whose colony it is, and where it lives
+The key is the old `bk_antcity_colony` plus `_<kidId>` when the shell has an active kid,
+read the same way the Farm reads it. Two kids on one iPad get two colonies. A guest keeps
+the plain key, and **the colony she grew before she had a profile is carried over to her
+own key the first time she opens the game signed in**, so signing in never costs anybody
+an anthill.
+
+localStorage is written first and always; the cloud copy follows and is allowed to fail as
+often as it likes. Leaving the page saves with a beacon, the one request a browser
+promises to finish. A newer cloud colony only ever lands if she has not touched anything
+yet, so a save can never yank the game out from under a child who is already playing.
+
+**`/api/kid-save` + `kid_game_saves` is the SHARED version of what FM5 built for the
+Farm**, one row per game per kid, service-key only, RLS written the same way, no delete
+verb and never will be. `db/create-kid-game-saves.sql` was written AND applied to the live
+Supabase project in this session, and verified against `information_schema` (four columns:
+game, kid_profile_id, data, updated_at). The Farm is deliberately still on its own
+`farm_saves`: it is live and it works, and replace-first says it moves over only once
+somebody verifies that move on the live site.
+
+### While she was away
+`awayGrow()` runs **the same `step()` the game runs**, in one-second slices instead of
+sixtieths, with one flag switching off everything that needs a kid in the room. There is
+no second model of the colony, so there is nothing that can drift away from the first.
+
+Diggers finish the tunnel she drew, foragers keep bringing the meadow home, eggs hatch.
+Four hours of credit however long she was gone, and none at all under ten minutes. No
+rain, no bad bugs, and tiredness does not creep in — a setback is a thing a kid answers,
+and she was not there to answer it. No missions and no coins out there either: a mission
+is a lesson, so it is finished in front of her, on her first real step back, where she
+watches the coins land. A colony still being taught does not run on past the lesson at all.
+
+**Two limits a real browser run put there, and I would not have found either headless.**
+A screenshot of the welcome-back card showed **989 ants living in a five-cell hole with an
+empty pantry**. So: a colony grows only into the home that was dug for it (eight ants per
+dug cell), and only while it is feeding itself (the queen stops laying and the nursery
+stops hatching once the store is down to its last quarter). Both only PAUSE the hatch —
+the eggs sit and wait, so digging on her first morning minute gets her the hatch she was
+saving up. She now comes back to 104 ants from 82, food going up, and no setback at all.
+
+### The welcome back
+One cream card in the Build menu's own style. Up to three rows, each a drawn picture and a
+number: new ants, food carried home, tunnels dug. Only the lines that really happened,
+built from the numbers the catch-up really produced, so it cannot promise a kid something
+the colony did not do. One button, and the colony has been running behind it the whole time.
+
+### Checked
+`qa-antcity.mjs` gained an AC3 section, all of it driven by moving a blob's `savedAt`
+backwards — no wall clock waited on, no network reached. The one I care most about:
+**eleven minutes away must never grow the colony more than eleven minutes of sitting
+there playing it**, and it does not (+11 against +36). `node qa-all.mjs` green.
+`qa-antcity-shot.mjs` does the whole thing again in real Chromium through a real page
+reload and photographs the card at phone size.
+
+### Calls I made for you
+1. **Four hours is the cap.** A week away banks the same four hours, and the card says so
+   in kid words rather than pretending the colony is a week old.
+2. **The shared table, not an Ant City one.** The Farm proved this mechanism; a second
+   table per game is how a repo ends up with nine of them. Ant City is the first on the
+   shared one, and the Farm moves over when somebody can verify it live.
+3. **Away time is deliberately stingier than playing.** It has to be, or the best way to
+   play Ant City is to close it.
+
 ## 2026-09-08 (AC10): the meadow becomes a place, the ground becomes layers, and water goes
 
 **Phase AC, card AC10.** Touched `public/antcity-engine.html`,

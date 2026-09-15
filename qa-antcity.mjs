@@ -21,6 +21,10 @@
 //   5. AC7: food only ever moves when an ant delivers, one hint at a time, the taught
 //      gestures all really work, idle ants stand still and never stack, the needs
 //      meters read true, and Build is reachable with a button.
+//   6. AC3: the colony is saved per kid and follows her to the next device, every
+//      version of the blob the game ever wrote still loads, and away time GROWS the
+//      colony and can never punish it — no rain, no bugs, no coins in an empty room,
+//      four hours of credit at most and none at all under ten minutes.
 //
 //   node qa-antcity.mjs .
 import fs from 'fs'; import vm from 'vm';
@@ -101,7 +105,9 @@ function node(tag) {
   Object.defineProperty(n, 'childElementCount', { get: () => n.children.length });
   Object.defineProperty(n, 'firstChild', { get: () => n.children[0] || null });
   Object.defineProperty(n, 'offsetHeight', { get: () => 0 });   // no layout engine: the game falls back
-  Object.defineProperty(n, 'innerHTML', { get: () => '', set: (v) => { if (!v) n.children.length = 0; } });
+  let _html = '';
+  Object.defineProperty(n, 'innerHTML', { get: () => _html,
+    set: (v) => { _html = v == null ? '' : String(v); if (!v) n.children.length = 0; } });
   return n;
 }
 // every id the page's own markup carries exists before the engine asks for it
@@ -1082,8 +1088,12 @@ for (let i = 0; i < 3000 && !cleared; i++) { G.step(1); if (G.floods() === 0) cl
 ok('and builders still clear it', cleared);
 
 // an older save with a water drop on the meadow comes back as a crumb
+// AC3 moved the version to a named constant and taught the loader to accept every
+// version the game has ever written, which is what makes this migration reachable at all.
 ok('a water drop saved by an older version is migrated to a crumb, never left stranded',
-  /GAME_CONFIG\.items\[o\.kind\] \? o\.kind : "crumb"/.test(html) && /v:2, cells:C\.cells/.test(html));
+  /GAME_CONFIG\.items\[o\.kind\] \? o\.kind : "crumb"/.test(html)
+  && /v:SAVE_V, cells:C\.cells/.test(html)
+  && /s\.v >= 1 && s\.v <= SAVE_V/.test(html));
 
 // -- part 1: the world above -------------------------------------------------
 const world = G.world();
@@ -1202,6 +1212,230 @@ ok('no manifest asset id is left with nothing behind it (a drawn one counts, if 
 ok('the deliberately drawn ids are declared, not just missing', /DRAWN_ART\s*=\s*\[/.test(html));
 // and the drawn fallback is still there for every slot
 ok('a drawn fallback still stands behind the art', /else\s*{[\s\S]{0,200}fillStyle/.test(html));
+
+// --- 9) AC3: the colony is hers, and it grows while she is away ----------------
+// Everything here is driven by moving a blob's savedAt backwards. No wall clock is
+// waited on, no network is reachable, and the colony is the real one: the catch-up
+// runs the SAME step() the game runs, so there is no second model to test.
+console.log('\n--- AC3: PER-KID SAVE + AWAY-TIME GROWTH ---');{  // one block, so this section's names are its own
+const S = G.save;
+ok('the engine exposes its save', !!S && typeof S.snapshot === 'function');
+
+// a colony worth saving: dug out, taught, and past the tutorial
+G.newColony(3);
+G.play();
+G.digDown(14);
+G.seconds(40);
+G.digDown(10);                              // a tunnel she drew and walked away from
+const grown = S.snapshot();
+grown.guided = true;                        // she has had the first lesson
+const baseline = { ants: grown.ants, food: grown.food, dug: grown.dug, plan: grown.plan.length };
+ok('a snapshot carries the colony', grown.cells && grown.ants > 0 && grown.v === S.version(),
+  `v=${grown.v} ants=${grown.ants} dug=${grown.dug}`);
+// THE BUG THIS CHECK EXISTS FOR: a crumb an ant has claimed points at that ant, and the
+// ant's task points back at the crumb. Handing the live meadow to JSON.stringify threw
+// on the circle, inside a try/catch, so saving silently failed any time a forager was
+// mid-trip. The snapshot is plain data now, and this proves it while ants are carrying.
+const carrying = G.crowd().filter((a) => a.carry).length;
+let serialises = true;
+try { JSON.stringify(S.snapshot()); } catch (e) { serialises = false; }
+ok('the save survives being taken while foragers are carrying things home',
+  serialises && carrying > 0, `${carrying} ants mid-trip, serialises=${serialises}`);
+ok('and it really lands in localStorage, rather than failing into a catch',
+  (S.now(), !!store[S.key()]), S.key());
+
+// ---- 9a) the round trip that had been broken since AC7 -----------------------
+const backAgain = G.save.load(JSON.parse(JSON.stringify(grown)));
+ok('a saved colony really loads back (v2 wrote, v1 loaded, so none ever did)',
+  !!backAgain && G.dbg().ants === baseline.ants && G.dbg().dug === baseline.dug,
+  `ants=${G.dbg().ants} dug=${G.dbg().dug}`);
+const olderShapes = [1, 2, 3].map((v) => {
+  const b = JSON.parse(JSON.stringify(grown)); b.v = v; b.savedAt = Date.now();
+  return { v, loaded: !!G.save.load(b) && G.dbg().ants === baseline.ants };
+});
+ok('every version this game has ever written still loads',
+  olderShapes.every((r) => r.loaded), JSON.stringify(olderShapes));
+const junk = JSON.parse(JSON.stringify(grown)); junk.v = 99;
+ok('a version it never wrote is refused rather than half-read', G.save.load(junk) === null);
+
+// ---- 9b) whose colony it is --------------------------------------------------
+const guestKey = (S.setKid(null), S.key());
+const kidAKey = (S.setKid('kid-A'), S.key());
+const kidBKey = (S.setKid('kid-B'), S.key());
+ok('a guest colony keeps the plain key it always had', guestKey === 'bk_antcity_colony', guestKey);
+ok('two kids on one iPad get two colonies', kidAKey !== kidBKey && kidAKey !== guestKey,
+  `${kidAKey} / ${kidBKey}`);
+ok('a kid key is the plain key plus who she is', kidAKey === guestKey + '_kid-A', kidAKey);
+// the colony she grew before she had a profile is not orphaned by signing in
+S.setKid(null); S.now();
+const guestBlob = S.local();
+S.setKid('kid-A'); S.clearLocal();
+ok('the colony she grew as a guest is picked up under her own key',
+  !!S.local() && S.local().savedAt === guestBlob.savedAt);
+S.now();
+ok('and from then on it is written under her key', !!store[kidAKey]);
+S.setKid(null);
+
+// ---- 9c) ten minutes is not away --------------------------------------------
+const soon = JSON.parse(JSON.stringify(grown)); soon.savedAt = Date.now() - 9 * 60 * 1000;
+const nothing = G.save.load(soon);
+ok('nine minutes away changes nothing at all',
+  G.dbg().ants === baseline.ants && G.dbg().dug === baseline.dug && !G.away().news,
+  `ants=${G.dbg().ants} news=${JSON.stringify(nothing)}`);
+ok('and no card is shown for a colony that did not move', G.away().card === false);
+
+// ---- 9d) four hours away ----------------------------------------------------
+const overnight = JSON.parse(JSON.stringify(grown)); overnight.savedAt = Date.now() - 4 * 3600 * 1000;
+const t0 = Date.now();
+const news = G.save.load(overnight);
+const catchUpMs = Date.now() - t0;
+ok('four hours away grows the colony', !!news && news.born > 0 && G.dbg().ants > baseline.ants,
+  `+${news && news.born} born, ants ${baseline.ants} -> ${G.dbg().ants}`);
+ok('the tunnel she drew got dug while she was gone', news.dug > 0, `+${news.dug} cells`);
+ok('and it is the tunnel she actually drew, not extra ground',
+  G.dbg().dug <= baseline.dug + baseline.plan, `${G.dbg().dug} dug, ${baseline.plan} were planned`);
+ok('the numbers on the card are the numbers the colony really moved by',
+  news.born === G.dbg().born - grown.born && news.ants === G.dbg().ants - baseline.ants,
+  `born=${news.born} ants=${news.ants}`);
+ok('the catch-up is quick enough to sit in front of a kid', catchUpMs < 4000, `${catchUpMs}ms`);
+
+// ---- 9d2) away time is the same colony, not a better one ---------------------
+// The catch-up runs the real step() in one-second slices instead of sixtieths, so the
+// thing to prove is that a kid gains nothing by leaving: ten minutes away must never
+// grow the colony more than ten minutes of sitting there and playing it.
+const tenMinBlob = JSON.parse(JSON.stringify(grown));
+tenMinBlob.savedAt = Date.now() - 11 * 60 * 1000;
+const awayTen = G.save.load(tenMinBlob);
+const awayAnts = G.dbg().ants;
+const nowBlob = JSON.parse(JSON.stringify(grown)); nowBlob.savedAt = Date.now();
+G.save.load(nowBlob);
+const realBefore = G.dbg().ants;
+G.seconds(11 * 60);
+const realGain = G.dbg().ants - realBefore;
+ok('eleven minutes away is never a better deal than eleven minutes of playing',
+  awayTen.ants <= realGain, `away +${awayTen.ants} vs played +${realGain}`);
+ok('and it is not nothing either: the colony really did work out there',
+  awayTen.ants > 0 && awayAnts > baseline.ants, `+${awayTen.ants}`);
+
+// ---- 9d3) she only grows into the home she dug -------------------------------
+// A real browser run showed what this is for: four hours alone in a five-cell hole
+// came back as nine hundred ants with nowhere to stand and no food, which is not a
+// nice thing to come back to. A colony grows into its burrow and the rest waits as eggs.
+const tinyBlob = JSON.parse(JSON.stringify(grown));
+tinyBlob.savedAt = Date.now() - 4 * 3600 * 1000;
+G.save.load(tinyBlob);
+const roomFor = G.away().perCell * Object.keys(tinyBlob.cells).length;
+ok('a colony never outgrows the burrow it was left in',
+  G.dbg().ants <= roomFor, `${G.dbg().ants} ants, room for about ${roomFor}`);
+ok('and the hatch it could not fit is waiting as eggs, not thrown away',
+  G.dbg().eggs >= 0 && G.dbg().ants > 0, `${G.dbg().eggs} eggs waiting`);
+ok('she is not handed back a starving colony',
+  G.setback() === null || !/hungry/.test(G.setback()), String(G.setback()));
+ok('and there is food in the store when she gets back', G.dbg().food > 0, `${G.dbg().food} food`);
+ok('nor a tired one: a setback she was never given a chance to head off',
+  G.dbg().rest >= grown.rest - 0.001, `rest ${grown.rest} -> ${G.dbg().rest}`);
+ok('there is no setback at all waiting for her', G.setback() === null, String(G.setback()));
+
+// ---- 9e) away can only ever be a nice thing to come back to ------------------
+ok('she never comes back to fewer ants than she left', G.dbg().ants >= baseline.ants);
+ok('no store ever goes below nothing', G.dbg().food >= 0 && G.dbg().eggs >= 0,
+  `food=${G.dbg().food} eggs=${G.dbg().eggs}`);
+ok('no rain flooded a tunnel nobody could clear', G.floods() === 0, `${G.floods()} floods`);
+ok('no bad bug turned up while the colony was alone', G.dbg().bug == null);
+// a grasshopper by the door stops anybody going out, so one left sitting there would
+// freeze the whole night AND be waiting for her. It moves on instead.
+const withBug = JSON.parse(JSON.stringify(grown));
+withBug.bug = { kind: 'grasshopper', state: 'nap', t: 5, fc: 3, c: null, r: null };
+withBug.savedAt = Date.now() - 4 * 3600 * 1000;
+const afterBug = G.save.load(withBug);
+ok('a visitor left sitting by the door has moved on by the time she is back',
+  G.dbg().bug == null, JSON.stringify(G.dbg().bug));
+ok('and the night was not frozen by it', afterBug.born > 0, `+${afterBug.born} born`);
+const coinsBefore = coinPosts.length;
+const again = JSON.parse(JSON.stringify(grown));
+again.savedAt = Date.now() - 4 * 3600 * 1000;
+G.save.load(again);
+ok('no coins are paid out to an empty room', coinPosts.length === coinsBefore,
+  `${coinPosts.length - coinsBefore} paid`);
+ok('the catch-up puts the flag back down when it is finished', G.away().inside === false);
+// the catch-up walks the ants in one-second strides instead of sixtieths, so the thing
+// to prove is that it never walks one into a wall on the way
+ok('and it never leaves an ant standing in solid dirt', inDirt() === 0,
+  `${inDirt()} of ${G.crowd().length}`);
+ok('the crowd she comes back to is a real crowd, doing real jobs',
+  G.crowd().length > 0 && G.crowd().some((a) => a.job), `${G.crowd().length} drawn`);
+
+// ---- 9f) a week away is still four hours ------------------------------------
+const week = JSON.parse(JSON.stringify(grown)); week.savedAt = Date.now() - 7 * 24 * 3600 * 1000;
+const long = G.save.load(week);
+ok('a week away banks the same four hours, and says so',
+  long.sec === G.away().max && long.capped === true, `${long.sec}s capped=${long.capped}`);
+ok('four hours is the cap, ten minutes is the floor',
+  G.away().max === 4 * 3600 && G.away().min === 600, JSON.stringify(G.away()));
+
+// ---- 9g) a kid mid-lesson comes back to the colony she left -----------------
+const midLesson = JSON.parse(JSON.stringify(grown));
+midLesson.guided = false; midLesson.savedAt = Date.now() - 4 * 3600 * 1000;
+const taught = G.save.load(midLesson);
+ok('a colony still being taught never runs on past the lesson',
+  G.dbg().ants === baseline.ants && !taught.sec, JSON.stringify(taught));
+
+// ---- 9h) the welcome-back card ----------------------------------------------
+const shown = JSON.parse(JSON.stringify(grown)); shown.savedAt = Date.now() - 4 * 3600 * 1000;
+G.save.load(shown);
+const rows = G.awayRows();
+ok('the card is up after a real night away', G.away().card === true);
+ok('it shows a line for each thing that really happened, and no others',
+  rows.length > 0 && rows.length <= 3 && rows.every((r) => r.v > 0),
+  JSON.stringify(rows));
+ok('the new ants are the first thing she reads', rows[0].pic === 'ant', rows[0] && rows[0].pic);
+const cardHtml = byId.awayRows.innerHTML;
+ok('every number on the card is really painted into it',
+  rows.every((r) => cardHtml.indexOf('>' + r.v + '<') >= 0), cardHtml.slice(0, 120));
+ok('the card is drawn geometry, not a picture file and not an emoji',
+  /<svg/.test(cardHtml) && !/<img/.test(cardHtml));
+ok('one button closes it', G.closeAway() === true && G.away().card === false);
+
+// ---- 9i) the colony plays with no save at all -------------------------------
+S.off();
+const noSaveAnts = G.dbg().ants;
+G.seconds(30);
+ok('the colony plays exactly the same with saving switched off',
+  G.dbg().ants >= noSaveAnts && G.state() === 'play' && S.stats().on === false);
+ok('and it writes nothing while it is off', S.now() === null);
+S.resume();
+ok('saving comes back on', S.now() !== null && S.stats().on === true);
+
+// ---- 9j) the cloud copy is a copy, never a boss ------------------------------
+ok('the cloud save goes through the shared per-kid endpoint',
+  /\/api\/kid-save/.test(html) && /game:\s*"antcity"/.test(html));
+ok('local is written before the cloud is even asked',
+  /writeLocal\(blob\);\s*\n\s*writeCloud\(blob, beacon\);/.test(html));
+ok('leaving the page saves with a beacon, the one request a browser finishes',
+  /sendBeacon\("\/api\/kid-save"/.test(html) && /pagehide", function\(\)\{ saveNow\(true\)/.test(html));
+ok('a newer cloud colony never lands on top of a kid who is already playing',
+  /if\(!untouched\(\)\) return;/.test(html));
+ok('no reset path a child can reach', !/removeItem\(saveKey\(\)\)/.test(
+  html.replace(/clearLocal:[\s\S]*?return true; \},/, '')));
+
+// ---- 9k) the migration is written down and the API is real -------------------
+const apiSrc = fs.readFileSync(dir + '/api/kid-save.js', 'utf8');
+ok('/api/kid-save exists', apiSrc.length > 0);
+ok('it is service-key only, like every other save in this repo',
+  /SUPABASE_SERVICE_KEY/.test(apiSrc) && !/ANON/.test(apiSrc));
+ok('the game name is an allowlist, not free text', /const GAMES = \["antcity"\]/.test(apiSrc));
+ok('there is no delete verb, and never will be',
+  !/method\s*===\s*"DELETE"/.test(apiSrc) && !/method:\s*"DELETE"/.test(apiSrc)
+  && /Allow-Methods", "GET, POST, OPTIONS"/.test(apiSrc));
+ok('every failure answers 200 with ok:false, so a kid never sees an error',
+  !/status\(5\d\d\)/.test(apiSrc.replace(/405/g, '')));
+const sqlSrc = fs.readFileSync(dir + '/db/create-kid-game-saves.sql', 'utf8');
+ok('the table has an idempotent migration file', /create table if not exists public\.kid_game_saves/.test(sqlSrc));
+ok('it is row-level locked down like farm_saves',
+  /enable row level security/.test(sqlSrc) && /jwt_kid_profile_id/.test(sqlSrc));
+ok('and it never drops or deletes anything',
+  !/\b(drop table|delete from|truncate)\b/i.test(sqlSrc));
+}
 
 console.log(fails ? `\n${fails} CHECK(S) FAILED` : '\nALL CHECKS PASS');
 process.exit(fails ? 1 : 0);

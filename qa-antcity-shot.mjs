@@ -347,6 +347,44 @@ await page.waitForTimeout(400);
 check('the ? button replays the guide', (await page.evaluate(() => ANTCITY_GAME.guide())).on === true);
 await page.screenshot({ path: path.join(OUT, 'antcity-5-replay.png') });
 
+// ---------------------------------------------------------------- AC3: she comes back
+// The one thing the headless robot cannot show you: what the welcome-back card actually
+// looks like on a phone, in a real browser, after a real page reload off a real save.
+console.log('');
+await page.evaluate(() => {
+  // Saving off FIRST: leaving the page is itself a save, so without this the engine
+  // writes a fresh savedAt over the blob on its way out and she is never away at all.
+  ANTCITY_GAME.save.off();
+  const blob = ANTCITY_GAME.save.snapshot();
+  blob.guided = true;                                 // she has had the first lesson
+  blob.savedAt = Date.now() - 4 * 3600 * 1000;        // and she left four hours ago
+  localStorage.setItem(ANTCITY_GAME.save.key(), JSON.stringify(blob));
+});
+const leftWith = await page.evaluate(() => ANTCITY_GAME.dbg().ants);
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(1200);
+const back = await page.evaluate(() => ({
+  ants: ANTCITY_GAME.dbg().ants, rows: ANTCITY_GAME.awayRows(),
+  news: ANTCITY_GAME.away().news, card: ANTCITY_GAME.away().card,
+  floods: ANTCITY_GAME.floods(),
+}));
+check('a real page reload really loads her colony back', back.ants >= leftWith,
+  `${leftWith} ants -> ${back.ants}`);
+check('four hours away grew it, in a real browser', !!back.news && back.news.born > 0,
+  `+${back.news && back.news.born} born`);
+check('no flood was waiting for her', back.floods === 0);
+check('the welcome-back card is up, with a line per thing that happened',
+  back.card === true && back.rows.length > 0, JSON.stringify(back.rows));
+const cardBox = await page.locator('#awayCard').boundingBox();
+check('the card fits the phone it is on', !!cardBox && cardBox.width <= 420 - 16 && cardBox.height < 860,
+  cardBox && `${Math.round(cardBox.width)}x${Math.round(cardBox.height)}`);
+await page.screenshot({ path: path.join(OUT, 'antcity-12-welcome-back.png') });
+await page.locator('#awayGo').click();
+await page.waitForTimeout(400);
+check('the one button closes it and hands her back the colony',
+  (await page.evaluate(() => ANTCITY_GAME.away().card)) === false);
+await page.screenshot({ path: path.join(OUT, 'antcity-13-after-welcome.png') });
+
 console.log('');
 check('never two hints on screen at any point', seenTwice.length === 0, seenTwice.slice(0, 3).join(' // '));
 check('no page errors while playing', errs.length === 0, errs.slice(0, 3).join(' | '));

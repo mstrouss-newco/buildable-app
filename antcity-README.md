@@ -435,8 +435,72 @@ resolves from manifest URLs, and there are no emojis anywhere).
   need an explicit route in `vercel.json`, before the `/(.*)` landing catch-all.
 - **In-app Games picker** - an Ant City tile in `src/BuildableKids.jsx`, with its slug added
   to `GAME_SLUGS` so plays are counted.
-- **Persistent save** - the colony and away-time growth are stored per kid (the one genuinely
-  new system in this build, planned as its own session).
+- **Persistent save** - DONE, card AC3. See "The colony is hers" below.
 
 Multiplayer is off for v1. Every creation still saves, shares (a colony snapshot link), and
 publishes through the shared mechanisms, per `CREATIONS.md`.
+
+## The colony is hers, and it keeps working while she is away (AC3)
+
+Ant City has ONE colony and it is always yours, so the save is the feature, not
+plumbing around it. Three parts.
+
+**Whose it is.** The save key is `bk_antcity_colony`, plus `_<kidId>` when the shell has
+an active kid (read from `bk_active_kid_v1`, exactly the way `skyflyer-farm.html` reads
+it). Two kids on one iPad get two colonies. A guest keeps the plain key, and the colony a
+kid grew before she had a profile is picked up under her own key the first time she opens
+the game signed in, so nobody loses an anthill by signing in.
+
+**Where it lives.** localStorage FIRST and always, so nothing is ever lost to a dead
+network; the cloud copy follows through `/api/kid-save` (table `kid_game_saves`, one row
+per game per kid, service-key only, `db/create-kid-game-saves.sql`). Leaving the page
+saves with `navigator.sendBeacon`, the one request a browser promises to finish. The cloud
+copy only ever replaces what is on screen if it is NEWER and she has not touched anything
+yet. A save error is silent to the kid, always, and there is no delete verb anywhere in
+the path.
+
+`/api/kid-save` is the SHARED version of the mechanism FM5 proved on the Farm. The Farm is
+deliberately still on its own `/api/farm-save` and `farm_saves`: it is live, it works, and
+"replace first, remove second" says it moves over only once a move is verified on the live
+site. Ant City is the first game on the shared table; the `game` value is an allowlist in
+the API, not free text.
+
+**Two bugs this card found and fixed, both of which meant saving did not work at all.**
+1. The blob had been written as `v:2` since AC7 while the loader still demanded `v:1`, so
+   no colony had actually loaded back since. Every visit quietly started a new anthill.
+   The version is a named constant now and the loader takes every version ever written.
+2. A crumb an ant has claimed holds a reference to that ant, and the ant's task holds one
+   back to the crumb. Handing the live meadow to `JSON.stringify` threw on the circle,
+   inside a `try/catch`, so the save silently failed any time a forager was mid-trip -
+   which is most of the time. The snapshot is plain data now.
+
+**While she was away.** `awayGrow(seconds)` runs THE SAME `step()` the game runs, in
+one-second slices instead of sixtieths, with an `AWAY` flag switching off everything that
+needs a kid in the room. No second model of the colony, so nothing can drift. The rules,
+and every one is the same rule the rest of Ant City follows - away time can only ever be a
+nice thing to come back to:
+
+| | |
+|---|---|
+| **It grows, never takes** | Diggers finish the tunnel she drew, foragers bring the meadow home, the queen lays, eggs hatch. |
+| **No setbacks out there** | No rain, no bad bugs, and tiredness does not creep in. A setback is a thing a kid answers, so she is never handed one she was given no chance to head off. |
+| **No missions, no coins** | A mission is a LESSON, so it is only ever finished in front of her - on her first real step back, where she watches the coins land. |
+| **Only into the home she dug** | At most eight ants per dug-out cell. Four hours alone in a five-cell hole used to come back as nine hundred ants with nowhere to stand; a real browser run is what showed that. |
+| **Only while it feeds itself** | The queen stops laying and the nursery stops hatching once the pantry is down to its last quarter, so she is handed back a colony with food in the store. Both caps only PAUSE the hatch - the eggs sit and wait, so digging on her first morning minute gets the hatch she was saving up. |
+| **Four hours at most** | However long she was gone. A week away banks the same four hours, and the card says so. |
+| **Ten minutes at least** | Under that she never really left, and nothing happens at all. |
+| **Not while she is being taught** | A colony still in the tutorial never runs on past the lesson. |
+| **Never a better deal than playing** | The robot proves eleven minutes away grows the colony less than eleven minutes of sitting there playing it. |
+
+**The welcome back.** One cream card in the Build menu's own style, up to three rows, each
+a drawn picture and a number: new ants, food carried home, tunnels dug. Only the lines
+that really happened, built from the numbers the catch-up really produced, so it can never
+promise a kid something the colony did not do. One button closes it, and the colony has
+been running behind it the whole time.
+
+**Checked.** `qa-antcity.mjs` gained an AC3 section: the round trip, every old blob
+version, per-kid keys and the guest hand-over, the save surviving being taken while ants
+are carrying, nine minutes changing nothing, four hours growing it, the caps, no floods,
+no bugs, no coins in an empty room, the card's rows matching the numbers, and the colony
+playing the same with saving switched off. `qa-antcity-shot.mjs` does the whole thing
+again in real Chromium through a real page reload and photographs the card.

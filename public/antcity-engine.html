@@ -154,6 +154,23 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   .room.cant .cost{animation:apflash 1s ease-in-out infinite;}
   @keyframes apflash{0%,100%{opacity:1;}50%{opacity:.25;}}
 
+  /* ---- AC3: what the colony did while she was away ----
+         The same cream card the Build menu uses, so it is plainly part of this game
+         and not a system message. Every line is a PICTURE and a NUMBER: a kid who
+         cannot read a word still sees three new ants and a pile of food. ---- */
+  #away{position:absolute;inset:0;z-index:13;display:none;align-items:center;justify-content:center;background:rgba(20,12,4,.5);}
+  #awayCard{background:#fff8ec;border-radius:22px;padding:14px 14px 12px;width:min(340px,92vw);
+            box-shadow:0 14px 40px rgba(0,0,0,.4);text-align:center;}
+  #awayCard h2{margin:0 0 2px;font-size:19px;color:#4a2f10;}
+  #awaySub{margin:0 0 10px;font-size:12px;font-weight:800;color:#8a7350;}
+  #awayRows{display:flex;flex-direction:column;gap:7px;margin:0 0 12px;}
+  .arow{display:flex;align-items:center;gap:10px;background:#f0e0c6;border-radius:14px;padding:7px 12px;}
+  .arow svg{flex:0 0 34px;width:34px;height:30px;display:block;}
+  .arow .an{flex:0 0 auto;font-size:21px;font-weight:800;color:#4a2f10;min-width:34px;text-align:right;}
+  .arow .al{flex:1 1 auto;font-size:13px;font-weight:800;color:#4a2f10;text-align:left;line-height:1.15;}
+  #awayGo{width:100%;border:none;border-radius:16px;background:#e9a23b;color:#3a2600;font-family:inherit;
+          font-size:17px;font-weight:800;padding:13px 0;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.18);}
+
   /* the engine's own standalone buttons — the shared nav bridge hides these in-app */
   .selfbtn{position:absolute;z-index:9;border:none;border-radius:999px;background:rgba(20,12,4,.55);color:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:8px 14px;cursor:pointer;}
   #backBtn{top:58px;left:14px;}
@@ -201,6 +218,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     </div>
   </div>
   <div id="build"><div id="buildCard"><div id="buildTop"><h2 id="buildHead">Build a room</h2><button id="buildCancel" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="#3a2600" stroke-width="4" stroke-linecap="round"/></svg></button></div><div id="roomList"></div></div></div>
+  <!-- AC3: the welcome back. Built from the numbers the catch-up really produced,
+       so it can never promise a kid something the colony did not do. -->
+  <div id="away"><div id="awayCard"><h2>Your colony kept working</h2><p id="awaySub">While you were away</p><div id="awayRows"></div><button id="awayGo" type="button">Let&rsquo;s go</button></div></div>
   <div id="start"></div>
 </div>
 
@@ -252,7 +272,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     scare:   "antcity_march"
   };
   var MUSIC_URL = "/api/library-music?name=meadow_busy_bright";
-  function sfx(name){ try{ if(BA && BA.sfx && !DEMO) BA.sfx(name); }catch(e){} }
+  // AC3: AWAY is true only inside the away catch-up, when the page has just opened
+  // and the colony is being caught up on hours it worked alone. Nothing that speaks
+  // to the kid fires in there: a hundred hatch chimes at once is not a welcome.
+  function sfx(name){ try{ if(BA && BA.sfx && !DEMO && !AWAY) BA.sfx(name); }catch(e){} }
   var _music = null;
   function ensureMusic(){
     if(DEMO || !BA || !BA.setMusic || _music === MUSIC_URL) return;
@@ -810,8 +833,14 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   //  robot prove a mission is beatable.
   // ======================================================================
   var STEP = 1/60;
+  // AC3 — AWAY TIME. The colony is counts and rates on a fixed step, so the honest
+  // way to grow it while the kid is gone is to run THE SAME STEPS, just bigger ones,
+  // with the parts that need a kid in the room switched off. No second model to drift
+  // out of step with the first. AWAY is set by awayGrow() and by nothing else.
+  var AWAY = false;
+  var AWAY_DT = 1;              // one second of colony time per catch-up step
   function step(){
-    var g = GAME_CONFIG, dt = STEP, pace = paceMul();
+    var g = GAME_CONFIG, dt = AWAY ? AWAY_DT : STEP, pace = paceMul();
     C.t += dt;
 
     // --- diggers carve the drawn path, one cell at a time, in the order it was drawn
@@ -889,12 +918,21 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       }
     }
 
-    // --- the queen lays, the nursery hatches
-    if(C.food > 0 && C.eggs < eggCap()){
+    // --- the queen lays, the nursery hatches. AC3: while she is away, BOTH stop once
+    //     the colony is full or the pantry is down to its last quarter — an egg costs
+    //     food to lay, so a queen who kept laying through the night would eat the store
+    //     she is meant to be handing back.
+    if(C.food > 0 && C.eggs < eggCap() && !(AWAY && awayFull())){
       C.layProg += g.nursery.layPerSec * pace * dt;
       while(C.layProg >= 1 && C.eggs < eggCap()){ C.layProg -= 1; C.eggs++; C.food = Math.max(0, C.food - g.nursery.eggFood); }
     }
-    if(C.eggs > 0){
+    // AC3: a colony only ever grows into the home that was dug for it, and away time
+    // is the one place that bites, because away time is the one place nobody is
+    // digging. Four hours alone in a five-cell hole used to come back as nine hundred
+    // ants with nowhere to stand and nothing to eat, which is not a nice thing to come
+    // back to. The eggs are not lost when the anthill is full — they wait, so a kid who
+    // digs on her first morning minute gets the hatch she was saving up.
+    if(C.eggs > 0 && !(AWAY && awayFull())){
       var tend = jobCount("nursery") * (1 - gardenShare()) * g.nursery.hatchPerAntPerSec
                  * pace * roomMul("nursery") * dt * (C.food > 0 ? 1 : 0.3);
       C.hatchProg += tend;
@@ -909,26 +947,44 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     // --- upkeep: the colony eats. Empty stores only slow it down, they never punish.
     C.food  = Math.max(0, C.food  - C.ants * g.upkeep.foodPerAntPerSec  * dt);
 
-    // --- tiredness: it creeps in slowly, and a resting den brings it back
+    // --- tiredness: it creeps in slowly, and a resting den brings it back.
+    //     AC3: it does not creep in while she is away. Tiredness is a thing a kid
+    //     answers by building a den, so a colony that worked all night alone would be
+    //     handing her a setback she was never given the chance to head off. A den she
+    //     already built still does its work out there, so away time can only ever
+    //     leave the colony as rested as she left it, or better.
     var dens2 = Math.min(g.denMax, roomCount("den"));
-    C.rest = Math.max(0, Math.min(1, C.rest - g.setback.restDrainPerSec*dt + dens2*g.setback.restPerDenPerSec*roomMul("den")*dt));
+    var restUp = dens2*g.setback.restPerDenPerSec*roomMul("den")*dt;
+    var restDown = AWAY ? 0 : g.setback.restDrainPerSec*dt;
+    C.rest = Math.max(0, Math.min(1, C.rest - restDown + restUp));
 
-    // --- rain: every so often a tunnel floods and blocks the way through it
-    C.floodT += dt * tune().setbacks;
-    if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
+    // --- rain: every so often a tunnel floods and blocks the way through it.
+    //     AC3: NEVER while she is away. A setback is a thing a kid puts right, so a
+    //     colony that worked alone all night is never greeted by a flood nobody could
+    //     have cleared. The rain clock does not even tick out there.
+    if(!AWAY){
+      C.floodT += dt * tune().setbacks;
+      if(C.floodT >= g.setback.floodEverySec){ if(rain()) C.floodT = 0; else C.floodT = g.setback.floodEverySec * 0.75; }
 
-    // AC9: a bad bug may call in. Free-build only, one at a time, and it can never
-    // change a number the colony owns.
-    bugTick(dt);
+      // AC9: a bad bug may call in. Free-build only, one at a time, and it can never
+      // change a number the colony owns.
+      bugTick(dt);
+    }
 
     normalizeJobs();
     foodTrend(dt);
-    checkMission();
-    // milestones used to be checked inside checkMission, which returns early once the
-    // colony is in free build — so the rewards a grown colony is meant to reach (fifty
-    // ants, five bugs seen off) could never fire. They are their own thing now.
-    checkMilestones();
+    // AC3: a mission is a LESSON, so it is only ever finished in front of the kid. A
+    // mission the colony outgrew while she was away is checked on her first real step
+    // back, so she is there to watch the coins land rather than finding them spent.
+    if(!AWAY){
+      checkMission();
+      // milestones used to be checked inside checkMission, which returns early once the
+      // colony is in free build — so the rewards a grown colony is meant to reach (fifty
+      // ants, five bugs seen off) could never fire. They are their own thing now.
+      checkMilestones();
+    }
     walkSample(dt);
+    if(AWAY) return;             // the rest of this is the screen, and there is nobody at it
     // AC13: and then the ants walk it like animals. This decides nothing about
     // the colony, it only decides how the ants get where the sim already put them.
     walkVisual(dt);
@@ -1541,10 +1597,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
 
   var puffs = [];
-  function puff(c,r){ if(puffs.length > 30) puffs.shift(); puffs.push({ c:c, r:r, t:0 }); }
+  function puff(c,r){ if(AWAY) return; if(puffs.length > 30) puffs.shift(); puffs.push({ c:c, r:r, t:0 }); }
   // tiny footprints, so a busy tunnel looks walked-in
   var foots = [];
-  function foot(fc, fr){ if(foots.length > 44) foots.shift(); foots.push({ fc:fc, fr:fr, t:0 }); }
+  function foot(fc, fr){ if(AWAY) return; if(foots.length > 44) foots.shift(); foots.push({ fc:fc, fr:fr, t:0 }); }
 
   // ======================================================================
   //  Missions (AC2). The ten tutorial missions come from the manifest and sit
@@ -3018,6 +3074,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // ======================================================================
   var msgT = 0, msgTxt = "", _coachTxt = "";
   function hint(msg, secs){
+    if(AWAY) return;                       // AC3: nobody is on the other side of it
     msgTxt = msg || "";
     msgT = msgTxt ? (secs || (guide.on ? 2.4 : 3.6)) : 0;
     syncCoach();
@@ -3526,6 +3583,9 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(!quiet) hint("No room this time");
   }
   $("buildCancel").addEventListener("click", function(){ BA.unlock(); pickCell = null; closeBuild(); });
+  // AC3: the welcome-back card has one button and it only ever closes the card. The
+  // colony has been running behind it the whole time.
+  (function(){ var b = $("awayGo"); if(b) b.addEventListener("click", function(){ BA.unlock(); hideAway(); }); })();
   function startRoom(id, c, r){
     var def = GAME_CONFIG.rooms[id]; if(!def) return false;
     if(C.food < def.food){ hint("Not enough food yet. Bring some crumbs home first."); cancelPlacing(true); return false; }
@@ -3544,28 +3604,122 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
 
   // ======================================================================
-  //  Save (this session: local only. Real per-kid saving + away-time growth
-  //  is card AC3, which replaces this with a stored colony.)
+  //  AC3 — THE COLONY IS HERS, AND IT KEEPS WORKING WHILE SHE IS AWAY.
+  //
+  //  Three things, in the order they matter.
+  //
+  //  1. WHOSE IT IS. The save is keyed on the shell's active kid, read exactly
+  //     the way skyflyer-farm.html reads it. Two kids on one iPad get two
+  //     colonies. No kid (a guest, or this page opened on its own) is not an
+  //     error: the colony lives under the plain key, as it always has, and the
+  //     colony a kid grew before she had a profile is carried over to her key
+  //     the first time she opens the game signed in, so nobody loses an anthill.
+  //  2. WHERE IT LIVES. localStorage FIRST, always, so nothing is ever lost to a
+  //     dead network. The cloud copy follows through /api/kid-save and is allowed
+  //     to fail as often as it likes — a save error is silent to the kid, always,
+  //     and a colony with no network is still a colony.
+  //  3. WHAT HAPPENED WHILE SHE WAS GONE. See awayGrow() below.
+  //
+  //  A note on the version, because it was a real bug. The blob has been written
+  //  as v:2 since AC7 while the loader still demanded v:1, so no colony has
+  //  actually loaded back since: every visit quietly started a brand new anthill.
+  //  The loader now accepts every version this game has ever written, and
+  //  freshColony() supplies whatever an older blob never carried.
   // ======================================================================
-  var SAVE_KEY = "bk_antcity_colony";
-  var saveT = 0;
-  function saveSoon(){ saveT = 1.2; }
-  function saveNow(){
-    saveT = 0;
-    try{
-      localStorage.setItem(SAVE_KEY, JSON.stringify({
-        v:2, cells:C.cells, plan:C.plan, ants:C.ants, eggs:C.eggs, food:C.food,
-        jobs:C.jobs, deepest:C.deepest, difficulty:C.difficulty, queen:C.queen,
-        born:C.born, dug:C.dug, rooms:C.rooms, surface:C.surface,
-        mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
-        carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
-        leaves:C.leaves, leavesCut:C.leavesCut, leafReady:C.leafReady, aphids:C.aphids, dew:C.dew, dewGot:C.dewGot, mush:C.mush,
-        berryReady:C.berryReady, tapped:C.tapped, taught:C.taught,
-        soldiers:!!C.soldiers, bug:C.bug, bugT:C.bugT||0, bugsSeen:C.bugsSeen|0, bugsScared:C.bugsScared|0,
-        seen:C.seen, guided:C.guided, savedAt:Date.now()
-      }));
-    }catch(e){}
+  var SAVE_V = 3;
+  var LEGACY_KEY = "bk_antcity_colony";   // the one-colony-per-browser key, up to AC3
+  function activeKidId(){
+    try{ var k = JSON.parse(localStorage.getItem("bk_active_kid_v1") || "null");
+         return k && k.id ? String(k.id) : null; }catch(e){ return null; }
   }
+  var KID_ID = activeKidId();
+  function saveKey(){ return LEGACY_KEY + (KID_ID ? ("_" + KID_ID) : ""); }
+  var SAVE_ON = true;            // QA turns this off to prove the colony plays without it
+  var saveT = 0, localSaves = 0, cloudSaves = 0, cloudErrs = 0;
+  function saveSoon(){ saveT = 1.2; }
+
+  // Everything that makes this colony HERS. Every timer in here is already a
+  // progress number rather than a wall-clock stamp, so a device with the wrong
+  // clock cannot poison it. The one wall-clock number is savedAt, and it is only
+  // ever used to work out how long she has been gone.
+  // The meadow, as plain data. This one matters: a crumb an ant has claimed holds a
+  // reference to that ant, and the ant's task holds a reference back to the crumb, so
+  // handing C.surface straight to JSON.stringify throws on a circular structure — and
+  // it threw inside a try/catch, which means saving has been silently failing any time
+  // a forager was mid-trip, which is most of the time. Only the three fields
+  // reviveSurface actually reads come out, and who is carrying what is not one of
+  // them: an ant that was holding a crumb when the app closed puts it back.
+  // and the visitor, if one was still here. Its plain part only, for the same reason.
+  function plainBug(b){
+    if(!b) return null;
+    return { kind:b.kind, state:b.state, t:b.t||0, fc:b.fc, c:b.c, r:b.r };
+  }
+  function snapshotSurface(){
+    var out = [], i;
+    for(i=0;i<(C.surface||[]).length;i++){
+      var it = C.surface[i];
+      if(!it || it.gone) continue;
+      out.push({ kind:it.kind, fx:it.fx, n:it.n });
+    }
+    return out;
+  }
+  function snapshotColony(){
+    if(!C) return null;
+    return {
+      v:SAVE_V, cells:C.cells, plan:C.plan, ants:C.ants, eggs:C.eggs, food:C.food,
+      jobs:C.jobs, deepest:C.deepest, difficulty:C.difficulty, queen:C.queen,
+      born:C.born, dug:C.dug, rooms:C.rooms, surface:snapshotSurface(),
+      mission:C.mission, done:C.done, mBase:C.mBase, freeBuild:C.freeBuild, hit:C.hit, mFlood:C.mFlood,
+      carried:C.carried, found:C.found, floods:C.floods, rest:C.rest, find:C.find,
+      leaves:C.leaves, leavesCut:C.leavesCut, leafReady:C.leafReady, aphids:C.aphids, dew:C.dew, dewGot:C.dewGot, mush:C.mush,
+      berryReady:C.berryReady, tapped:C.tapped, taught:C.taught,
+      soldiers:!!C.soldiers, bug:plainBug(C.bug), bugT:C.bugT||0, bugsSeen:C.bugsSeen|0, bugsScared:C.bugsScared|0,
+      seen:C.seen, guided:C.guided, savedAt:Date.now()
+    };
+  }
+
+  function writeLocal(blob){
+    try{ localStorage.setItem(saveKey(), JSON.stringify(blob)); localSaves++; return true; }
+    catch(e){ return false; }
+  }
+  function readLocal(){
+    try{
+      var raw = localStorage.getItem(saveKey());
+      // her colony from before she had a profile. Read once, under the plain key,
+      // and it is written straight back under hers on the next save.
+      if(!raw && KID_ID) raw = localStorage.getItem(LEGACY_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+  // The cloud copy, so the colony follows her to the next device. A guest has no
+  // row and never asks for one.
+  function writeCloud(blob, beacon){
+    if(!KID_ID || typeof fetch === "undefined") return;
+    var body = JSON.stringify({ game:"antcity", kidProfileId:KID_ID, data:blob });
+    // On the way out of the page a normal fetch is killed mid-flight; a beacon is
+    // the only thing a browser promises to finish.
+    if(beacon){
+      try{ if(navigator.sendBeacon &&
+              navigator.sendBeacon("/api/kid-save", new Blob([body], { type:"application/json" }))){
+        cloudSaves++; return; } }catch(e){}
+    }
+    try{
+      fetch("/api/kid-save", { method:"POST", headers:{ "Content-Type":"application/json" }, body:body })
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if(j && j.ok) cloudSaves++; else cloudErrs++; })
+        .catch(function(){ cloudErrs++; });
+    }catch(e){ cloudErrs++; }
+  }
+  // The one door out. Local is written first and always.
+  function saveNow(beacon){
+    saveT = 0;
+    if(!SAVE_ON || DEMO) return null;
+    var blob = snapshotColony(); if(!blob) return null;
+    writeLocal(blob);
+    writeCloud(blob, beacon);
+    return blob;
+  }
+
   // a colony saved before AC7 has crumbs of the old shape sitting on its meadow.
   // They come forward as real items rather than being thrown away.
   function reviveSurface(list){
@@ -3583,10 +3737,12 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }
     return out;
   }
-  function loadSaved(){
+  function loadSaved(blob){
     try{
-      var raw = localStorage.getItem(SAVE_KEY); if(!raw) return null;
-      var s = JSON.parse(raw); if(!s || s.v !== 1 || !s.cells) return null;
+      var s = blob || readLocal();
+      // AC3: every version this game has ever written is welcome. v1 and v2 blobs
+      // are read exactly as v3 is, and freshColony fills in what they never had.
+      if(!s || !s.cells || !(s.v >= 1 && s.v <= SAVE_V)) return null;
       var col = freshColony(s.difficulty || 3);
       col.cells = s.cells; col.plan = s.plan || []; col.ants = s.ants || col.ants; col.eggs = s.eggs || 0;
       col.food = s.food || 0; col.jobs = s.jobs || col.jobs;
@@ -3605,8 +3761,135 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       col.soldiers = !!s.soldiers; col.bug = s.bug || null;
       col.bugT = s.bugT||0; col.bugsSeen = s.bugsSeen|0; col.bugsScared = s.bugsScared|0;
       if(col.jobs && col.jobs.soldier == null) col.jobs.soldier = 0;
+      // how long ago this colony was put down. Not part of the colony: the catch-up
+      // reads it once on the way in and clears it.
+      col._savedAt = +s.savedAt || 0;
+      col._loadedAt = col._savedAt;
       return col;
     }catch(e){ return null; }
+  }
+
+  // ======================================================================
+  //  AC3 — WHAT HAPPENED WHILE SHE WAS AWAY.
+  //
+  //  The rules, and every one of them is the same rule the rest of Ant City
+  //  follows: away time can only ever be a nice thing to come back to.
+  //
+  //  * It GROWS and never takes. Diggers finish the tunnel she drew, foragers
+  //    keep bringing the meadow home, the queen lays and eggs hatch.
+  //  * NO setbacks out there. No rain, no bad bugs. A flood is something a kid
+  //    puts right, so a colony is never greeted by one nobody could have cleared.
+  //  * NO missions and NO coins out there. A mission is a lesson, so it is only
+  //    ever finished in front of her, on her first real step back, where she can
+  //    watch the coins land.
+  //  * FOUR HOURS of credit, however long she was gone, and none at all under ten
+  //    minutes, because under ten minutes she never really left.
+  //  * It is THE SAME SIMULATION, run in one-second steps instead of sixtieths.
+  //    A second model of the colony would drift away from the real one; this one
+  //    cannot, because it is the real one.
+  // ======================================================================
+  // How many ants the dug-out colony can grow into on its own. Generous — a kid who
+  // dug a proper burrow gets a proper hatch — and it only ever applies while she is
+  // away, because while she is there she is digging.
+  var AWAY_PER_CELL = 8;
+  function awayRoom(){
+    return Math.max(GAME_CONFIG.startAnts * 2, openCells().length * AWAY_PER_CELL);
+  }
+  // A quarter of a full pantry, kept back. A colony alone all night grows only while
+  // it has food PUT BY, so it stops short of eating itself hungry and she is handed
+  // back a colony with something in the store rather than a queue at an empty one.
+  var AWAY_SPARE = 0.25;
+  // The two things that stop a colony growing on its own: no room in the burrow, or
+  // no food to spare. Both only ever PAUSE the hatch — the eggs sit and wait.
+  function awayFull(){ return C.ants >= awayRoom() || C.food < foodCap() * AWAY_SPARE; }
+  var AWAY_MIN = 600;              // ten minutes
+  var AWAY_MAX = 4 * 3600;         // four hours of credit
+  var awayNews = null;             // what the catch-up did, for the card on the way in
+
+  function awayGrow(sec){
+    awayNews = null;
+    if(!C || !(sec > 0)) return null;
+    // A kid who closed the lid in the middle of the very first lesson comes back to
+    // the colony she left, not to one that has run on past what she was being taught.
+    if(!C.guided) return null;
+    var use = Math.min(sec, AWAY_MAX), steps = Math.floor(use / AWAY_DT);
+    if(steps < 1) return null;
+    // AC9 says a visitor is a rare treat the kid answers by moving an ant to Soldiers.
+    // One that was still here when she closed the app has MOVED ON by the time she is
+    // back: a grasshopper by the door stops anybody going out, so leaving it there
+    // would freeze the whole night AND hand her a setback she was given no chance to
+    // head off. Nothing it was sitting on was ever taken, so nothing is lost with it.
+    C.bug = null; C.bugT = 0;
+    var was = { ants:C.ants, food:C.food, dug:C.dug, born:C.born };
+    var feel = Feel;
+    AWAY = true; Feel = null;      // no chimes, no little taps, no dust out there
+    try{ for(var i=0;i<steps;i++) step(); }
+    finally{ AWAY = false; Feel = feel; }
+    awayNews = { sec:Math.round(use), capped:sec > AWAY_MAX + 1,
+                 born:C.born - was.born, ants:C.ants - was.ants,
+                 food:Math.round(C.food - was.food), dug:C.dug - was.dug };
+    saveSoon();
+    return awayNews;
+  }
+  // Worth telling her about? Only if the colony really did something. A quiet
+  // catch-up says nothing rather than showing her a card full of noughts.
+  function awayWorthSaying(n){ return !!(n && (n.born > 0 || n.dug > 0 || n.food > 0)); }
+
+  // The pictures on the card: an ant, a crumb of food, a shovel. Drawn geometry,
+  // like every other icon in this game.
+  var AWAY_PICS = {
+    // side on, facing right, six feet on the ground. The legs and feelers are drawn
+    // first so the three body segments sit on top of them.
+    ant:'<svg viewBox="0 0 34 30" aria-hidden="true">'
+      + '<path d="M26 11.2l4-3.4M26.6 12.8l4.8-1.2" stroke="#3d2712" stroke-width="1.4" stroke-linecap="round"/>'
+      + '<path d="M10 17.6l-3.4 5.2M15.4 18l-1.4 5.4M20 17.4l3 5.2" stroke="#3d2712" stroke-width="1.7" stroke-linecap="round"/>'
+      + '<ellipse cx="9" cy="15" rx="5.4" ry="4.4" fill="#5a3a1c"/>'
+      + '<ellipse cx="16.6" cy="15" rx="3.6" ry="3.2" fill="#6b4523"/>'
+      + '<ellipse cx="23.6" cy="14" rx="4.3" ry="3.7" fill="#5a3a1c"/>'
+      + '<circle cx="25.4" cy="13.1" r="1" fill="#fff8ec"/></svg>',
+    food:'<svg viewBox="0 0 34 30" aria-hidden="true"><path d="M17 8.4c2-2 6.6-1.6 6.6 3.6 0 5-3.2 9.4-6.6 9.4s-6.6-4.4-6.6-9.4c0-5.2 4.6-5.6 6.6-3.6z" fill="#63b34a" stroke="#2f6b26" stroke-width="1.6"/>'
+      + '<path d="M17 8.4V5" stroke="#6b431c" stroke-width="1.8" stroke-linecap="round"/>'
+      + '<path d="M17.4 6.2c1.6-1.6 3.4-1.4 3.4-1.4s.2 1.8-1.4 3.4c-1.2 1-2 .6-2 .6s-.4-1 0-2.6z" fill="#8ed36f"/></svg>',
+    dig:'<svg viewBox="0 0 34 30" aria-hidden="true"><path d="M16 2h2v11h-2z" fill="#b07a3c" stroke="#6b431c" stroke-width="1.4"/>'
+      + '<path d="M13.5 2h7v2.6h-7z" fill="#8a5a2b"/>'
+      + '<path d="M12.6 13h8.8v5a4.4 4.4 0 0 1-8.8 0z" fill="#cfd6dc" stroke="#5b6874" stroke-width="1.5"/></svg>'
+  };
+  // Three lines at most, only the ones that really happened, biggest first: the new
+  // ants are the thing a kid came back for.
+  function awayRows(n){
+    var rows = [];
+    if(n.born > 0) rows.push({ pic:"ant",  v:n.born, l:n.born === 1 ? "new ant hatched" : "new ants hatched" });
+    if(n.food > 0) rows.push({ pic:"food", v:n.food, l:"food carried home" });
+    if(n.dug  > 0) rows.push({ pic:"dig",  v:n.dug,  l:n.dug === 1 ? "new tunnel dug" : "new tunnels dug" });
+    return rows;
+  }
+  function showAway(n){
+    if(!awayWorthSaying(n)) return null;
+    var rows = awayRows(n), host = $("away"), list = $("awayRows");
+    if(list){
+      var html = "", i;
+      for(i=0;i<rows.length;i++){
+        html += '<div class="arow">' + AWAY_PICS[rows[i].pic]
+             +  '<span class="an">' + rows[i].v + '</span>'
+             +  '<span class="al">' + rows[i].l + '</span></div>';
+      }
+      list.innerHTML = html;
+    }
+    var sub = $("awaySub");
+    // AC3: the one honest thing to say about the cap. Four hours is all the colony
+    // ever banks, so a colony left for a week is not pretended to be a week old.
+    if(sub) sub.textContent = n.capped ? "While you were away, for as long as your ants can keep going"
+                                       : "While you were away";
+    if(host && host.style) host.style.display = "flex";
+    awayOpen = true;
+    if(Feel){ try{ Feel.celebrate ? Feel.celebrate() : Feel.tap(); }catch(e){} }
+    return rows;
+  }
+  var awayOpen = false;
+  function hideAway(){
+    var host = $("away"); if(host && host.style) host.style.display = "none";
+    awayOpen = false;
+    return true;
   }
 
   // ======================================================================
@@ -3639,8 +3922,52 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     syncNeeds();
     if(DEMO) return;
     ensureMusic();
+    // AC3: catch the colony up on the hours it worked alone, then tell her about it.
+    catchUp();
     syncCoach();
     if(!C.guided){ C.seen = true; saveSoon(); showHow(); }    // first colony: teach it, one step at a time
+    fetchCloud();
+  }
+  // How long ago this colony was put down, run forward, and shown. _savedAt is
+  // cleared as it is read, so a colony is never caught up on the same hours twice.
+  function catchUp(){
+    var gone = C._savedAt ? Math.max(0, (Date.now() - C._savedAt) / 1000) : 0;
+    C._savedAt = 0;
+    if(gone < AWAY_MIN) return null;
+    var news = awayGrow(gone);
+    syncNeeds(); syncHud(); syncJobsUI();
+    if(awayWorthSaying(news)) showAway(news);
+    return news;
+  }
+  // The cloud copy, for the kid who grew this colony on another device. It only
+  // ever replaces what is on screen if it is NEWER and she has not touched
+  // anything yet: a save must never yank the colony out from under a child who is
+  // already playing. Nothing on the screen can call this.
+  var bootMark = null;
+  function untouched(){
+    return !!(bootMark && C && C.tapped === bootMark.tapped && C.dug === bootMark.dug
+              && C.plan.length === bootMark.plan && C.mission === bootMark.mission);
+  }
+  function fetchCloud(){
+    bootMark = { tapped:C.tapped|0, dug:C.dug|0, plan:C.plan.length, mission:C.mission|0 };
+    if(!KID_ID || typeof fetch === "undefined") return;
+    var mine = C._loadedAt || 0;
+    try{
+      fetch("/api/kid-save?game=antcity&kidProfileId=" + encodeURIComponent(KID_ID))
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if(!j || !j.ok || !j.data) return;
+          if((+j.data.savedAt || 0) <= mine) return;      // ours is the newer colony
+          if(!untouched()) return;                        // she is already playing
+          var col = loadSaved(j.data); if(!col) return;
+          C = col; C.sample = []; walkSample(0);
+          if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
+          catchUp();
+          syncJobsUI(); syncHud(); syncNeeds(); syncCoach();
+          bootMark = { tapped:C.tapped|0, dug:C.dug|0, plan:C.plan.length, mission:C.mission|0 };
+        })
+        .catch(function(){});
+    }catch(e){}
   }
   // AC7: there is no level picker any more. Ant City has ONE colony that is always
   // yours, so a page with a single card on it was a door for the sake of a door:
@@ -3659,7 +3986,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       while(acc >= STEP && guard < 12){ step(); acc -= STEP; guard++; }
       if(acc > 0.5) acc = 0;
       tickHint(dt); tickParty(dt); tickPulse(dt);
-      if(saveT > 0 && !DEMO){ saveT -= dt; if(saveT <= 0) saveNow(); }
+      if(saveT > 0 && !DEMO){ saveT -= dt; if(saveT <= 0) saveNow(false); }
       if(DEMO) demoStep(dt);
       syncHud(); syncJobsUI(); syncNeeds(); syncCoach();
     }
@@ -3845,8 +4172,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     if(d.type === "resume"){ paused = false; last = 0; acc = 0; return; }
     if(d.type === "start"){ startPlay(); return; }
   });
-  document.addEventListener("visibilitychange", function(){ if(document.hidden){ saveNow(); } else { last = 0; } });
-  window.addEventListener("pagehide", saveNow);
+  // AC3: leaving the page is the save that matters most, so it goes out as a beacon —
+  // the only request a browser promises to finish once the page is on its way out.
+  document.addEventListener("visibilitychange", function(){ if(document.hidden){ saveNow(true); } else { last = 0; } });
+  window.addEventListener("pagehide", function(){ saveNow(true); });
 
   // ======================================================================
   //  Boot: read the manifest for art + feel, keep every built-in fallback
@@ -3980,6 +4309,38 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   // ======================================================================
   window.ANTCITY_GAME = {
     state: function(){ return state; },
+    // --- AC3: the save, the away catch-up and the welcome-back card. All of it
+    // drivable without a wall clock and without a network: move a blob's savedAt
+    // back and you have been away that long, which is the lever the whole card
+    // and the whole catch-up are tested through.
+    save: {
+      key: saveKey,
+      kid: function(){ return KID_ID; },
+      setKid: function(id){ KID_ID = id || null; return KID_ID; },
+      version: function(){ return SAVE_V; },
+      snapshot: snapshotColony,
+      now: function(){ return saveNow(false); },
+      local: readLocal,
+      stats: function(){ return { local:localSaves, cloud:cloudSaves, cloudErrs:cloudErrs,
+                                  on:SAVE_ON, pending:saveT > 0 }; },
+      off: function(){ SAVE_ON = false; },
+      resume: function(){ SAVE_ON = true; },
+      clearLocal: function(){ try{ localStorage.removeItem(saveKey()); }catch(e){} return true; },
+      // Pour a blob straight in, as if the page had just opened on it, and run the
+      // catch-up exactly as a real return does.
+      load: function(blob){
+        var col = loadSaved(blob); if(!col) return null;
+        C = col; C.sample = []; walkSample(0);
+        if(!C.mBase || C.mBase.dug == null) startMission(C.mission || 0);
+        return catchUp() || { sec:0, born:0, ants:0, food:0, dug:0, capped:false };
+      }
+    },
+    away: function(){ return { min:AWAY_MIN, max:AWAY_MAX, dt:AWAY_DT, news:awayNews,
+                               card:awayOpen, inside:AWAY,
+                               perCell:AWAY_PER_CELL, room:awayRoom() }; },
+    grow: function(sec){ return awayGrow(sec); },
+    awayRows: function(){ return awayNews ? awayRows(awayNews) : []; },
+    closeAway: hideAway,
     play: function(diff){ if(diff) { newColony(diff); } startPlay(); },
     newColony: function(diff){ newColony(diff||3); },
     setDifficulty: function(d){ C.difficulty = Math.max(1, Math.min(5, d|0)); },
