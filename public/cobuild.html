@@ -319,7 +319,56 @@ footer .logo{justify-content:center;margin-bottom:10px}
 var picked='';
 function did(){try{var d=localStorage.getItem('cobuild_did');if(!d){d='cb_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem('cobuild_did',d);}return d;}catch(e){return 'cb_anon';}}
 function log(body){try{fetch('/api/cobuild-lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({deviceId:did()},body)),keepalive:true});}catch(e){}}
-function openDoor(where){picked=where;log({kind:'click',source:where,plan:where.indexOf('premium')===0?'premium-20':(where.indexOf('cobuild')===0?'cobuild-10':null)});document.getElementById('modal').classList.add('open');document.getElementById('form').style.display='block';document.getElementById('thanks').style.display='none';setTimeout(function(){document.getElementById('email').focus();},50);}
+
+/* ══════════ THE SWITCH ══════════
+   `cobuild_live` in /api/app-flags has always SAID what these buttons do:
+   "When true, the Start buttons on /cobuild go to real signup and Stripe
+   checkout instead of the waitlist. FALSE is the safe side: the fake door
+   keeps taking names and nobody is charged or blocked."
+
+   This page never read it. Every Start button went to the waitlist whatever
+   the switch said, so the switch was a switch that did nothing, and flipping
+   it would have changed nothing on the page it names. It reads it now.
+
+   FALSE IS STILL THE DEFAULT AND STILL WHAT IS LIVE, so nothing a visitor sees
+   changes today: they type an email and we save their spot, exactly as before.
+   And the live path FALLS BACK rather than dead-ends — a Start button that does
+   nothing is the worst thing a marketing page can do, so if the signup is not
+   ready, or the flag read fails, or the network is out, the family lands in the
+   same friendly waitlist instead of on a broken button. */
+var LIVE=false;
+try{ fetch('/api/app-flags',{cache:'no-store'}).then(function(r){return r.json();})
+  .then(function(j){ LIVE = !!(j && j.ok && j.flags && j.flags.cobuild_live); })
+  .catch(function(){ LIVE=false; }); }catch(e){ LIVE=false; }
+
+// The fake door, and the only door open today: take a name, say thank you.
+function waitlist(where){
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('form').style.display='block';
+  document.getElementById('thanks').style.display='none';
+  setTimeout(function(){document.getElementById('email').focus();},50);
+}
+// The real door, for when Mike flips the switch. Signup comes first and
+// checkout follows it, because the till cannot open for somebody who does not
+// have an account yet (/api/cobuild-billing refuses a checkout without a
+// grown-up code, and there is no sign-up page to mint one — see QA50). Until
+// that page exists this resolves to nothing and the catch below takes over,
+// which is the behaviour we want anyway: never a dead end.
+function startSignup(where){
+  var plan = where.indexOf('premium')===0?'premium-20':(where.indexOf('cobuild')===0?'cobuild-10':'unpicked');
+  return new Promise(function(resolve,reject){
+    if(!window.BuildableSignup || !window.BuildableSignup.open) return reject(new Error('signup not built yet'));
+    window.BuildableSignup.open({plan:plan,source:where,then:resolve,fail:reject});
+  });
+}
+function openDoor(where){
+  picked=where;
+  // the click is logged FIRST and always, switch or no switch, because what we
+  // are learning from this page is which button people press
+  log({kind:'click',source:where,plan:where.indexOf('premium')===0?'premium-20':(where.indexOf('cobuild')===0?'cobuild-10':null)});
+  if(LIVE){startSignup(where).catch(function(){ waitlist(where); });}
+  else { waitlist(where); }   // not switched on yet
+}
 function closeDoor(){document.getElementById('modal').classList.remove('open')}
 function thanks(){
   var email=document.getElementById('email').value.trim();

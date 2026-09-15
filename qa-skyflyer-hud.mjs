@@ -17,12 +17,47 @@
 // Its geometry is asserted against src/BuildableKids.jsx below, so the mock can
 // never quietly drift away from the shell it is standing in for.
 import fs from 'node:fs';
+import fsSync from 'node:fs';
 import { createRequire } from 'node:module';
+import { qaBase } from './scripts/qa-serve.mjs';
 const require_ = createRequire(process.cwd() + '/');
-const { chromium } = require_('playwright-core');
+// playwright-core is NOT a repo dep, so `npm ci` takes it away again every time.
+// Try the repo, then the machine-wide install the other harnesses fall back to,
+// and if neither is there SAY SO in one plain line instead of throwing a module
+// resolution stack at somebody reading a QA report.
+let chromium = null;
+for (const spec of ['playwright-core', 'playwright',
+                    '/opt/node22/lib/node_modules/playwright/index.js']) {
+  try { chromium = require_(spec).chromium; break; } catch (e) { /* keep trying */ }
+}
+if (!chromium) {
+  console.log('FAIL  this gate could run  ::  no playwright here — `npm i --no-save playwright`');
+  process.exit(1);
+}
 
-const CHROME = process.env.PW_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-const BASE = process.env.SKY_BASE || 'http://127.0.0.1:8899';
+// A pinned build number goes stale the day the image is rebuilt. Take the one
+// that is actually on disk, and let playwright pick for itself if none matches.
+const CHROME = process.env.PW_CHROME || (function () {
+  const roots = ['/opt/pw-browsers'];
+  for (const root of roots) {
+    let names = [];
+    try { names = fsSync.readdirSync(root); } catch (e) { continue; }
+    for (const n of names.filter((x) => /^chromium-/.test(x)).sort().reverse()) {
+      for (const tail of ['chrome-linux/chrome', 'chrome-linux64/chrome']) {
+        const p = root + '/' + n + '/' + tail;
+        try { if (fsSync.existsSync(p)) return p; } catch (e) {}
+      }
+    }
+  }
+  return undefined;               // undefined means "playwright, you choose"
+})();
+// FL-GATE PLUMBING (QA57): this used to require somebody to have run
+// `python3 -m http.server 8899` in another window first, and died with
+// ERR_CONNECTION_REFUSED when nobody had — which in qa-all.mjs reads exactly
+// like a broken game and is not one. It now serves public/ itself if nothing is
+// already answering, the way every other harness in this repo does.
+const SERVER = await qaBase();
+const BASE = SERVER.base;
 const dir = process.env.SKY_DIR || '.';
 const read = f => fs.readFileSync(dir + '/' + f, 'utf8');
 
@@ -222,5 +257,6 @@ console.log('\n--- STANDALONE: the engine opened directly is unchanged ---');
 }
 
 await browser.close();
+SERVER.close();
 console.log('\n' + (ok ? 'ALL CHECKS PASSED' : 'THERE ARE FAILURES ABOVE'));
 process.exit(ok ? 0 : 1);

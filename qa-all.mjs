@@ -46,6 +46,21 @@ const WITH_BROWSER = has("--with-browser");
 const LIVE = has("--live");
 const SITE = valOf("--site") || process.env.QA_SITE_URL || "https://buildablekids.com";
 const ONLY = valOf("--only");
+// HOW LONG A HARNESS MAY TAKE BEFORE WE CALL IT HUNG.
+//
+// This was a hard-coded five minutes, and on a small machine that turned the
+// gate into a liar: `qa-farm.mjs` plays the farm in a real browser on the
+// software rasteriser and wants about twelve minutes on four cores, so
+// --with-browser killed it at five and reported a failure it had not earned,
+// twice (qa-farm-shot.mjs too). A gate that invents red is worse than no gate,
+// because the next person learns to ignore it.
+//
+// So: a default anyone can raise, and a longer allowance for the handful of
+// harnesses that really do play a whole game through. `--timeout <minutes>`
+// overrides both, for a machine slower or faster than this one.
+const SLOW = /^qa-(farm|farm-shot|antcity|antcity-shot|hopheroes-shot|practice-shot|art-browser)\.mjs$/;
+const TIMEOUT_MIN = Number(valOf("--timeout") || process.env.QA_TIMEOUT_MIN || 0);
+const capFor = (f) => (TIMEOUT_MIN > 0 ? TIMEOUT_MIN : SLOW.test(f) ? 25 : 5) * 60 * 1000;
 
 let failures = [];
 let LIVE_BLOCKED = false;
@@ -151,16 +166,26 @@ const run = (f) => new Promise((res) => {
   const t0 = Date.now();
   const p = spawn(process.execPath, [f], { cwd: ROOT });
   let out = "";
+  let killed = false;
   p.stdout.on("data", (d) => (out += d));
   p.stderr.on("data", (d) => (out += d));
-  const killer = setTimeout(() => { try { p.kill("SIGKILL"); } catch {} }, 5 * 60 * 1000);
-  p.on("close", (code) => { clearTimeout(killer); res({ code, out, secs: Math.round((Date.now() - t0) / 1000) }); });
+  const cap = capFor(f);
+  const killer = setTimeout(() => { killed = true; try { p.kill("SIGKILL"); } catch {} }, cap);
+  p.on("close", (code) => { clearTimeout(killer);
+    res({ code, out, killed, cap, secs: Math.round((Date.now() - t0) / 1000) }); });
 });
 
 for (const f of chosen) {
   if (needsBrowser(f) && !WITH_BROWSER) { skipped.push(f); continue; }
-  const { code, out, secs } = await run(f);
+  const { code, out, secs, killed, cap } = await run(f);
   if (code === 0) pass(f, `${secs}s`);
+  else if (killed) {
+    // Say WHAT happened. A SIGKILL used to surface as "exit null" next to
+    // whatever half-finished output had scrolled by, which reads exactly like a
+    // real failure and is not one.
+    fail(f, `ran out of time after ${secs}s (cap ${Math.round(cap / 60000)} min) — ` +
+      `raise it with --timeout <minutes>, or run this one on its own`);
+  }
   else if (/ERR_MODULE_NOT_FOUND/.test(out)) {
     // Not a product bug: the machine is missing a devDependency (jsdom, usually).
     // Say so plainly rather than letting it read as "the code is broken".

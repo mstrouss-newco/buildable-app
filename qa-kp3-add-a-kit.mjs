@@ -11,8 +11,23 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import pw from "/home/claude/.npm-global/lib/node_modules/playwright/index.js";
-const { chromium } = pw;
+// QA57: this was an ABSOLUTE PATH into one particular laptop's npm folder, so on
+// any other machine the harness died on its import line before it could print a
+// word, and `qa-all.mjs` reported it as a broken product. Look for playwright in
+// the places it actually lives, and say so plainly if it is nowhere.
+import { createRequire } from "node:module";
+const require_ = createRequire(import.meta.url);
+let chromium = null;
+for (const spec of ["playwright", "playwright-core",
+                    "/opt/node22/lib/node_modules/playwright/index.js",
+                    "/home/claude/.npm-global/lib/node_modules/playwright/index.js"]) {
+  try { chromium = require_(spec).chromium; break; } catch (e) { /* keep trying */ }
+}
+if (!chromium) {
+  console.log("FAIL  this harness could run  ::  no playwright here — `npm i --no-save playwright`");
+  console.log("\nSOME CHECKS FAILED");
+  process.exit(1);
+}
 
 const REPO = path.resolve(process.argv[2] || ".");
 const PUB = path.join(REPO, "public");
