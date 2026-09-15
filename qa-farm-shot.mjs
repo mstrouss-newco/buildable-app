@@ -438,6 +438,68 @@ try {
   await shot(f10b, 'fm10-the-mill-wants-two');
   await f10b.close();
 
+  // ------------------------------------------- FM11: the stick under her thumb
+  // A DATA CHECK CANNOT SEE WHERE A CIRCLE IS. qa-farm.mjs proves the numbers
+  // (centred on the down point, full tilt at one radius, gone on lift); only a
+  // picture can tell Mike that the bright circle is under the thumb and the old
+  // corner pad has faded into the background behind it.
+  const f11 = await browser.newPage({ viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await f11.goto(BASE, { waitUntil: 'load' });
+  await ready(f11);
+  await f11.evaluate(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
+  await f11.evaluate(() => { window.FARM.addCoins(200); window.FARM.moveKidTo(-6, -2); });
+  await f11.waitForTimeout(700);
+  // a thumb put down high and right — the far corner from the resting pad, so
+  // the two are in the same frame and the difference is the whole point
+  await f11.mouse.move(268, 470);
+  await f11.mouse.down();
+  await f11.mouse.move(268, 442);
+  await f11.mouse.move(286, 416);
+  const T11 = await f11.evaluate(() => window.FARM.thumb());
+  chk('the floating stick is really under the thumb in the shot, not in the corner',
+    T11.on === true && T11.shown === true &&
+    Math.abs(T11.cx - 268) < 3 && Math.abs(T11.cy - 470) < 3,
+    JSON.stringify(T11));
+  await f11.waitForTimeout(350);
+  await shot(f11, 'fm11-thumb-stick-phone');
+  await f11.mouse.up();
+
+  // and the other half: one tap across the field, a ring where she is going,
+  // and NO seed card sitting open over the farm while she is still walking
+  // THE RING HAS TO BE IN THE FRAME. The camera follows her and looks north, so
+  // a target on the far side of the farm is a target off the top of the picture:
+  // the ring is real either way, but a shot that does not show it proves nothing
+  // to the person judging it. So she taps open grass a few strides ahead of her.
+  // OPEN GRASS, AND NOTHING ELSE. The first cut of this shot aimed at a spot the
+  // crate happened to be standing on, so the only circle in the frame was the
+  // crate's own ask bubble and the ring it exists to show was hidden under a
+  // box. So the spot is CHOSEN: a few strides up the farm, nothing solid on it,
+  // and `pickTapTarget` agreeing it is plain ground and not a thing.
+  const R11 = await f11.evaluate(() => {
+    for (const [sx, sz] of [[-22, 14], [-24, 16], [-20, 18], [-26, 12]]) {
+      if (window.FARM.blockedAt(sx, sz, 0.8)) continue;
+      for (const gap of [7.5, 6.5, 8.5]) {
+        const tx = sx, tz = sz - gap;
+        if (window.FARM.blockedAt(tx, tz, 0.9)) continue;
+        window.FARM.moveKidTo(sx, sz);
+        const t = window.FARM.tapAt(tx, tz);
+        if (t.what === 'ground') return { from: [sx, sz], to: [tx, tz], t };
+        window.FARM.stick(0, 0);
+      }
+    }
+    return null;
+  });
+  await f11.waitForTimeout(500);
+  const S11 = await f11.evaluate(() => ({ ring: window.FARM.tapRing(),
+    going: window.FARM.walkingTo(), card: window.FARM.cardUp() }));
+  chk('one tap on open grass, a ring where she is going, and the seed card waits for her feet',
+    !!R11 && !!S11.ring && S11.ring.opacity > 0.3 && !!S11.going &&
+    S11.going.what === 'ground' && S11.card === false,
+    JSON.stringify(R11) + ' ' + JSON.stringify(S11));
+  await shot(f11, 'fm11-tap-to-go-phone');
+  await f11.close();
+
 } catch (e) {
   chk('the farm camera completed its run', false, e.message);
 } finally {

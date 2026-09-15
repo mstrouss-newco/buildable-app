@@ -2703,7 +2703,7 @@ chk('FM3 gap 1: it routes to a screen of its own that frames the page',
   /function FarmScreen/.test(jsxF) &&
   /screen === SCREEN_FARM/.test(jsxF));
 chk('FM3 gap 1: the link carries its OWN cache-bust, not the flying engine\'s',
-  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
 chk('FM3 gap 1: the tile is DRAWN geometry, and there is not an emoji in it',
   (function(){
     const m = jsxF.match(/const TILE_ART = \{[\s\S]*?\n\};/);
@@ -2822,6 +2822,28 @@ chk('FM4: tap-to-go is the main way to move, and the joystick still cancels it',
   /function planWalk/.test(farm) && /clearWalkTo\(\);[\s\S]{0,120}hideHint/.test(farm));
 chk('FM4: tap-to-go adds no HUD of its own — just a soft ring on the ground',
   /function showTapRing/.test(farm) && !/id="walkBtn"/.test(farm));
+// ---- FM11: fix how she moves ---------------------------------------------
+chk('FM11: the stick comes to her thumb — one appears where she puts it down',
+  /id="floatStick"/.test(farm) && /function floatStart/.test(farm) &&
+  /function floatMove/.test(farm) && /function floatEnd/.test(farm) &&
+  /var FLOAT_R=53/.test(farm));
+chk('FM11: it is the SAME stick — it writes stickVec, so nothing downstream changed',
+  /function floatMove\(x,y\)\{[\s\S]{0,400}stickVec\.x=dx\/FLOAT_R/.test(farm));
+chk('FM11: a thumb only becomes a stick when it is not already busy',
+  /function floatAllowed/.test(farm) &&
+  /floatAllowed[\s\S]{0,260}!placing[\s\S]{0,80}!WATER\.patch/.test(farm));
+chk('FM11: the corner pad is kept, faint, for a child who already learned it',
+  /#stick\{[^}]*rgba\(255,252,240,\.18\)/.test(farm) && /#stick\.live\{/.test(farm));
+chk('FM11: a drag on the world steers and never scrolls the page',
+  /canvas\{display:block;touch-action:none\}/.test(farm));
+chk('FM11: the seed pop-up waits for her feet — a walk can carry a job to do on arrival',
+  /function startWalkTo\(x,z,stopR,what,then\)/.test(farm) &&
+  /function arriveWalkTo/.test(farm) && /function walkThenPlant/.test(farm) &&
+  /arriveWalkTo\(\); return \{x:0,z:0\}/.test(farm));
+chk('FM11: the well, the barn doors and the two buildings are things she can tap',
+  /what:"well"/.test(farm) && /what:"barn"/.test(farm) && /what:big\?"machine":"animal"/.test(farm));
+chk('FM11: nothing in the file still claims a drag-anywhere that was never built',
+  !/drag-anywhere on the world[\s\S]{0,40}also works/.test(farm));
 chk('FM4: the wish list is one slot per KIND, in full colour, with a count badge',
   /function kindCounts/.test(farm) && /class="count"/.test(farm) &&
   /svg\.pic\{width:58px/.test(farm) &&
@@ -2980,7 +3002,7 @@ chk('FM5: the small celebrations all go through the shared Feel Kit, so mute wor
   /heartPuff\(A\.x,/.test(farm) &&
   /if\(!quiet\)\{ sparklePuff/.test(farm));
 chk('FM5: the shell contract still holds — the door carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
 chk('FM5: the save endpoint and its migration both exist in the repo',
   fs.existsSync('api/farm-save.js') && fs.existsSync('db/create-farm-save.sql') &&
   /farm_saves/.test(read('db/create-farm-save.sql')) &&
@@ -3074,7 +3096,7 @@ chk('FM7: and every built present has a model to hop out of the box',
   ['pumpkinseed', 'farmdog', 'fieldrow', 'strawberry', 'mill', 'bees', 'pig', 'tractor', 'farmhand']
     .every(id => new RegExp('id===\"' + id + '\"').test(farm.slice(farm.indexOf('function unlockModel')))));
 chk('FM6: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
 chk('FM6: still no timer, no countdown, no emoji, after all of that',
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
 
@@ -3146,7 +3168,7 @@ chk('FM6: the coop and the cow pen kept their FM4 gates through the move',
 chk('FM6: still no timer, no countdown, no emoji, after a whole island of it',
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) && !emoji.test(farm));
 chk('FM6: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
 
 // ==========================================================================
 //  FM7 — MORE TO DO. Crops, a pig, a hive, the mill, the dairy, the watering
@@ -3254,7 +3276,7 @@ chk('FM7: still no timer, no countdown, no emoji, and nothing that can be failed
   !/countdown|timeLeft|secondsLeft|timerText|remainingSec/i.test(farmCode) &&
   !emoji.test(farm) && !/gameOver|youLose|starv|\bdied\b/i.test(farmCode));
 chk('FM7: the door on the Play page carries the new cache-bust',
-  /skyflyer-farm\.html\?v=fm10/.test(jsxF));
+  /skyflyer-farm\.html\?v=fm11/.test(jsxF));
 
 // ==========================================================================
 //  FM8 — HELPERS, A CAST WHO COME BACK, THE STICKER BOOK AND THE PICTURE.

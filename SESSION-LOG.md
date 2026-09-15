@@ -1,3 +1,101 @@
+## 2026-09-15 (FM11): fix how she moves
+
+**Phase FM, card FM11.** Mike's playtest: "you have to use the button controller now
+and it stinks". Touched `public/skyflyer-farm.html`, `src/BuildableKids.jsx`,
+`qa-farm.mjs`, `qa-farm-shot.mjs`, `qa-skyflyer.mjs`.
+
+### The stick comes to her thumb
+
+A 130px circle nailed to the bottom-left corner asks a child to FIND the control
+before she can move, with the wrong hand if she is left-handed, and it sits exactly
+where a small hand already rests on an iPad. So the stick now goes to her: put a thumb
+down anywhere on the farm, slide, and that spot becomes the middle of the stick. It
+fades in under her thumb and fades out when she lifts. Left side, right side, top,
+bottom — wherever she put it.
+
+**It is the same stick, not a second one.** Same 130px across, same 53px working
+radius, and it writes the same `stickVec`, so `step()` never learns any of this
+happened and nothing downstream had to change. What tells a steer from a tap is the
+tap/drag split FM4 already uses: under 10px the finger meant to TAP and tap-to-go
+handles it; over 10px it meant to STEER and the stick appears where the finger
+started. A thumb that is already busy never becomes a stick — not while she is
+holding the watering can over a crop, not while she is carrying a decoration to put
+down, not on the corner pad, not with the seed pop-up open.
+
+**The corner pad stays, faint.** A child who learned it should not find it gone. It is
+now the resting one: same place, same size, still fully live, just washed back so it
+no longer reads as the way in. It can go in a session or two.
+
+`canvas` got `touch-action:none` so a thumb dragged across the world steers and never
+scrolls the page out from under her.
+
+### Tap to go, the gaps FM4 left
+
+FM4 and FM6 had already built tap-to-go, so the card's first half was smaller than its
+wording — but three real holes were left, and all three are the same hole: things she
+can tap that she could not actually reach.
+
+- **THE SEED POP-UP OPENED FROM ACROSS THE FIELD.** Tap a hole thirty units away and
+  the card came up on the spot, so she chose a seed while standing nowhere near where
+  it went in. A walk can now carry a JOB to do on arrival: the tap starts the walk and
+  the pop-up waits for her feet. Standing on the patch already, it still opens at once.
+  The job dies with the walk, so grabbing the stick mid-journey cancels the planting
+  too, which is the only sane rule — she changed her mind.
+- **A MILL IS NOT A HEN-SIZED TARGET.** Every tap target had the same 2.1-unit reach,
+  and the mill is 6.2 units across: a tap on the side of the building missed it
+  entirely and she walked to the grass beside it. Reach now scales with the thing, and
+  she stops outside the pad it stands on rather than grinding into its wall — still
+  inside feeding range, so the feed fires on arrival exactly as walking into it does.
+- **THE WELL AND THE BARN WERE NOT TAPPABLE AT ALL.** Both are solid, so a tap on
+  either aimed her at a point she can never stand on and she stopped dead against it.
+  They now aim her at the spot the thing actually happens from: outside the well, and
+  in front of the barn doors. Both reaches are drawn TIGHT, around the building
+  itself and no further, because the well sits on the path between the barn and the
+  field and a generous circle round it would swallow taps that plainly meant
+  "walk over there".
+
+Nothing about harvesting or feeding got a second copy: arriving by tap fires the same
+proximity checks in `step()` that arriving on foot already fired, and the QA proves
+both fire exactly once.
+
+The CSS comment claiming drag-anywhere on the world "also works" is gone. It was never
+built. It is now true, so it says what is actually there instead.
+
+### QA, and two reds that were already there
+
+`qa-farm.mjs` **295 green** with a new FM11 block of thirteen checks, run on its own
+(see below). `qa-skyflyer.mjs` **all green**, with eight new static FM11 checks and the
+five `?v=fm10` cache-bust assertions bumped to `fm11` — those five went red the moment
+the door was bumped in `BuildableKids.jsx`, and would have shipped red if the static
+half had not been run. `qa-farm-shot.mjs` all green with two new pictures,
+`fm11-thumb-stick-phone` (the bright circle under a thumb top-right, the faded pad
+bottom-left, in one frame) and `fm11-tap-to-go-phone` (one tap, the ring on open grass
+a few strides ahead of her, and no seed card open while she is still walking).
+`node qa-all.mjs` **54 harnesses, one red**.
+
+**THE ONE RED IN qa-all IS NOT THIS CARD'S, AND IT WAS CHECKED RATHER THAN ASSUMED.**
+`qa-grownups.mjs` fails two checks about the grown-ups waitlist and checkout. I stashed
+every change in this session, ran it on a pristine `HEAD`, and got the same two
+failures word for word. Same story for the farm's own `walking over the egg hops it
+onto the stack like any crop`: a full `qa-farm.mjs` run on a pristine `HEAD` gives 279
+green and that one red, with the identical `2 -> 2 [egg,egg]`, so FM11 adds sixteen
+checks and no new failure. Both are flagged, neither is fixed here: the egg one is the
+produce-and-magnet loop and not movement, and the grown-ups one is a different page
+altogether, so folding either into this card would have made it two cards in a
+trenchcoat.
+
+**A NOTE FOR THE NEXT SESSION ON HOW TO RUN THE GATE HERE.** `node qa-all.mjs
+--with-browser` cannot pass in this sandbox and it is the machine, not the code:
+`qa-all.mjs` kills any harness at five minutes, and `qa-farm.mjs` takes about twelve on
+four cores with the software rasteriser, so it and `qa-farm-shot.mjs` are killed
+mid-run and report failures they did not earn. Run those two directly instead. Two more
+things bite: `npm ci` removes the unsaved `playwright`, so reinstall it after, and
+`qa-skyflyer-hud/look/sky` expect something already serving `public/` on port 8899 and
+die with `ERR_CONNECTION_REFUSED` without it — with a server up, all three run clean.
+Also do not run two farm harnesses at once: the first attempt here overlapped two and
+produced five failures that all vanished on a solo run, which is a good way to waste an
+hour chasing a bug that is not there.
+
 ## 2026-09-08 (AC10): the meadow becomes a place, the ground becomes layers, and water goes
 
 **Phase AC, card AC10.** Touched `public/antcity-engine.html`,

@@ -602,6 +602,14 @@ try {
     return { t, gate, x: k.x, z: k.z, walking: !!window.FARM.walkingTo() };
   }, [x, z, frames]);
 
+  // Tick the walk WITHOUT re-tapping, for the checks that care about what the
+  // one tap they already made does next.
+  const tick = async (frames) => ev((n) => {
+    for (let i = 0; i < n; i++) if (!window.FARM.walkTick(1 / 60).walking) break;
+    const k = window.FARM.kid();
+    return { x: k.x, z: k.z, walking: !!window.FARM.walkingTo() };
+  }, frames);
+
   await ev(() => window.FARM.stick(0, 0));
   chk('tapping empty ground walks her there, and leaves a soft ring while she goes',
     await (async () => {
@@ -620,14 +628,23 @@ try {
     const after = (await ev(() => window.FARM.patches()))[4];
     return t.what === 'growing' && Math.hypot(r.x - p.x, r.z - p.z) < 2.2 && after.state !== 'empty';
   })());
-  chk('tapping an EMPTY patch still opens the seed pop-up, exactly as before',
+  // FM11 CHANGED THIS ONE ON PURPOSE. Until FM11 the pop-up opened the instant
+  // she tapped a hole on the far side of the field, so she chose a seed while
+  // standing nowhere near it. Now the tap is a WALK that opens the pop-up when
+  // she gets there. Standing on the patch already, it still opens at once —
+  // that half is unchanged and is checked in the FM11 block below.
+  chk('tapping an EMPTY patch across the field WALKS her to it and holds the pop-up back',
     await (async () => {
+      await ev(() => window.FARM.moveKidTo(-16, 8));
       const e = (await ev(() => window.FARM.patches())).findIndex(p => p.state === 'empty');
       const p = (await ev(() => window.FARM.patches()))[e];
       const t = await ev(([x, z]) => window.FARM.tapAt(x, z), [p.x, p.z]);
-      const up = await ev(() => window.FARM.cardUp());
+      const upNow = await ev(() => window.FARM.cardUp());
+      const r = await tick(4000);
+      const upThere = await ev(() => window.FARM.cardUp());
       await ev(() => window.FARM.closeSeedPicker());
-      return t.what === 'seedCard' && up === true;
+      return t.what === 'patch' && t.pending === true && upNow === false &&
+             upThere === true && Math.hypot(r.x - p.x, r.z - p.z) < 2.2;
     })());
   chk('tapping an animal inside a pen walks her IN THROUGH THE GATE, not through the rails',
     await (async () => {
@@ -2138,6 +2155,312 @@ try {
     })());
   chk('no page errors in the whole FM10 run', e10.length === 0, e10.join(' | '));
   await p10.close();
+
+  // =======================================================================
+  //  FM11 — FIX HOW SHE MOVES
+  //
+  //  Mike's playtest: "you have to use the button controller now and it
+  //  stinks". Two halves. TAP TO GO has to reach every kind of thing on the
+  //  farm and do the thing on arrival, including the hole she taps, which used
+  //  to pop the seed card open from across the field. And the stick has to come
+  //  to HER THUMB instead of living in one corner.
+  //
+  //  The thumb half is driven with a REAL FINGER — page.mouse, on a phone-sized
+  //  page — because the whole point of the card is where a finger lands on
+  //  glass, and a hook that sets stickVec directly would prove nothing about
+  //  that. The tap-to-go half stays on world coordinates, so it does not depend
+  //  on where the camera happens to be looking.
+  // =======================================================================
+  console.log('\n--- FM11: TAP TO GO, AND THE STICK COMES TO HER THUMB ---');
+  const p11 = await browser.newPage({ viewport: { width: 390, height: 780 } });
+  const e11 = [];
+  p11.on('pageerror', ev => e11.push(ev.message));
+  await p11.goto(BASE, { waitUntil: 'load' });
+  await p11.waitForFunction(() => window.FARM && window.FARM.save.booted(), null, { timeout: 25000 });
+  const ev11 = (fn, arg) => p11.evaluate(fn, arg);
+  // the who-is-this card covers the world, and the mill and dairy only exist
+  // once they have been unwrapped
+  await ev11(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
+  await ev11(() => { window.FARM.addCoins(400);
+    ['mill', 'dairy'].forEach(id => window.FARM.givePresent(id)); });
+  await p11.waitForFunction(() => window.FARM.animals().some(a => a.kind === 'mill'),
+    null, { timeout: 25000 }).catch(() => {});
+  const tick11 = async (frames) => ev11((n) => {
+    for (let i = 0; i < n; i++) if (!window.FARM.walkTick(1 / 60).walking) break;
+    const k = window.FARM.kid();
+    return { x: k.x, z: k.z, walking: !!window.FARM.walkingTo() };
+  }, frames);
+  // A real finger, in CSS pixels, on the world (never the corner pad, which
+  // lives at the bottom-left).
+  // WHICH SCREEN PIXELS ARE THE FARM? The HUD moves with what she is carrying —
+  // the order card grows a slot per kind — so a point that was open world at the
+  // top of this block can be under a panel by the bottom of it. Rather than go
+  // red on a coincidence, the finger asks first and steps aside by a few pixels,
+  // and it always REPORTS where it ended up, so a real cover-up names itself.
+  const hitAt = (x, y) => ev11(([px, py]) => {
+    const el = document.elementFromPoint(px, py);
+    if (!el) return 'nothing';
+    const named = el.closest('[id]');            // the nub belongs to its pad
+    return named ? named.tagName + '#' + named.id : el.tagName;
+  }, [x, y]);
+  const clearSpot = async (x, y) => {
+    for (const [dx, dy] of [[0, 0], [0, -40], [0, 40], [-40, 0], [40, 0], [0, -90], [0, 90]]) {
+      const px = x + dx, py = y + dy;
+      if (px < 8 || py < 8 || px > 382 || py > 772) continue;
+      if ((await hitAt(px, py)) === 'CANVAS') return { x: px, y: py };
+    }
+    return { x, y, stuck: true };
+  };
+  const finger = async (x0, y0, dx, dy) => {
+    await ev11(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
+    const s0 = await clearSpot(x0, y0);
+    const hit = await hitAt(s0.x, s0.y);
+    const x1 = s0.x + dx, y1 = s0.y + dy;
+    await p11.mouse.move(s0.x, s0.y);
+    await p11.mouse.down();
+    const down = await ev11(() => window.FARM.thumb());
+    if (dx || dy) {
+      await p11.mouse.move(s0.x + dx * 0.5, s0.y + dy * 0.5);
+      await p11.mouse.move(x1, y1);
+    }
+    const moved = await ev11(() => window.FARM.thumb());
+    await p11.mouse.up();
+    const after = await ev11(() => window.FARM.thumb());
+    return { down, moved, after, hit, at: s0, onWorld: hit === 'CANVAS' };
+  };
+
+  // ---- TAP TO GO REACHES EVERYTHING -------------------------------------
+  chk('a tap on the WELL walks her to it and stops her outside it, not in it',
+    await (async () => {
+      await ev11(() => window.FARM.moveKidTo(-13, 4));
+      const w = await ev11(() => window.FARM.wellAt());
+      const t = await ev11(([x, z]) => window.FARM.tapAt(x, z), [w.x, w.z]);
+      const r = await tick11(4000);
+      const d = Math.hypot(r.x - w.x, r.z - w.z);
+      const solid = await ev11(([x, z]) => window.FARM.blockedAt(x, z, 0.45), [r.x, r.z]);
+      return t.what === 'well' && d < 2.8 && solid === false;
+    })());
+  chk('a tap on the BARN walks her to the DOORS, close enough that the shop opens',
+    await (async () => {
+      await ev11(() => window.FARM.moveKidTo(-13, 4));
+      const L = await ev11(() => window.FARM.layout());
+      const t = await ev11(([x, z]) => window.FARM.tapAt(x, z), [L.barnDoor.x, L.barnDoor.z - 2.6]);
+      const r = await tick11(4000);
+      return t.what === 'barn' &&
+             Math.hypot(r.x - L.barnDoor.x, r.z - L.barnDoor.z) < L.barnR;
+    })());
+  chk('a tap on the SIDE of the mill still means the mill — a 6-unit building is not a hen-sized target',
+    await (async () => {
+      const m = (await ev11(() => window.FARM.animals())).find(a => a.kind === 'mill');
+      if (!m) return false;
+      await ev11(() => window.FARM.moveKidTo(-13, 4));
+      const t = await ev11(([x, z]) => window.FARM.tapAt(x, z), [m.x + 2.6, m.z]);
+      return t.what === 'machine';
+    })());
+  chk('and she stops OUTSIDE the mill pad, but inside feeding range, so the feed still fires on arrival',
+    await (async () => {
+      const m = (await ev11(() => window.FARM.animals())).find(a => a.kind === 'mill');
+      if (!m) return false;
+      await ev11(() => window.FARM.moveKidTo(-13, 4));
+      await ev11(([x, z]) => window.FARM.tapAt(x, z), [m.x, m.z]);
+      const r = await tick11(6000);
+      const d = Math.hypot(r.x - m.x, r.z - m.z);
+      const solid = await ev11(([x, z]) => window.FARM.blockedAt(x, z, 0.45), [r.x, r.z]);
+      return d < 2.9 && d > 2.4 && solid === false;
+    })());
+
+  // ---- THE STICK COMES TO HER THUMB -------------------------------------
+  // the who-is-this card lets itself up a few seconds in and it covers the very
+  // middle of the screen, which is where a thumb goes
+  await ev11(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
+  let why = '';
+  const T = (f) => (why = 'landed on ' + f.hit + ' at ' + JSON.stringify(f.at) +
+                    ' -> ' + JSON.stringify(f.moved));
+  chk('a thumb put down in the MIDDLE of the farm and slid becomes the stick, centred where she put it',
+    await (async () => {
+      const f = await finger(195, 430, 0, -70); T(f);
+      return f.onWorld && f.down.on === false &&    // a finger resting is not yet a stick
+             f.moved.on === true && f.moved.shown === true &&
+             Math.abs(f.moved.cx - f.at.x) < 2 && Math.abs(f.moved.cy - f.at.y) < 2 &&
+             f.moved.y < -0.5 && Math.abs(f.moved.x) < 0.2;   // up the screen is forward
+    })(), why);
+  chk('she lifts her thumb and the stick goes away, and she stops dead',
+    await (async () => {
+      const f = await finger(195, 430, 45, 40); T(f);
+      return f.onWorld && f.moved.on === true &&
+             f.after.on === false && f.after.shown === false &&
+             f.after.x === 0 && f.after.y === 0;
+    })(), why);
+  chk('LEFT OR RIGHT HANDED — the far right of the screen works exactly like the far left',
+    await (async () => {
+      const R = await finger(330, 500, 0, -60);
+      const L = await finger(60, 500, 0, -60);
+      why = 'right ' + JSON.stringify(R.at) + ' on ' + R.hit + ' -> ' + R.moved.y +
+            ' | left ' + JSON.stringify(L.at) + ' on ' + L.hit + ' -> ' + L.moved.y;
+      return R.onWorld && L.onWorld && R.moved.on === true && L.moved.on === true &&
+             Math.abs(R.moved.y - L.moved.y) < 0.02 &&
+             Math.abs(R.moved.cx - R.at.x) < 2 && Math.abs(L.moved.cx - L.at.x) < 2;
+    })(), why);
+  chk('it is the SAME stick: 130px across, so the feel of the old corner pad is not lost',
+    await (async () => {
+      const r = (await ev11(() => window.FARM.thumb())).r;
+      const f = await finger(195, 430, 0, -r); T(f);        // slid exactly one radius
+      return r === 53 && f.onWorld && f.moved.y <= -0.999;  // pinned at full tilt
+    })(), why);
+  chk('a TAP is still a tap — a finger that barely moves never turns into a stick',
+    await (async () => {
+      await ev11(() => window.FARM.moveKidTo(-13, 4));
+      const f = await finger(195, 430, 3, 3); T(f);         // 4px, under the 10px line
+      return f.onWorld && f.moved.on === false && f.after.on === false;
+    })(), why);
+  chk('STEERING ALWAYS WINS — a thumb put down mid-journey drops the walk on the spot',
+    await (async () => {
+      await ev11(() => window.FARM.moveKidTo(-20, -20));
+      await ev11(() => window.FARM.tapAt(10, 10));
+      const going = await ev11(() => window.FARM.walkingTo());
+      const f = await finger(195, 430, 0, -60); T(f);
+      const stopped = await ev11(() => window.FARM.walkingTo());
+      return !!going && f.onWorld && f.moved.on === true && stopped === null;
+    })(), why);
+  chk('the corner pad is STILL THERE and still works, faint, for a child who learned it',
+    await (async () => {
+      const box = await ev11(() => {
+        const el = document.getElementById('stick');
+        const r = el.getBoundingClientRect();
+        return { w: Math.round(r.width), live: el.classList.contains('live'),
+                 cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+      });
+      const on = await hitAt(box.cx, box.cy);
+      await p11.mouse.move(box.cx, box.cy);
+      await p11.mouse.down();
+      await p11.mouse.move(box.cx, box.cy - 40);
+      const v = await ev11(() => window.FARM.thumb());
+      const live = await ev11(() => document.getElementById('stick').classList.contains('live'));
+      await p11.mouse.up();
+      const off = await ev11(() => window.FARM.thumb());
+      why = 'pad ' + box.w + 'px, finger landed on ' + on + ', vec ' + v.x + ',' + v.y;
+      // the corner pad drives stickVec, and the FLOATING one never appeared
+      return box.w === 130 && box.live === false && on === 'DIV#stick' && live === true &&
+             v.y < -0.5 && v.on === false && off.x === 0 && off.y === 0;
+    })(), why);
+
+  // ---- ARRIVING DOES THE THING, AND DOES IT ONCE -------------------------
+  // The real loop, in real time, and no walkTick: the harvest and the feed are
+  // proximity checks in step(), and the whole point of FM11 is that arriving by
+  // TAP fires exactly the code arriving on foot already fired. A second copy of
+  // either would show up here as a double.
+  // Stand her a short walk away and INSIDE the same fence, so this is a test of
+  // what arriving does and not a test of how fast a software rasteriser can get
+  // her through a gate.
+  const startNear = (tx, tz, gap) => ev11(([x, z, d]) => {
+    const areas = window.FARM.areas();
+    const A = areas.find(a => Math.abs(x - a.cx) < a.halfX && Math.abs(z - a.cz) < a.halfZ);
+    for (let k = 0; k < 48; k++) {
+      const ang = (k / 48) * Math.PI * 2;
+      const px = x + Math.cos(ang) * d, pz = z + Math.sin(ang) * d;
+      const same = A
+        ? (Math.abs(px - A.cx) < A.halfX - 0.9 && Math.abs(pz - A.cz) < A.halfZ - 0.9)
+        : !areas.some(a => Math.abs(px - a.cx) < a.halfX && Math.abs(pz - a.cz) < a.halfZ);
+      if (same && !window.FARM.blockedAt(px, pz, 0.6)) {
+        window.FARM.moveKidTo(px, pz);
+        return { x: +px.toFixed(2), z: +pz.toFixed(2), area: A ? A.side || 'field' : 'open' };
+      }
+    }
+    window.FARM.moveKidTo(x, z - d);
+    return null;
+  }, [tx, tz, gap]);
+
+  let harvestWhy = '';
+  chk('a tap on a ready crop walks her over and harvests it — ONCE, not twice',
+    await (async () => {
+      await ev11(() => { window.FARM.plant(0, 'corn'); window.FARM.advanceTime(120); });
+      await p11.waitForFunction(() => window.FARM.patches()[0].state === 'ready', null,
+        { timeout: 20000 }).catch(() => {});
+      const P = (await ev11(() => window.FARM.patches()))[0];
+      const from = await startNear(P.x, P.z, 5.5);
+      const h0 = await ev11(() => window.FARM.stackHeight());
+      await ev11(([x, z]) => window.FARM.tapAt(x, z), [P.x, P.z]);
+      await p11.waitForFunction(h => window.FARM.stackHeight() > h, h0, { timeout: 45000 })
+        .catch(() => {});
+      const h1 = await ev11(() => window.FARM.stackHeight());
+      await p11.waitForTimeout(1500);                 // and she is still standing on it
+      const h2 = await ev11(() => window.FARM.stackHeight());
+      const st = await ev11(() => window.FARM.patches()[0].state);
+      harvestWhy = 'from ' + JSON.stringify(from) + ' h ' + h0 + '->' + h1 + '->' + h2 +
+                   ' patch ' + st;
+      return h1 === h0 + 1 && h2 === h1 && st === 'empty';
+    })(), harvestWhy);
+  let feedWhy = '';
+  chk('a tap on a hungry animal walks her over and the feed fires on arrival, one item only',
+    await (async () => {
+      const A = (await ev11(() => window.FARM.animals()))
+        .find(a => a.kind === 'chicken' && a.wants);
+      if (!A) { feedWhy = 'no hungry hen to feed'; return false; }
+      const from = await startNear(A.x, A.z, 5.5);
+      // ONE corn, not two. The coop holds four hens and she feeds whichever she
+      // walks past, so with a full stack a walk across the pen legitimately
+      // feeds more than one — which tells us nothing about whether arriving
+      // fires the feed once. With a single corn on her head there is exactly
+      // one feed to be had, and a second copy of the code would have to
+      // conjure it from nowhere.
+      // top her up to EXACTLY ONE corn, counting what the harvest check already
+      // left on her head, so there is exactly one feed to be had in the pen
+      const carried = await ev11(w => window.FARM.stack()
+        .filter(s => s.kind === w).length, A.wants);
+      if (carried < 1) await ev11(([w, n]) => window.FARM.giveItem(w, n),
+        [A.wants, 1 - carried]);
+      await p11.waitForTimeout(600);
+      const h0 = await ev11(() => window.FARM.stackHeight());
+      const want0 = await ev11(w => window.FARM.stack()
+        .filter(s => s.kind === w).length, A.wants);
+      await ev11(([x, z]) => window.FARM.tapAt(x, z), [A.x, A.z]);
+      await p11.waitForFunction(h => window.FARM.stackHeight() < h, h0, { timeout: 45000 })
+        .catch(() => {});
+      const h1 = await ev11(() => window.FARM.stackHeight());
+      await p11.waitForTimeout(1200);                  // and she stands there
+      const h2 = await ev11(() => window.FARM.stackHeight());
+      const st = await ev11(() => window.FARM.animals()
+        .filter(a => a.kind === 'chicken').map(a => a.state).join(','));
+      const want2 = await ev11(w => window.FARM.stack()
+        .filter(s => s.kind === w).length, A.wants);
+      feedWhy = 'from ' + JSON.stringify(from) + ' carried ' + carried + ' ' + A.wants +
+                ', stack ' + h0 + '->' + h1 + '->' + h2 +
+                ', ' + A.wants + ' ' + want0 + '->' + want2 + ', hens ' + st;
+      return want0 === 1 && want2 === 0 && h0 - h1 === 1 && h2 === h1 &&
+             /feeding|making|ready/.test(st);
+    })(), feedWhy);
+
+  // ---- THE HOLE SHE TAPPED IS THE HOLE SHE IS STANDING IN ----------------
+  chk('standing ON an empty patch, the seed pop-up still opens the instant she taps it',
+    await (async () => {
+      const i = (await ev11(() => window.FARM.patches())).findIndex(p => p.state === 'empty' && !p.locked);
+      const p = (await ev11(() => window.FARM.patches()))[i];
+      await ev11(([x, z]) => window.FARM.moveKidTo(x, z), [p.x, p.z]);
+      const t = await ev11(([x, z]) => window.FARM.tapAt(x, z), [p.x, p.z]);
+      const up = await ev11(() => window.FARM.cardUp());
+      await ev11(() => window.FARM.closeSeedPicker());
+      return t.what === 'seedCard' && up === true;
+    })());
+  chk('CHANGING HER MIND CANCELS THE PLANTING TOO — steering mid-walk never leaves a pop-up to arrive later',
+    await (async () => {
+      const i = (await ev11(() => window.FARM.patches())).findIndex(p => p.state === 'empty' && !p.locked);
+      const p = (await ev11(() => window.FARM.patches()))[i];
+      await ev11(() => window.FARM.moveKidTo(-16, 8));
+      await ev11(([x, z]) => window.FARM.tapAt(x, z), [p.x, p.z]);
+      await tick11(20);
+      await ev11(() => window.FARM.stick(0, -1));       // she grabs the wheel
+      const stopped = await ev11(() => window.FARM.walkingTo());
+      await ev11(() => window.FARM.stick(0, 0));
+      await tick11(600);
+      const up = await ev11(() => window.FARM.cardUp());
+      return stopped === null && up === false;
+    })());
+
+  chk('nothing in the file still claims a drag-anywhere that was never built',
+    !/drag-anywhere on the world\s*\n?\s*also works/.test(
+      fs.readFileSync(path.join(root, 'skyflyer-farm.html'), 'utf8')));
+  chk('no page errors in the whole FM11 run', e11.length === 0, e11.join(' | '));
+  await p11.close();
 
   console.log('\n--- FM3: THE SHELL CONTRACT ---');
   chk('the shared nav bridge is loaded, so the shell\'s Home button reaches us',
