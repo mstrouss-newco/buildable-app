@@ -594,6 +594,11 @@ try{
 function saveSound(){ try{ localStorage.setItem("bk_minutemath_sound_v1", JSON.stringify({music:S.music, sfx:S.sfx})); }catch(e){} }
 var RUN = null;                 /* the settings the current run is using */
 var probs = [], cur = 0, left = 60, tick = null, started = 0, hideClock = false;
+/* Session MM19 - how far into the deck this run has ever got. Back is allowed
+   to undo ONE card from there and no further: a mis-tap is recoverable, but a
+   kid cannot walk the deck backwards revising, which is not what a timed fact
+   test is. */
+var furthest = 0;
 
 function $(id){ return document.getElementById(id); }
 function show(id){ ["s-setup","s-sheet","s-done","s-scores"].forEach(function(s){
@@ -824,6 +829,7 @@ function makeSet(cfg,n){ var out=[]; for(var i=0;i<n;i++) out.push(makeProblem(c
 function renderSheet(){ setCur(0); }
 function setCur(i){
   cur = Math.max(0, Math.min(probs.length-1, i));
+  if(cur > furthest) furthest = cur;
   var p = probs[cur];
   $("fa").textContent = p.a;
   $("fsign").textContent = SIGN[p.op];
@@ -835,7 +841,9 @@ function setCur(i){
 function paintBoxes(){
   $("fbox").innerHTML = probs[cur].typed + '<span class="caret"></span>';
   var go = $("nextBar"); if(go) go.disabled = probs[cur].typed === "";
-  var bk = document.querySelector('.key.back'); if(bk) bk.disabled = cur === 0;
+  // Only live on the card you are actually up to, so one tap undoes a mis-tap
+  // and a second tap does nothing.
+  var bk = document.querySelector('.key.back'); if(bk) bk.disabled = !(cur > 0 && cur === furthest);
 }
 /* Leaving a card tells you how it went, then moves on. You cannot go back and
    change it, so the score stays honest; you just are not left guessing for a
@@ -849,7 +857,7 @@ function paintBoxes(){
 function key(k){
   var p = probs[cur];
   if(k === "del"){ p.typed = p.typed.slice(0,-1); paintBoxes(); return; }
-  if(k === "back"){ if(cur > 0) setCur(cur-1); return; }
+  if(k === "back"){ if(cur > 0 && cur === furthest) setCur(cur-1); return; }
   if(k === "next"){
     if(p.typed === "") return;        // no skipping: answer it or run the clock out
     sfx("select");
@@ -872,6 +880,7 @@ function startRun(cfg, list){
   RUN = cfg;
   probs = list || makeSet(cfg, cfg.count);
   probs.forEach(function(p){ p.typed=""; });
+  furthest = 0;
   renderSheet();
   $("sheetTitle").textContent = opsLabel(cfg.ops)+", "+cfg.lo+" to "+cfg.hi +
     ((cfg.focus!==null && cfg.focus!==undefined) ? " ("+cfg.focus+"s)" : "");
