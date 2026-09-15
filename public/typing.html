@@ -302,28 +302,49 @@ var $=function(id){return document.getElementById(id);};
 /* ══════════ KEYBOARD MAP ══════════ */
 var FC={p:'#FF6B6B',r:'#F0A020',m:'#2FAE68',i:'#7C5CFC',t:'#9B7BFF'};
 var FNAME={p:'pinky',r:'ring',m:'middle',i:'index',t:'thumb'};
+// Row 0 is the number row and only appears in the lessons that use it — a
+// five year old learning F and J does not need ten more keys on the screen.
+var NUMROW=[['1','p'],['2','r'],['3','m'],['4','i'],['5','i'],['6','i'],['7','i'],['8','m'],['9','r'],['0','p'],['-','p']];
 var ROWS=[
   [['q','p'],['w','r'],['e','m'],['r','i'],['t','i'],['y','i'],['u','i'],['i','m'],['o','r'],['p','p']],
-  [['a','p',1],['s','r',1],['d','m',1],['f','i',1],['g','i'],['h','i'],['j','i',1],['k','m',1],['l','r',1],[';','p',1]],
+  [['a','p',1],['s','r',1],['d','m',1],['f','i',1],['g','i'],['h','i'],['j','i',1],['k','m',1],['l','r',1],[';','p',1],["'",'p']],
   [['z','p'],['x','r'],['c','m'],['v','i'],['b','i'],['n','i'],['m','i'],[',','m'],['.','r'],['/','p']]
 ];
 var SIDE={q:'L',w:'L',e:'L',r:'L',t:'L',a:'L',s:'L',d:'L',f:'L',g:'L',z:'L',x:'L',c:'L',v:'L',b:'L',
-          y:'R',u:'R',i:'R',o:'R',p:'R',h:'R',j:'R',k:'R',l:'R',';':'R',n:'R',m:'R',',':'R','.':'R','/':'R'};
+          y:'R',u:'R',i:'R',o:'R',p:'R',h:'R',j:'R',k:'R',l:'R',';':'R',"'":'R',n:'R',m:'R',',':'R','.':'R','/':'R',
+          '1':'L','2':'L','3':'L','4':'L','5':'L','6':'R','7':'R','8':'R','9':'R','0':'R','-':'R'};
 var FING={},ROWOF={};
 ROWS.forEach(function(row,ri){row.forEach(function(k){FING[k[0]]=k[1];ROWOF[k[0]]=ri;});});
+// the number row reads as "reach up", same as the top row, so it shares row 0
+NUMROW.forEach(function(k){FING[k[0]]=k[1];ROWOF[k[0]]=0;});
 FING[' ']='t';SIDE[' ']='R';ROWOF[' ']=3;
-function fcolor(ch){return FC[FING[ch]]||'#A78BFF';}
+
+// Characters you can only make by holding shift. The letter half is implicit:
+// any capital is its lowercase key plus the OPPOSITE hand's shift.
+var SHIFT_BASE={'?':'/','!':'1','"':"'",':':';'};
+var SHIFT_OF={'/':'?','1':'!',"'":'"',';':':'};
+function baseKey(ch){
+  if(ch>='A'&&ch<='Z')return ch.toLowerCase();
+  return SHIFT_BASE[ch]||ch;
+}
+function needsShift(ch){return baseKey(ch)!==ch;}
+// you hold the shift on the hand that is NOT typing the letter
+function shiftSide(ch){return SIDE[baseKey(ch)]==='L'?'R':'L';}
+function fcolor(ch){return FC[FING[baseKey(ch)]]||'#A78BFF';}
+var SLUG={' ':'space',';':'semi',"'":'apos',',':'comma','.':'dot','/':'slash','-':'dash'};
+function slug(ch){return SLUG[ch]||ch;}
 
 /* ══════════ THE COURSE ══════════ */
 /* Unit 1 mirrors typing.com's Starting Out, key for key. */
 var HOME='asdfjkl;';
 var UNITS=[
  {id:'u1',name:'Starting Out',sub:'Home keys',ready:true},
- {id:'u2',name:'Reaching Out',sub:'Top and bottom rows',ready:false},
- {id:'u3',name:'The Home Stretch',sub:'The last keys',ready:false},
- {id:'u4',name:'Level Up',sub:'Capitals, numbers, symbols',ready:false}
+ {id:'u2',name:'Reaching Out',sub:'Top and bottom rows',ready:true},
+ {id:'u3',name:'The Home Stretch',sub:'The last keys',ready:true},
+ {id:'u4',name:'Level Up',sub:'Capitals, numbers, symbols',ready:true}
 ];
 var LESSONS=[
+/* ── Unit 1 · Starting Out ── */
 {id:'L1',unit:'u1',title:'Say hello to the keyboard',sub:'Find the two bumps',newKeys:['f','j'],target:8,
  steps:[
   {t:'meet',key:'f'},{t:'meet',key:'j'},
@@ -344,7 +365,7 @@ var LESSONS=[
  steps:[
   {t:'meet',key:'d'},{t:'meet',key:'e'},{t:'meet',key:'i'},
   {t:'type',lab:'Letter groups',lines:['ddd eee iii','ded dkd iki','did did fed fed','rid rid die die']},
-  {t:'type',lab:'Real words',lines:['red fed did rid','ride rude jerk fire','deer feed kid irk','fried drier fever']},
+  {t:'type',lab:'Real words',lines:['red fed did rid','ride rude jerk fire','deer feed kid irk','fried drier defer']},
   {t:'type',lab:'A whole sentence',lines:['i fed red deer','did i ride','fred fed deer']}
  ]},
 {id:'L5',unit:'u1',title:'C, G and N',sub:'The bottom row joins in',newKeys:['c','g','n'],target:13,
@@ -352,19 +373,119 @@ var LESSONS=[
   {t:'meet',key:'c'},{t:'meet',key:'g'},{t:'meet',key:'n'},
   {t:'type',lab:'Letter groups',lines:['ccc ggg nnn','dcd fgf jnj','cud cig gun gnu','nice nice dice dice']},
   {t:'type',lab:'Real words',lines:['run fun ice nice','find kind grin drink','duck junk cider guide','finger dinner ginger']},
-  {t:'type',lab:'A whole sentence',lines:['i find nine ducks','nine kind kids ride','fred fed nine deer']}
+  {t:'type',lab:'A whole sentence',lines:['i find nine deer','red ice in june','fred fed nine deer']}
  ]},
 {id:'L6',unit:'u1',title:'Unit 1 challenge',sub:'Everything you know',newKeys:[],target:15,
  steps:[
   {t:'type',lab:'Warm up',lines:['fj dk ru ie cn gj','fur ice red gun kid fun']},
   {t:'type',lab:'Words',lines:['ride nice find drink','guide finger duck junk','cider dinner reindeer']},
-  {t:'type',lab:'Sentences',lines:['i find nine red ducks','kind kids ride junk','fred fed nine deer in june']}
+  {t:'type',lab:'Sentences',lines:['i find nine red deer','nice red cider in june','fred fed nine deer in june']}
+ ]},
+
+/* ── Unit 2 · Reaching Out ── */
+{id:'L7',unit:'u2',title:'T, S and L',sub:'Two home keys and a stretch',newKeys:['t','s','l'],target:14,
+ steps:[
+  {t:'meet',key:'t'},{t:'meet',key:'s'},{t:'meet',key:'l'},
+  {t:'type',lab:'Letter groups',lines:['ttt sss lll','ftf dsd klk','set set let let','list list rust rust']},
+  {t:'type',lab:'Real words',lines:['set let list rust','still tells fluid','silent ticket kettle','listen first result']},
+  {t:'type',lab:'A whole sentence',lines:['let us find it','ten tickets left','listen first']}
+ ]},
+{id:'L8',unit:'u2',title:'O, B and A',sub:'The last home key',newKeys:['o','b','a'],target:15,
+ steps:[
+  {t:'meet',key:'o'},{t:'meet',key:'b'},{t:'meet',key:'a'},
+  {t:'type',lab:'Letter groups',lines:['ooo bbb aaa','lol fbf asa','boat boat also also','able able cable cable']},
+  {t:'type',lab:'Real words',lines:['boat also able cable','about tables border','classic blanket sailor','locate rabbit island']},
+  {t:'type',lab:'A whole sentence',lines:['a big boat','take a look at it','i can see a red balloon']}
+ ]},
+{id:'L9',unit:'u2',title:'V, H and M',sub:'The last of the bottom row',newKeys:['v','h','m'],target:16,
+ steps:[
+  {t:'meet',key:'v'},{t:'meet',key:'h'},{t:'meet',key:'m'},
+  {t:'type',lab:'Letter groups',lines:['vvv hhh mmm','fvf jhj jmj','have have home home','move move them them']},
+  {t:'type',lab:'Real words',lines:['have home move them','mother vehicle himself','movie shelves mammoth','beehive machine harvest']},
+  {t:'type',lab:'A whole sentence',lines:['the movie is over','have them come home','she has a mother hen']}
+ ]},
+{id:'L10',unit:'u2',title:'Full stop and comma',sub:'Where a sentence breathes',newKeys:['.',','],target:16,
+ steps:[
+  {t:'meet',key:'.'},{t:'meet',key:','},
+  {t:'type',lab:'Letter groups',lines:['l.l k,k l.l k,k','end. end. halt, halt,','one, five, ten.','it is. it is, it is.']},
+  {t:'type',lab:'Real words',lines:['first, second, third.','red, blue, and green.','come here, sit, and stand.']},
+  {t:'type',lab:'A whole sentence',lines:['i like cats, dogs, and fish.','the boat is here, and it is big.','come, look, and listen.']}
+ ]},
+{id:'L11',unit:'u2',title:'Unit 2 challenge',sub:'Most of the keyboard now',newKeys:[],target:18,
+ steps:[
+  {t:'type',lab:'Warm up',lines:['asdf jkl fj dk sl am','tob ahm vhm lst']},
+  {t:'type',lab:'Words',lines:['about tables mother','machine blanket silent','island vehicle mistake']},
+  {t:'type',lab:'Sentences',lines:['the cat sat on a mat.','i can hold ten tiles.','she takes the boat home, and then she rests.']}
+ ]},
+
+/* ── Unit 3 · The Home Stretch ── */
+{id:'L12',unit:'u3',title:'W, X and the semicolon',sub:'Three awkward ones',newKeys:['w','x',';'],target:18,
+ steps:[
+  {t:'meet',key:'w'},{t:'meet',key:'x'},{t:'meet',key:';'},
+  {t:'type',lab:'Letter groups',lines:['www xxx ;;;','sws sxs l;l','wax wax mix mix','week; week; work; work;']},
+  {t:'type',lab:'Real words',lines:['wax mix week work','window wonder exact','flowers boxes showed','sixteen towards awkward']},
+  {t:'type',lab:'A whole sentence',lines:['we went with them.','the window was wide.','mix the wax; it works.']}
+ ]},
+{id:'L13',unit:'u3',title:'Q, Y and P',sub:'The far corners',newKeys:['q','y','p'],target:19,
+ steps:[
+  {t:'meet',key:'q'},{t:'meet',key:'y'},{t:'meet',key:'p'},
+  {t:'type',lab:'Letter groups',lines:['qqq yyy ppp','aqa jyj ;p;','quiet quiet happy happy','people people quickly quickly']},
+  {t:'type',lab:'Real words',lines:['quiet happy people quickly','puppy yellow question','played typing pyramid','property equally company']},
+  {t:'type',lab:'A whole sentence',lines:['the puppy is happy.','i can type quickly.','people play every day.']}
+ ]},
+{id:'L14',unit:'u3',title:'Z and the apostrophe',sub:'The last two',newKeys:['z',"'"],target:20,
+ steps:[
+  {t:'meet',key:'z'},{t:'meet',key:"'"},
+  {t:'type',lab:'Letter groups',lines:["zzz '''","aza ;';","zoo zoo it's it's","size size don't don't"]},
+  {t:'type',lab:'Real words',lines:["zoo size zebra puzzle","it's don't can't we're","amazing dozens buzzing","i'm you're they're won't"]},
+  {t:'type',lab:'A whole sentence',lines:["the zebra is amazing.","don't lose the puzzle.","it's a lazy day, and i'm happy."]}
+ ]},
+{id:'L15',unit:'u3',title:'Unit 3 challenge',sub:'Every letter on the board',newKeys:[],target:22,
+ steps:[
+  {t:'type',lab:'Warm up',lines:["qwe rty uio p","zxc vbn m,.","asdf jkl; a; sl dk fj"]},
+  {t:'type',lab:'Every letter, twice',lines:['the quick brown fox jumps over the lazy dog.','pack my box with five dozen jugs.']},
+  {t:'type',lab:'Sentences',lines:["we don't know why it's so quiet.","the jazz band played six songs.","my dog naps by the warm oven."]}
+ ]},
+
+/* ── Unit 4 · Level Up ── */
+{id:'L16',unit:'u4',title:'Capital letters',sub:'Hold shift with the other hand',newKeys:[],target:20,shift:true,
+ steps:[
+  {t:'meet',key:'A'},{t:'meet',key:'L'},
+  {t:'type',lab:'One capital at a time',lines:['Aa Ss Dd Ff','Jj Kk Ll Pp','Qq Ww Ee Rr','Zz Xx Cc Vv']},
+  {t:'type',lab:'Names',lines:['Monday Tuesday Friday','London Paris Tokyo','Sam Mia Jack Ruby']},
+  {t:'type',lab:'A whole sentence',lines:['My name is Sam.','We went to New York.','The Nile is a long river.']}
+ ]},
+{id:'L17',unit:'u4',title:'The number row',sub:'Reach up past the letters',newKeys:['1','2','3','4','5','6','7','8','9','0'],target:18,
+ steps:[
+  {t:'meet',key:'4'},{t:'meet',key:'7'},
+  {t:'type',lab:'Letter groups',lines:['111 222 333','444 555 666','777 888 999 000','a1a s2s d3d f4f','j7j k8k l9l ;0;']},
+  {t:'type',lab:'Numbers in words',lines:['i am 8 years old.','call 911.','2 dogs and 3 cats.']},
+  {t:'type',lab:'A whole sentence',lines:['i have 5 red and 4 blue.','there are 60 minutes in 1 hour.','my house is number 27.']}
+ ]},
+{id:'L18',unit:'u4',title:'Question mark and more',sub:'? ! and the hyphen',newKeys:['?','!','-'],target:18,
+ steps:[
+  {t:'meet',key:'?'},{t:'meet',key:'!'},{t:'meet',key:'-'},
+  {t:'type',lab:'Letter groups',lines:['??? !!! ---','how? why? wow!','stop! wait! go!','well-known part-time']},
+  {t:'type',lab:'Asking and telling',lines:['are you ok?','that is great!','what time is it?']},
+  {t:'type',lab:'A whole sentence',lines:['Where did my well-known dog go?','Wow! That was so fast!','Can you help me, please?']}
+ ]},
+{id:'L19',unit:'u4',title:'Unit 4 challenge',sub:'The whole keyboard',newKeys:[],target:22,
+ steps:[
+  {t:'type',lab:'Warm up',lines:['Aa Bb Cc 1 2 3','?! -- Xx Yy Zz']},
+  {t:'type',lab:'Mixed',lines:['Can I have 2 apples?','Wow! That is 100 miles!',"Let's go to New York on May 5."]},
+  {t:'type',lab:'The whole thing',lines:['The quick brown fox jumps over 2 lazy dogs!',"I'm 9 years old, and my best friend is 10."]}
  ]}
 ];
 /* every key a lesson is allowed to use, cumulative */
 (function(){var pool=['f','j',' '];LESSONS.forEach(function(L){
   L.newKeys.forEach(function(k){if(pool.indexOf(k)<0)pool.push(k);});
-  L.pool=pool.slice();});})();
+  var p=pool.slice();
+  function add(ch){var b=baseKey(ch);if(p.indexOf(b)<0)p.push(b);}
+  L.steps.forEach(function(st){
+    if(st.t==='meet')add(st.key);
+    else st.lines.forEach(function(ln){for(var i=0;i<ln.length;i++)add(ln[i]);});
+  });
+  L.pool=p;});})();
 
 /* ══════════ SAVE ══════════ */
 var KEYP='bk_typing_v1';
@@ -409,28 +530,45 @@ window.addEventListener('resize',fit);
 
 /* ══════════ KEYBOARD RENDER ══════════ */
 function buildKb(pool){
-  var h='';
-  ROWS.forEach(function(row){
-    h+='<div class="krow">';
-    row.forEach(function(kd){
+  var h='',showNums=!pool||pool.some(function(c){return c>='0'&&c<='9';});
+  function row(cells){
+    var r='<div class="krow">';
+    cells.forEach(function(kd){
       var k=kd[0],home=kd[2];
       var known=!pool||pool.indexOf(k)>=0;
-      h+='<button class="key'+(home?' home':'')+(known?'':' dim')+'" data-k="'+k+'" id="key-'+(k===';'?'semi':k)+'">'+k.toUpperCase()+'</button>';
+      r+='<button class="key'+(home?' home':'')+(known?'':' dim')+'" data-k="'+k+'" id="key-'+slug(k)+'">'+k.toUpperCase()+'</button>';
     });
-    h+='</div>';
-  });
-  h+='<div class="krow"><span class="key w15" style="opacity:.3;cursor:default">shift</span>'+
+    return r+'</div>';
+  }
+  if(showNums)h+=row(NUMROW);
+  ROWS.forEach(function(r){h+=row(r);});
+  // shift is a real key now: tap it on a tablet, or hold it on a keyboard
+  h+='<div class="krow">'+
+     '<button class="key w15" data-k="ShiftL" id="key-shiftL">shift</button>'+
      '<button class="key space" data-k=" " id="key-space"></button>'+
-     '<span class="key w15" style="opacity:.3;cursor:default">shift</span></div>';
+     '<button class="key w15" data-k="ShiftR" id="key-shiftR">shift</button></div>';
   $('kb').innerHTML=h;
+  shiftHeld=false;
 }
-function keyEl(ch){return $('key-'+(ch===' '?'space':ch===';'?'semi':ch));}
+function keyEl(ch){return $('key-'+slug(ch));}
 function clearTarget(){var els=$('kb').querySelectorAll('.key.tgt');
   for(var i=0;i<els.length;i++){els[i].classList.remove('tgt');els[i].style.background='';els[i].style.boxShadow='';els[i].style.color='';}}
-function setTarget(ch){clearTarget();var e=keyEl(ch);if(!e)return;
-  var c=fcolor(ch);e.classList.add('tgt');e.style.background=c;e.style.boxShadow='0 6px 20px '+c+'99';e.style.color='#fff';
-  drawHands(SIDE[ch],FING[ch]);
-  $('handlab').textContent=(SIDE[ch]==='L'?'left ':'right ')+FNAME[FING[ch]];}
+function lightKey(el,c){if(!el)return;el.classList.add('tgt');el.style.background=c;
+  el.style.boxShadow='0 6px 20px '+c+'99';el.style.color='#fff';}
+function setTarget(ch){
+  clearTarget();
+  var b=baseKey(ch),c=fcolor(ch),hands={},lab='';
+  lightKey(keyEl(b),c);
+  hands[SIDE[b]]=FING[b];
+  lab=(SIDE[b]==='L'?'left ':'right ')+FNAME[FING[b]];
+  if(needsShift(ch)){
+    var ss=shiftSide(ch);
+    lightKey($('key-shift'+ss),FC.p);
+    hands[ss]='p';
+    lab=(ss==='L'?'left ':'right ')+'shift + '+lab;
+  }
+  drawHands(hands);
+  $('handlab').textContent=lab;}
 
 /* ══════════ HANDS ══════════ */
 function handSvg(isLeft,active){
@@ -447,8 +585,10 @@ function handSvg(isLeft,active){
   f+='<rect x="18" y="110" width="170" height="58" rx="26" fill="#EDE4D1" stroke="#D2C6AE" stroke-width="2"/>';
   return '<svg width="204" height="180" viewBox="0 0 204 180">'+f+'</svg>';
 }
-function drawHands(side,fing){
-  $('hands').innerHTML=handSvg(true,side==='L'?fing:null)+handSvg(false,side==='R'?fing:null);
+// takes {L:'i'} or, for a capital, {L:'m',R:'p'} — both hands can be busy now
+function drawHands(hands){
+  hands=hands||{};
+  $('hands').innerHTML=handSvg(true,hands.L||null)+handSvg(false,hands.R||null);
 }
 
 /* ══════════ HOME SCREEN ══════════ */
@@ -591,12 +731,22 @@ function runStep(){
   if(st.t==='meet'){
     mode='meet';
     $('meetBox').style.display='';$('train').style.display='none';
-    var k=st.key,row=ROWOF[k],s=SIDE[k]==='L'?'left':'right';
-    var where=row===1?'is right under your '+s+' '+FNAME[FING[k]]+' finger:':(row===0?'Move your '+s+' '+FNAME[FING[k]]+' finger up to:':'Move your '+s+' '+FNAME[FING[k]]+' finger down to:');
+    var k=st.key,b=baseKey(k),row=ROWOF[b],s=SIDE[b]==='L'?'left':'right',fn=FNAME[FING[b]];
+    var where,spoken;
+    if(needsShift(k)){
+      var ss=shiftSide(k)==='L'?'left':'right';
+      where='Hold the '+ss+' shift with your '+ss+' pinky, then press:';
+      spoken='Hold the '+ss+' shift, then press '+(k>='A'&&k<='Z'?'capital '+k:k);
+    }else{
+      where=row===1?'is right under your '+s+' '+fn+' finger:'
+           :(row===0?'Move your '+s+' '+fn+' finger up to:'
+                    :'Move your '+s+' '+fn+' finger down to:');
+      spoken='Press the '+k+' key with your '+s+' '+fn+' finger';
+    }
     $('meetSay').textContent=where;
-    $('meetBig').innerHTML='Press the <span class="keychip" style="background:'+fcolor(k)+'">'+k.toUpperCase()+'</span> key';
+    $('meetBig').innerHTML='Press the <span class="keychip" style="background:'+fcolor(k)+'">'+(k===' '?'space':k)+'</span> key';
     setTarget(k);
-    say('Press the '+k+' key with your '+s+' '+FNAME[FING[k]]+' finger');
+    say(spoken);
   }else{
     mode='type';
     $('meetBox').style.display='none';$('train').style.display='';
@@ -623,7 +773,7 @@ function flashBad(){
 function press(ch){
   if(!screens.lesson.classList.contains('on'))return;
   if($('ovlPause').classList.contains('on'))return;
-  var e=keyEl(ch);if(e){e.classList.add('press');setTimeout(function(){e.classList.remove('press');},90);}
+  var e=keyEl(baseKey(ch));if(e){e.classList.add('press');setTimeout(function(){e.classList.remove('press');},90);}
   if(mode==='meet'){
     if(ch===L.steps[stepI].key){blip(4);stepI++;lineI=0;runStep();}else{bzz();}
     return;
@@ -648,10 +798,31 @@ document.addEventListener('keydown',function(ev){
   if(ev.metaKey||ev.ctrlKey||ev.altKey)return;
   var k=ev.key;
   if(k==='Escape'){togglePause();ev.preventDefault();return;}
+  if(k==='Shift')return;                       // holding shift is not a mistake
   if(k===' '){ev.preventDefault();press(' ');return;}
-  if(k.length===1){var c=k.toLowerCase();if(FING[c]!==undefined){ev.preventDefault();press(c);}}
+  // the raw key, case kept, so a capital A is not quietly turned into an a
+  if(k.length===1&&FING[baseKey(k)]!==undefined){ev.preventDefault();press(k);}
 });
-$('kb').addEventListener('click',function(e){var b=e.target.closest('[data-k]');if(!b)return;press(b.dataset.k);});
+
+/* On a tablet there is no shift to hold, so tapping it latches for one key. */
+var shiftHeld=false;
+function paintShift(){
+  ['L','R'].forEach(function(sd){
+    var el=$('key-shift'+sd);if(!el)return;
+    el.style.outline=shiftHeld?'2px solid '+FC.p:'';
+    el.style.outlineOffset=shiftHeld?'1px':'';
+  });
+}
+$('kb').addEventListener('click',function(e){
+  var b=e.target.closest('[data-k]');if(!b)return;
+  var k=b.dataset.k;
+  if(k==='ShiftL'||k==='ShiftR'){shiftHeld=!shiftHeld;paintShift();return;}
+  if(shiftHeld){
+    k=(k>='a'&&k<='z')?k.toUpperCase():(SHIFT_OF[k]||k);
+    shiftHeld=false;paintShift();
+  }
+  press(k);
+});
 
 function togglePause(){$('ovlPause').classList.toggle('on');}
 $('btnResume').addEventListener('click',function(){$('ovlPause').classList.remove('on');});
@@ -718,7 +889,7 @@ $('cardTest').addEventListener('click',function(){openPractice('test');});
 $('cardMiss').addEventListener('click',function(){openPractice('miss');});
 
 /* ══════════ BOOT ══════════ */
-buildKb(null);drawHands(null,null);paintSpeak();paintHome();fit();
+buildKb(null);drawHands({});paintSpeak();paintHome();fit();
 setTimeout(fit,400);
 })();
 </script>
