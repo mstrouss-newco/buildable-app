@@ -357,7 +357,7 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
     try {
       await sendEmailCode(email.trim());
       setEmailStage("code");
-      setNotice("We sent a 6-digit code to " + email.trim() + ". It expires in about an hour.");
+      setNotice("We sent a code to " + email.trim() + ". It expires in about an hour.");
     } catch (err) {
       const m = (err && err.message) || "Could not send the code";
       setError(/rate limit/i.test(m)
@@ -594,23 +594,28 @@ export default function GrownUpScreen({ onBack, onProfileChosen, onOpenFriends, 
                   {busy ? "Sending…" : "Email me a code"}
                 </button>
                 <p style={S.fineprint}>
-                  No password. We email you a 6-digit code and you type it in. Your
-                  email is what lets you see your kids' progress from any device.
+                  No password. We email you a code and you type it in. Your email is
+                  what lets you see your kids' progress from any device.
                 </p>
               </form>
             ) : (
               <form onSubmit={handleVerifyCode} style={S.form}>
-                <label style={S.label}>6-digit code
+                {/* SY1 fix: the code is NOT always six digits. This project issues
+                    EIGHT, which a maxLength of 6 silently truncated, so the box
+                    would not accept the code that had just been emailed. Caught
+                    by sending a real one and reading the actual email rather
+                    than trusting the docs' example. Accepts 4 to 10 now. */}
+                <label style={S.label}>Your code
                   <input className="bk-light" style={{ ...S.input, letterSpacing: "0.35em",
                         fontSize: 22, textAlign: "center" }}
                     type="text" inputMode="numeric" autoComplete="one-time-code"
-                    required maxLength={6} value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                    placeholder="000000" />
+                    required maxLength={10} value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="Code from your email" />
                 </label>
                 {error && <p style={S.error}>{error}</p>}
                 {notice && <p style={S.noticeBox}>{notice}</p>}
-                <button type="submit" style={S.primaryBig} disabled={busy || code.length < 6}>
+                <button type="submit" style={S.primaryBig} disabled={busy || code.length < 4}>
                   {busy ? "Checking…" : "Sign in"}
                 </button>
                 <button type="button" style={S.linkBtn} disabled={busy}

@@ -203,10 +203,15 @@ export async function signInParent(email, password) {
    Mike's wife's sign-ins during onboarding. A code is typed into the page the
    grown-up is already looking at, so no redirect is involved at all.
 
-   DEPENDS ON ONE DASHBOARD SETTING: Supabase decides link-vs-code purely by
-   what the Magic Link email template contains. With {{ .ConfirmationURL }} it
-   sends a link; with {{ .Token }} it sends the six digits. If codes ever stop
-   arriving and a link shows up instead, that template is what changed. */
+   DEPENDS ON ONE DASHBOARD SETTING, now done: Supabase decides link-vs-code
+   purely by what the Magic Link email template contains. With
+   {{ .ConfirmationURL }} it sends a link; with {{ .Token }} it sends a code.
+   That template was switched to {{ .Token }} on 2026-09-14. If codes ever stop
+   arriving and a link shows up instead, that template is what changed.
+
+   THE CODE IS NOT SIX DIGITS. Every example in the docs says six; this project
+   actually issues EIGHT (verified by sending one and reading the email). Do not
+   hard-code a length anywhere in the UI. */
 export async function sendEmailCode(email) {
   await authFetch("otp", {
     method: "POST",
