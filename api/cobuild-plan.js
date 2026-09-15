@@ -235,9 +235,15 @@ async function buildPlan(text, answers, who) {
   // Layer three is CB5. Until then, an idea nothing matches head-on is answered by
   // NAMING the game being built, with the child's own star in it. CB7: no apology,
   // no "not yet" — a child is told what they are getting, with excitement.
+  // CB5 — LAYER THREE IS REAL NOW. An idea no engine's own words match is not
+  // answered with the nearest thing any more: `forge` tells the studio it may ask
+  // /api/cobuild-forge to write a brand new cartridge, and `said` is what a child
+  // hears while that happens. The nearest engine still rides along, because it is
+  // what a child plays while they wait and what they get if the forge cannot
+  // finish. Nothing here decides: the studio asks, the gate answers.
   const layerThree = best.score === 0
-    ? { what: clean(text, 200), nearest: best.engine,
-        said: "I am making you a " + best.label + " game — " + best.about + " — with " + star.toLowerCase() + " right in the middle of it." }
+    ? { what: clean(text, 200), nearest: best.engine, nearestLabel: best.label, forge: true,
+        said: "Nobody has made this one before, so I am going to write it from scratch, with " + star.toLowerCase() + " right in the middle of it." }
     : null;
 
   return { ok: true, plan: {

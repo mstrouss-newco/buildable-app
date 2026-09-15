@@ -2,6 +2,10 @@
   "functions": {
     "api/*.js": {
       "maxDuration": 300
+    },
+    "api/cobuild-forge.js": {
+      "maxDuration": 300,
+      "includeFiles": "{BUILDING-A-GAME,CARTRIDGE-CONTRACT,GAME-FEEL,HUD-AND-NAV-RULES,MECHANICS}.md"
     }
   },
   "routes": [
@@ -1048,6 +1052,22 @@
       "headers": {
         "cache-control": "public, max-age=3600, stale-while-revalidate=604800"
       }
+    },
+    {
+      "src": "/studio-forge.html",
+      "dest": "/studio-forge.html"
+    },
+    {
+      "src": "/studio/forge-review",
+      "dest": "/studio-forge.html"
+    },
+    {
+      "src": "/studio/forge/([A-Za-z0-9][A-Za-z0-9-]{1,63})",
+      "dest": "/studio.html"
+    },
+    {
+      "src": "/forge/([A-Za-z0-9][A-Za-z0-9-]{1,63})",
+      "dest": "/api/forge?id=$1"
     },
     {
       "src": "/studio.html",

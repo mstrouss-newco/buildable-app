@@ -1,3 +1,118 @@
+## 2026-09-15 (CB5): layer three — the studio writes a game nobody has built
+
+**Phase CB, card CB5.** New: `api/_forgeSpec.js`, `api/cobuild-forge.js`,
+`api/forge.js`, `public/studio-forge.html`, `scripts/promote-forge.mjs`,
+`qa-forge.mjs`, `db/create-forge-cartridges.sql` (applied). Touched
+`api/cobuild-plan.js`, `public/studio.html`, `public/buildable-manifest.js`,
+`qa/kid-game-robot.mjs`, `CARTRIDGE-CONTRACT.md`, `vercel.json`, `qa-studio.mjs`.
+
+### The promise this card is about
+
+Layer one builds a kid's game out of a game we already ship. Layer two changes it
+by asking. Layer three is the thing underneath both: when a child asks for a
+lemonade stand, or a fishing game, and no engine covers it, the studio WRITES A
+NEW ONE rather than handing them the nearest thing with a new title.
+
+### How a game gets written
+
+The model is handed this repo's own documentation — BUILDING-A-GAME,
+CARTRIDGE-CONTRACT, GAME-FEEL, HUD-AND-NAV-RULES and MECHANICS, in full, the way
+a framework hands a model its rules — plus the child's sentence and a hard shape
+to answer in: one HTML file, its manifest, and its own cobuild sheet. The docs
+live at the repo root and a Vercel function only ships what its code traces, so
+`vercel.json` names them in `includeFiles` for this endpoint, and the forge
+REFUSES to write anything if the cartridge contract could not be read. A game
+written without the rules in front of the model is exactly what this card exists
+to prevent, and that failure would otherwise be silent.
+
+### How it is stopped from reaching a child
+
+Four gates, cheapest first, and every failure comes back as a sentence the model
+can act on, because the next attempt is literally handed the list:
+
+1. **Static** (`api/_forgeSpec.js`): only our eight shared libraries, nothing
+   loaded from outside, no fetch, no storage, no eval, no iframe, no emoji, a
+   120KB cap, and the two hooks the robot needs.
+2. **Strict**: the manifest is validated against the sheet the model wrote for
+   its own game — the same strict validation every kid game goes through.
+3. **The robot PLAYS it.** Not a second robot: `qa/kid-game-robot.mjs` grew an
+   option to be handed a cartridge that is on no disk, and everything after that
+   is the path Breaker takes — manifest becomes GAME_CONFIG, the page's scripts
+   run in the same sandbox, the game is played through the same `sim()` hook.
+4. **Did it talk to the shell?** The sandbox now records every message a game
+   posts while it plays, so "it posts the cartridge contract messages" is
+   PROVEN at runtime rather than grepped for. A game that never says it was won
+   is a game no family could keep, however well it plays.
+
+Three attempts, each told what the last one did wrong. After that the child gets
+a game that works — the nearest engine, built the ordinary way — and the attempt
+lands in the review queue.
+
+### What a child sees
+
+Buddy says plainly that nobody has made this one before and that it will take a
+few minutes, and offers the nearest game we DO have to play while it happens. The
+forged game opens labelled **"Buddy is still learning this one"**, and that label
+is drawn by the shell, so a cartridge cannot pretend it is further along than it
+is. Keep still waits for the family to beat it. Layer three counts as two games
+on the month's meter.
+
+### Where it lives, and the two calls made on the way
+
+**The cartridge is a database row, not a bucket and not the repo.** The card asked
+for Supabase storage; a table is what this repo already reaches for (image_cache
+holds every picture the studio paints), it needs no bucket provisioning and no
+object ACL to get wrong, and it means the file is served ONLY through
+`/api/forge`, where we set the headers: `default-src 'none'`, `connect-src 'none'`
+so the network is dead at the browser level rather than merely refused by a
+static check, and `sandbox="allow-scripts"` on the shell's iframe as well.
+
+**Promotion stages files; it does not write to main.** A serverless function
+cannot write into the repo, and more to the point it should not. So the Promote
+button marks the row and `node scripts/promote-forge.mjs <id>` writes the four
+files (the page, its manifest, its sheet, and a generated `qa-<engine>.mjs` that
+plays it on every QA run) plus the vercel routes, for a person to read like any
+other change. Adding the GAME_CATALOG tile is left to Mike on purpose — which
+tile a new game gets, and whether it ships behind the coming-soon gate, is his
+call. The script prints the line, with the family's name already in it.
+
+### One thing found on the way
+
+A forged manifest fell through to the BREAKER level profile and was told it
+needed bricks and a breaker layout — layer three could not have existed until the
+shared loader had a profile for a game it has never seen. `buildable-manifest.js`
+now has a deliberately loose `forge` profile; what actually fences a forged game
+is the cobuild sheet it had to write for itself.
+
+### What is checked
+
+`qa-forge.mjs`, 80 checks, no keys and no database: a stub model returns a real
+working cartridge and all three of the card's sentences (a lemonade stand, a maze
+with a ghost, a fishing game) forge end to end, the robot finishes every level and
+the win message is captured. Then eleven ways of being wrong are each refused one
+at a time — an outside script, a library we do not ship, fetch, storage, eval, an
+emoji, no play hook, never saying the child won, a manifest that does not fit its
+own sheet, too many levels, a level the robot cannot finish. Plus the retry
+ladder, the CSP, the routes, the studio flow and the promotion rules.
+
+### The scope line I drew, and why
+
+A forged game lives in the studio and at its own `/forge/<id>` link. It does NOT
+appear on the shell's My Games shelf beside engine games, because that shelf is
+`kid_games` and every row there is gated by CB1's engine check against a cobuild
+sheet on disk. Teaching that gate to accept an engine that exists only as a
+database row is a real change to the CB1 contract and belongs in its own card,
+not smuggled into this one. Promotion is the path a forged game takes to become
+an ordinary game, and that path is built and tested.
+
+### Needs Mike
+
+The forge needs `ANTHROPIC_API_KEY` to write anything; with no key the studio
+falls back to layer one and says so, which is a supported state and is tested.
+Nothing here has been run against the real model — the whole path is proven with
+a stub, which is what makes it testable at all, but the first real forge is worth
+watching. `/studio/forge-review` is behind the grown-up code.
+
 ## 2026-09-15 (FM12): the beds, the signs, the pond, and she was walking backwards
 
 **Phase FM, card FM12**, off a screenshot Mike sent of the live farm: "the highlighted

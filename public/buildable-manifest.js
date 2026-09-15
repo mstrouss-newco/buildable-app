@@ -763,7 +763,30 @@
   };
 
   // ---- profile registry -----------------------------------------------------
-  var PROFILES = { breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile, typing: crocProfile, bubble: crocProfile, castleguard: crocProfile, tennis: crocProfile, skyflyer: crocProfile, mathcannon: mathProfile, "paper-route": paperProfile };
+  // CB5 — THE FORGE PROFILE. Layer three writes a game the shared loader has
+  // never seen, and before this a manifest for it fell through to the BREAKER
+  // profile and was told it needed bricks and a breaker layout. A forged game is
+  // not fenced by a profile here: it is fenced by the cobuild sheet the forge
+  // made it write, which strict mode checks for real (see strictCheck). So this
+  // profile is deliberately loose — it keeps the level shape honest and hands
+  // `parts` through untouched, which is exactly what a game nobody has designed
+  // yet needs.
+  var forgeProfile = {
+    validateLevel: function(lv, at, errors){
+      if(lv.parts!=null && (typeof lv.parts!=="object" || Array.isArray(lv.parts))) errors.push(at+" 'parts' must be an object");
+    },
+    toLevel: function(lv){
+      var d = clamp(lv.difficulty,1,5);
+      var parts = lv.parts || {};
+      return { id: lv.id, name: lv.name, difficulty: d, theme: parts.theme || null,
+               coins: (lv.coins!=null ? lv.coins : COIN_BY_DIFF[d]), unlocked: !!lv.unlocked, parts: parts };
+    },
+    toConfig: function(m, levels){
+      return { id:m.id, name:m.name, color:m.color, levels:levels, art:m.art||{}, feel:m.feel||{}, _manifest:m };
+    },
+    resolveAsset: function(){ return null; }    // a forged game reads its own art keys
+  };
+  var PROFILES = { forge: forgeProfile, breaker: breakerProfile, survival: survivalProfile, sling: slingProfile, studio: studioProfile, chess: chessProfile, board: boardProfile, checkers: boardProfile, tictactoe: boardProfile, connectfour: boardProfile, dotsboxes: boardProfile, croc: crocProfile, croctot: crocProfile, "rileys-garden": crocProfile, mahjong: crocProfile, bingo: crocProfile, stringmatch: crocProfile, memory: crocProfile, typing: crocProfile, bubble: crocProfile, castleguard: crocProfile, tennis: crocProfile, skyflyer: crocProfile, mathcannon: mathProfile, "paper-route": paperProfile };
   // Studios always use the studio profile (they have no levelProfile/levels); every
   // other game keys off its id (or an explicit levelProfile), falling back to breaker.
   function profileFor(m){ if(m && m.type==="studio") return studioProfile; var key = m && (m.levelProfile || m.id); return PROFILES[key] || breakerProfile; }

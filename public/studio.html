@@ -209,6 +209,7 @@
   function screenAsk(){
     if(!namesKnown()) return screenNames(screenAsk);
     S.plan=null; S.answers={}; S.game=null; S.beaten=false; S.repainted=false;
+    S.forge=null; S.forging=false; S.said=null;
     titleEl.textContent="Make a game";
     show('<div class="buddy">'+ICON.star+'<div class="bubble" id="say">What is your game about? Say it out loud, or type it.</div></div>'+
       '<div class="row"><input id="idea" type="text" placeholder="A dragon who delivers pizza..." autocomplete="off">'+
@@ -276,13 +277,16 @@
       '<div class="chips" id="chips">'+(p.chips||[]).map(function(c){
         return '<button class="chip" type="button" data-c="'+esc(c.id)+'"><small>'+esc(c.label)+'</small>'+esc(c.value)+'</button>'; }).join("")+'</div>'+
       '<p class="note">Tap anything to change it.</p></div>'+
-      '<button class="btn" id="build">Build my game</button>'+
+      '<button class="btn" id="build">'+(p.layerThree&&p.layerThree.forge?"Make me this new game":"Build my game")+'</button>'+
       '<button class="btn alt" id="back" style="margin-top:10px">Start again</button>'+
       '<div class="err" id="err"></div>');
     Array.prototype.forEach.call(document.querySelectorAll("#chips .chip"), function(c){
       c.onclick=function(){ tapChip(c.getAttribute("data-c")); };
     });
-    on("build", function(){ meterCheck("new").then(function(m){ m.allowed ? buildIt() : screenAskAGrownUp(); }); });
+    on("build", function(){ meterCheck("new").then(function(m){
+      if(!m.allowed) return screenAskAGrownUp();
+      (p.layerThree && p.layerThree.forge) ? forgeIt() : buildIt();
+    }); });
     on("back", screenAsk);
   }
   function tapChip(id){
@@ -417,10 +421,96 @@
           S.game=j.game; S.manifest=j.game.manifest||p.manifest; S.engine=p.engine; S.beaten=false;
           if(j.created) meterCount("new");
           try{ history.replaceState(null,"","/studio/"+j.game.id); }catch(e){}
-          setTimeout(screenPlay, 450);
+          var line=S.said; S.said=null;
+          setTimeout(function(){ screenPlay(line); }, 450);
         });
     }
     paintArt(0);
+  }
+
+  // =========================================================================
+  //  3b. LAYER THREE (CB5) — no engine fits, so Buddy writes a brand new one.
+  //
+  //  Writing a game takes a few minutes, which is forever to a child. So the
+  //  wait is not a spinner: Buddy says plainly that this one has never been made
+  //  before, and offers the nearest game we DO have to play while it happens. If
+  //  the forge cannot produce something the robot can finish, that nearest game
+  //  is what the child ends up with, built the ordinary way — a child is never
+  //  left holding nothing because a machine could not write a game.
+  // =========================================================================
+  function forgeIt(){
+    var p=S.plan, l3=p.layerThree||{}, waited=0;
+    var story=["Reading how our games are made","Writing your game","Checking every level can be finished","Letting the robot play it"];
+    function paint(at, note){
+      show('<div class="buddy">'+ICON.star+'<div class="bubble">Nobody has made this one before, so I am writing it from scratch. It takes a few minutes.</div></div>'+
+        '<h2>Making '+esc(p.manifest.name)+'</h2>'+
+        '<ul class="steps">'+story.map(function(t,i){
+          return '<li class="'+(i<at?"done":(i===at?"now":""))+'">'+(i<at?ICON.tick:ICON.ring)+esc(t)+'</li>'; }).join("")+'</ul>'+
+        (note?'<div class="card"><p class="why">'+esc(note)+'</p></div>':'')+
+        '<button class="btn alt" id="meanwhile">Play '+esc(l3.nearestLabel||"a game")+' while you wait</button>'+
+        '<div class="err" id="err"></div>');
+      on("meanwhile", function(){ S.forging=true; buildIt(); });
+    }
+    paint(0);
+    // The steps move on a clock, not on real progress: the forge is one request
+    // and a child watching a frozen list decides it is broken.
+    var tick=setInterval(function(){ waited++; paint(Math.min(3, Math.floor(waited/12))); }, 5000);
+    post("/api/cobuild-forge", { op:"forge", plan:{ text:p.text, star:p.star, theme:p.theme, manifest:p.manifest },
+      idea:p.text, star:p.star, theme:p.theme, name:p.manifest.name, levels:(p.manifest.levels||[]).length,
+      nearest:l3.nearest||null, familyId:deviceId(), kidId:(activeKid()||{}).id||null,
+      kidName:kidName()||null, grownupName:grownupName()||null })
+      .then(function(j){
+        clearInterval(tick);
+        if(S.forging) return;                      // they went off to play the other one
+        if(j && j.ok && j.forged && j.forge && j.forge.id){
+          // Layer three is two games' worth of work, and the meter says so.
+          meterCount("new"); meterCount("new");
+          S.forge=j.forge; S.beaten=false;
+          try{ history.replaceState(null,"","/studio/forge/"+j.forge.id); }catch(e){}
+          return screenForgePlay();
+        }
+        // It did not come out playable. The child gets a game that works, and
+        // hears what is true: this one is being learned, not refused.
+        S.said="I could not get that one finished today, so here is one I can make you now. I am still learning yours.";
+        buildIt();
+      });
+  }
+
+  // A forged game, playing. The label is the shell's, never the cartridge's, so
+  // a game cannot pretend it is further along than it is.
+  function screenForgePlay(msg){
+    var f=S.forge;
+    startClock();
+    titleEl.textContent=f.name||"My new game";
+    var src="/forge/"+encodeURIComponent(f.id);
+    show('<div class="playwrap"><iframe class="frame" id="frame" src="'+esc(src)+'" sandbox="allow-scripts" '+
+      'allow="autoplay" title="'+esc(f.name||"My new game")+'"></iframe></div>'+
+      '<div class="tweaks">'+
+      '<div class="card"><h3>Buddy is still learning this one</h3>'+
+      '<p class="why">This is a brand new kind of game, written just for you. It might be a bit wobbly. Play it through once and then you can keep it.</p></div>'+
+      '<div class="buddy">'+ICON.star+'<div class="bubble" id="say">'+esc(msg||"Have a go. This one has never existed before.")+'</div></div>'+
+      '<button class="btn'+(S.beaten?"":" alt")+'" id="keep">'+(S.beaten?"Keep it":"Beat it once to keep it")+'</button>'+
+      '<button class="btn alt" id="love" style="margin-top:10px">I love this one</button>'+
+      '<button class="btn alt" id="another" style="margin-top:10px">Make another game</button>'+
+      '<div class="err" id="err"></div></div>', true);
+    on("keep", function(){ S.beaten ? forgeKeep() : say("Play it through once first. Then you can keep it."); });
+    on("love", function(){ post("/api/cobuild-forge",{ op:"heart", id:f.id }); say("I will tell the grown-ups you loved this one."); });
+    on("another", screenAsk);
+  }
+  function forgeKeep(){
+    var f=S.forge;
+    post("/api/cobuild-forge", { op:"cleared", id:f.id });
+    show('<div class="center">'+
+      '<svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 8.9l6-.8z"/></svg>'+
+      '<h2>'+esc(f.name||"My new game")+'</h2>'+
+      '<p class="sub">'+esc(credit())+'</p>'+
+      '<div class="card keep"><p class="why">You made a kind of game that did not exist this morning. Buddy is still learning it, so it lives here in the studio for now — play it any time with this link.</p>'+
+      '<p class="why" id="link">'+esc(location.origin+"/forge/"+f.id)+'</p></div>'+
+      '<button class="btn" id="play">Play it again</button>'+
+      '<button class="btn alt" id="another" style="margin-top:10px">Make another game</button>'+
+      '</div>');
+    on("play", function(){ screenForgePlay(); });
+    on("another", screenAsk);
   }
 
   // =========================================================================
@@ -472,6 +562,9 @@
     if(!d || d.source!=="buildable") return;
     if(d.kind==="win" || d.kind==="levelup"){
       if(!S.beaten){ S.beaten=true;
+        // A forged game's Keep button lives on its own screen.
+        if(S.forge && !S.game){ var fb=document.getElementById("keep");
+          if(fb){ fb.className="btn"; fb.textContent="Keep it"; } say("You did it! You can keep this game now."); return; }
         var b=document.getElementById("keep");
         if(b){ b.className="btn"; b.textContent="Keep it"; }
         say("You did it! You can keep this game now.");
@@ -775,6 +868,16 @@
     try{ return (new URLSearchParams(location.search)).get("game")||""; }catch(e){ return ""; }
   }
   function start(){
+    // CB5 — /studio/forge/<id> reopens a forged game. It is not a kid_games row,
+    // so it is fetched from the workshop rather than the game store.
+    var fm=/^\/studio\/forge\/([A-Za-z0-9][A-Za-z0-9-]{1,63})\/?$/.exec(location.pathname);
+    if(fm){
+      busy("Opening your game...");
+      return post("/api/cobuild-forge",{op:"status",id:fm[1]}).then(function(j){
+        if(!j||!j.ok||!j.forge||j.forge.status!=="ready"&&j.forge.status!=="promoted") return screenAsk();
+        S.forge=j.forge; S.beaten=false; screenForgePlay("Here it is again.");
+      });
+    }
     var id=reopenId();
     if(!id) return screenAsk();
     busy("Opening your game...");

@@ -66,11 +66,17 @@ function makeSandbox() {
   class ImageStub { set src(v) { this._src = v; } get src() { return this._src; } addEventListener() {} }
   const documentStub = { getElementById: (id) => (id === "start" ? el(false) : el(true)), querySelector: () => el(true),
     addEventListener: noop, createElement: () => el(true), head: el(true), documentElement: el(true) };
+  // CB5 — what the game SAYS to the shell is part of the contract, so the robot
+  // listens. A forged cartridge that never posts a win is not a game a family
+  // could ever keep, however well it plays.
+  const said = [];
   const sandbox = { document: documentStub, Image: ImageStub, requestAnimationFrame: noop, cancelAnimationFrame: noop,
     addEventListener: noop, removeEventListener: noop, setTimeout: () => 0, clearTimeout: noop, setInterval: () => 0, clearInterval: noop,
     localStorage: { getItem: () => null, setItem: noop, removeItem: noop },
     fetch: () => Promise.reject(new Error("no-net")).catch(() => {}),
     performance: { now: () => Date.now() }, URLSearchParams, location: { search: "" }, Date, Math, console };
+  sandbox.parent = { postMessage: (m) => { said.push(m); } };
+  sandbox.__said = said;
   sandbox.window = sandbox; sandbox.globalThis = sandbox; sandbox.self = sandbox;
   vm.createContext(sandbox);
   return sandbox;
@@ -85,7 +91,14 @@ const levelName = (m, i) => {
 // ---------------------------------------------------------------------------
 //  One play-through of one manifest. Returns the per-level verdicts.
 // ---------------------------------------------------------------------------
-async function runOnce(manifest, engine, read) {
+async function runOnce(manifest, engine, read, opts) {
+  // CB5 — A FORGED CARTRIDGE. Layer three writes an engine that has existed for
+  // four seconds and is on no disk, so the caller hands the file in rather than
+  // naming one. Everything after this is the SAME path a shipped engine takes:
+  // the manifest becomes GAME_CONFIG, the page's own scripts run in the same
+  // sandbox, and the game is played through the same sim() hook. There is still
+  // one robot.
+  if (opts && opts.cartridge) return runCartridge(manifest, opts.cartridge, read);
   const page = PAGE[engine];
   if (!page) return { robot: "none", note: "there is no robot for '" + engine + "'", levels: [] };
 
@@ -151,6 +164,51 @@ async function runOnce(manifest, engine, read) {
   return { robot: "played", levels };
 }
 
+// CB5 — one play-through of a cartridge that is not on disk. Budgets are
+// deliberately generous and the same for every forged game: we do not know what
+// it is yet, and a game that takes four minutes is caught by TOO_LONG_FORGE
+// rather than by a budget that cuts it off mid-win.
+const FORGE_BUDGET = 60000, TOO_LONG_FORGE = 60 * 300;
+async function runCartridge(manifest, cartridge, read) {
+  const html = String(cartridge.html || "");
+  if (!html) return { robot: "none", note: "there was no cartridge to play", levels: [] };
+  const libSrc = [];
+  for (const f of (cartridge.libs || [])) { const t = await read(f); if (t) libSrc.push(t); }
+  const manifestLib = await read("buildable-manifest.js");
+  if (!manifestLib) return { robot: "none", note: "the shared manifest loader could not be read", levels: [] };
+
+  const sb = makeSandbox();
+  vm.runInContext(manifestLib, sb, { filename: "buildable-manifest.js" });
+  const BM = sb.BuildableManifest;
+  if (!BM || !BM.validate) return { robot: "none", note: "the shared manifest loader did not load", levels: [] };
+  sb.window.GAME_CONFIG = BM.toEngineConfig(manifest);
+  try { vm.runInContext(libSrc.join("\n") + "\n" + inlineScripts(html), sb, { filename: "forge" }); }
+  catch (e) { return { robot: "none", note: "the game threw before it started: " + String((e && e.message) || e), levels: [], said: sb.__said }; }
+
+  const G = sb.BUILDABLE_GAME || (sb.window && sb.window.BUILDABLE_GAME);
+  if (!G || typeof G.sim !== "function") return { robot: "none", note: "the game did not expose its play hook", levels: [], said: sb.__said };
+  const cfg = (typeof G._cfg === "function" ? G._cfg() : null) || { levels: [] };
+  const engineLevels = Array.isArray(cfg.levels) ? cfg.levels.length : 0;
+  const wanted = Array.isArray(manifest.levels) ? manifest.levels.length : 0;
+  const levels = [];
+  for (let i = 0; i < wanted; i++) {
+    const { id, name } = levelName(manifest, i);
+    if (i >= engineLevels) { levels.push({ id, name, verdict: "not-beatable", note: "the game does not have this level" }); continue; }
+    let best = null, won = false;
+    for (let t = 0; t < 3 && !won; t++) {
+      let r = null;
+      try { r = G.sim(i, FORGE_BUDGET); } catch (e) { r = { result: "error", frames: 0, error: String((e && e.message) || e) }; }
+      if (!best || (r && r.result === "win")) best = r;
+      won = !!(r && r.result === "win");
+    }
+    const frames = (best && best.frames) || 0;
+    if (!won) levels.push({ id, name, verdict: "not-beatable", frames, note: "the robot played it three times and never finished it" });
+    else if (frames > TOO_LONG_FORGE) levels.push({ id, name, verdict: "too-long", frames, seconds: Math.round(frames / 60), note: "it takes about " + Math.round(frames / 60) + " seconds, which is a long wait for a child" });
+    else levels.push({ id, name, verdict: "beatable", frames, seconds: Math.round(frames / 60) });
+  }
+  return { robot: "played", levels, said: sb.__said };
+}
+
 // Sky Flyer: the goals a world sets have to be reachable. This is the whole of
 // what a manifest can get wrong there, because the world itself grows from the
 // theme and there is no way to lose.
@@ -180,7 +238,7 @@ export async function playManifest(manifest, engine, opts) {
   opts = opts || {};
   const read = opts.read;
   if (typeof read !== "function") throw new Error("playManifest needs opts.read");
-  const run = await runOnce(manifest, engine, read);
+  const run = await runOnce(manifest, engine, read, opts);
   const levels = run.levels || [];
   const verdict = levels.length ? worst(levels) : "untested";
   const out = {
@@ -189,6 +247,7 @@ export async function playManifest(manifest, engine, opts) {
     playable: verdict !== "not-beatable",
     levels, note: run.note || null, checkedAt: new Date().toISOString(),
     suggestion: null,
+    said: run.said || null,          // CB5: what the game told the shell while it played
   };
   if (verdict === "not-beatable" && opts.suggest !== false && opts.recipes) {
     try {

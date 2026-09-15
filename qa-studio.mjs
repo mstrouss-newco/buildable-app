@@ -249,7 +249,10 @@ console.log("\n--- 5d. CB7: the child's words come back, and nobody apologises -
   // A sentence no engine matches head-on is still answered by NAMING the game.
   const odd = await call(plan, { body: { text: "zzzz qqqq", answers: { star: "A dragon", hard: "middle" } } });
   const l3 = odd.body.plan && odd.body.plan.layerThree;
-  chk("an idea nothing matches is answered with what IS being built", !l3 || (/making you a/i.test(l3.said) && !/yet|not quite/i.test(l3.said)), l3 && l3.said);
+  // CB5 changed this line for the better: an idea nothing matches is no longer
+  // answered with the nearest game at all, it is answered by writing a new one.
+  chk("an idea nothing matches is answered with what IS being built", !l3 || (/(making you a|write it from scratch)/i.test(l3.said) && !/yet|not quite/i.test(l3.said)), l3 && l3.said);
+  chk("and it tells the studio it may forge one", !l3 || (l3.forge === true && !!l3.nearest));
   // Names: asked once, kept on the device, and carried by the save.
   chk("the studio asks the child's name and the grown-up's name, once", /function screenNames\(/.test(studioSrc) && /bk_kid_name/.test(studioSrc) && /bk_grownup_name/.test(studioSrc));
   chk("both names ride on the save that creates the game", /kidName:kidName\(\)/.test(studioSrc) && /grownupName:grownupName\(\)/.test(studioSrc));

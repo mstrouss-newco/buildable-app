@@ -76,3 +76,14 @@ Every practiced skill lands in ONE place per kid, no matter where it came from. 
 - Messages only. No shared variables, no reaching across the boundary in either direction.
 - A game that ignores `pause` or hardcodes art fails its QA contract check.
 - New message types get added here first, then implemented. This file is the contract's single source of truth.
+
+## Forged cartridges (Session CB5 — layer three)
+
+A **forged** cartridge is one the studio WROTE, from a child's sentence, when no engine we ship covered the idea. It is a cartridge like any other and obeys everything above. Four extra rules apply, because nobody read it before a child did:
+
+- **It publishes a play hook.** `window.BUILDABLE_GAME = { sim(levelIndex, budget), _cfg() }`. `_cfg()` returns `{ levels }`; `sim()` plays one level headlessly with a built-in player — no canvas, no timers, no rendering — and returns `{ result: "win"|"lose"|"timeout", frames }`. This is not a testing afterthought: it is the ONLY reason a game that has existed for four seconds can be gated by the same robot that guards the shipped ones (`qa/kid-game-robot.mjs`).
+- **It is handed its manifest, it never asks for one.** `/api/forge` injects `window.GAME_CONFIG` before the cartridge runs. A forged manifest declares `levelProfile: "forge"`, the deliberately loose profile in `buildable-manifest.js`; what actually fences it is the cobuild sheet the forge made it write, checked in strict mode.
+- **It ships its own cobuild sheet.** Without one there is nothing to validate it against and nothing for the studio to remix it with.
+- **It lives inside a sandbox.** Served only by `/api/forge` under `default-src 'none'` with `connect-src 'none'`, embedded with `sandbox="allow-scripts"`. No network, no storage, no external scripts, no eval, no emoji, 120KB. `api/_forgeSpec.js` is the enforced list and `qa-forge.mjs` proves each refusal.
+
+A forged game is labelled **"Buddy is still learning this one"** wherever it appears, and the label is drawn by the shell, never by the cartridge. It becomes an ordinary engine only by PROMOTION (`/studio/forge-review` then `scripts/promote-forge.mjs`), which writes its files into the repo for a person to read.
