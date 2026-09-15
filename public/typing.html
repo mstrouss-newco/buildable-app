@@ -15,143 +15,149 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
+/* Light cream theme, same token family as minutemath.html and lessons.html.
+   Cream page, white card, soft tan lines, hard bottom shadows on buttons. */
 :root{
-  --ink:#0F0E17; --purple:#7C5CFC; --purple2:#A78BFF; --coral:#FF6B6B;
-  --mint:#00C48C; --gold:#F59E0B;
+  --ink:#0F0E17; --cream:#FDFAF5; --card:#FFFFFF; --line:#EDE5D6; --sub:#6E6684;
+  --purple:#7C5CFC; --purple-d:#5B3FD0; --purple-soft:#F4F0FF;
+  --coral:#FF6B6B; --mint:#2FAE68; --mint-soft:#E9F7EF; --mint-line:#BCE3CD;
+  --gold:#FFC542; --sky:#37B6F5; --sunk:#F2EDE2; --keyshade:#E0D6C4;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:'Fredoka',sans-serif;color:#fff;background:var(--ink);min-height:100dvh;
+body{font-family:'Fredoka',sans-serif;color:var(--ink);background:var(--cream);min-height:100dvh;
   display:flex;align-items:safe center;justify-content:safe center;overflow:auto;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  user-select:none;-webkit-tap-highlight-color:transparent}
+  user-select:none;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
 .app{width:860px;max-width:100vw;transform-origin:center center;padding:8px}
 .logo{font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;text-align:center;margin-bottom:9px;letter-spacing:-.3px}
-.logo .b{background:linear-gradient(110deg,#A78BFF,#C084FC 40%,#F472B6 75%,#FF6B6B);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.logo .b{background:linear-gradient(110deg,#7C5CFC,#A855F7 40%,#EC4899 75%,#FF6B6B);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .logo .k{color:var(--coral)}
-.card{position:relative;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-  border-radius:26px;padding:16px 18px 18px;backdrop-filter:blur(14px);box-shadow:0 30px 90px rgba(0,0,0,.5)}
+.card{position:relative;background:var(--card);border:2px solid var(--line);
+  border-radius:26px;padding:16px 18px 18px;box-shadow:0 8px 24px rgba(15,14,23,.06)}
 .screen{display:none}.screen.on{display:block;animation:pop .28s ease}
 @keyframes pop{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
-button{font-family:'Fredoka',sans-serif}
+button{font-family:'Fredoka',sans-serif;color:var(--ink)}
 
 /* nav */
 .nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.tabs{display:flex;gap:5px;background:rgba(255,255,255,.06);border-radius:100px;padding:4px}
-.tab{padding:7px 18px;border-radius:100px;font-weight:600;font-size:14px;color:rgba(255,255,255,.6);cursor:pointer;border:none;background:none}
-.tab.on{background:var(--purple);color:#fff;box-shadow:0 4px 14px rgba(124,92,252,.5)}
+.tabs{display:flex;gap:5px;background:var(--sunk);border-radius:100px;padding:4px}
+.tab{padding:7px 18px;border-radius:100px;font-weight:600;font-size:14px;color:var(--sub);cursor:pointer;border:none;background:none}
+.tab.on{background:var(--purple);color:#fff;box-shadow:0 3px 10px rgba(124,92,252,.35)}
 .spacer{flex:1}
-.pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
-  border-radius:100px;padding:6px 13px;font-weight:700;font-size:14px;white-space:nowrap}
-.pill .u{color:rgba(255,255,255,.45);font-weight:600;font-size:12px}
+.pill{display:flex;align-items:center;gap:6px;background:#fff;border:2px solid var(--line);
+  border-radius:100px;padding:5px 13px;font-weight:700;font-size:14px;white-space:nowrap}
+.pill .u{color:var(--sub);font-weight:600;font-size:12px}
+.pill.gold{background:#FFF7E3;border-color:#FFE3A3}
 /* ICONS ARE DRAWN, NEVER TYPED. Every picture on this page is SVG geometry —
    no emoji anywhere in the product, which is a rule and not a preference: an
    emoji is a different picture on every phone, tablet and laptop a kid opens
    it on, and half of them are not the picture we meant. */
 .ic{width:1.15em;height:1.15em;flex:0 0 auto;display:inline-block;vertical-align:-.2em}
 .ic.big{width:42px;height:42px}
-.ic.sm{width:14px;height:14px;vertical-align:-.18em}
-.pill.gold{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.32)}
+.ic.sm{width:15px;height:15px;vertical-align:-.2em}
+.ic.huge{width:46px;height:46px}
 .pill.btn{cursor:pointer}
 
 /* course map */
 .course{display:grid;grid-template-columns:200px 1fr;gap:14px}
-.unit{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:11px 13px;cursor:pointer;margin-bottom:7px;width:100%;text-align:left;color:#fff}
-.unit.on{background:rgba(124,92,252,.2);border-color:var(--purple2)}
-.unit.soon{opacity:.5;cursor:default}
+.unit{background:var(--cream);border:2px solid var(--line);border-radius:16px;padding:11px 13px;cursor:pointer;margin-bottom:7px;width:100%;text-align:left;color:var(--ink)}
+.unit.on{background:var(--purple-soft);border-color:var(--purple)}
+.unit.soon{opacity:.55;cursor:default}
 .unit .un{font-weight:700;font-size:14px}
-.unit .us{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px}
-.ubar{height:5px;border-radius:99px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden}
-.ubar i{display:block;height:100%;background:linear-gradient(90deg,var(--mint),#00EAA7);border-radius:99px;transition:width .4s}
+.unit .us{font-size:12px;color:var(--sub);margin-top:2px}
+.ubar{height:6px;border-radius:99px;background:var(--line);margin-top:8px;overflow:hidden}
+.ubar i{display:block;height:100%;background:var(--mint);border-radius:99px;transition:width .4s}
 .lessons{display:flex;flex-direction:column;gap:8px}
-.les{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:11px 14px;text-align:left}
-.les .num{width:30px;height:30px;flex:0 0 30px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-family:'Nunito';font-weight:900;font-size:14px}
-.les.done{background:rgba(0,196,140,.12);border-color:rgba(0,196,140,.3)}
-.les.done .num{background:var(--mint);color:#04352a}
-.les.now{background:rgba(124,92,252,.16);border-color:var(--purple2)}
-.les.now .num{background:var(--purple)}
-.les.lock{opacity:.45}
+.les{display:flex;align-items:center;gap:12px;background:var(--cream);border:2px solid var(--line);border-radius:18px;padding:11px 14px;text-align:left}
+.les .num{width:30px;height:30px;flex:0 0 30px;border-radius:10px;background:var(--sunk);color:var(--sub);display:flex;align-items:center;justify-content:center;font-family:'Nunito';font-weight:900;font-size:14px}
+.les.done{background:var(--mint-soft);border-color:var(--mint-line)}
+.les.done .num{background:var(--mint);color:#fff}
+.les.now{background:var(--purple-soft);border-color:var(--purple)}
+.les.now .num{background:var(--purple);color:#fff}
+.les.lock{opacity:.5}
 .les .t{font-weight:700;font-size:15px}
-.les .s{font-size:12px;color:rgba(255,255,255,.45);margin-top:1px}
+.les .s{font-size:12px;color:var(--sub);margin-top:1px}
 .les .right{margin-left:auto;display:flex;align-items:center;gap:10px}
-.stars{letter-spacing:1px;font-size:13px;color:var(--gold)}
-.go{background:var(--purple);border:none;border-radius:100px;padding:9px 20px;font-weight:600;font-size:14px;color:#fff;cursor:pointer;white-space:nowrap}
-.go:hover{filter:brightness(1.1)}
-.go.ghost{background:rgba(255,255,255,.08)}
+.stars{letter-spacing:1px;font-size:14px;color:var(--gold)}
+.go{background:var(--purple);border:none;border-radius:100px;padding:9px 20px;font-weight:600;font-size:14px;color:#fff;cursor:pointer;white-space:nowrap;box-shadow:0 3px 0 var(--purple-d)}
+.go:active{transform:translateY(2px);box-shadow:none}
+.go.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:0 3px 0 var(--line)}
 .go.big{font-family:'Nunito';font-weight:900;font-size:16px;padding:12px 30px}
 
 /* lesson chrome */
 .lhead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-.back{width:34px;height:34px;flex:0 0 34px;border-radius:12px;background:rgba(255,255,255,.08);border:none;color:#fff;
+.back{width:38px;height:38px;flex:0 0 38px;border-radius:13px;background:#fff;border:2px solid var(--line);color:var(--ink);
   display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;cursor:pointer}
 .ltitle{font-family:'Nunito';font-weight:900;font-size:17px;line-height:1.1}
-.lstep{font-size:12px;color:rgba(255,255,255,.45);font-weight:600;margin-top:2px}
-.prog{height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin-bottom:14px}
-.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--mint),#00EAA7);transition:width .25s}
+.lstep{font-size:12px;color:var(--sub);font-weight:600;margin-top:2px}
+.prog{height:9px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:14px}
+.prog i{display:block;height:100%;width:0;background:var(--mint);transition:width .25s}
 
 /* coach */
 .coach{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:14px}
 .bot{width:80px;flex:0 0 80px}
-.bubble{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:13px 22px;text-align:center;position:relative;max-width:460px}
-.bubble:before{content:'';position:absolute;left:-8px;top:50%;margin-top:-8px;width:16px;height:16px;background:rgba(255,255,255,.07);
-  border-left:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.12);transform:rotate(45deg)}
-.bubble .say{font-size:14px;color:rgba(255,255,255,.62);font-weight:600;margin-bottom:6px;line-height:1.35}
+.bubble{background:var(--cream);border:2px solid var(--line);border-radius:22px;padding:13px 22px;text-align:center;position:relative;max-width:460px}
+.bubble:before{content:'';position:absolute;left:-9px;top:50%;margin-top:-8px;width:16px;height:16px;background:var(--cream);
+  border-left:2px solid var(--line);border-bottom:2px solid var(--line);transform:rotate(45deg)}
+.bubble .say{font-size:14px;color:var(--sub);font-weight:600;margin-bottom:6px;line-height:1.35}
 .bubble .big{font-family:'Nunito';font-weight:900;font-size:24px;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap}
-.keychip{display:inline-flex;min-width:40px;height:40px;padding:0 10px;border-radius:11px;align-items:center;justify-content:center;font-size:21px;color:#04352a}
+.keychip{display:inline-flex;min-width:42px;height:42px;padding:0 10px;border-radius:12px;align-items:center;justify-content:center;font-size:21px;color:#fff}
 
 /* train */
 .train{display:flex;gap:8px;justify-content:center;margin:2px 0 14px;min-height:64px}
-.tile{width:54px;height:60px;border-radius:14px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;
-  font-family:'Nunito';font-weight:900;font-size:28px;color:rgba(255,255,255,.5);flex:0 0 54px;transition:transform .12s,background .12s}
-.tile.cur{background:var(--purple);color:#fff;box-shadow:0 8px 24px rgba(124,92,252,.55);transform:scale(1.07)}
-.tile.ok{background:rgba(0,196,140,.2);color:var(--mint)}
-.tile.bad{background:rgba(255,107,107,.25);color:var(--coral);animation:nud .25s}
+.tile{width:54px;height:60px;border-radius:15px;background:var(--sunk);display:flex;align-items:center;justify-content:center;
+  font-family:'Nunito';font-weight:900;font-size:28px;color:#9C907C;flex:0 0 54px;transition:transform .12s,background .12s}
+.tile.cur{background:var(--purple);color:#fff;box-shadow:0 6px 16px rgba(124,92,252,.4);transform:scale(1.07)}
+.tile.ok{background:#D5F2E2;color:#1C7A45}
+.tile.cur.bad{background:#FF6B6B;color:#fff;box-shadow:0 6px 16px rgba(255,107,107,.45);animation:nud .26s}
 @keyframes nud{0%,100%{transform:translateX(0)}30%{transform:translateX(-5px)}70%{transform:translateX(5px)}}
-.tile.sp{font-size:15px;color:rgba(255,255,255,.3)}
-.tile.cur.sp{color:rgba(255,255,255,.75)}
+.tile.sp{font-size:15px;color:#BDB29D}
+.tile.cur.sp{color:rgba(255,255,255,.85)}
 
 /* keyboard */
-.kb{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:11px 9px 9px;position:relative;z-index:2}
-.krow{display:flex;gap:6px;justify-content:center;margin-bottom:6px}
+.kb{background:var(--cream);border:2px solid var(--line);border-radius:20px;padding:11px 9px 9px;position:relative;z-index:2}
+.krow{display:flex;gap:6px;justify-content:center;margin-bottom:7px}
 .krow:last-child{margin-bottom:0}
-.key{height:40px;min-width:40px;border-radius:10px;background:rgba(255,255,255,.09);border:none;color:rgba(255,255,255,.75);
-  display:flex;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:14px;position:relative;cursor:pointer;transition:background .12s,transform .08s}
-.key.w15{min-width:62px;font-size:11px}.key.space{min-width:240px;flex:0 1 240px}
-.key.home:after{content:'';position:absolute;bottom:5px;left:50%;margin-left:-6px;width:12px;height:2px;border-radius:2px;background:rgba(255,255,255,.45)}
-.key.dim{opacity:.28}
-.key.tgt{color:#fff;transform:translateY(-2px)}
-.key.press{transform:scale(.92)}
+.key{height:40px;min-width:40px;border-radius:11px;background:#fff;border:1.5px solid var(--line);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;font-family:'Fredoka';font-weight:700;font-size:14px;position:relative;cursor:pointer;
+  box-shadow:0 2px 0 var(--keyshade);transition:background .12s,transform .08s}
+.key.w15{min-width:62px;font-size:11px;color:var(--sub)}.key.space{min-width:240px;flex:0 1 240px}
+.key.home:after{content:'';position:absolute;bottom:5px;left:50%;margin-left:-6px;width:12px;height:2px;border-radius:2px;background:#B8AC96}
+.key.dim{opacity:.38}
+.key.tgt{border-color:transparent;transform:translateY(-2px)}
+.key.press{transform:translateY(2px);box-shadow:none}
 
 /* hands */
 .hands{display:flex;justify-content:center;gap:34px;margin-top:-28px;pointer-events:none}
 .hands svg{display:block}
-.handlab{text-align:center;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-top:-6px}
+.handlab{text-align:center;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#A79B86;margin-top:-6px}
 
 /* results */
 .res{text-align:center}
-.bigstars{font-size:44px;letter-spacing:6px;color:var(--gold);margin:2px 0 4px;min-height:52px}
+.bigstars{display:flex;gap:7px;justify-content:center;margin:2px 0 8px;min-height:50px}
 .restitle{font-family:'Nunito';font-weight:900;font-size:26px}
-.ressub{color:rgba(255,255,255,.55);font-weight:600;font-size:14px;margin-bottom:16px}
+.ressub{color:var(--sub);font-weight:600;font-size:14px;margin-bottom:16px}
 .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:440px;margin:0 auto 14px}
-.sc{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:13px}
+.sc{background:var(--cream);border:2px solid var(--line);border-radius:18px;padding:13px}
 .sc .v{font-family:'Nunito';font-weight:900;font-size:25px}
-.sc .l{font-size:12px;color:rgba(255,255,255,.45);font-weight:600;margin-top:2px}
-.sc.best{background:rgba(0,196,140,.13);border-color:rgba(0,196,140,.3)}
+.sc .l{font-size:12px;color:var(--sub);font-weight:600;margin-top:2px}
+.sc.best{background:var(--mint-soft);border-color:var(--mint-line)}
 .misses{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
-.miss{background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.32);border-radius:10px;padding:6px 12px;font-weight:700;font-size:14px}
+.miss{background:#FFE9E9;border:2px solid #FFC9C9;color:#C0392B;border-radius:12px;padding:5px 12px;font-weight:700;font-size:14px}
 .rowb{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
 
 /* games + practice cards */
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.gcard{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:16px;text-align:left;cursor:pointer;color:#fff;transition:transform .15s,border-color .15s}
-.gcard:hover{transform:translateY(-3px);border-color:var(--purple2)}
-.gcard.soon{opacity:.45;cursor:default}.gcard.soon:hover{transform:none;border-color:rgba(255,255,255,.1)}
+.gcard{background:var(--cream);border:2px solid var(--line);border-radius:22px;padding:16px;text-align:left;cursor:pointer;color:var(--ink);transition:transform .15s,border-color .15s}
+.gcard:hover{transform:translateY(-3px);border-color:var(--purple)}
+.gcard.soon{opacity:.5;cursor:default}.gcard.soon:hover{transform:none;border-color:var(--line)}
 .gcard .gt{font-family:'Nunito';font-weight:900;font-size:17px;margin-bottom:3px}
-.gcard .gs{font-size:13px;color:rgba(255,255,255,.5);font-weight:600;line-height:1.4}
-.gcard .art{height:86px;border-radius:14px;margin-bottom:11px;display:flex;align-items:center;justify-content:center;font-size:36px}
-.sect{font-family:'Nunito';font-weight:900;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin:16px 0 9px}
-.hint{text-align:center;font-size:13px;color:rgba(255,255,255,.4);font-weight:600;margin-top:10px}
-.ovl{position:absolute;inset:0;background:rgba(15,14,23,.93);border-radius:26px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:20;padding:20px;text-align:center}
+.gcard .gs{font-size:13px;color:var(--sub);font-weight:600;line-height:1.4}
+.gcard .art{height:86px;border-radius:16px;margin-bottom:11px;display:flex;align-items:center;justify-content:center;font-size:36px}
+.sect{font-family:'Nunito';font-weight:900;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);margin:16px 0 9px}
+.hint{text-align:center;font-size:13px;color:var(--sub);font-weight:600;margin-top:10px}
+.ovl{position:absolute;inset:0;background:rgba(253,250,245,.95);border-radius:24px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:20;padding:20px;text-align:center}
 .ovl.on{display:flex}
 .ovl h2{font-family:'Nunito';font-weight:900;font-size:24px}
 @media(max-width:700px){.course{grid-template-columns:1fr}.cards{grid-template-columns:1fr}
@@ -174,9 +180,9 @@ button{font-family:'Fredoka',sans-serif}
         <button class="tab" data-tab="games">Games</button>
       </div>
       <div class="spacer"></div>
-      <div class="pill" id="pillWpm"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.6 2 5.4 13.4h4.9L9.3 22l9.3-11.6h-5.1z" fill="#F59E0B"/></svg> 0 <span class="u">wpm</span></div>
-      <div class="pill" id="pillAcc"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="none" stroke="#FF6B6B" stroke-width="2.2"/><circle cx="12" cy="12" r="4.4" fill="none" stroke="#FF6B6B" stroke-width="2.2"/><circle cx="12" cy="12" r="1.7" fill="#FF6B6B"/></svg> 0<span class="u">%</span></div>
-      <div class="pill gold" id="pillStars"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="#F59E0B"/></svg> 0</div>
+      <div class="pill" id="pillWpm">0 <span class="u">wpm</span></div>
+      <div class="pill" id="pillAcc">0<span class="u">%</span></div>
+      <div class="pill gold" id="pillStars">0</div>
     </div>
 
     <div id="tabLearn">
@@ -189,12 +195,12 @@ button{font-family:'Fredoka',sans-serif}
     <div id="tabPractice" style="display:none">
       <div class="cards">
         <button class="gcard" id="cardTest">
-          <div class="art" style="background:linear-gradient(140deg,#7C5CFC,#A78BFF)"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><rect x="9.6" y="1.4" width="4.8" height="2.4" rx="1.2" fill="#fff"/><circle cx="12" cy="13.6" r="8.2" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M12 8.8v5h3.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+          <div class="art" style="background:linear-gradient(140deg,#7C5CFC,#A78BFF)"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.4" fill="none" stroke="#fff" stroke-width="2"/><path d="M12 8.4V13l3.2 1.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M9.6 2.6h4.8" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M12 2.6v2" stroke="#fff" stroke-width="2"/></svg></div>
           <div class="gt">One minute test</div>
           <div class="gs">Type for sixty seconds and see your words a minute. Beat your own record.</div>
         </button>
         <button class="gcard" id="cardMiss">
-          <div class="art" style="background:linear-gradient(140deg,#FF6B6B,#F59E0B)"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="12" cy="12" r="4.4" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="12" cy="12" r="1.7" fill="#fff"/></svg></div>
+          <div class="art" style="background:linear-gradient(140deg,#FF6B6B,#F0A020)"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="1.8" fill="#fff"/></svg></div>
           <div class="gt">Keys you miss most</div>
           <div class="gs" id="missBlurb">Finish a lesson first and this fills up with the keys that trip you.</div>
         </button>
@@ -210,12 +216,12 @@ button{font-family:'Fredoka',sans-serif}
     <div id="tabGames" style="display:none">
       <div class="cards">
         <a class="gcard" id="cardCastle" href="/typing-game.html" style="text-decoration:none;display:block">
-          <div class="art" style="background:linear-gradient(140deg,#1FA897,#00C48C)"><svg class="ic big" viewBox="0 0 48 48" aria-hidden="true"><path d="M5 20h5v-6h5v6h5v-6h5v6h5v-6h5v6h5v22H5z" fill="#fff" opacity=".95"/><rect x="20" y="30" width="8" height="12" rx="4" fill="#1FA897"/><rect x="10" y="24" width="5" height="5" rx="1.2" fill="#1FA897"/><rect x="33" y="24" width="5" height="5" rx="1.2" fill="#1FA897"/></svg></div>
+          <div class="art" style="background:linear-gradient(140deg,#1FA897,#2FAE68)"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l2.5 2L9 9l2.5 2L14 9l2.5 2L19 9v11z" fill="#fff"/><path d="M4 9h3V5.2H4zm12 0h3V5.2h-3z" fill="#fff" opacity=".7"/><rect x="10.2" y="14" width="3.6" height="6" rx="1.4" fill="#1FA897"/></svg></div>
           <div class="gt">Defend the Castle</div>
           <div class="gs">Spell the word before the baddie reaches your fort. Stars you earn in lessons unlock the heroes.</div>
         </a>
         <div class="gcard soon">
-          <div class="art" style="background:linear-gradient(140deg,#F472B6,#7C5CFC)"><svg class="ic big" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3c6.4 5.4 9.6 12.4 9.6 20.4v8.2H14.4v-8.2C14.4 15.4 17.6 8.4 24 3z" fill="#fff" opacity=".95"/><circle cx="24" cy="18" r="4.4" fill="#7C5CFC"/><path d="M14.4 24 7.6 31.6v5.2l6.8-3.6zM33.6 24l6.8 7.6v5.2l-6.8-3.6z" fill="#fff" opacity=".8"/><path d="M20.6 34h6.8l-3.4 9z" fill="#FF6B6B"/></svg></div>
+          <div class="art" style="background:linear-gradient(140deg,#F472B6,#7C5CFC)"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3 2.7 4.5 6 4.5 9.5v3.1h-9v-3.1c0-3.5 1.5-6.8 4.5-9.5z" fill="#fff"/><circle cx="12" cy="9.4" r="1.9" fill="#A855F7"/><path d="M7.5 11.4L4.9 15.3l2.6-.6zm9 0l2.6 3.9-2.6-.6z" fill="#fff" opacity=".75"/><path d="M10.4 16.6h3.2l-1.6 4.9z" fill="#fff" opacity=".9"/></svg></div>
           <div class="gt">More games</div>
           <div class="gs">Coming next. Same keys, different fun.</div>
         </div>
@@ -230,8 +236,8 @@ button{font-family:'Fredoka',sans-serif}
       <button class="back" id="btnBack">‹</button>
       <div><div class="ltitle" id="lsTitle">Lesson</div><div class="lstep" id="lsStep">Step 1 of 4</div></div>
       <div class="spacer"></div>
-      <div class="pill" id="timerPill" style="display:none"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9.6" y="1.4" width="4.8" height="2.4" rx="1.2" fill="#A78BFF"/><circle cx="12" cy="13.6" r="8.2" fill="none" stroke="#A78BFF" stroke-width="2.2"/><path d="M12 8.8v5h3.4" fill="none" stroke="#A78BFF" stroke-width="2.2" stroke-linecap="round"/></svg> <span id="timerLab">1:00</span></div>
-      <button class="pill btn" id="btnSpeak"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2h3.4L12 5v14l-4.6-4.2H4z" fill="#A78BFF"/><path d="M15.6 9.2a4.2 4.2 0 0 1 0 5.6M18.3 6.4a8 8 0 0 1 0 11.2" fill="none" stroke="#A78BFF" stroke-width="2" stroke-linecap="round"/></svg> <span id="speakLab">Read aloud</span></button>
+      <div class="pill" id="timerPill" style="display:none"><span id="timerIco"></span> <span id="timerLab">1:00</span></div>
+      <button class="pill btn" id="btnSpeak"><span id="speakIco"></span> <span id="speakLab">Read aloud</span></button>
     </div>
     <div class="prog"><i id="lsProg"></i></div>
 
@@ -273,7 +279,7 @@ button{font-family:'Fredoka',sans-serif}
       <div class="rowb">
         <button class="go big" id="btnNext">Next lesson ▸</button>
         <button class="go ghost" id="btnAgain">Try again</button>
-        <a class="go ghost" href="/typing-game.html" style="text-decoration:none;display:inline-block"><svg class="ic" viewBox="0 0 48 48" aria-hidden="true"><path d="M5 20h5v-6h5v6h5v-6h5v6h5v-6h5v6h5v22H5z" fill="currentColor"/><rect x="20" y="30" width="8" height="12" rx="4" fill="#0F0E17"/></svg> Play a game</a>
+        <a class="go ghost" href="/typing-game.html" style="text-decoration:none;display:inline-block" id="btnPlayGame"><svg class="ic" viewBox="0 0 48 48" aria-hidden="true"><path d="M5 20h5v-6h5v6h5v-6h5v6h5v-6h5v6h5v22H5z" fill="#7C5CFC"/><rect x="20" y="30" width="8" height="12" rx="4" fill="#FDFAF5"/></svg> Play a game</a>
       </div>
       <div class="rowb" style="margin-top:9px"><button class="go ghost" id="btnHome">All lessons</button></div>
     </div>
@@ -294,7 +300,7 @@ if(Q&&(Q.get('screen')==='demo'||(Q.get('level')!=null&&Q.get('level')!==''))){
 var $=function(id){return document.getElementById(id);};
 
 /* ══════════ KEYBOARD MAP ══════════ */
-var FC={p:'#FF6B6B',r:'#F59E0B',m:'#00C48C',i:'#7C5CFC',t:'#A78BFF'};
+var FC={p:'#FF6B6B',r:'#F0A020',m:'#2FAE68',i:'#7C5CFC',t:'#9B7BFF'};
 var FNAME={p:'pinky',r:'ring',m:'middle',i:'index',t:'thumb'};
 var ROWS=[
   [['q','p'],['w','r'],['e','m'],['r','i'],['t','i'],['y','i'],['u','i'],['i','m'],['o','r'],['p','p']],
@@ -387,7 +393,9 @@ function fanfare(){[0,2,4,5,7].forEach(function(s,i){setTimeout(function(){blip(
 var speakOn=true;try{speakOn=localStorage.getItem('bk_typing_speak')!=='0';}catch(e){}
 function say(txt){if(!speakOn||!window.speechSynthesis)return;
   try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(txt);u.rate=.92;u.pitch=1.1;window.speechSynthesis.speak(u);}catch(e){}}
-function paintSpeak(){$('speakLab').textContent=speakOn?'Read aloud':'Silent';$('btnSpeak').style.opacity=speakOn?1:.5;}
+function paintSpeak(){$('speakLab').textContent=speakOn?'Read aloud':'Silent';
+  var ico=$('speakIco');if(ico)ico.innerHTML=speakOn?ICO.speak:ICO.mute;
+  $('btnSpeak').style.opacity=speakOn?1:.62;}
 
 /* ══════════ SCREENS ══════════ */
 var screens={home:$('scHome'),lesson:$('scLesson'),res:$('scRes')};
@@ -429,14 +437,14 @@ function handSvg(isLeft,active){
   var cols=isLeft?['p','r','m','i']:['i','m','r','p'];var f='';
   cols.forEach(function(c,n){
     var x=24+n*34,on=(active===c),len=on?98:70;
-    var col=on?FC[c]:'rgba(255,255,255,.14)',st=on?FC[c]:'rgba(255,255,255,.22)';
+    var col=on?FC[c]:'#EFE7D6',st=on?FC[c]:'#D2C6AE';
     if(on)f+='<circle cx="'+(x+12)+'" cy="'+(128-len+14)+'" r="22" fill="'+col+'" opacity=".22"/>';
     f+='<rect x="'+x+'" y="'+(128-len)+'" width="24" height="'+len+'" rx="12" fill="'+col+'" stroke="'+st+'" stroke-width="2"/>';
   });
   var on=(active==='t'),tx=isLeft?168:10;
-  var tcol=on?FC.t:'rgba(255,255,255,.14)';
-  f+='<rect x="'+tx+'" y="118" width="26" height="48" rx="13" fill="'+tcol+'" stroke="'+(on?FC.t:'rgba(255,255,255,.22)')+'" stroke-width="2" transform="rotate('+(isLeft?28:-28)+' '+(tx+13)+' 142)"/>';
-  f+='<rect x="18" y="110" width="170" height="58" rx="26" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.17)" stroke-width="2"/>';
+  var tcol=on?FC.t:'#EFE7D6';
+  f+='<rect x="'+tx+'" y="118" width="26" height="48" rx="13" fill="'+tcol+'" stroke="'+(on?FC.t:'#D2C6AE')+'" stroke-width="2" transform="rotate('+(isLeft?28:-28)+' '+(tx+13)+' 142)"/>';
+  f+='<rect x="18" y="110" width="170" height="58" rx="26" fill="#EDE4D1" stroke="#D2C6AE" stroke-width="2"/>';
   return '<svg width="204" height="180" viewBox="0 0 204 180">'+f+'</svg>';
 }
 function drawHands(side,fing){
@@ -444,25 +452,30 @@ function drawHands(side,fing){
 }
 
 /* ══════════ HOME SCREEN ══════════ */
+  /* The same drawn icons the markup uses, as strings, so a pill repainted by
+     JS looks exactly like the one that was there on first paint. Colours are
+     the cream-theme tokens, not the old dark ones. */
+  var ICO={
+    bolt:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.6 2 5.4 13.4h4.9L9.3 22l9.3-11.6h-5.1z" fill="#F0A020"/></svg>',
+    target:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="none" stroke="#FF6B6B" stroke-width="2.2"/><circle cx="12" cy="12" r="4.4" fill="none" stroke="#FF6B6B" stroke-width="2.2"/><circle cx="12" cy="12" r="1.7" fill="#FF6B6B"/></svg>',
+    star:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="#FFC542"/></svg>',
+    starSm:'<svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="#FFC542"/></svg>',
+    starSmOpen:'<svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="none" stroke="#DCCFB4" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    starBig:'<svg class="ic huge" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="#FFC542"/></svg>',
+    starBigOpen:'<svg class="ic huge" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="none" stroke="#DCCFB4" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    tick:'<svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.6l5 5L19.5 6.8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    lock:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10.4V7.6a4 4 0 0 1 8 0v2.8" fill="none" stroke="#C8BDA8" stroke-width="2.2"/><rect x="5.2" y="10.4" width="13.6" height="10.4" rx="2.6" fill="#C8BDA8"/></svg>',
+    speak:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2h3.4L12 5v14l-4.6-4.2H4z" fill="#0F0E17"/><path d="M15.6 9.2a4.2 4.2 0 0 1 0 5.6M18.3 6.4a8 8 0 0 1 0 11.2" fill="none" stroke="#0F0E17" stroke-width="2" stroke-linecap="round"/></svg>',
+    mute:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2h3.4L12 5v14l-4.6-4.2H4z" fill="#6E6684"/><path d="M15.4 9.6l5 4.8m0-4.8l-5 4.8" fill="none" stroke="#6E6684" stroke-width="2" stroke-linecap="round"/></svg>',
+    clock:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9.6" y="1.4" width="4.8" height="2.4" rx="1.2" fill="#7C5CFC"/><circle cx="12" cy="13.6" r="8.2" fill="none" stroke="#7C5CFC" stroke-width="2.2"/><path d="M12 8.8v5h3.4" fill="none" stroke="#7C5CFC" stroke-width="2.2" stroke-linecap="round"/></svg>'
+  };
+
 var curUnit='u1';
-/* The same drawn icons the markup above uses, as strings, so a pill repainted
-   by JS looks exactly like the one that was there on first paint. */
-var ICO={
-  bolt:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.6 2 5.4 13.4h4.9L9.3 22l9.3-11.6h-5.1z" fill="#F59E0B"/></svg>',
-  target:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="none" stroke="#FF6B6B" stroke-width="2.2"/><circle cx="12" cy="12" r="4.4" fill="none" stroke="#FF6B6B" stroke-width="2.2"/><circle cx="12" cy="12" r="1.7" fill="#FF6B6B"/></svg>',
-  star:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="#F59E0B"/></svg>',
-  starSm:'<svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="#F59E0B"/></svg>',
-  starSmOpen:'<svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linejoin="round"/></svg>',
-  tick:'<svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.6l5 5L19.5 6.8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  lock:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10.4V7.6a4 4 0 0 1 8 0v2.8" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2"/><rect x="5.2" y="10.4" width="13.6" height="10.4" rx="2.6" fill="rgba(255,255,255,.55)"/></svg>'
-};
-// three stars, filled for earned and outlined for not — a picture a child who
-// cannot read still counts
-function starStr(n){
-  var out='',i;
-  for(i=0;i<3;i++) out += (i<n ? ICO.starSm : ICO.starSmOpen);
-  return out;
-}
+// three stars, filled for earned and outlined for not — a picture a child
+  // who cannot read still counts
+  function starStr(n,big){var h='';for(var i=0;i<3;i++)
+    h+=big?(i<n?ICO.starBig:ICO.starBigOpen):(i<n?ICO.starSm:ICO.starSmOpen);
+    return h;}
 function paintHome(){
   $('pillStars').innerHTML=ICO.star+' '+loadStars();
   $('pillWpm').innerHTML=ICO.bolt+' '+(P.bestWpm||0)+' <span class="u">wpm</span>';
@@ -565,7 +578,7 @@ function fmt(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);}
 function stopTimed(){if(timedTick){clearInterval(timedTick);timedTick=null;}$('timerPill').style.display='none';}
 function startTimed(secs){
   if(timedTick)return;
-  timedLeft=secs;$('timerPill').style.display='';$('timerLab').textContent=fmt(secs);
+  timedLeft=secs;$('timerPill').style.display='';$('timerIco').innerHTML=ICO.clock;$('timerLab').textContent=fmt(secs);
   timedTick=setInterval(function(){
     timedLeft--;$('timerLab').textContent=fmt(Math.max(0,timedLeft));
     if(timedLeft<=0){stopTimed();finish();}
@@ -602,8 +615,9 @@ function paintTrain(){
   setTarget(s[chI]);
 }
 function flashBad(){
-  var e=$('train').querySelector('.tile.cur');if(e){e.classList.remove('cur');e.classList.add('bad');
-    setTimeout(function(){if(e.parentNode)paintTrain();},260);}
+  var e=$('train').querySelector('.tile.cur');if(!e)return;
+  e.classList.add('bad');                       // keeps .cur, so the pointer never disappears
+  setTimeout(function(){e.classList.remove('bad');},280);
 }
 
 function press(ch){
@@ -671,7 +685,7 @@ function finish(){
   }
   save();
 
-  $('rStars').textContent=starStr(st);
+  $('rStars').innerHTML=starStr(st,true);
   $('rTitle').textContent=st===3?'Three stars!':(st===2?'Nice work!':'Lesson finished');
   $('rSub').textContent=L.title+(best?' · your fastest yet':'');
   $('rWpm').textContent=wpm;$('rAcc').textContent=acc+'%';
