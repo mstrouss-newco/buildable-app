@@ -109,7 +109,7 @@ export default async function handler(req, res) {
     if (!check.playable) {
       const bad = (check.levels || []).find((l) => l.verdict === "not-beatable");
       return res.status(200).json({ ok: true, changed: false, check,
-        offer: { said: "That made it too hard to finish" + (bad ? ' on "' + bad.name + '"' : "") + ", so I put it back the way it was.",
+        offer: { said: "That one got too hard to finish" + (bad ? ' on "' + bad.name + '"' : "") + ", so your game is back the way it was. Try a smaller step.",
           nearest: ["easier", "moreCollectibles", "calmer"].filter((k) => R.supports(k, engine)) } });
     }
 

@@ -1,3 +1,172 @@
+## 2026-09-15 (FM12): the beds, the signs, the pond, and she was walking backwards
+
+**Phase FM, card FM12**, off a screenshot Mike sent of the live farm: "the highlighted
+garden patches, and then the highlighted food, it all looks flat. also the pond looks
+bad, shouldnt it be like just a doc, not a full bridge?" and, a minute later, "also the
+character walks backwards". Touched `public/skyflyer-farm.html` and one line of
+`src/BuildableKids.jsx` (cache-bust fm11 to fm12). Approved off a before-and-after
+picture before anything was committed.
+
+### Every one of these was a fault in the code
+
+**The beds.** One flat disc each, with fourteen little boxes stood up around the rim as
+a "dashed ring". From the game camera that is not a dashed ring, it is a set of white
+teeth round a brown pancake. `buildDirtDisc()` now returns dark earth with a crumbly
+rim that sits down INTO the grass and six rows of BROKEN ridges raked across it, and
+each bed is turned by its slot index so nine of them stop reading as a printed pattern.
+First attempt at this was a light warm brown with four fat unbroken ridges and it came
+out looking like the lid of a barrel, which is worse than the pancake; the ridges are
+painted DARKER than the bed on purpose, because the light catches the top of a ridge.
+
+**The pale bar across every growing patch** was a bug, not a decoration. The ready ring
+is baked lying flat and the draw loop then did `halo.rotation.z += dt*2.2`, which tips
+it out of the ground; from overhead you see the edge of a tipped ring, which draws a
+stripe across the soil. It turns on Y now and only brightens.
+
+**The give arrow** was `s*0.55` wide and faded from 0.85 to 0 across its whole hop, so
+most of the time it was a ghost rather than a sign. Smaller, and solid until the last
+quarter of the hop.
+
+**Wheat was one stalk**, which is a diagram of wheat, not a crop. Four stalks now, at
+different heights, leaning apart, so it has a silhouette.
+
+**The pond** was two perfect circles inside a wide cream ring, which is a dartboard,
+with a railed bridge bank to bank to nothing. `pondOutline()` wanders, four depth bands
+sit slightly off centre from each other, the lip is a narrow band of wet earth, there
+are reeds along part of the bank, and the lily pads have the wedge notch that makes
+them read as lily pads. `buildBridge()` is now `buildDock()`: a short deck on posts off
+the north bank with two mooring posts and a coil of rope. The stepping stones that used
+to cross on the bridge now go round the west bank.
+
+**The island** was one flat green, which is the whole reason everything standing on it
+looked pasted on. Eight big, very soft blotches in two neighbouring greens.
+
+**And she has walked backwards since FM1.** `kid.rotation.y = kidState.facing + Math.PI`
+with a comment one line above saying the model's front faces +Z. It does, for the
+Kenney character AND for the drawn kid behind it (its eyes are at z +0.32). The half
+turn was always wrong; on a blob with two bead eyes nobody could see it.
+
+### How it was checked
+
+A real Chromium render of the real page in the cloud container (the whole of
+`public/` that the farm loads, served locally, `--use-gl=swiftshader`), because every
+one of these passed every data-level check in `qa-farm.mjs` and always had. 21 checks
+green: plant, grow, harvest, feed, ask-and-give staying two different pictures, the
+drawn-kid fallback when `character-kid.glb` is blocked, and her facing in all four
+directions. Before and after pictures at `qa/shots/fm12-field-before-after.png` and
+`qa/shots/fm12-pond-before-after.png`. Recipe for the harness is in project memory as
+`farm-render-harness.md`.
+
+## 2026-09-15 (CB6 + CB7): the child's own idea reaches the screen
+
+**Phase CB, cards CB6 and CB7, run as one session** (approved by Mike 2026-09-15).
+Touched `api/cobuild-plan.js`, `api/asset-studio.js`, `api/kid-game.js`, `api/g.js`,
+`api/cobuild-edit.js`, `api/_cobuildBrain.js`, `public/studio.html`, `public/g.html`,
+`public/buildable-manifest.js`, the four Cobuild engines, `qa-studio.mjs`,
+`qa-kidgames.mjs`.
+
+### The problem
+
+The lander promises that a dragon who delivers pizza to the moon becomes a game about
+that. It became stock Sky Flyer with a new title. Three things caused it, and the QA
+run on 2026-09-06 found all three: the plan asked for art by THEME only, the shared
+library handed back the first picture of the right shape whatever it was of, and the
+engines each had their own idea of the title and their own save file.
+
+### CB6 — the shot list
+
+The plan now carries a SHOT LIST instead of three vague art jobs. One entry per
+picture the game needs, and each entry names four things: a **slot** that engine's own
+`cobuild.json` really has (so a picture is never painted with nowhere to hang), a
+short **painting description** built out of the child's words, a **search phrase** the
+shared library is checked with first, and the **noun** from the sentence it is
+carrying. Six pictures is the aim, ten the ceiling.
+
+The nouns are taken from what follows "a", "an" or "the" — a child names the thing
+they mean with an article in front of it almost every time, so "a robot cat who races
+trains under the sea" gives "robot cat" and "sea", not "races". Every engine gets the
+shots it has slots for and no others: Breaker gets a hero on the bat, a world behind
+each level and a brick set; Castle Guard gets a hero, the goblin at the end and a
+badge a level; Sky Flyer, whose worlds are a palette name rather than a picture, gets
+a hero and a badge a level.
+
+**Reuse now means "another dragon", not "another picture of the right shape".** The
+kids lane in `api/asset-studio.js` matches a library asset against the shot's search
+words before handing it back, and files what it paints with that phrase in the slug
+AND the descriptor, so the second family who asks for a dragon gets one instantly and
+for nothing. Same daily cost brake, same `usage_log` line, unchanged.
+
+**One thing the card asked for that lands only half way, deliberately.** Every painted
+picture is filed tagged `madeIn: cobuild` with its search phrase, and it carries the
+kid game id whenever the studio knows it — which is a repaint or any art added after
+the game exists, but NOT the first build, because the id is minted by the save that
+happens after the painting. Rather than invent a second id a row would not recognise,
+the field is left empty on that first pass. Closing it properly means the save handing
+its id back to the library, which is a small endpoint and did not belong in this card.
+
+**The pre-Keep check.** Before a game is written, `op:"artCheck"` asks whether the
+manifest really ended up wearing the child's idea: a painted hero, and a world on
+every level. What is missing is repainted ONCE. It never blocks a child — a game with
+a gap is kept anyway, and the honest line is stored on the row in `robot.art` rather
+than being hidden.
+
+`op:"art"` also had to grow: it could only reach `levels[].parts.*` and it put one
+picture on every level. It now hangs whole-game slots (`art.hero`), per-level badges,
+and a piece that names ONE level, so level two's world is not level one's. Every
+version is still strict-validated against the sheet and anything that does not fit is
+dropped, not forced.
+
+### CB7 — the words, the names, and four engines that agree
+
+**The chips echo the child.** The star suggestions are built from the child's own
+nouns first and our stock heroes second, so a kid who only ever taps a chip still ends
+up with their own idea.
+
+**Nobody apologises.** "That is not quite a game I can build yet" is gone, and so is
+every line like it. An idea no engine matches head-on is answered by NAMING the game
+being built with the child's star in the middle of it. The tweak door, the voice
+recorder and the microphone fallback were reworded the same way: what CAN happen, not
+what could not.
+
+**Names.** The studio asks the child's first name and the grown-up's name once, keeps
+them on the device, and carries both on every save. They are the credit line on the
+cover, on the Keep card, on the share sheet and in the `/g/` link preview title,
+which used to name only the kid. A later tweak can no longer wipe them: an edit that
+does not carry the names leaves the ones already on the row alone, which is how a
+game used to quietly lose the family that made it.
+
+**Four engines, one answer.** `buildable-manifest.js` now owns three things every
+engine used to invent for itself: `kgTitle()` (the kid's title on the start screen),
+the browser tab, and `kgSaveKey()` — a save file keyed by the kid game id, so a brand
+new game never opens with stock cleared levels or somebody else's stars. Sling Squad
+was the known offender; Breaker, Castle Guard and Sky Flyer had the same hole and are
+fixed the same way.
+
+**One screen.** The play frame keeps its shape but never takes more than two thirds of
+the height, so the tweak chips are on screen without scrolling at 1440x900 and at
+390x844.
+
+**Planner hygiene (CB7 item 6) was already done** — CB2, CB3 and CB4 were flagged
+deployed with corrected notes before this session started, so nothing was changed.
+
+### What is checked
+
+`qa-studio.mjs` grew two sections: CB6 (every shot names a real slot, carries a word
+the child said and a search phrase; worlds are one per level; the pre-Keep check sees
+every gap; a hero really lands in the hero slot; a level-specific shot changes only
+that level) and CB7 (the chips echo the sentence, no page tells a child it cannot
+build their idea, both names ride on the save, a tweak cannot wipe the credit, all
+four engines use the shared title and save key). `qa-kidgames.mjs` now expects the
+share preview to name both makers. Both suites are green.
+
+### Needs Mike
+
+Family test with Jackson and Riley on a phone before CB8, and the acceptance check the
+card asks for: on the live site, build from "a robot cat who races trains under the
+sea" and look for a cat on the screen. The painting itself needs `OPENAI_API_KEY`
+live; with the picture machine off the game still builds and the engines draw their
+own art, which is the read-with-a-fallback rule.
+
 ## 2026-09-15 (QA57): the release gate is red in three places, and one of them was emoji in front of kids
 
 **Phase QA, card QA57.** Found while running the gate for FM11, raised as its own card

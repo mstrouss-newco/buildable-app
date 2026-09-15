@@ -174,6 +174,102 @@ console.log("\n--- 5b. the painted art is hung by the server, and only where it 
     /onMakeGame=\{\(\) => \{ window\.location\.href = "\/studio"/.test(shell) && !/onMakeGame=\{\(\) => setScreen\(SCREEN_INTRO\)\}/.test(shell));
 }
 
+console.log("\n--- 5c. CB6: the child's own idea reaches the screen ---");
+// The promise on the lander is that "a dragon who delivers pizza to the moon"
+// becomes a game about THAT. So the plan has to carry a shot list built out of
+// the child's nouns, every shot has to name a slot the engine really has, and the
+// pre-Keep check has to notice when a hero or a world never got painted.
+{
+  const SAID = "a robot cat who races trains under the sea";
+  for (const e of ENGINES) {
+    const r = await call(plan, { body: { text: IDEAS[e] + " with a dragon and a pizza", answers: { star: "A dragon", hard: "middle" } } });
+    const p = r.body.plan; if (!p) { chk(`${e}: the plan came back`, false); continue; }
+    const shots = p.art || [];
+    chk(`${e}: the shot list aims at six pictures and never more than ten`, shots.length >= 2 && shots.length <= 10, String(shots.length));
+    chk(`${e}: every shot names a slot this engine's own sheet has`,
+      shots.every((a) => a.slot === "cover" || (sheets[e].art || []).some((x) => x.key === a.key)),
+      shots.map((a) => a.shot + "=" + (a.key || "cover")).join(", "));
+    chk(`${e}: every shot carries a word the child actually said`,
+      shots.every((a) => a.noun || /dragon|pizza/.test(String(a.subject || ""))),
+      shots.map((a) => a.shot + ":" + a.noun).join(", "));
+    chk(`${e}: every shot carries a search phrase, so the library is checked by the child's words`,
+      shots.every((a) => typeof a.search === "string" && a.search.split(" ").length >= 2));
+    chk(`${e}: a painting description is short enough to be one picture`,
+      shots.every((a) => String(a.subject || "").split(/\s+/).length <= 14));
+    chk(`${e}: the world shots are one per level, not one for all of them`,
+      shots.filter((a) => a.shot === "world").every((a) => a.level != null));
+    // The pre-Keep check must SEE the gap on a game with nothing painted at all.
+    const chk1 = await call(plan, { body: { op: "artCheck", manifest: p.manifest, shots } });
+    const wanted = shots.filter((a) => a.shot === "hero" || a.shot === "world").length;
+    chk(`${e}: the pre-Keep check notices every unpainted hero and world`,
+      (chk1.body.missing || []).length === wanted, `${(chk1.body.missing || []).length} of ${wanted}`);
+    chk(`${e}: a gap is an honest note, never a block`, chk1.body.ok === true && (wanted === 0 || typeof chk1.body.note === "string"));
+  }
+  // A dragon really lands in the hero slot, and level 2's world is not level 1's.
+  const p = plans.breaker;
+  const r = await call(plan, { body: { op: "art", engine: "breaker", manifest: p.manifest, pieces: [
+    { key: "levels[].parts.paddle", slug: "cobuild/hero/jungle/dragon" },
+    { key: "levels[].parts.background", slug: "cobuild/world/jungle/moon", level: 1 },
+    { key: "art.hero", slug: "cobuild/cover/jungle/dragon" } ] } });
+  chk("the child's hero is hung on the hero slot", (r.body.manifest.levels || []).every((l) => l.parts.paddle === "studio:cobuild/hero/jungle/dragon"));
+  chk("a shot that names ONE level changes only that level",
+    r.body.manifest.levels[1].parts.background === "studio:cobuild/world/jungle/moon" &&
+    r.body.manifest.levels[0].parts.background !== "studio:cobuild/world/jungle/moon");
+  chk("a whole-game slot (art.hero) can be hung too, not just level parts", r.body.manifest.art.hero === "studio:cobuild/cover/jungle/dragon");
+  const v2 = await checkManifest(r.body.manifest, "breaker");
+  chk("the game wearing the child's art is still strict-valid", v2.ok, (v2.errors || []).slice(0, 2).join(" | "));
+  const gaps = await call(plan, { body: { op: "artCheck", manifest: r.body.manifest,
+    shots: [{ shot: "hero", key: "levels[].parts.paddle", level: null }, { shot: "world", key: "levels[].parts.background", level: 1 }] } });
+  chk("a game that IS wearing its art has no gaps left", (gaps.body.missing || []).length === 0);
+  // And the kids lane matches on the child's words, not just the shape.
+  const src = fs.readFileSync("api/asset-studio.js", "utf8");
+  chk("the kids lane reuses a picture only when the child's words match it", /words\.every\(\(w\) => hay\.indexOf\(w\) !== -1\)/.test(src));
+  chk("what it paints is filed with the search phrase, so the next family finds it", /search: search \|\| null/.test(src));
+  chk("every painted picture still goes through the daily cost brake", /underBudget\(\)/.test(src) && /logCost\(COST\.low\)/.test(src));
+  // The plan keeps the sentence, so tapping a chip cannot lose the child's words.
+  const keep = await call(plan, { body: { text: SAID, answers: { star: "A robot cat", hard: "middle" } } });
+  chk("the plan remembers the sentence a child said", typeof keep.body.plan.text === "string" && /robot cat/.test(keep.body.plan.text));
+  chk("a cat really reaches the shot list", (keep.body.plan.art || []).some((a) => /cat|robot|trains?|sea/.test(String(a.noun || "") + String(a.subject || ""))),
+    (keep.body.plan.art || []).map((a) => a.noun).join(","));
+}
+
+console.log("\n--- 5d. CB7: the child's words come back, and nobody apologises ---");
+{
+  const r = await call(plan, { body: { text: "a dragon who delivers pizza to the moon" } });
+  const chips = ((r.body.ask || {}).chips || []).map((c) => c.label);
+  chk("the star chips echo what the child just said", chips.some((c) => /dragon|pizza|moon/i.test(c)), chips.join(", "));
+  const studioSrc = fs.readFileSync("public/studio.html", "utf8");
+  const planSrc = fs.readFileSync("api/cobuild-plan.js", "utf8");
+  const brainSrc = fs.readFileSync("api/_cobuildBrain.js", "utf8");
+  const spoken = (src) => src.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+  for (const [what, src] of [["the studio page", studioSrc], ["the plan door", planSrc], ["the edit brain", brainSrc]]) {
+    chk(`${what} never tells a child it cannot build their idea`,
+      !/not quite|cannot do|could not do|can't build|build .* yet/i.test(spoken(src)));
+  }
+  // A sentence no engine matches head-on is still answered by NAMING the game.
+  const odd = await call(plan, { body: { text: "zzzz qqqq", answers: { star: "A dragon", hard: "middle" } } });
+  const l3 = odd.body.plan && odd.body.plan.layerThree;
+  chk("an idea nothing matches is answered with what IS being built", !l3 || (/making you a/i.test(l3.said) && !/yet|not quite/i.test(l3.said)), l3 && l3.said);
+  // Names: asked once, kept on the device, and carried by the save.
+  chk("the studio asks the child's name and the grown-up's name, once", /function screenNames\(/.test(studioSrc) && /bk_kid_name/.test(studioSrc) && /bk_grownup_name/.test(studioSrc));
+  chk("both names ride on the save that creates the game", /kidName:kidName\(\)/.test(studioSrc) && /grownupName:grownupName\(\)/.test(studioSrc));
+  const kgSrc = fs.readFileSync("api/kid-game.js", "utf8");
+  chk("a later tweak can never wipe the credit line", /if \(str\(get\("kidName"\)\)\) patch\.kid_name/.test(kgSrc));
+  chk("the keep card and the share sheet show the same credit as the cover", (studioSrc.match(/esc\(credit\(\)\)/g) || []).length >= 2);
+  // All four engines agree about the title, the tab and the save file.
+  const bm = fs.readFileSync("public/buildable-manifest.js", "utf8");
+  chk("the shared loader owns the kid title, the tab and the save key", /function kgTitle\(/.test(bm) && /function kgSaveKey\(/.test(bm) && /document\.title = row\.name/.test(bm));
+  const ENG_FILES = { breaker: "public/breaker-engine.html", sling: "public/sling-squad.html",
+    castleguard: "public/castle-guard.html", skyflyer: "public/skyflyer-engine.html" };
+  for (const [e, f] of Object.entries(ENG_FILES)) {
+    const src = fs.readFileSync(f, "utf8");
+    chk(`${e}: a kid's game saves under its own key, so it never opens half-finished`, /kgKey\(/.test(src));
+    if (e !== "skyflyer") chk(`${e}: the start screen shows the kid's title, not ours`, /title: ?kgName\(/.test(src));
+  }
+  // The game and the asking share one screen, on a phone and on a laptop.
+  chk("the play frame leaves room for the tweak chips", /max-width:calc\(62dvh \* 1\.6\)/.test(studioSrc));
+}
+
 console.log("\n--- 6. the routes exist, or the page would be served as the landing page ---");
 {
   const routes = JSON.parse(fs.readFileSync("vercel.json", "utf8")).routes.map((r) => r.src);

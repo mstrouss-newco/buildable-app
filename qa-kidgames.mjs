@@ -235,7 +235,9 @@ const gApi = read('api/g.js');
 for (const tag of ['og:title', 'og:image', 'og:description', 'twitter:card']) {
   chk(`the share link previews with ${tag}`, gApi.includes(tag));
 }
-chk('the OG title reads "<name> by <kid_name>"', /\$\{game\.name[^}]*\} by \$\{game\.kid_name/.test(gApi));
+// CB7 — the preview title names BOTH the kid and the grown-up who made it, the
+// same credit line the cover and the share sheet show.
+chk('the OG title reads "<name> by <kid> and <grown-up>"', /const by = \[game\.kid_name, game\.grownup_name\]/.test(gApi) && /\$\{game\.name[^}]*\} by \$\{by/.test(gApi));
 chk('opening the share link counts a play', /plays: \(g\.plays \|\| 0\) \+ 1/.test(gApi));
 chk('a deleted game is not served by its link', /deleted_at=is\.null/.test(gApi));
 

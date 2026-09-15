@@ -881,6 +881,20 @@ function buildIsland(){
   top.rotateX(-Math.PI/2);
   hbPaint(top, GRASS_C, null);
   g.add(hbMesh(top));
+  // FM12 — SOFT PATCHES OF COLOUR ON THE GRASS. One flat green over the whole
+  // island is the reason everything standing on it looked pasted on: there was
+  // nothing behind anything. A handful of big, faint, overlapping blotches in
+  // two neighbouring greens gives the ground something to be, and they are so
+  // soft that nothing on top of them has to change.
+  var BLOT=[[-16,-8,13,1],[9,-19,15,0],[-24,14,12,0],[22,6,14,1],
+            [2,24,16,0],[-6,-26,11,1],[30,-12,10,0],[-32,-2,9,1]];
+  for(i=0;i<BLOT.length;i++){
+    var bl=new THREE.CircleGeometry(BLOT[i][2], 26);
+    bl.rotateX(-Math.PI/2);
+    hbPaint(bl, BLOT[i][3]?0x96D96A:0x86C75B,
+      {p:[BLOT[i][0], 0.004+i*0.0006, BLOT[i][1]]});
+    g.add(hbMesh(bl));
+  }
   // a darker band just inside the rim, so the island has an edge to it rather
   // than reading as one flat colour all the way out
   var band=new THREE.RingGeometry(ISLAND_R-4.5, ISLAND_R, 96, 1);
@@ -1060,27 +1074,64 @@ var PATCH_STEP=3.6;  // spacing centre-to-centre
 var PATCHES=[];      // {mesh, x, z, ring, state, seed, plantedAt, sparkle}
 
 function buildDirtDisc(){
-  var parts=[];
-  // dark top disc
-  parts.push(hbTurn([[PATCH_R,0],[PATCH_R*0.95,0.06],[0,0.08]],0x6B4E2E,null,20));
-  // rim - a slightly darker crumbly edge
-  parts.push(hbTurn([[PATCH_R*1.02,-0.08],[PATCH_R*1.02,0.02],[PATCH_R*0.9,0.06]],0x513A20,null,20));
+  var parts=[], i;
+  // FM12 — A TILLED BED, NOT A BROWN PUDDLE. The first cut was one flat disc,
+  // and from the game camera nine of them read as pancakes dropped on the
+  // grass. Soil that has been worked has ROWS in it, and rows are what give a
+  // patch a top and a side, which is the whole of why it looked flat.
+  // the bed itself, a low mound in proper dark earth. The first cut of this
+  // was a light warm brown with four fat ridges on it and it came out looking
+  // like the lid of a barrel, which is worse than the pancake it replaced.
+  parts.push(hbTurn([[PATCH_R,0],[PATCH_R*0.96,0.07],[0,0.10]],0x5E4227,null,24));
+  // the crumbly rim, darker again, so the bed has an edge and sits IN the grass
+  parts.push(hbTurn([[PATCH_R*1.04,-0.10],[PATCH_R*1.04,0.02],[PATCH_R*0.88,0.07]],0x46301A,null,24));
+  // six furrows across it, thin and half-buried, each cut to the chord of the
+  // circle at its own depth. They are painted DARKER than the bed on purpose:
+  // the light catches the top of a ridge, so a darker paint lands at about the
+  // bed's own tone and the rows read as tilth rather than as planks.
+  for(i=0;i<6;i++){
+    var t=(i-2.5)/3.0;
+    var z=t*PATCH_R*1.00;
+    var half=Math.sqrt(Math.max(0.02, PATCH_R*PATCH_R - z*z))*0.90;
+    // BROKEN, not continuous. One unbroken rib per row is a plank and six of
+    // them are a barrel lid. Three or four short clumps with gaps between them
+    // is broken earth, which is what a rake actually leaves behind.
+    var segs=3+(i%2), sj;
+    for(sj=0;sj<segs;sj++){
+      var sl=(half*2/segs)*(0.62+((i*3+sj*5)%4)*0.09);
+      var sx=-half + (half*2/segs)*(sj+0.5);
+      parts.push(hbTube(0.058,0.058, sl, 0x513619,
+        {r:[0,0,Math.PI/2], p:[sx, 0.086+((sj+i)%2)*0.005, z+(((i*7+sj*3)%3)-1)*0.035]}, 8));
+    }
+  }
+  // a few clods, so no two patches read as the same stamp
+  for(i=0;i<4;i++){
+    var a=(i/4)*Math.PI*2+0.6, rr=PATCH_R*(0.34+((i*3)%3)*0.14);
+    parts.push(hbTurn([[0.001,0.06],[0.085,0.03],[0.08,0]], i%2?0x6B4C2C:0x513619,
+      {p:[Math.cos(a)*rr, 0.10, Math.sin(a)*rr]}, 6));
+  }
   return hbMesh(hbBake(parts));
 }
 
-// A dashed glow ring above an empty patch: THREE line dashes are not supported
-// on plain lines without a shader, so we make it out of many small tube pieces
-// arranged in a circle. Rotates gently. Reads as "tap me".
+// FM12 — THE "TAP ME" RING. It used to be fourteen little boxes standing in a
+// circle, and from the game camera that is not a dashed ring, it is a set of
+// white teeth round a brown pancake. Mike saw eyelashes. One smooth ring lying
+// flat in the grass says the same thing and says it quietly, and the breathing
+// scale the draw loop already applies is what makes it read as "tap me".
 function buildDashRing(){
   var g=new THREE.Group();
-  var seg=14, R=PATCH_R+0.18, tubeR=0.09, tubeH=0.42;
-  for(var i=0;i<seg;i++){
-    var a=(i/seg)*Math.PI*2;
-    var t=hbPaint(new THREE.BoxGeometry(tubeH,0.05,tubeR*1.6),0xFFF7B0,{
-      r:[0,-a,0], p:[Math.cos(a)*R, 0.08, Math.sin(a)*R]
-    });
-    g.add(hbMesh(t));
-  }
+  var m=new THREE.Mesh(
+    new THREE.TorusGeometry(PATCH_R+0.22, 0.090, 8, 44),
+    new THREE.MeshBasicMaterial({color:0xFFF2BC, transparent:true, opacity:0.88}));
+  m.rotation.x=Math.PI/2; m.position.y=0.035;
+  g.add(m);
+  // a second, wider and fainter ring, so the marker has a soft outside rather
+  // than one hard line
+  var m2=new THREE.Mesh(
+    new THREE.TorusGeometry(PATCH_R+0.44, 0.13, 8, 44),
+    new THREE.MeshBasicMaterial({color:0xFFF2BC, transparent:true, opacity:0.30}));
+  m2.rotation.x=Math.PI/2; m2.position.y=0.028;
+  g.add(m2);
   return g;
 }
 
@@ -1387,6 +1438,10 @@ function buildFieldLegacy(){
     var z=FIELD_CZ + S.j*PATCH_STEP;
     var patch=buildDirtDisc();
     patch.position.set(x,0.001,z);
+    // FM12 — nine identical beds with their furrows all running the same way
+    // is a printed pattern, not a field. One turn each, fixed by slot so it
+    // never changes between visits.
+    patch.rotation.y = ((k*37)%180) * Math.PI/180;
     group.add(patch);
     var ring=buildDashRing();
     ring.position.set(x,0.001,z);
@@ -1552,22 +1607,34 @@ var CROP_RECIPES = {
     colors: {main:0xE0C25A, accent:0xB48A26, stem:0xC7B15C},
     parts:function(s){
       var C=this.colors, p=[];
-      // slender stem
-      p.push(hbTube(0.06*s, 0.05*s, 1.15*s, C.stem, {p:[0, 0.575*s, 0]}));
-      // head — a lofted oval
-      p.push(hbTurn([
-        [0.001,-0.32*s],[0.16*s,-0.20*s],[0.20*s,0.0],[0.16*s,0.20*s],[0.001,0.32*s]
-      ], C.main, {p:[0, 1.05*s, 0]}, 12));
-      // four rows of bristly grains sticking out
-      var i,j;
-      for(i=0;i<4;i++){
-        var y = 0.90*s + i*0.15*s;
-        for(j=0;j<4;j++){
-          var a=(j/4)*Math.PI*2;
-          p.push(hbCone(0.04*s, 0.20*s, C.accent, {
-            r:[0,0, Math.PI/2 + Math.sin(a)*0.3],
-            p:[Math.cos(a)*0.20*s, y, Math.sin(a)*0.20*s]
-          }, 6));
+      // FM12 — A TUFT, NOT A STICK. One stem and one head is what a diagram of
+      // wheat looks like; what a patch of wheat looks like is three or four of
+      // them at slightly different heights leaning slightly apart. Same parts,
+      // same colours, three times, and the crop finally has a silhouette.
+      var STALKS=[{x:0, z:0, h:1.00, lean:0.00},
+                  {x:-0.26*s, z:0.13*s, h:0.84, lean:-0.13},
+                  {x: 0.25*s, z:-0.11*s, h:0.90, lean: 0.12},
+                  {x: 0.05*s, z: 0.27*s, h:0.74, lean: 0.05}];
+      var k,i,j;
+      for(k=0;k<STALKS.length;k++){
+        var S=STALKS[k], hs=s*S.h;
+        // slender stem
+        p.push(hbTube(0.055*hs, 0.045*hs, 1.15*hs, C.stem,
+          {r:[0,0,S.lean], p:[S.x, 0.575*hs, S.z]}));
+        // head — a lofted oval
+        p.push(hbTurn([
+          [0.001,-0.32*hs],[0.16*hs,-0.20*hs],[0.20*hs,0.0],[0.16*hs,0.20*hs],[0.001,0.32*hs]
+        ], C.main, {p:[S.x + S.lean*1.05*hs, 1.05*hs, S.z]}, 12));
+        // four rows of bristly grains sticking out
+        for(i=0;i<4;i++){
+          var y = 0.90*hs + i*0.15*hs;
+          for(j=0;j<4;j++){
+            var a=(j/4)*Math.PI*2;
+            p.push(hbCone(0.04*hs, 0.20*hs, C.accent, {
+              r:[0,0, Math.PI/2 + Math.sin(a)*0.3],
+              p:[S.x + S.lean*1.05*hs + Math.cos(a)*0.20*hs, y, S.z + Math.sin(a)*0.20*hs]
+            }, 6));
+          }
         }
       }
       return p;
@@ -2854,9 +2921,13 @@ function giveArrow(s){
   // yellow on light green grass is nearly invisible, which the first picture
   // showed plainly. It is also drawn BIG — this is the loudest thing the farm
   // says, because it is the one she is meant to walk into.
-  var mat=new THREE.MeshBasicMaterial({color:GIVE_ARROW,transparent:true,opacity:0.95});
-  var c=new THREE.Mesh(new THREE.ConeGeometry(s*0.55,s*0.85,8),mat); c.position.y=s*0.62; g.add(c);
-  var b=new THREE.Mesh(new THREE.BoxGeometry(s*0.30,s*0.55,s*0.30),mat); b.position.y=s*0.10; g.add(b);
+  // FM12 — SMALLER AND SOLID. Drawn big and faded out over its whole hop, the
+  // arrow stopped being an arrow and became a pale smear hanging over the
+  // crop. Half the size, full strength for most of the hop, and it reads as
+  // one clear sign instead of a stain on the picture.
+  var mat=new THREE.MeshBasicMaterial({color:GIVE_ARROW,transparent:true,opacity:0.98});
+  var c=new THREE.Mesh(new THREE.ConeGeometry(s*0.40,s*0.62,10),mat); c.position.y=s*0.55; g.add(c);
+  var b=new THREE.Mesh(new THREE.BoxGeometry(s*0.20,s*0.42,s*0.20),mat); b.position.y=s*0.14; g.add(b);
   g.userData.mat=mat; return g;
 }
 // One beat for every arrow on the farm, so a ready egg and a ready crop say
@@ -2864,8 +2935,10 @@ function giveArrow(s){
 function beatArrow(ar, baseY, now, i){
   if(!ar) return;
   var u=(now*1.5+i*0.37)%1;
-  ar.position.y=baseY+u*0.38;
-  ar.userData.mat.opacity=0.85*(1-u);
+  ar.position.y=baseY+u*0.30;
+  // FM12 — it stays solid for three quarters of the hop and only fades at the
+  // very top, so at any moment you are looking at an arrow and not a ghost.
+  ar.userData.mat.opacity = u<0.74 ? 0.98 : 0.98*(1-(u-0.74)/0.26);
 }
 // Shortest way round to an angle, so an animal turning to face her never
 // swings the long way about.
@@ -3273,40 +3346,114 @@ function buildWell(){
 }
 
 // ----------------------------------------------------------------- THE POND
+// FM12 — WATER, NOT A TARGET. Two perfect circles of flat blue inside a
+// perfect cream ring is a dartboard, which is exactly what it looked like.
+// Ponds are not round and they are not one colour: the edge is shallow and
+// warm, the middle is deep and cool, and the outline wanders.
+function pondOutline(rad){
+  var sh=new THREE.Shape(), n=72, i;
+  for(i=0;i<n;i++){
+    var a=(i/n)*Math.PI*2;
+    var rr=rad*(1 + Math.sin(a*3+0.7)*0.070 + Math.sin(a*5+2.1)*0.038
+                  + Math.sin(a*2-1.1)*0.045);
+    var x=Math.cos(a)*rr, y=Math.sin(a)*rr;
+    if(i===0) sh.moveTo(x,y); else sh.lineTo(x,y);
+  }
+  sh.closePath();
+  return sh;
+}
+function pondLayer(rad, hex, y, ox, oz){
+  var geo=new THREE.ShapeGeometry(pondOutline(rad));
+  geo.rotateX(-Math.PI/2);
+  hbPaint(geo, hex, {p:[ox||0, y, oz||0]});
+  return hbMesh(geo);
+}
 function buildPond(r){
-  var g=new THREE.Group();
-  var lip=new THREE.RingGeometry(r, r+1.15, 48, 1); lip.rotateX(-Math.PI/2);
-  hbPaint(lip, 0xE3CE9C, {p:[0,0.014,0]}); g.add(hbMesh(lip));
-  var w1=new THREE.CircleGeometry(r, 48); w1.rotateX(-Math.PI/2);
-  hbPaint(w1, 0x4FB4D8, {p:[0,0.010,0]}); g.add(hbMesh(w1));
-  var w2=new THREE.CircleGeometry(r*0.62, 40); w2.rotateX(-Math.PI/2);
-  hbPaint(w2, 0x2E86B8, {p:[0,0.018,0]}); g.add(hbMesh(w2));
-  var lily, i, a;
-  for(i=0;i<5;i++){
-    a=(i/5)*Math.PI*2+0.4;
-    lily=new THREE.CircleGeometry(0.52, 12); lily.rotateX(-Math.PI/2);
-    hbPaint(lily, 0x5FA556, {p:[Math.cos(a)*r*0.55, 0.026, Math.sin(a)*r*0.55]});
+  var g=new THREE.Group(), i, a;
+  // a narrow band of wet earth at the edge, not a wide cream rim: the first
+  // cut had a bathtub lip round it
+  g.add(pondLayer(r+0.55, 0xC9A870, 0.014));
+  // four bands from shallow to deep, each one NUDGED off centre, because
+  // perfectly nested rings are a dartboard and that is what Mike saw
+  g.add(pondLayer(r,      0x6ABFD6, 0.020,  0.00,  0.00));
+  g.add(pondLayer(r*0.80, 0x3C9FC4, 0.026,  0.55, -0.45));
+  g.add(pondLayer(r*0.56, 0x257FAC, 0.032,  0.95, -0.15));
+  g.add(pondLayer(r*0.28, 0x1A6690, 0.038,  1.25,  0.35));
+  // lily pads: a disc with a wedge taken out of it, which is the one shape
+  // that says lily pad without a word
+  for(i=0;i<6;i++){
+    a=(i/6)*Math.PI*2+0.4;
+    var lr=0.46+((i*7)%3)*0.10;
+    var d=r*(0.40+((i*5)%4)*0.13);
+    var px=Math.cos(a)*d, pz=Math.sin(a)*d;
+    var lily=new THREE.CircleGeometry(lr, 14, 0.42, Math.PI*2-0.84);
+    lily.rotateX(-Math.PI/2);
+    hbPaint(lily, i%2?0x5FA556:0x6FB262, {r:[0,a*1.7,0], p:[px, 0.046, pz]});
     g.add(hbMesh(lily));
+    // one of them flowers
+    if(i===1||i===4){
+      var fl=[], k;
+      for(k=0;k<5;k++){
+        var fa=(k/5)*Math.PI*2;
+        fl.push(hbTurn([[0.001,0.05],[0.07,0.02],[0.06,0]], 0xF6C9DA,
+          {p:[px+Math.cos(fa)*0.10, 0.058, pz+Math.sin(fa)*0.10]}, 6));
+      }
+      fl.push(hbTurn([[0.001,0.07],[0.06,0.03],[0.05,0]], 0xFFE59B, {p:[px,0.062,pz]}, 6));
+      g.add(hbMesh(hbBake(fl)));
+    }
+  }
+  // reeds round part of the bank, so the water has something growing out of it
+  for(i=0;i<16;i++){
+    a=0.9 + (i/16)*Math.PI*1.35;
+    var rr=r*(1.0+((i*3)%4)*0.02);
+    var rx=Math.cos(a)*rr, rz=Math.sin(a)*rr;
+    var reed=[], n=2+((i*5)%2), j;
+    for(j=0;j<n;j++){
+      var jx=rx+(((i*7+j*3)%5)-2)*0.09, jz=rz+(((i*3+j*5)%5)-2)*0.09;
+      var h=0.7+((i*11+j*7)%5)*0.13;
+      reed.push(hbTube(0.035,0.025,h, 0x4E8C46,
+        {r:[0,0,(((i+j)%3)-1)*0.12], p:[jx, h/2, jz]}, 6));
+      // a cattail on the tallest of each clump
+      if(j===0 && i%3===0)
+        reed.push(hbTurn([[0.001,-0.13],[0.075,-0.07],[0.075,0.07],[0.001,0.13]],
+          0x8A6237, {p:[jx, h+0.10, jz]}, 8));
+    }
+    g.add(hbMesh(hbBake(reed)));
   }
   return g;
 }
-// A plank bridge over the pond, with rails a duck can waddle under.
-function buildBridge(len){
-  var p=[], i, j;
-  // A SOLID DECK, not a ladder. The first cut left gaps between the planks and
-  // from the game's overhead camera you looked straight through the bridge at
-  // the water, which read as a rope ladder someone had dropped.
-  p.push(hbBox(2.2, 0.18, len, 0xB07B4C, {p:[0, 0.46, 0]}));
-  var n=Math.max(5, Math.round(len/1.05));
+// FM12 — A DOCK, NOT A BRIDGE. A bridge is for getting across something, and
+// there is nothing on the far side of this pond: it ran bank to bank with
+// rails on both sides and read as a ladder dropped on a dartboard. What a
+// small pond wants is a short dock you can stand on the end of. Mike's call.
+function buildDock(len){
+  var p=[], i;
+  // the deck, with plank lines cut into the top rather than gaps through it
+  p.push(hbBox(2.0, 0.17, len, 0xA97B45, {p:[0, 0.42, 0]}));
+  var n=Math.max(4, Math.round(len/0.85));
   for(i=0;i<n;i++)
-    p.push(hbBox(2.24, 0.06, 0.14, 0x8C6237, {p:[0, 0.56, -len/2 + (i+0.5)*(len/n)]}));
-  // rails, thick enough to read from directly above
+    p.push(hbBox(2.05, 0.05, 0.09, 0x8A6034, {p:[0, 0.51, -len/2 + (i+0.5)*(len/n)]}));
+  // the beam under it, so it is held up by something
+  p.push(hbBox(1.55, 0.14, len-0.3, 0x7A5430, {p:[0, 0.28, 0]}));
+  // posts down into the water
+  for(i=0;i<3;i++){
+    var z=-len/2+0.7+i*(len-1.4)/2;
+    p.push(hbTube(0.15,0.15,1.15, 0x7A5430, {p:[-0.78, -0.10, z]}, 8));
+    p.push(hbTube(0.15,0.15,1.15, 0x7A5430, {p:[ 0.78, -0.10, z]}, 8));
+  }
+  // two mooring posts at the water end, capped, with nothing to trip over in
+  // between: the end of a dock has to stay open or it is a bridge again
   for(i=0;i<2;i++){
     var sx=(i?1:-1);
-    p.push(hbBox(0.20, 0.22, len, 0xC08A52, {p:[sx*1.02, 1.10, 0]}));
-    for(j=0;j<5;j++)
-      p.push(hbBox(0.22, 0.72, 0.22, 0x8C6237, {p:[sx*1.02, 0.72, -len/2+0.6+j*(len-1.2)/4]}));
+    p.push(hbTube(0.16,0.19,0.95, 0x9C7040, {p:[sx*0.80, 0.92, len/2-0.42]}, 8));
+    p.push(hbTurn([[0.001,0.11],[0.19,0.05],[0.19,-0.05],[0.001,-0.10]], 0x8C6237,
+      {p:[sx*0.80, 1.44, len/2-0.42]}, 8));
   }
+  // a coil of rope on the deck, the small thing that makes it a place someone
+  // uses rather than a shape that was placed
+  for(i=0;i<3;i++)
+    p.push(hbPaint(new THREE.TorusGeometry(0.17-i*0.04, 0.038, 6, 16), 0xD9C48C,
+      {r:[Math.PI/2,0,0], p:[-0.55, 0.53+i*0.045, len/2-1.25]}));
   var g=new THREE.Group(); g.add(hbMesh(hbBake(p)));
   return g;
 }
@@ -6946,10 +7093,14 @@ function dressIsland(){
   var pond=buildPond(ISLE.pond.r);
   pond.position.set(ISLE.pond.x, 0, ISLE.pond.z);
   g.add(pond);
-  // the bridge crosses it north to south, so the path from the coop carries on
-  var br=buildBridge(ISLE.pond.r*2 + 1.4);
-  br.position.set(ISLE.pond.x, 0, ISLE.pond.z);
-  g.add(br);
+  // FM12 — the dock reaches out from the north bank, which is the side the
+  // path from the coop arrives on. It stops over open water, so standing on
+  // the end of it is the point of walking down it.
+  var dockLen=ISLE.pond.r*0.95;
+  var dock=buildDock(dockLen);
+  dock.position.set(ISLE.pond.x - 1.1, 0,
+                    ISLE.pond.z - ISLE.pond.r + dockLen/2 - 0.5);
+  g.add(dock);
 
   // ----------------------------------------------------------- road and paths
   buildRoad(g);
@@ -6960,7 +7111,12 @@ function dressIsland(){
   steppingStones(g, FIELD_CX-fieldHalf(1)-1.0, FIELD_CZ, CRATE.x+2.2, CRATE.z);
   steppingStones(g, CRATE.x-2.4, CRATE.z, RUNWAY.x+RUNWAY.halfW+1.4, RUNWAY.z);
   steppingStones(g, COOP_C.x, COOP_C.z+5.0, ISLE.pond.x, ISLE.pond.z-ISLE.pond.r-2.0);
-  steppingStones(g, ISLE.pond.x, ISLE.pond.z+ISLE.pond.r+2.0, ISLE.pond.x-2.0, ISLE.road.z-3.0);
+  // FM12 — the way south used to cross the pond on the bridge. With the bridge
+  // gone it goes ROUND the west bank, which is what a path by a pond does.
+  steppingStones(g, ISLE.pond.x-ISLE.pond.r-1.6, ISLE.pond.z-2.4,
+                    ISLE.pond.x-ISLE.pond.r-2.2, ISLE.pond.z+3.0);
+  steppingStones(g, ISLE.pond.x-ISLE.pond.r-2.2, ISLE.pond.z+3.0,
+                    ISLE.pond.x-2.0, ISLE.road.z-3.0);
 
   // ------------------------------------------------- the Quaternius set dressing
   if(NAT_READY){
@@ -7894,7 +8050,12 @@ function step(){
     kid.position.x += mx * speed * dt;
     kid.position.z += mz * speed * dt;
     kidState.facing = Math.atan2(mx, mz);   // face where we're going (radians)
-    kid.rotation.y = kidState.facing + Math.PI;   // model's front faces +Z
+    // FM12 — SHE WALKED BACKWARDS, and had done since FM1. The model's front
+    // faces +Z, which is exactly what the old comment said, and then the line
+    // under it added half a turn and pointed her the other way. On a blob with
+    // two bead eyes nobody could tell; on a real character she moonwalks the
+    // whole farm. facing IS the rotation, there is nothing to add.
+    kid.rotation.y = kidState.facing;
     kidState.walkT += dt*speed*1.4;
     // walk-cycle: legs swing
     var ang = Math.sin(kidState.walkT) * 0.55;
@@ -7957,6 +8118,17 @@ function step(){
       // pulse the ring's brightness by tilting its scale
       var s=1+Math.sin(now*2.4+i*0.7)*0.04;
       P.ring.scale.set(s,1,s);
+      // FM12 — ONE VOICE AT A TIME, the same rule FM10 gave the animals. Nine
+      // rings all shouting at once is wallpaper; the bed she is standing next
+      // to brightens and the rest sit back and let the soil do the talking.
+      var pd=Math.hypot(kid.position.x-P.x, kid.position.z-P.z);
+      var near = pd < PATCH_STEP*1.15;
+      var ch=P.ring.children, ri;
+      for(ri=0;ri<ch.length;ri++){
+        if(!ch[ri].material) continue;
+        var base = ri===0 ? (near?0.95:0.34) : (near?0.34:0.10);
+        ch[ri].material.opacity = base + (near?0.05*Math.sin(now*3+i):0);
+      }
       continue;
     }
     if(P.state==="growing"){
@@ -7988,13 +8160,18 @@ function step(){
       P.crop.position.y = 0.06 + bob;
       // sparkle: temporary spinning halo tube added once
       if(!P.halo){
-        var halo=hbPaint(new THREE.TorusGeometry(PATCH_R*0.9, 0.10, 6, 20), GIVE_TINT, {r:[Math.PI/2,0,0]});
-        var mh=new THREE.Mesh(halo, new THREE.MeshBasicMaterial({color:GIVE_TINT, transparent:true, opacity:0.75}));
-        mh.position.set(P.x, 0.16, P.z);
+        // FM12 — THE RING STAYS FLAT. It was baked lying down and then turned
+        // on Z every frame, which tips it out of the ground and, from above,
+        // draws a pale bar across the soil. That bar is what Mike saw. A ring
+        // that lies in the grass and only brightens says "ready" without
+        // scribbling on the bed.
+        var halo=hbPaint(new THREE.TorusGeometry(PATCH_R*1.00, 0.10, 8, 34), GIVE_ARROW, {r:[Math.PI/2,0,0]});
+        var mh=new THREE.Mesh(halo, new THREE.MeshBasicMaterial({color:GIVE_ARROW, transparent:true, opacity:0.70}));
+        mh.position.set(P.x, 0.06, P.z);
         scene.add(mh); P.halo=mh;
       }
-      P.halo.rotation.z += dt*2.2;
-      P.halo.material.opacity = 0.48 + 0.32*Math.abs(Math.sin(now*3+i));
+      P.halo.rotation.y += dt*0.7;
+      P.halo.material.opacity = 0.50 + 0.24*Math.abs(Math.sin(now*3+i));
       if(!P.arrow){ P.arrow=giveArrow(1.00); P.arrow.position.set(P.x,1.10,P.z); scene.add(P.arrow); }
       beatArrow(P.arrow, 1.10, now, i);
 
@@ -8054,7 +8231,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm8",
+  version: "fm12",
   coins: function(){ return walletBalance(); },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){

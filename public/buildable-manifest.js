@@ -1086,6 +1086,35 @@
     if(n) n.innerHTML = kgEsc(row.name || "My game");
     if(b) b.innerHTML = kgEsc(kgCredit(row));
   }
+
+  // ---- CB7: every engine agrees about whose game this is -------------------
+  //  Four engines each had their own idea of the title and their own save file,
+  //  so a kid's game could open with a stock name in the tab and somebody else's
+  //  cleared levels already ticked. These three make them agree, and every engine
+  //  uses them rather than inventing its own answer:
+  //
+  //    kidGameRow()      the row, if it has landed (synchronous; null otherwise)
+  //    kgTitle(stock)    the kid's title, or the engine's own when it is not one
+  //    kgSaveKey(base)   a save file keyed by the kid game id, so a new game
+  //                      always starts fresh and never inherits stock progress
+  function kidGameRow(){ return (KG_CACHE && typeof KG_CACHE === "object") ? KG_CACHE : null; }
+  function kgTitle(stock){
+    var row = kidGameRow();
+    return (row && row.name) ? String(row.name) : stock;
+  }
+  function kgSaveKey(base){
+    var id = kidGameId();
+    return id ? (String(base) + "_kg_" + id) : String(base);
+  }
+  // The tab is part of the game's face: a kid showing a grown-up their game
+  // should see their own name there, not the engine we happened to build it on.
+  function kgSetDocTitle(row){
+    try{
+      if(!row || !row.name || typeof document === "undefined") return;
+      document.title = row.name + " — Buildable Kids";
+    }catch(e){}
+  }
+
   function kgHideCover(){
     if(!KG_COVER) return;
     var d = KG_COVER; KG_COVER = null;
@@ -1099,7 +1128,7 @@
       kgShowCover();
       setTimeout(kgHideCover, 8000);                 // hard floor: never a stuck cover
       kidGame(function(row){
-        if(row) kgFillCover(row); else kgHideCover(); // no row = nothing to announce
+        if(row){ kgFillCover(row); kgSetDocTitle(row); } else kgHideCover(); // no row = nothing to announce
         // The kid gets a beat to read their own title before the game shows.
         if(row) setTimeout(kgHideCover, 1400);
       });
@@ -1177,7 +1206,7 @@
     stock();
   }
 
-  var API = { validate:validate, checkRules:checkRules, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, rawManifest:rawManifest, breakerBoardToManifest:breakerBoardToManifest, kidGame:kidGame, kidGameId:kidGameId, kidGameCredit:kgCredit, hideKidCover:kgHideCover, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
+  var API = { validate:validate, checkRules:checkRules, resolveAsset:resolveAsset, toEngineConfig:toEngineConfig, load:load, rawManifest:rawManifest, breakerBoardToManifest:breakerBoardToManifest, kidGame:kidGame, kidGameId:kidGameId, kidGameRow:kidGameRow, kgTitle:kgTitle, kgSaveKey:kgSaveKey, kidGameCredit:kgCredit, hideKidCover:kgHideCover, TPL:TPL, multiplayerMode:multiplayerMode, multiplayerTransport:multiplayerTransport, learningDefaults:learningDefaults, landingKind:landingKind, slingTerrainPoly:slingTerrainPoly };
   root.BuildableManifest = API;
   if(typeof module!=="undefined" && module.exports) module.exports = API;
 })(typeof window!=="undefined" ? window : (typeof globalThis!=="undefined" ? globalThis : this));

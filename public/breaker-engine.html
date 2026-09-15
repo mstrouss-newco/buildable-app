@@ -443,7 +443,10 @@ function mergePrefs(d){ const p=defaultPrefs(); if(!d||typeof d!=="object")retur
   return p; }
 let PREFS=defaultPrefs();
 function activeKidId(){ try{ const k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return k&&k.id?k.id:null; }catch{ return null; } }
-function prefsKey(){ const k=activeKidId(); return "bk_breaker_prefs"+(k?("_"+k):""); }
+// CB7 — a kid-made game saves under its OWN key (see buildable-manifest.js).
+function kgKey(base){ try{ return (window.BuildableManifest && window.BuildableManifest.kgSaveKey) ? window.BuildableManifest.kgSaveKey(base) : base; }catch(e){ return base; } }
+function kgName(stock){ try{ return (window.BuildableManifest && window.BuildableManifest.kgTitle) ? window.BuildableManifest.kgTitle(stock) : stock; }catch(e){ return stock; } }
+function prefsKey(){ const k=activeKidId(); return kgKey("bk_breaker_prefs"+(k?("_"+k):"")); }
 function loadPrefs(){ try{ const s=localStorage.getItem(prefsKey()); if(s)PREFS=mergePrefs(JSON.parse(s)); }catch{} }
 function savePrefs(){ try{ localStorage.setItem(prefsKey(), JSON.stringify(PREFS)); }catch{} }
 
@@ -1116,7 +1119,7 @@ function buildStartCfg(){
         const st = i<unlocked ? "done" : (i===unlocked ? "next" : "locked");
         return { n:i+1, name:l.name, color:brickColorFor(i), img:levelThumbURL(l,i), maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st };
       });
-  const cfg = { title:"Buildable Breaker",
+  const cfg = { title:kgName("Buildable Breaker"),
     subtitle: currentMode==="two" ? "Two players — knock the ball past your buddy!" : "Bounce the ball, smash every brick",
     sound: !(BA&&BA.muted), showBack:true, modes:[], mode:"solo", levels };
   if(currentMode!=="two"){ cfg.coins = (window.BuildableWallet?BuildableWallet.balance():totalStars()); cfg.subtitle = "Stars: "+totalStars()+" of "+maxStars(); }   // coins = shared wallet balance; stars = level progress

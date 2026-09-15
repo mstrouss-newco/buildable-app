@@ -95,8 +95,8 @@ export default async function handler(req, res) {
 
   let head;
   if (game) {
-    const title = `${game.name || "A kid-made game"} by ${game.kid_name || "a kid"}`;
     const by = [game.kid_name, game.grownup_name].filter(Boolean).join(" and ");
+    const title = `${game.name || "A kid-made game"} by ${by || "a kid"}`;
     const desc = by ? `Made by ${by} on Buildable Kids. Free to play, no account needed.`
                     : "Made on Buildable Kids. Free to play, no account needed.";
     const img = coverUrl(game);

@@ -378,9 +378,12 @@ if (BA && BA.configure) {
 
 /* ---------- prefs (unlock + stars), localStorage with safe fallback ---------- */
 const PREFS = { unlocked: 0, stars: {} };
-function loadPrefs() { try { const d = JSON.parse(localStorage.getItem("castleguard") || "{}");
+function loadPrefs() { try { const d = JSON.parse(localStorage.getItem(kgKey("castleguard")) || "{}");
   PREFS.unlocked = d.unlocked || 0; PREFS.stars = d.stars || {}; } catch (e) {} }
-function savePrefs() { try { localStorage.setItem("castleguard", JSON.stringify(PREFS)); } catch (e) {} }
+// CB7 — a kid-made game saves under its OWN key (see buildable-manifest.js).
+function kgKey(base){ try{ return (window.BuildableManifest && window.BuildableManifest.kgSaveKey) ? window.BuildableManifest.kgSaveKey(base) : base; }catch(e){ return base; } }
+function kgName(stock){ try{ return (window.BuildableManifest && window.BuildableManifest.kgTitle) ? window.BuildableManifest.kgTitle(stock) : stock; }catch(e){ return stock; } }
+function savePrefs() { try { localStorage.setItem(kgKey("castleguard"), JSON.stringify(PREFS)); } catch (e) {} }
 
 /* ===================================================================== */
 /*  GAME STATE + PURE SIMULATION (no canvas) — drives both play and QA   */
@@ -1101,7 +1104,7 @@ function showMenu() {
   const host = document.getElementById("start"); if (!host) return;
   host.style.display = "block";
   BS.mount(host, {
-    title: "Castle Guard",
+    title: kgName("Castle Guard"),
     subtitle: "Place archers to gently stop the silly goblins!",
     hero: { name: GAME_CONFIG.world.name, progressText: (PREFS.unlocked || 0) + " of " + GAME_CONFIG.levels.length + " levels cleared" },
     coins: 0, sound: !(BA && BA.muted), showBack: false, hideSound: true,
