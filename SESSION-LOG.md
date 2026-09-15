@@ -167,6 +167,178 @@ sea" and look for a cat on the screen. The painting itself needs `OPENAI_API_KEY
 live; with the picture machine off the game still builds and the engines draw their
 own art, which is the read-with-a-fallback rule.
 
+## 2026-09-15 (QA57): the release gate is red in three places, and one of them was emoji in front of kids
+
+**Phase QA, card QA57.** Found while running the gate for FM11, raised as its own card
+because none of it is farm work, then done. Touched `public/typing.html`,
+`public/cobuild.html`, `qa-typing.mjs`, `qa-farm.mjs`, `qa-all.mjs`,
+`qa-skyflyer-hud.mjs`, `qa-skyflyer-look.mjs`, `qa-skyflyer-sky.mjs`, and
+`scripts/qa-serve.mjs` (new).
+
+### 1. Emoji shipped to kids, which is a rule and not a nit
+
+The typing rebuild put **twenty-one emoji glyphs** into `public/typing.html` and they
+were live: a lightning bolt and a dart board and a star in the header pills, a castle
+and a rocket and a stopwatch on the tile pictures, a loudspeaker on Read aloud, a tick
+on every finished lesson, a padlock on every locked one, and `★★★☆☆☆` sliced with
+`substr` for the star ratings. Every one of them is now **drawn SVG geometry**, in an
+`ICO` table the markup and the JavaScript both read from, so a pill repainted by code
+looks exactly like the one that was there on first paint.
+
+The rule exists for a reason worth writing down: an emoji is a **different picture on
+every device a kid opens it on**, and half of them are not the picture we meant.
+
+### 2. The harness was pointed at a file that had moved
+
+Five of the seven `qa-typing.mjs` failures were not the product at all. Typing is TWO
+pages since the rebuild: `typing.html` is the school and `typing-game.html` is Defend
+the Castle, which used to BE typing.html. The harness still grepped one file called
+typing.html for a fort, a hero face and a win message, found a page that had never had
+any of those in it, and went red five times over. **The checks were right and they were
+aimed at the wrong file.** They now name the file they mean, and the emoji scan runs
+over BOTH pages rather than one.
+
+**The emoji range had a hole in it and that is the worse bug of the two.** The
+stopwatch is U+23F1 and the range list started at U+2600, so `typing.html` shipped two
+stopwatches and the harness reported the file clean apart from the two stray variation
+selectors hanging off the end of them. A range that catches the accent but not the
+character **reads as a pass**, which is worse than no check at all. U+2300-U+23FF is in
+the list now.
+
+### 3. A switch that switched nothing
+
+`cobuild_live` in `/api/app-flags` has always said, in its own note, what it does:
+"When true, the Start buttons on /cobuild go to real signup and Stripe checkout instead
+of the waitlist. FALSE is the safe side." The page never read it. Every Start button
+went to the waitlist whatever the switch said, so **flipping it would have changed
+nothing on the page it names**.
+
+It reads it now. FALSE is still the default and still what is live, so nothing a
+visitor sees changes today: they type an email and we save their spot, exactly as
+before. Nobody is charged and nothing new is switched on. What is new is that the live
+path exists and **falls back rather than dead-ends** — a Start button that does nothing
+is the worst thing a marketing page can do, so if the signup is not ready (it is not:
+there is still no sign-up page, QA50), or the flag read fails, or the network is out,
+the family lands in the same friendly waitlist. Proved in a real browser all four ways:
+switch off, save-my-spot, switch on with no signup page, switch on with one.
+
+### 4. The egg the farm was collecting perfectly all along
+
+`walking over the egg hops it onto the stack like any crop` has been going red on and
+off since FM6 and **the farm was never at fault**, twice over now. FM10 fixed half of
+it. This is the other half, and it was three faults in the harness stacked on each
+other:
+
+- **"Stand clear of the magnet" only stood clear of ONE hen's egg.** It offset from the
+  target hen by x+6.5, z+6.5 and called that outside the four-unit magnet. It is
+  outside THAT hen's magnet. But `advanceTime` ripens every hen she fed, and the coop's
+  hens sit a couple of units apart, so the diagonal routinely landed inside four units
+  of a DIFFERENT hen's egg. Those eggs flew onto the stack **before the reading was
+  taken**. The harness now searches for a spot clear of every produce spot on the farm
+  and **proves it is clear** before reading anything.
+- **It counted things, not eggs.** She is usually still carrying corn from the feeding
+  test, and collecting an egg while holding corn feeds that hen straight back up — the
+  loop closing, which the cow checks two blocks down call out by name. So the stack
+  height moves for reasons that have nothing to do with this egg. It counts eggs now.
+- **It waited on the wrong word.** It waited for the hen to stop being `ready`, but a
+  hen fed again on the spot goes `ready` to `feeding` to `making`, so a harness watching
+  for "not ready" can read the word it wanted **while the egg is still sitting in the
+  grass**. It now waits for that hen's egg to be gone from the ground, which is the
+  thing the check is actually about.
+
+Traced by replaying the harness step by step in a real browser and printing the state
+every second: prePick 1 corn, three hens ready, and the instant she was put on the
+target egg the stack read `[egg, egg]` — hers and the neighbour's, 1.7 units apart,
+both inside the magnet. The mechanic was fine every single time.
+
+### 5. And the gate can be run honestly now
+
+Three things made `node qa-all.mjs --with-browser` impossible to trust on a small
+machine, and a gate that invents red is worse than no gate, because the next person
+learns to ignore it.
+
+- **A hard-coded five-minute kill.** `qa-farm.mjs` plays the farm in a real browser on
+  the software rasteriser and wants about twelve minutes on four cores, so it was killed
+  at five and reported a failure it had not earned, and `qa-farm-shot.mjs` with it.
+  There is now a per-harness cap (25 minutes for the seven that really do play a whole
+  game through, 5 for everything else), a `--timeout <minutes>` override, and a killed
+  harness **says it ran out of time** instead of surfacing as `exit null`.
+- **Three harnesses expected a server somebody else had started.**
+  `qa-skyflyer-hud/look/sky` each wanted `python3 -m http.server 8899` running in
+  another window and died with `ERR_CONNECTION_REFUSED` when nobody had. New
+  `scripts/qa-serve.mjs`: ask for a base URL, get one — an existing server if something
+  is answering, otherwise public/ served on a free port. All three now run from a cold
+  start.
+- **A pinned browser build number and a dependency `npm ci` deletes.** Those same three
+  hard-coded `/opt/pw-browsers/chromium-1194/...` and required `playwright-core`, which
+  is not a repo dep, so `npm ci` takes it away every time. They now find chromium on
+  disk whatever it is called, fall back to the machine-wide playwright, and print one
+  plain line rather than a module-resolution stack if neither is there.
+
+### The gate, before and after
+
+`node qa-all.mjs --with-browser` on this machine, before: **8 failed** — five of them the
+machine rather than the code (two harnesses killed at the five-minute cap, three dead on
+a missing module or an absolute path into somebody else's laptop) and three real.
+
+After: **68 harnesses run, 0 skipped, 1 failed.** `qa-farm.mjs` 297 green in 865
+seconds, which is the run that used to be killed at 300; `qa-farm-shot.mjs` green in
+351; `qa-typing.mjs`, `qa-grownups.mjs`, `qa-skyflyer{,-hud,-look,-sky}.mjs` and
+`qa-kp3-add-a-kit.mjs` all green.
+
+**The one remaining red is a card that already exists and is not new.**
+`qa-ap2-use-in-game.mjs` now says `expected 2 .useg buttons, got 307`, which is QA10
+word for word. It has been on the planner since the whole-site sweep; it was invisible
+until today only because the harness died on its import line before it could say
+anything. Making it run is what QA57 was for; fixing what it found is QA10's job.
+
+**Two things that went in and are worth knowing.** The FM11 thumb checks turned out to
+be flaky under a loaded machine and green on a quiet one, with the product identical
+either way: two `mouse.move` calls back to back are two CDP messages, and Chromium may
+coalesce them or deliver them after the `evaluate` that reads the result. They now drag
+in six steps, like a thumb rather than a teleport, wait a beat before reading, and retry
+once before reporting. And `npm ci` removes the unsaved `playwright`, which then leaves
+a newer one than the browsers in `/opt/pw-browsers`; if a harness suddenly cannot find
+chromium, that mismatch is why.
+
+### 6. And then FM12 landed on main while this was in flight, red
+
+Merging `main` in brought FM12, CB6 and CB7, and with them **twelve fresh failures that
+had been pushed to main and deployed**: nine in `qa-skyflyer.mjs` and three in
+`qa-farm.mjs`. Checked on a pristine `origin/main` worktree before anything was touched,
+and they fail there identically, so this is not the merge. Every one of them is the
+harness being stale rather than the game being broken, and they are all the same shape
+as the bugs above: **a check that names a number somebody has to remember to retype**.
+
+- **The build tag was typed out in EIGHT places.** `version: "fm8"` twice in the static
+  half and five times in the farm robot, plus `?v=fm10` four times over. FM12 bumped the
+  engine and the door and left all eight behind. There is now ONE source of truth — the
+  cache-bust on the door in `BuildableKids.jsx`, which is what a kid's browser actually
+  fetches — and every check reads the tag from there and asks the engine to agree with
+  it. A card that bumps the build no longer has to find eight places, and a build where
+  the door and the engine disagree now goes red with both numbers in the message, which
+  is a genuinely useful check and is not one we had.
+- **The bridge became a dock, on Mike's word.** He looked at the live farm and said a
+  pond that size wants a dock you can stand on the end of, not a full bridge, so FM12
+  replaced `buildBridge` with `buildDock` and the check that greps for the bridge by
+  name went red on the thing it asked for. It asks for **a way onto the water** now.
+- **The arrow's hop was pinned to the pixel.** `ar.position.y=baseY+u*0.38` was written
+  into the check, so FM12 could not calm the arrow to `0.30` without turning FM10 red.
+  UP is the rule and the height is a dial: the check reads the shape and lets the number
+  move.
+
+**Two more flaky checks, both fixed at the premise rather than the assertion.** `an egg
+left on the ground is collected once she walks up to it` demanded a chicken that
+happened to be HUNGRY at that moment and returned a bare `false` when there wasn't one —
+a coin toss decided by whatever the blocks above left behind. It now takes an egg that
+is already lying there if there is one, and feeds whichever hen can take the corn if
+there isn't. `the animal she is nearest to STOPS pacing and turns to face her` waited
+for a patrolling hen to go loud, but FM10's rule is that only a HUNGRY animal gets
+loud, and the patrolling hen has usually been fed and ripened by the blocks above, so it
+was waiting twenty-five seconds for something that could not happen. It waits for the
+hen to come back round to hungry first. Both now carry a reason in their message, so a
+future red says what it saw instead of nothing at all.
+
 ## 2026-09-15 (FM11): fix how she moves
 
 **Phase FM, card FM11.** Mike's playtest: "you have to use the button controller now

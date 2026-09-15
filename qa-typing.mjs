@@ -1,24 +1,51 @@
-// Headless QA for public/typing.html — LIGHT EMOJI FIX + MANIFEST + WIRING (Session 7B).
-// Typing is a bespoke real-time canvas/DOM game with no headless logic hook, so this proves
-// what can be checked deterministically: the light emoji fix landed (file is now emoji-free —
-// hero faces + placeholders are drawn, real AI art stays primary), the manifest is valid and
-// maps to the worlds, the engine reads its world names with a built-in fallback, and the shell
-// contract signal (win postMessage) is present.
+// Headless QA for TYPING — both halves of it.
+//
+// Typing is TWO pages since the rebuild: `public/typing.html` is the typing
+// school (units, lessons, the practice tab) and `public/typing-game.html` is
+// Defend the Castle, which used to BE typing.html and now lives behind the
+// Games tab. This harness checked one file called typing.html and, when the
+// castle game moved out from under it, every game-shaped check went red against
+// a page that had never had a fort in it. The checks were right; they were
+// pointed at the wrong file. They now name the file they mean.
+//
+// Typing is a bespoke real-time canvas/DOM game with no headless logic hook, so
+// this proves what can be checked deterministically: NEITHER PAGE HAS AN EMOJI
+// IN IT (hero faces, placeholders and every icon in the school are drawn, real
+// AI art stays primary), the manifest is valid and maps to the worlds, the
+// engine reads its world names with a built-in fallback, and the shell contract
+// signal (win postMessage) is present.
 import fs from 'fs'; import vm from 'vm';
 const dir = process.argv[2] || '.';
 const read = f => fs.readFileSync(dir + '/' + f, 'utf8');
 let ok = true;
 const chk = (name, cond, extra='') => { console.log((cond?'PASS':'FAIL')+'  '+name+(extra?'  ::  '+extra:'')); if(!cond) ok=false; };
-const html = read('public/typing.html');
+const school = read('public/typing.html');          // the typing school
+const html   = read('public/typing-game.html');     // Defend the Castle
 
-// 1) THE LIGHT FIX: file is emoji-free, drawn replacements present
+// 1) NO EMOJI, ON EITHER PAGE.
+// U+2300-U+23FF is in the range list because the stopwatch is U+23F1 and the
+// old list stopped just short of it: typing.html shipped two of them and this
+// harness reported the file clean apart from the stray variation selectors
+// hanging off the end of them. A range that catches the accent but not the
+// character is worse than no check, because it reads as a pass.
 console.log('--- EMOJI FIX ---');
-const emojiRe = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu;
-const found = html.match(emojiRe) || [];
-chk('no emoji glyphs remain (was ~40)', found.length===0, found.length?('still: '+[...new Set(found)].slice(0,8).join(' ')):'clean');
+const emojiRe = /[\u{1F000}-\u{1FAFF}\u{2300}-\u{23FF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu;
+const sniff = (name, text) => {
+  const f = text.match(emojiRe) || [];
+  chk('no emoji glyphs in ' + name, f.length === 0,
+    f.length ? ('still: ' + [...new Set(f)].join(' ')) : 'clean');
+};
+sniff('the typing school (typing.html)', school);
+sniff('Defend the Castle (typing-game.html)', html);
 chk('foe/boss placeholder is a drawn dot, not an emoji', /el\.style\.background='radial-gradient/.test(html) && /el\.textContent='';el\.style\.backgroundImage=''/.test(html));
 chk('fort + hero faces are drawn SVG', /class="fort" id="fort"><svg/.test(html) && /class=\\?"face\\?"><svg/.test(html));
 chk('real AI art stays primary (kind=type)', /\/api\/images\?kind=type/.test(html));
+// and the school's own icons are geometry, so nothing can quietly go back to
+// being a glyph the day someone finds it quicker to type one
+chk('the school draws its icons: the pills, the tiles and the stars are all SVG',
+  /class="ic"/.test(school) && /var ICO=\{/.test(school) &&
+  /ICO\.bolt/.test(school) && /ICO\.target/.test(school) &&
+  /ICO\.starSmOpen/.test(school) && /ICO\.tick/.test(school) && /ICO\.lock/.test(school));
 
 // 2) manifest
 console.log('--- MANIFEST ---');

@@ -28,6 +28,13 @@ import { createRequire } from 'node:module';
 
 const dir = process.argv[2] || '.';
 const root = path.resolve(dir, 'public');
+// THE BUILD TAG IS READ, NEVER TYPED. This said 'fm8' in three places and FM12
+// bumped the engine without them, so three checks went red on a build that was
+// fine. The door in BuildableKids.jsx is what a kid's browser actually fetches,
+// so the engine is asked to agree with THAT rather than with a number somebody
+// remembered to update here.
+const FARM_V = (fs.readFileSync(path.resolve(dir, 'src/BuildableKids.jsx'), 'utf8')
+  .match(/skyflyer-farm\.html\?v=([a-z0-9]+)/) || [])[1] || '';
 let ok = true;
 const chk = (name, cond, extra = '') => {
   console.log((cond ? 'PASS' : 'FAIL') + '  ' + name + (extra ? '  ::  ' + extra : ''));
@@ -89,7 +96,9 @@ try {
 
   console.log('--- THE FARM: the scene stands up in a real browser ---');
   chk('the farm scene boots with a WebGL context and no page errors', errs.length === 0, errs.join(' | '));
-  chk('it is the FM8 build', (await ev(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev(() => window.FARM.version)));
 
   // ======================================================================
   //  FM4 — THE FIRST ORDER. This block runs BEFORE the robot collects
@@ -176,20 +185,47 @@ try {
   chk('after the wait an egg is sitting beside the animal', !!ready && ready.hasProduce);
   chk('and it sparkles, the same signal a ready crop uses', !!ready && ready.sparkling);
 
-  // stand OUTSIDE the magnet's four units, or it fetches the egg before this
-  // has even taken its first reading — which is what the slower island scene
-  // started doing here
-  await ev(r => window.FARM.moveKidTo(r.x + 6.5, r.z + 6.5), ready);
+  // STAND CLEAR OF EVERY EGG, NOT JUST THIS HEN'S. This is why the check below
+  // has been red on and off since FM6, and it was never the farm's fault. The
+  // old version stood her at the target hen's x+6.5, z+6.5 and called that
+  // outside the magnet. It is outside THAT hen's magnet. But `advanceTime` ripens
+  // every hen she fed, and the coop's hens sit a couple of units apart, so the
+  // diagonal routinely landed inside four units of a DIFFERENT hen's egg. Those
+  // eggs flew onto the stack before the reading was taken, and the reading was
+  // then compared with a stack height that a walk to one more egg could not
+  // always beat. The fix is to find a spot clear of every produce spot on the
+  // farm and to PROVE it is clear before reading anything.
+  const clearOfEggs = await ev(() => {
+    const R = window.FARM.magnetRadius() + 1.6;
+    const spots = window.FARM.produceSpots();
+    const far = (x, z) => spots.every(s => Math.hypot(x - s.x, z - s.z) > R);
+    for (const r of [10, 14, 18, 24]) {
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        const x = spots[0].x + Math.cos(a) * r, z = spots[0].z + Math.sin(a) * r;
+        if (Math.abs(x) > 30 || Math.abs(z) > 30) continue;
+        if (far(x, z) && !window.FARM.blockedAt(x, z, 0.6)) { window.FARM.moveKidTo(x, z); return { x, z }; }
+      }
+    }
+    return null;
+  });
   await page.waitForTimeout(700);
-  const prePick = await ev(() => window.FARM.stackHeight());
+  const clearNow = await ev(() => {
+    const k = window.FARM.kid(), R = window.FARM.magnetRadius();
+    return window.FARM.produceSpots().every(s => Math.hypot(k.x - s.x, k.z - s.z) > R);
+  });
+  chk('she can be stood somewhere no egg reaches her, so the reading means something',
+    !!clearOfEggs && clearNow === true, JSON.stringify(clearOfEggs));
+  // COUNT EGGS, NOT THINGS. She may still be carrying corn from the feeding
+  // above, and collecting an egg while holding corn feeds that hen straight back
+  // up — the loop closing, which the cow checks below call out by name. A stack
+  // HEIGHT therefore moves for reasons that have nothing to do with this egg.
+  const eggsOn = () => ev(() => window.FARM.stack().filter(s => s.kind === 'egg').length);
+  const preEggs = await eggsOn();
   // WALK TO THE EGG, not to the hen. The egg lands up to a unit and a bit off
   // her flank, and the magnet measures from the EGG, so standing a magnet's
   // reach from the animal can be a magnet's reach and a half from the thing.
   // THE EGG OF THE HEN WE WAITED ON, and not simply the first egg on the farm.
-  // Several animals can be ready at once, and one of those other eggs may
-  // already be halfway to her on the magnet — walking to that one and then
-  // waiting for it proves nothing. This is the fix for a check that has gone
-  // red on and off since FM6 without the farm ever being at fault.
   const eggSpot = await ev(i => {
     const s = window.FARM.produceSpots().find(p => p.i === i);
     return s || null;
@@ -212,16 +248,27 @@ try {
     }
     window.FARM.moveKidTo(r.x, r.z);
   }, eggSpot);
-  // wait on THAT hen letting go of its egg, not on the stack getting taller:
-  // any other egg drifting in on the magnet would satisfy a height test
-  await page.waitForFunction(i => window.FARM.animals()[i].state !== 'ready', ready.i,
+  // wait on THAT hen's EGG being gone from the ground. Not on the stack getting
+  // taller, which another egg drifting in would satisfy; and not on the hen's
+  // state leaving 'ready' either, because a hen fed again on the spot goes
+  // 'ready' -> 'feeding' -> 'making' and a harness watching for "not ready" can
+  // read the word it wanted while the egg is still sitting in the grass.
+  await page.waitForFunction(i => !window.FARM.produceSpots().some(s => s.i === i), ready.i,
     { timeout: 25000 }).catch(() => {});
-  const picked = await ev(() => ({ stack: window.FARM.stack(), animals: window.FARM.animals() }));
+  const picked = await ev(() => ({ stack: window.FARM.stack(), animals: window.FARM.animals(),
+    spots: window.FARM.produceSpots().map(s => s.i) }));
+  const postEggs = await eggsOn();
   chk('walking over the egg hops it onto the stack like any crop',
-    picked.stack.length > prePick && picked.stack.some(s => s.kind === 'egg'),
-    prePick + ' -> ' + picked.stack.length + ' [' + picked.stack.map(s => s.kind).join(',') + ']');
-  chk('the hen goes straight back to asking for corn — never to a fail state',
-    picked.animals.some(a => a.kind === 'chicken' && a.state === 'hungry' && a.wanting));
+    postEggs > preEggs && picked.spots.indexOf(ready.i) < 0,
+    preEggs + ' eggs -> ' + postEggs + ', hen ' + ready.i +
+    (picked.spots.indexOf(ready.i) < 0 ? ' has none left' : ' STILL has one') +
+    ' [' + picked.stack.map(s => s.kind).join(',') + ']');
+  chk('and the hen never lands in a fail state — she is asking, eating or making',
+    ['hungry', 'feeding', 'making', 'ready'].includes(picked.animals[ready.i].state),
+    'hen ' + ready.i + ' is ' + picked.animals[ready.i].state);
+  chk('the hens go on asking for corn — nothing about this ends the loop',
+    picked.animals.some(a => a.kind === 'chicken' && (a.wanting || a.state === 'making' || a.state === 'feeding')),
+    picked.animals.filter(a => a.kind === 'chicken').map(a => a.state).join(','));
 
   console.log('\n--- THE COW: same mechanic, different item ---');
   const cow = animals.find(a => a.kind === 'cow');
@@ -509,14 +556,26 @@ try {
     await (async () => {
       await park();
       await ev(() => { window.FARM.clearStack(); window.FARM.giveItem('corn', 1); });
-      const hen = (await ev(() => window.FARM.animals()))
-        .find(a => a.kind === 'chicken' && a.state === 'hungry');
-      if (!hen) return false;
-      await ev(([x, z]) => window.FARM.moveKidTo(x, z), [hen.x, hen.z]);
-      await page.waitForFunction(() => window.FARM.animals().some(a => a.state === 'making'), null,
-        { timeout: 15000 }).catch(() => {});
-      await ev(() => window.FARM.advanceTime(40));
-      await page.waitForFunction(() => window.FARM.produceSpots().length > 0, null, { timeout: 20000 });
+      // GET AN EGG ONTO THE GROUND, whatever state the farm is in. This used to
+      // demand a chicken that happened to be HUNGRY right now and return a bare
+      // false when there wasn't one, which is a coin toss decided by whatever
+      // the blocks above left behind. If an egg is already lying there, that IS
+      // the premise; otherwise feed whichever hen can take the corn; and if the
+      // farm somehow offers neither, say which.
+      if ((await ev(() => window.FARM.produceSpots().length)) === 0) {
+        const hen = (await ev(() => window.FARM.animals()))
+          .find(a => a.kind === 'chicken' && a.state === 'hungry') ||
+          (await ev(() => window.FARM.animals())).find(a => a.kind === 'chicken');
+        if (!hen) return false;
+        await ev(([x, z]) => window.FARM.moveKidTo(x, z), [hen.x, hen.z]);
+        await page.waitForFunction(() => window.FARM.animals()
+          .some(a => a.state === 'making' || a.state === 'ready'), null,
+          { timeout: 15000 }).catch(() => {});
+        await ev(() => window.FARM.advanceTime(40));
+      }
+      await page.waitForFunction(() => window.FARM.produceSpots().length > 0, null, { timeout: 25000 })
+        .catch(() => {});
+      if ((await ev(() => window.FARM.produceSpots().length)) === 0) return false;
       const sp = (await ev(() => window.FARM.produceSpots()))[0];
       await park();
       const before = await ev(() => window.FARM.stackHeight());
@@ -752,7 +811,9 @@ try {
 
   await p5.goto(BASE, { waitUntil: 'load' });
   await boot5();
-  chk('it is the FM8 build', (await ev5(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev5(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev5(() => window.FARM.version)));
   chk('a farm nobody has played starts from the FM1 farm, not from someone else\'s',
     (await ev5(() => window.FARM.save.info())) === null &&
     (await ev5(() => window.FARM.patches().every(p => p.state === 'empty'))) === true);
@@ -1111,7 +1172,9 @@ try {
 
   await p6.goto(BASE, { waitUntil: 'load' });
   await boot6();
-  chk('it is the FM8 build', (await ev6(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev6(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev6(() => window.FARM.version)));
   const seeds0 = await ev6(() => window.FARM.seedsOffered());
   chk('the seed pop-up offers the three starters and nothing else',
     seeds0.length === 3 && ['corn', 'carrot', 'wheat'].every(k => seeds0.includes(k)), seeds0.join(','));
@@ -1351,7 +1414,9 @@ try {
     { timeout: 25000 });
   await p7.goto(BASE, { waitUntil: 'load' });
   await boot7();
-  chk('the farm page is the FM8 build now', (await ev7(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev7(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev7(() => window.FARM.version)));
 
   chk('none of the three is plantable before she has its seed',
     await (async () => {
@@ -1673,7 +1738,9 @@ try {
   await p9.waitForFunction(
     () => window.FARM && window.FARM.save && window.FARM.save.booted() && window.FARM.animals().length > 0,
     null, { timeout: 25000 });
-  chk('it is the FM8 build', (await ev9(() => window.FARM.version)) === 'fm8');
+  chk('the engine says it is the same build as the door',
+    (await ev9(() => window.FARM.version)) === FARM_V,
+    'door ' + FARM_V + ', engine ' + (await ev9(() => window.FARM.version)));
   // she has picked who she is, so the card is out of the way of everything below
   await ev9(() => window.FARM.pickLook('girl'));
 
@@ -2053,11 +2120,27 @@ try {
              A.filter(a => a.state === 'hungry' && a.wanting).length > 1;
     })());
 
+  let pacedWhy = '';
   chk('the animal she is nearest to STOPS pacing and turns to face her',
     await (async () => {
       const hen = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
-      if (!hen) return false;
-      await ev10(([x, z]) => window.FARM.moveKidTo(x + 1.1, z + 1.1), [hen.x, hen.z]);
+      if (!hen) { pacedWhy = 'nothing on this farm is patrolling'; return false; }
+      // ONLY A HUNGRY ANIMAL GETS LOUD — that is FM10's rule, one voice at a
+      // time and only from something that is actually asking. The patrolling
+      // hen has usually been fed and ripened by the blocks above, so waiting
+      // for a full hen to go loud is waiting for something that will never
+      // happen. Wait for it to come back round to hungry first, and if it will
+      // not, SAY SO rather than going red with no reason attached.
+      await p10.waitForFunction(() => {
+        const a = window.FARM.animals().find(x => x.patrolling);
+        return a && a.state === 'hungry';
+      }, null, { timeout: 25000 }).catch(() => {});
+      const fresh = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
+      if (fresh.state !== 'hungry') {
+        pacedWhy = 'the patrolling hen is ' + fresh.state + ', so it has nothing to ask for';
+        return false;
+      }
+      await ev10(([x, z]) => window.FARM.moveKidTo(x + 1.1, z + 1.1), [fresh.x, fresh.z]);
       await p10.waitForFunction(() => {
         const a = window.FARM.animals().find(x => x.patrolling);
         return a && a.loud;
@@ -2067,8 +2150,11 @@ try {
       // have walked anywhere, because it is busy asking her for something
       await p10.waitForTimeout(1500);
       const after = (await ev10(() => window.FARM.animals())).find(a => a.patrolling);
-      return at.loud && Math.hypot(after.x - at.x, after.z - at.z) < 0.05;
-    })());
+      const moved = Math.hypot(after.x - at.x, after.z - at.z);
+      pacedWhy = 'hen ' + at.state + (at.loud ? ', loud' : ', NOT loud') +
+                 ', drifted ' + moved.toFixed(3) + 'u';
+      return at.loud && moved < 0.05;
+    })(), pacedWhy);
   chk('and it starts pacing again the moment she is not the one it is asking',
     await (async () => {
       await ev10(() => window.FARM.moveKidTo(0, 20));
@@ -2211,22 +2297,35 @@ try {
     }
     return { x, y, stuck: true };
   };
+  // ONE DRAG, SEVERAL STEPS, AND A BEAT BEFORE READING.
+  // Two `mouse.move` calls back to back are two CDP messages, and Chromium is
+  // free to coalesce them into one event or to deliver them after the evaluate
+  // that reads the result — which is how two of these checks went red on a
+  // loaded machine and green on a quiet one, with the product identical either
+  // way. `steps` makes it a real drag (six pointermoves, like a thumb) instead
+  // of one teleport, and the short wait lets the last one land before we look.
+  // A drag that still did not register is tried ONCE more and then reported
+  // exactly as it came back, because a second failure is real.
+  const dragOnce = async (s0, dx, dy) => {
+    await p11.mouse.move(s0.x, s0.y);
+    await p11.mouse.down();
+    const down = await ev11(() => window.FARM.thumb());
+    if (dx || dy) await p11.mouse.move(s0.x + dx, s0.y + dy, { steps: 6 });
+    await p11.waitForTimeout(60);
+    const moved = await ev11(() => window.FARM.thumb());
+    await p11.mouse.up();
+    await p11.waitForTimeout(40);
+    const after = await ev11(() => window.FARM.thumb());
+    return { down, moved, after };
+  };
   const finger = async (x0, y0, dx, dy) => {
     await ev11(() => { if (window.FARM.lookPicker().up) window.FARM.pickLook('girl'); });
     const s0 = await clearSpot(x0, y0);
     const hit = await hitAt(s0.x, s0.y);
-    const x1 = s0.x + dx, y1 = s0.y + dy;
-    await p11.mouse.move(s0.x, s0.y);
-    await p11.mouse.down();
-    const down = await ev11(() => window.FARM.thumb());
-    if (dx || dy) {
-      await p11.mouse.move(s0.x + dx * 0.5, s0.y + dy * 0.5);
-      await p11.mouse.move(x1, y1);
-    }
-    const moved = await ev11(() => window.FARM.thumb());
-    await p11.mouse.up();
-    const after = await ev11(() => window.FARM.thumb());
-    return { down, moved, after, hit, at: s0, onWorld: hit === 'CANVAS' };
+    const big = Math.hypot(dx, dy) > 10;        // was this meant to steer at all?
+    let r = await dragOnce(s0, dx, dy);
+    if (big && r.moved.on !== true) r = await dragOnce(s0, dx, dy);
+    return { ...r, hit, at: s0, onWorld: hit === 'CANVAS' };
   };
 
   // ---- TAP TO GO REACHES EVERYTHING -------------------------------------
