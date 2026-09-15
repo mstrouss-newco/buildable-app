@@ -239,15 +239,22 @@ export default async function handler(req, res) {
       }
 
       const wanted = str(get("id"));
+      // CB6 — the studio's pre-Keep art check rides along on the robot's row, so a
+      // game kept with a picture the engine drew itself says so honestly instead of
+      // pretending, and nobody has to guess later why a hero looks stock.
+      const artNote = str(get("artNote"));
       const patch = {
-        robot: robotRow(verdict),
+        robot: { ...(robotRow(verdict) || {}), art: artNote || null },
         engine, name,
-        kid_name: str(get("kidName")) || null,
-        grownup_name: str(get("grownupName")) || null,
         cover: str(get("cover")) || null,
         manifest,
         updated_at: new Date().toISOString(),
       };
+      // CB7 — names are only ever WRITTEN, never wiped. An edit ("make it faster")
+      // does not carry them, and blanking the credit line on every tweak is how a
+      // game quietly lost the family that made it.
+      if (str(get("kidName"))) patch.kid_name = str(get("kidName"));
+      if (str(get("grownupName"))) patch.grownup_name = str(get("grownupName"));
 
       // An id that already exists is an EDIT — and an edit is only allowed by the
       // family that owns it. Anything else creates a new game.

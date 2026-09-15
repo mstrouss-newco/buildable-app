@@ -189,7 +189,9 @@ export function nearestOffer(text, sheet, R) {
   const ids = R ? R.list(sheet.engine).map((r) => r.id) : [];
   const handy = ["harder", "easier", "zoomier", "calmer", "swapWorld", "addLevel", "moreCollectibles", "voiceLine"].filter((k) => ids.indexOf(k) !== -1);
   return {
-    said: why ? why : "I could not work out how to do that in " + (sheet.label || sheet.engine) + " yet.",
+    // CB7: name what this game CAN do, in the same breath. A child hears an
+    // invitation, never an apology.
+    said: why ? why : "In " + (sheet.label || sheet.engine) + " the big changes are how tricky it is, how fast it is, the world and the levels.",
     nearest: handy.slice(0, 4),
   };
 }

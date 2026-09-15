@@ -211,15 +211,21 @@ var EFF_G = 0.45;               // per-frame gravity accel (auto-calibrated belo
 // winding Journey picker reads a per-kid key ("bk_sling_prefs[_<kidId>]") in the
 // SAME shape — so we mirror progress into it, and the path lights up as levels clear.
 var PREFS = { unlocked:0, stars:[] };
+// CB7 — a kid-made game saves under its OWN key, and "sling.prefs" is keyed the
+// same way, so a new game opens with nothing cleared rather than inheriting the
+// stock game's stars.
+function kgKey(base){ try{ return (window.BuildableManifest && window.BuildableManifest.kgSaveKey) ? window.BuildableManifest.kgSaveKey(base) : base; }catch(e){ return base; } }
+function kgName(stock){ try{ return (window.BuildableManifest && window.BuildableManifest.kgTitle) ? window.BuildableManifest.kgTitle(stock) : stock; }catch(e){ return stock; } }
 function _bkKey(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null");
-  return "bk_sling_prefs"+((k&&k.id)?("_"+k.id):""); }catch(e){ return "bk_sling_prefs"; } }
+  return kgKey("bk_sling_prefs"+((k&&k.id)?("_"+k.id):"")); }catch(e){ return kgKey("bk_sling_prefs"); } }
+function _stdKey(){ return kgKey("sling.prefs"); }
 function loadPrefs(){ try{
-  var s=localStorage.getItem(_bkKey()) || localStorage.getItem("sling.prefs");
+  var s=localStorage.getItem(_bkKey()) || localStorage.getItem(_stdKey());
   if(s){ var p=JSON.parse(s); PREFS.unlocked=p.unlocked||0; PREFS.stars=p.stars||[]; }
 }catch(e){} }
 function savePrefs(){ if(SLING_DEMO) return; try{
   var json=JSON.stringify({ unlocked:PREFS.unlocked, stars:PREFS.stars });
-  localStorage.setItem("sling.prefs", json);
+  localStorage.setItem(_stdKey(), json);
   localStorage.setItem(_bkKey(), json);   // shell Journey reads this
 }catch(e){} }
 function totalStars(){ return (PREFS.stars||[]).reduce(function(a,b){return a+(b||0);},0); }
@@ -1413,7 +1419,7 @@ function buildStartCfg(){
       { blocks:l.blocks, targets:l.targets, terrain:terr, sky:p.sky, g0:p.g0, g1:p.g1, top:p.top, n:i+1 },
       (l.id||l.name||i)+"|"+i+"|v3"); }catch(e){}   // v3: SD3 terrain repaints the cards
     return { n:i+1, name:l.name, color:"#3b6ea5", img:img||undefined, maxStars:3, stars: st==="done"?(PREFS.stars[i]||0):undefined, state:st }; });
-  return { title:"Sling Squad", subtitle:"Fling your friends and topple every tower! Stars: "+totalStars()+" of "+maxStars(),
+  return { title:kgName("Sling Squad"), subtitle:"Fling your friends and topple every tower! Stars: "+totalStars()+" of "+maxStars(),
            coins:totalStars(), sound:!(BA&&BA.muted), showBack:false, hideSound:true, levels:levels };
 }
 function el(id){ return document.getElementById(id); }

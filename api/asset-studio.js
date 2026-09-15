@@ -375,20 +375,34 @@ export default async function handler(req, res) {
     const theme = cleanSlug(body.theme || "jungle");
     const subject = (body.subject || "").toString().trim().slice(0, 200);
     const slot = cleanSlug(body.slot || kind);
+    // CB6 — the SEARCH PHRASE the shot list carries ("cobuild hero dragon space").
+    // It is what makes reuse mean "another dragon", not "another picture of the
+    // right shape": without it every space game got the first space picture ever
+    // painted, which is exactly how a pizza dragon became stock Sky Flyer.
+    const search = (body.search || "").toString().toLowerCase().replace(/[^a-z0-9 ]+/g, " ").trim().slice(0, 120);
+    const words = search.split(/\s+/).filter((w) => w && w.length > 2 && w !== "cobuild");
+    const gameId = cleanSlug(body.gameId || body.kidGame || "");
     if (!subject) return res.status(400).json({ ok: false, error: "no_subject" });
 
-    // 1. the library first
+    // 1. the library first, matched on the child's own words
     if (body.reuse !== false && SUPABASE_URL && SUPABASE_SERVICE_KEY) {
       try {
         const r = await sb("image_cache?select=cache_key,descriptor,created_at&kind=eq.studio&order=created_at.desc&limit=400");
         const rows = r.ok ? await r.json() : [];
+        let loose = null;
         for (const row of rows) {
           const slug = (row.cache_key || "").replace(/^studio:/, "");
           const m = studioMeta(slug, row.descriptor);
-          if (m.kind === kind && m.theme === theme && /^cobuild\//.test(slug)) {
-            return res.status(200).json({ ok: true, reused: true, slug, url: assetUrl(slug, row.created_at), kind, theme });
-          }
+          if (m.kind !== kind || m.theme !== theme || !/^cobuild\//.test(slug)) continue;
+          const hay = (slug + " " + String(row.descriptor || "")).toLowerCase();
+          // Every word of the shot's search phrase has to be in this asset before
+          // it counts as the same picture. A phrase with no words of its own (an
+          // older plan) falls back to the first fitting asset, as before.
+          const hit = words.length ? words.every((w) => hay.indexOf(w) !== -1) : true;
+          if (hit) return res.status(200).json({ ok: true, reused: true, slug, url: assetUrl(slug, row.created_at), kind, theme, matched: words.length ? "words" : "shape" });
+          if (!loose && !words.length) loose = { slug, created_at: row.created_at };
         }
+        if (loose) return res.status(200).json({ ok: true, reused: true, slug: loose.slug, url: assetUrl(loose.slug, loose.created_at), kind, theme, matched: "shape" });
       } catch {}
     }
 
@@ -407,10 +421,13 @@ export default async function handler(req, res) {
     if (!b64) return res.status(200).json({ ok: false, reason: "picture_failed" });
     await logCost(COST.low);
 
-    // 3. file it back, tagged, so the next family gets it for free
-    const name = cleanSlug(subject.split(/\s+/).slice(0, 4).join("_")) || slot;
+    // 3. file it back, tagged, so the next family gets it for free. The search
+    // phrase rides in the slug AND the descriptor, which is what step 1 reads.
+    const from = (words.join("_") || subject.split(/\s+/).slice(0, 4).join("_"));
+    const name = cleanSlug(from) || slot;
     const slug = `cobuild/${slot}/${theme}/${name}`;
-    const descriptor = JSON.stringify({ slug, kind, theme, game: "cobuild", type: slot, madeIn: "cobuild", reusable: true });
+    const descriptor = JSON.stringify({ slug, kind, theme, game: "cobuild", type: slot, madeIn: "cobuild",
+      reusable: true, search: search || null, kidGame: gameId || null });
     const ok = await cachePut("studio:" + slug, descriptor, "studio", b64);
     if (!ok) return res.status(200).json({ ok: true, reused: false, slug: null, url: null, b64, kind, theme, filed: false });
     return res.status(200).json({ ok: true, reused: false, slug, url: assetUrl(slug), kind, theme, filed: true });

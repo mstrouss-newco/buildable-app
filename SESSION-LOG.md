@@ -1,3 +1,113 @@
+## 2026-09-15 (CB6 + CB7): the child's own idea reaches the screen
+
+**Phase CB, cards CB6 and CB7, run as one session** (approved by Mike 2026-09-15).
+Touched `api/cobuild-plan.js`, `api/asset-studio.js`, `api/kid-game.js`, `api/g.js`,
+`api/cobuild-edit.js`, `api/_cobuildBrain.js`, `public/studio.html`, `public/g.html`,
+`public/buildable-manifest.js`, the four Cobuild engines, `qa-studio.mjs`,
+`qa-kidgames.mjs`.
+
+### The problem
+
+The lander promises that a dragon who delivers pizza to the moon becomes a game about
+that. It became stock Sky Flyer with a new title. Three things caused it, and the QA
+run on 2026-09-06 found all three: the plan asked for art by THEME only, the shared
+library handed back the first picture of the right shape whatever it was of, and the
+engines each had their own idea of the title and their own save file.
+
+### CB6 — the shot list
+
+The plan now carries a SHOT LIST instead of three vague art jobs. One entry per
+picture the game needs, and each entry names four things: a **slot** that engine's own
+`cobuild.json` really has (so a picture is never painted with nowhere to hang), a
+short **painting description** built out of the child's words, a **search phrase** the
+shared library is checked with first, and the **noun** from the sentence it is
+carrying. Six pictures is the aim, ten the ceiling.
+
+The nouns are taken from what follows "a", "an" or "the" — a child names the thing
+they mean with an article in front of it almost every time, so "a robot cat who races
+trains under the sea" gives "robot cat" and "sea", not "races". Every engine gets the
+shots it has slots for and no others: Breaker gets a hero on the bat, a world behind
+each level and a brick set; Castle Guard gets a hero, the goblin at the end and a
+badge a level; Sky Flyer, whose worlds are a palette name rather than a picture, gets
+a hero and a badge a level.
+
+**Reuse now means "another dragon", not "another picture of the right shape".** The
+kids lane in `api/asset-studio.js` matches a library asset against the shot's search
+words before handing it back, and files what it paints with that phrase in the slug
+AND the descriptor, so the second family who asks for a dragon gets one instantly and
+for nothing. Same daily cost brake, same `usage_log` line, unchanged.
+
+**One thing the card asked for that lands only half way, deliberately.** Every painted
+picture is filed tagged `madeIn: cobuild` with its search phrase, and it carries the
+kid game id whenever the studio knows it — which is a repaint or any art added after
+the game exists, but NOT the first build, because the id is minted by the save that
+happens after the painting. Rather than invent a second id a row would not recognise,
+the field is left empty on that first pass. Closing it properly means the save handing
+its id back to the library, which is a small endpoint and did not belong in this card.
+
+**The pre-Keep check.** Before a game is written, `op:"artCheck"` asks whether the
+manifest really ended up wearing the child's idea: a painted hero, and a world on
+every level. What is missing is repainted ONCE. It never blocks a child — a game with
+a gap is kept anyway, and the honest line is stored on the row in `robot.art` rather
+than being hidden.
+
+`op:"art"` also had to grow: it could only reach `levels[].parts.*` and it put one
+picture on every level. It now hangs whole-game slots (`art.hero`), per-level badges,
+and a piece that names ONE level, so level two's world is not level one's. Every
+version is still strict-validated against the sheet and anything that does not fit is
+dropped, not forced.
+
+### CB7 — the words, the names, and four engines that agree
+
+**The chips echo the child.** The star suggestions are built from the child's own
+nouns first and our stock heroes second, so a kid who only ever taps a chip still ends
+up with their own idea.
+
+**Nobody apologises.** "That is not quite a game I can build yet" is gone, and so is
+every line like it. An idea no engine matches head-on is answered by NAMING the game
+being built with the child's star in the middle of it. The tweak door, the voice
+recorder and the microphone fallback were reworded the same way: what CAN happen, not
+what could not.
+
+**Names.** The studio asks the child's first name and the grown-up's name once, keeps
+them on the device, and carries both on every save. They are the credit line on the
+cover, on the Keep card, on the share sheet and in the `/g/` link preview title,
+which used to name only the kid. A later tweak can no longer wipe them: an edit that
+does not carry the names leaves the ones already on the row alone, which is how a
+game used to quietly lose the family that made it.
+
+**Four engines, one answer.** `buildable-manifest.js` now owns three things every
+engine used to invent for itself: `kgTitle()` (the kid's title on the start screen),
+the browser tab, and `kgSaveKey()` — a save file keyed by the kid game id, so a brand
+new game never opens with stock cleared levels or somebody else's stars. Sling Squad
+was the known offender; Breaker, Castle Guard and Sky Flyer had the same hole and are
+fixed the same way.
+
+**One screen.** The play frame keeps its shape but never takes more than two thirds of
+the height, so the tweak chips are on screen without scrolling at 1440x900 and at
+390x844.
+
+**Planner hygiene (CB7 item 6) was already done** — CB2, CB3 and CB4 were flagged
+deployed with corrected notes before this session started, so nothing was changed.
+
+### What is checked
+
+`qa-studio.mjs` grew two sections: CB6 (every shot names a real slot, carries a word
+the child said and a search phrase; worlds are one per level; the pre-Keep check sees
+every gap; a hero really lands in the hero slot; a level-specific shot changes only
+that level) and CB7 (the chips echo the sentence, no page tells a child it cannot
+build their idea, both names ride on the save, a tweak cannot wipe the credit, all
+four engines use the shared title and save key). `qa-kidgames.mjs` now expects the
+share preview to name both makers. Both suites are green.
+
+### Needs Mike
+
+Family test with Jackson and Riley on a phone before CB8, and the acceptance check the
+card asks for: on the live site, build from "a robot cat who races trains under the
+sea" and look for a cat on the screen. The painting itself needs `OPENAI_API_KEY`
+live; with the picture machine off the game still builds and the engines draw their
+own art, which is the read-with-a-fallback rule.
+
 ## 2026-09-15 (FM11): fix how she moves
 
 **Phase FM, card FM11.** Mike's playtest: "you have to use the button controller now

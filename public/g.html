@@ -144,7 +144,8 @@
 
   function start(g){
     if(!g){ showMissing(); return; }
-    document.title = (g.name || "A kid-made game") + " by " + (g.kid_name || "a kid") + " — Buildable Kids";
+    var by = [(g.kid_name||"").trim(), (g.grownup_name||"").trim()].filter(Boolean).join(" and ");
+    document.title = (g.name || "A kid-made game") + " by " + (by || "a kid") + " — Buildable Kids";
     if(!gateOk()){ showGate(g, function(){ showCover(g); }); return; }
     showCover(g);
   }

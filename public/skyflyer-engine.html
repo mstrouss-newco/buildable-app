@@ -931,7 +931,11 @@ var FEEL_NOW=ride;
 
 // ---------- progress (per kid, the shape the shell's journey reads) ----------
 function kidSuffix(){ try{ var k=JSON.parse(localStorage.getItem("bk_active_kid_v1")||"null"); return (k&&k.id)?("_"+k.id):""; }catch(e){ return ""; } }
-function prefsKey(){ return "bk_skyflyer_prefs"+kidSuffix(); }
+// CB7 — a kid-made game saves under its OWN key, so opening a brand new game
+// never shows stock cleared worlds or somebody else's stars.
+function kgKey(base){ try{ return (window.BuildableManifest && window.BuildableManifest.kgSaveKey) ? window.BuildableManifest.kgSaveKey(base) : base; }catch(e){ return base; } }
+function kgName(stock){ try{ return (window.BuildableManifest && window.BuildableManifest.kgTitle) ? window.BuildableManifest.kgTitle(stock) : stock; }catch(e){ return stock; } }
+function prefsKey(){ return kgKey("bk_skyflyer_prefs"+kidSuffix()); }
 function loadPrefs(){ try{ var p=JSON.parse(localStorage.getItem(prefsKey())||"null"); if(!p||typeof p!=="object") p={}; if(typeof p.unlocked!=="number") p.unlocked=0; if(!p.stars||typeof p.stars!=="object") p.stars={}; if(!p.badges||typeof p.badges!=="object") p.badges={}; return p; }catch(e){ return {unlocked:0,stars:{},badges:{}}; } }
 function savePrefs(p){ try{ localStorage.setItem(prefsKey(), JSON.stringify(p)); }catch(e){} }
 function markStars(n){ if(DEMO) return; var p=loadPrefs(); if((p.stars[WI]||0)<n) p.stars[WI]=n; savePrefs(p); }
