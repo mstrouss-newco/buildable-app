@@ -188,7 +188,7 @@
   html,body{margin:0;padding:0;overflow:hidden;height:100%;background:#B3E58C;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
     -webkit-user-select:none;user-select:none;touch-action:none;color:#33566e}
-  canvas{display:block}
+  canvas{display:block;touch-action:none}   /* FM11: a thumb dragged on the world steers, it never scrolls the page */
   #hud{position:fixed;inset:0;pointer-events:none}
   .pill{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;
     background:rgba(255,252,240,.92);border-radius:999px;padding:8px 16px 8px 10px;
@@ -505,16 +505,34 @@
     opacity:0;pointer-events:none;z-index:13;transition:opacity .16s}
   #flash.on{opacity:.85;transition:none}
 
-  /* Joystick — a soft touch pad kids can use, and drag-anywhere on the world
-     also works. Kept clear of the top strip (HUD-AND-NAV rules). */
+  /* FM11 — THE STICK COMES TO HER THUMB. The pad in the corner is now the
+     RESTING one: still live, still exactly where a child who learned it left
+     it, but faint, because it is no longer the way in. Put a thumb down
+     anywhere on the farm and slide, and #floatStick appears under it with the
+     same 130px feel. Kept clear of the top strip (HUD-AND-NAV rules). */
   #stick{position:absolute;left:calc(20px + env(safe-area-inset-left));
     bottom:calc(24px + env(safe-area-inset-bottom));width:130px;height:130px;
-    border-radius:50%;background:rgba(255,252,240,.35);
-    border:3px solid rgba(255,252,240,.7);pointer-events:auto;touch-action:none}
+    box-sizing:border-box;   /* 130px is what it MEASURES, border and all, so the
+                                floating one can be centred on a thumb exactly */
+    border-radius:50%;background:rgba(255,252,240,.18);
+    border:3px solid rgba(255,252,240,.40);pointer-events:auto;touch-action:none;
+    transition:background .2s,border-color .2s}
+  #stick.live{background:rgba(255,252,240,.35);border-color:rgba(255,252,240,.7)}
   #stick .nub{position:absolute;left:50%;top:50%;width:64px;height:64px;
-    border-radius:50%;background:rgba(255,252,240,.9);
+    border-radius:50%;background:rgba(255,252,240,.62);
     box-shadow:0 4px 10px rgba(30,60,90,.25);
     transform:translate(-50%,-50%);transition:opacity .2s}
+  #stick.live .nub{background:rgba(255,252,240,.9)}
+  /* The floating one. Same size, same nub, no pointer-events of its own — the
+     canvas under it owns the finger, so the stick can never swallow a tap. */
+  #floatStick{position:absolute;left:0;top:0;width:130px;height:130px;
+    box-sizing:border-box;margin:-65px 0 0 -65px;border-radius:50%;
+    background:rgba(255,252,240,.30);border:3px solid rgba(255,252,240,.68);
+    pointer-events:none;opacity:0;transition:opacity .14s;z-index:12}
+  #floatStick.on{opacity:1}
+  #floatStick .nub{position:absolute;left:50%;top:50%;width:64px;height:64px;
+    border-radius:50%;background:rgba(255,252,240,.92);
+    box-shadow:0 4px 10px rgba(30,60,90,.25);transform:translate(-50%,-50%)}
 </style>
 <script>
   // FL9: tag the page in-shell HERE, before <body> is parsed, so the class is on
@@ -541,6 +559,7 @@
   </div>
   <div id="toast"></div>
   <div id="stick"><div class="nub"></div></div>
+  <div id="floatStick"><div class="nub"></div></div>
 
   <!-- SEED POPUP (AR1R shape: floating, 340px max, rounded). No emojis: each
        button holds an SVG grown from the SAME shapes as the 3D crop, per FL5b
@@ -7430,6 +7449,7 @@ var stickCenter={x:0,y:0}, stickActive=false, stickVec={x:0,y:0};
 
 function stickReset(){
   stickActive=false; stickVec.x=0; stickVec.y=0;
+  stickEl.classList.remove("live");
   stickNub.style.transform="translate(-50%,-50%)";
 }
 function stickMove(clientX,clientY){
@@ -7442,7 +7462,8 @@ function stickMove(clientX,clientY){
   stickNub.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))";
 }
 stickEl.addEventListener("pointerdown",function(e){
-  stickActive=true; stickEl.setPointerCapture(e.pointerId); stickMove(e.clientX,e.clientY);
+  stickActive=true; stickEl.classList.add("live");
+  stickEl.setPointerCapture(e.pointerId); stickMove(e.clientX,e.clientY);
   // THE STICK ALWAYS WINS. Touching it drops any walk the kid was on, so a
   // child can always take back the wheel mid-journey.
   clearWalkTo();
@@ -7451,6 +7472,63 @@ stickEl.addEventListener("pointerdown",function(e){
 stickEl.addEventListener("pointermove",function(e){ if(!stickActive) return; stickMove(e.clientX,e.clientY); });
 stickEl.addEventListener("pointerup",function(e){ stickReset(); });
 stickEl.addEventListener("pointercancel",function(e){ stickReset(); });
+
+// =========================================================================
+//  FM11 — THE FLOATING THUMB SPOT.
+//
+//  Mike's playtest: "you have to use the button controller now and it stinks".
+//  He is right. A 130px circle nailed to one corner asks a child to find it
+//  before she can move, with the wrong hand if she is left-handed, and the
+//  corner is exactly where a small hand already rests on an iPad.
+//
+//  So the stick now comes to HER. Put a thumb down anywhere on the farm and
+//  slide: that spot becomes the middle of the stick, and it fades away the
+//  moment she lifts. Left hand or right, top of the screen or bottom, it is
+//  wherever she put her thumb.
+//
+//  IT IS THE SAME STICK. Same 130px radius feel, same stickVec out the other
+//  end, so step() below never learns that any of this happened. The tap/drag
+//  split that FM4 already uses (10px, 380ms) is what tells the two apart: under
+//  it, the finger meant to TAP something, and tap-to-go handles it; over it,
+//  the finger meant to STEER, and the stick appears where it started.
+//
+//  The corner pad stays, faint, because a child who learned it should not find
+//  it gone. It can go once she has stopped reaching for it.
+// =========================================================================
+var FLOAT_R=53;                  // 130px wide, less the 12px inset — the corner pad's exact feel
+var floatEl=document.getElementById("floatStick");
+var floatNub=floatEl.querySelector(".nub");
+var floatOn=false, floatCx=0, floatCy=0;
+
+function floatStart(cx,cy,pid){
+  floatOn=true; floatCx=cx; floatCy=cy;
+  floatEl.style.left=cx+"px"; floatEl.style.top=cy+"px";
+  floatEl.classList.add("on");
+  floatNub.style.transform="translate(-50%,-50%)";
+  // STEERING ALWAYS WINS, exactly as the corner pad does: the instant her thumb
+  // becomes a stick, whatever she was walking to is dropped.
+  clearWalkTo(); hideHint();
+  if(pid!=null){ try{ canvas.setPointerCapture(pid); }catch(err){} }
+}
+function floatMove(x,y){
+  var dx=x-floatCx, dy=y-floatCy, d=Math.hypot(dx,dy);
+  if(d>FLOAT_R){ dx=dx*FLOAT_R/d; dy=dy*FLOAT_R/d; }
+  stickVec.x=dx/FLOAT_R; stickVec.y=dy/FLOAT_R;
+  floatNub.style.transform="translate(calc(-50% + "+dx+"px),calc(-50% + "+dy+"px))";
+}
+function floatEnd(){
+  if(!floatOn) return;
+  floatOn=false; stickVec.x=0; stickVec.y=0;
+  floatEl.classList.remove("on");
+  floatNub.style.transform="translate(-50%,-50%)";
+}
+// A thumb only becomes a stick if it is not already doing something else:
+// not holding the watering can over a crop, not carrying a decoration ghost,
+// not on the corner pad, and not with the seed pop-up open over the world.
+function floatAllowed(){
+  return !floatOn && !stickActive && !placing && !WATER.patch &&
+         !seedCardEl.classList.contains("up");
+}
 
 // Raycast tap for patches. Fires only if we didn't drag much.
 var ray=new THREE.Raycaster();
@@ -7469,19 +7547,33 @@ canvas.addEventListener("pointerdown",function(e){
 });
 canvas.addEventListener("pointerup",function(e){
   stopWatering();
+  // FM11 — she was steering, not tapping. Lift the thumb, drop the stick, and
+  // never let the same finger also count as a tap.
+  if(floatOn){ floatEnd(); downXY=null; return; }
   if(!downXY) return;
   var dx=e.clientX-downXY.x, dy=e.clientY-downXY.y, t=performance.now()-downAt;
   downXY=null;
   if(Math.hypot(dx,dy)>10 || t>380) return;   // it was a drag, or it was a hold
   handleTap(e.clientX,e.clientY);
 });
-canvas.addEventListener("pointercancel",function(){ stopWatering(); downXY=null; });
+canvas.addEventListener("pointercancel",function(){ stopWatering(); floatEnd(); downXY=null; });
 canvas.addEventListener("pointerleave",function(){ stopWatering(); });
 canvas.addEventListener("pointermove",function(e){
   // while she is holding a thing to put down, the ghost follows her finger
-  if(!placing) return;
-  var g=groundAt(e.clientX,e.clientY);
-  if(g) moveGhost(g.x,g.z);
+  if(placing){
+    var g=groundAt(e.clientX,e.clientY);
+    if(g) moveGhost(g.x,g.z);
+    return;
+  }
+  // FM11 — already steering: this finger is the stick now.
+  if(floatOn){ floatMove(e.clientX,e.clientY); e.preventDefault(); return; }
+  // Has the finger she put down travelled far enough to mean STEER rather than
+  // TAP? Same 10px FM4 uses on the way up, so the two can never disagree.
+  if(!downXY || !floatAllowed()) return;
+  if(Math.hypot(e.clientX-downXY.x, e.clientY-downXY.y) <= 10) return;
+  floatStart(downXY.x, downXY.y, e.pointerId);
+  floatMove(e.clientX,e.clientY);
+  e.preventDefault();
 });
 // =========================================================================
 //  FM4 — TAP TO GO. Mike's call: on a tablet this is the MAIN way to move,
@@ -7576,10 +7668,19 @@ function planWalk(tx,tz){
   }
   return out;
 }
-function startWalkTo(x,z,stopR,what){
+// FM11 — a walk can carry a JOB to do on arrival. The seed pop-up used to open
+// the instant she tapped a patch on the far side of the field, so she picked a
+// seed while standing nowhere near the hole it went in. Now the tap starts the
+// walk and the pop-up waits for her feet. `then` dies with the walk, so the
+// stick cancelling a journey cancels the job too, which is the only sane rule:
+// she changed her mind.
+function startWalkTo(x,z,stopR,what,then){
   walkTo={ legs:planWalk(x,z), stopR:(stopR==null?0.35:stopR),
-           what:what||"ground", stuck:0, lastD:null };
+           what:what||"ground", stuck:0, lastD:null, then:then||null };
   showTapRing(x,z);
+}
+function arriveWalkTo(){
+  var f=walkTo&&walkTo.then; clearWalkTo(); if(f) f();
 }
 // Returns the move direction for this frame, and retires legs as they land.
 function stepWalkTo(dt){
@@ -7590,7 +7691,7 @@ function stepWalkTo(dt){
     var stop=(walkTo.legs.length>1)?0.6:walkTo.stopR;
     if(d<=stop){
       walkTo.legs.shift();
-      if(!walkTo.legs.length){ clearWalkTo(); return {x:0,z:0}; }
+      if(!walkTo.legs.length){ arriveWalkTo(); return {x:0,z:0}; }
       walkTo.stuck=0; walkTo.lastD=null;
       continue;
     }
@@ -7620,12 +7721,34 @@ function pickTapTarget(hx,hz){
   for(i=0;i<ANIMALS.length;i++){
     A=ANIMALS[i];
     d=Math.hypot(hx-A.x, hz-A.z);
-    if(d<2.1) cands.push({d:d, x:A.x, z:A.z, stopR:FEED_R*0.7, what:"animal"});
+    // FM11 — A MILL IS NOT A HEN-SIZED TARGET. The mill is 6.2 units across and
+    // the dairy 4.4, so a 2.1 reach meant a tap on the side of the building
+    // missed it entirely and she walked to the grass beside it. Reach scales
+    // with the thing; and she stops OUTSIDE the 1.9 pad it stands on rather
+    // than trying to walk into its wall, while still inside FEED_R so the feed
+    // fires on arrival exactly as walking into it does.
+    var K=ANIMAL_KINDS[A.kind]||{}, big=!!K.machine;
+    var reach=big ? (K.size*0.5+1.3) : 2.1;
+    if(d<reach) cands.push({d:d, x:A.x, z:A.z,
+      stopR:(big?2.75:FEED_R*0.7), what:big?"machine":"animal"});
     if(A.produce){
       d=Math.hypot(hx-A.produceX, hz-A.produceZ);
       if(d<2.1) cands.push({d:d, x:A.produceX, z:A.produceZ, stopR:PICKUP_R*0.55, what:"produce"});
     }
   }
+  // FM11 — THE WELL AND THE BARN ARE PLACES SHE GOES TOO. Both are blockers, so
+  // before this a tap on either aimed her at a point she can never stand on and
+  // she ground to a halt against the wall. Aim her at the spot the thing
+  // actually happens from: outside the well, and in front of the barn doors.
+  // Both reaches are drawn TIGHT, around the thing itself and no further. The
+  // well sits on the path between the barn and the field, and the barn doors
+  // open onto open grass she crosses all day: a generous reach round either
+  // would swallow taps that plainly meant "walk over there".
+  d=Math.hypot(hx-ISLE.well.x, hz-ISLE.well.z);
+  if(d<1.9) cands.push({d:d, x:ISLE.well.x, z:ISLE.well.z, stopR:2.35, what:"well"});
+  if(Math.abs(hx-ISLE.barn.x)<BARN_HALF_X+0.6 && Math.abs(hz-ISLE.barn.z)<BARN_HALF_Z+0.6)
+    cands.push({d:Math.hypot(hx-BARN_DOOR.x, hz-BARN_DOOR.z),
+      x:BARN_DOOR.x, z:BARN_DOOR.z, stopR:BARN_R*0.7, what:"barn"});
   for(i=0;i<PATCHES.length;i++){
     P=PATCHES[i]; if(P.state==="empty") continue;
     d=Math.hypot(hx-P.x, hz-P.z);
@@ -7694,10 +7817,24 @@ function handleTap(x,y){
     var d=Math.hypot(hx-P.x, hz-P.z);
     if(d<bestD){ best=P; bestD=d; }
   }
-  if(best){ hideHint(); openSeedPicker(best); return; }
+  if(best){ hideHint(); walkThenPlant(best); return; }
   hideHint();
   var T=pickTapTarget(hx,hz);
   startWalkTo(T.x, T.z, T.stopR, T.what);
+}
+
+// FM11 — TAP A HOLE, WALK TO THE HOLE, THEN PICK THE SEED. Standing at the
+// patch when the pop-up opens is the whole point: she is choosing what goes in
+// THAT hole, not filling in a form about a hole across the field. If she is
+// already stood on it, nothing waits — the pop-up opens on the spot.
+function walkThenPlant(P){
+  if(Math.hypot(kid.position.x-P.x, kid.position.z-P.z) < PATCH_R*1.6){
+    openSeedPicker(P); return;
+  }
+  startWalkTo(P.x, P.z, PATCH_R*0.6, "patch", function(){
+    // she may have picked up a job on the way, or the dog may have covered it
+    if(P.state==="empty" && !P.locked && !P.cover) openSeedPicker(P);
+  });
 }
 
 // FM5 — the ONE place a growing patch becomes a ready one, so the main loop
@@ -8185,7 +8322,14 @@ window.FARM = {
       d=Math.hypot(x-P.x, z-P.z);
       if(d<bestD){ best=P; bestD=d; }
     }
-    if(best){ openSeedPicker(best); return {what:"seedCard"}; }
+    // FM11 — the robot walks the road a thumb walks: an empty patch is a WALK
+    // that opens the pop-up on arrival, not a pop-up that opens from anywhere.
+    if(best){
+      walkThenPlant(best);
+      return walkTo ? {what:"patch", x:+best.x.toFixed(2), z:+best.z.toFixed(2),
+                       legs:walkTo.legs.length, pending:true}
+                    : {what:"seedCard"};
+    }
     var T=pickTapTarget(x,z);
     startWalkTo(T.x, T.z, T.stopR, T.what);
     return {what:T.what, x:+T.x.toFixed(2), z:+T.z.toFixed(2), legs:walkTo?walkTo.legs.length:0};
@@ -8196,6 +8340,11 @@ window.FARM = {
   tapRing: function(){ return tapRing && tapRing.visible ?
     { x:+tapRing.position.x.toFixed(2), z:+tapRing.position.z.toFixed(2),
       opacity:+tapRing.material.opacity.toFixed(3) } : null; },
+  // FM11 — what the floating thumb spot is doing right now, in screen pixels,
+  // so a robot driving a REAL finger can prove the circle turned up under it.
+  thumb: function(){ return { on:floatOn, cx:floatCx, cy:floatCy,
+    r:FLOAT_R, shown:floatEl.classList.contains("on"),
+    x:+stickVec.x.toFixed(3), y:+stickVec.y.toFixed(3) }; },
   // Drive the stick by hand, so a robot can prove that it cancels a walk.
   stick: function(x,y){
     stickVec.x=x||0; stickVec.y=y||0;
