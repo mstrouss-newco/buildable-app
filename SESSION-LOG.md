@@ -1,3 +1,62 @@
+## 2026-09-15 (FM12): the beds, the signs, the pond, and she was walking backwards
+
+**Phase FM, card FM12**, off a screenshot Mike sent of the live farm: "the highlighted
+garden patches, and then the highlighted food, it all looks flat. also the pond looks
+bad, shouldnt it be like just a doc, not a full bridge?" and, a minute later, "also the
+character walks backwards". Touched `public/skyflyer-farm.html` and one line of
+`src/BuildableKids.jsx` (cache-bust fm11 to fm12). Approved off a before-and-after
+picture before anything was committed.
+
+### Every one of these was a fault in the code
+
+**The beds.** One flat disc each, with fourteen little boxes stood up around the rim as
+a "dashed ring". From the game camera that is not a dashed ring, it is a set of white
+teeth round a brown pancake. `buildDirtDisc()` now returns dark earth with a crumbly
+rim that sits down INTO the grass and six rows of BROKEN ridges raked across it, and
+each bed is turned by its slot index so nine of them stop reading as a printed pattern.
+First attempt at this was a light warm brown with four fat unbroken ridges and it came
+out looking like the lid of a barrel, which is worse than the pancake; the ridges are
+painted DARKER than the bed on purpose, because the light catches the top of a ridge.
+
+**The pale bar across every growing patch** was a bug, not a decoration. The ready ring
+is baked lying flat and the draw loop then did `halo.rotation.z += dt*2.2`, which tips
+it out of the ground; from overhead you see the edge of a tipped ring, which draws a
+stripe across the soil. It turns on Y now and only brightens.
+
+**The give arrow** was `s*0.55` wide and faded from 0.85 to 0 across its whole hop, so
+most of the time it was a ghost rather than a sign. Smaller, and solid until the last
+quarter of the hop.
+
+**Wheat was one stalk**, which is a diagram of wheat, not a crop. Four stalks now, at
+different heights, leaning apart, so it has a silhouette.
+
+**The pond** was two perfect circles inside a wide cream ring, which is a dartboard,
+with a railed bridge bank to bank to nothing. `pondOutline()` wanders, four depth bands
+sit slightly off centre from each other, the lip is a narrow band of wet earth, there
+are reeds along part of the bank, and the lily pads have the wedge notch that makes
+them read as lily pads. `buildBridge()` is now `buildDock()`: a short deck on posts off
+the north bank with two mooring posts and a coil of rope. The stepping stones that used
+to cross on the bridge now go round the west bank.
+
+**The island** was one flat green, which is the whole reason everything standing on it
+looked pasted on. Eight big, very soft blotches in two neighbouring greens.
+
+**And she has walked backwards since FM1.** `kid.rotation.y = kidState.facing + Math.PI`
+with a comment one line above saying the model's front faces +Z. It does, for the
+Kenney character AND for the drawn kid behind it (its eyes are at z +0.32). The half
+turn was always wrong; on a blob with two bead eyes nobody could see it.
+
+### How it was checked
+
+A real Chromium render of the real page in the cloud container (the whole of
+`public/` that the farm loads, served locally, `--use-gl=swiftshader`), because every
+one of these passed every data-level check in `qa-farm.mjs` and always had. 21 checks
+green: plant, grow, harvest, feed, ask-and-give staying two different pictures, the
+drawn-kid fallback when `character-kid.glb` is blocked, and her facing in all four
+directions. Before and after pictures at `qa/shots/fm12-field-before-after.png` and
+`qa/shots/fm12-pond-before-after.png`. Recipe for the harness is in project memory as
+`farm-render-harness.md`.
+
 ## 2026-09-15 (CB6 + CB7): the child's own idea reaches the screen
 
 **Phase CB, cards CB6 and CB7, run as one session** (approved by Mike 2026-09-15).
