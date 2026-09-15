@@ -800,7 +800,13 @@ document.addEventListener('keydown',function(ev){
   if(k==='Escape'){togglePause();ev.preventDefault();return;}
   if(k==='Shift')return;                       // holding shift is not a mistake
   if(k===' '){ev.preventDefault();press(' ');return;}
-  // the raw key, case kept, so a capital A is not quietly turned into an a
+  // Case is KEPT, so a capital A is not quietly graded as an a. A real
+  // keyboard already hands us "A"; some on-screen and remote keyboards hand
+  // us "a" with shiftKey set instead, so finish the job for them.
+  if(ev.shiftKey&&k.length===1){
+    if(k>='a'&&k<='z')k=k.toUpperCase();
+    else if(SHIFT_OF[k])k=SHIFT_OF[k];
+  }
   if(k.length===1&&FING[baseKey(k)]!==undefined){ev.preventDefault();press(k);}
 });
 
