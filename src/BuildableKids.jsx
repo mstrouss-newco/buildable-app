@@ -157,7 +157,7 @@ const LANDING_WRAP = {
   tictactoe: { play: SCREEN_TICTACTOE, loadout: true, demo: "/tictactoe-engine.html?v=hud2&screen=demo" },
   connectfour: { play: SCREEN_CONNECTFOUR, loadout: true, demo: "/connectfour-engine.html?v=hud2&screen=demo" },
   dotsboxes: { play: SCREEN_DOTSBOXES, loadout: true, demo: "/dotsboxes-engine.html?v=hud2&screen=demo" },
-  checkers: { play: SCREEN_CHECKERS, loadout: true, demo: "/buildable-checkers.html?v=3&screen=demo" },
+  checkers: { play: SCREEN_CHECKERS, loadout: true, demo: "/buildable-checkers.html?v=qa56&screen=demo" },
   memory: { play: SCREEN_MEMORY, loadout: true, journey: true, demo: "/memory-engine.html?v=hud2&screen=demo" },
   mahjong: { play: SCREEN_MAHJONG, loadout: true, journey: true, demo: "/mahjong-engine.html?v=hud2&screen=demo" },
   bingo: { play: SCREEN_BINGO, loadout: true },
@@ -644,7 +644,7 @@ function TennisScreen({ onHome, onPlayFriend, start }) {
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onPlayFriend]);
-  let src = "/tennis.html?v=7f";
+  let src = "/tennis.html?v=qa56";
   if (start) {
     const court = TENNIS_COURTS[(readEquipped("tennis").World) || 0] || "beach";
     src += "&mode=" + (start === "local" ? "two" : "solo") + "&world=" + court;
@@ -2635,7 +2635,7 @@ export default function BuildableKids() {
     return <TumbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=qa56" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -2690,10 +2690,10 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CONNECTFOUR) {
-    return <BoardGameScreen title="Buildable Connect Four" src={"/connectfour-engine.html?v=hud2" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
+    return <BoardGameScreen title="Buildable Connect Four" src={"/connectfour-engine.html?v=qa56" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_DOTSBOXES) {
-    return <BoardGameScreen title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=hud2" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
+    return <BoardGameScreen title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=qa56" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAZE) {
     return <MazeScreen onHome={() => setScreen(SCREEN_HOME)} />;
@@ -4558,7 +4558,7 @@ function CheckersScreen({ onHome, onPlayFriend, diff, twoP }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Checkers"
-        src={"/buildable-checkers.html?v=3" + (twoP ? "&mode=two" : diff != null ? "&diff=" + diff : "")}
+        src={"/buildable-checkers.html?v=qa56" + (twoP ? "&mode=two" : diff != null ? "&diff=" + diff : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>

@@ -33,7 +33,7 @@ check('Solo never leaves the 2P flag set',
 const twoParam = (shell.match(/boardTwoP \? "&mode=two"/g) || []).length;
 check('all 3 shared-harness board engines carry mode=two', twoParam === 3, `found ${twoParam}, want 3`);
 check('checkers carries mode=two',
-  /buildable-checkers\.html\?v=3" \+ \(twoP \? "&mode=two"/.test(shell));
+  /buildable-checkers\.html\?v=[a-z0-9]+" \+ \(twoP \? "&mode=two"/.test(shell));
 check('tennis carries mode=two',
   /"&mode=" \+ \(start === "local" \? "two" : "solo"\)/.test(shell));
 
