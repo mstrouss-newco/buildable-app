@@ -181,9 +181,10 @@ const LANDING_WRAP = {
 };
 
 // Session 7H — the four board games that get a multiplayer mode row on the shared
-// landing (Solo / Same device / Play a friend), matching Chess and Tennis. Solo and
+// landing (Solo / Same device / Play a friend), matching Chess and Tennis. Solo
+// opens the shared difficulty picker, which deep-links the engine with ?diff=.
 // Same device deep-links the engine's own same-screen 2P match with ?mode=two
-// (QA56 -- it used to land on the engine's menu, which is the ROBOT difficulty
+// (QA56 -- it used to land on the engine's menu, which IS the robot difficulty
 // picker, so "Same device" quietly started a game against the computer).
 // Play a friend opens the shared GameLobby. TTT + Checkers already had lobbies;
 // Connect Four + Dots use the same board harness online path via gameSpecFor (7H).
