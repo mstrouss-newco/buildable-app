@@ -255,7 +255,7 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
       <div><div class="ltitle" id="lsTitle">Lesson</div><div class="lstep" id="lsStep">Step 1 of 4</div></div>
       <div class="spacer"></div>
       <div class="pill" id="timerPill" style="display:none"><span id="timerIco"></span> <span id="timerLab">1:00</span></div>
-      <button class="pill btn" id="btnSpeak"><span id="speakIco"></span> <span id="speakLab">Read aloud</span></button>
+      <button class="pill btn" id="btnSpeak"><span id="speakIco"></span> <span id="speakLab">Sound</span></button>
     </div>
     <div class="prog"><i id="lsProg"></i></div>
 
@@ -285,6 +285,7 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
       <button class="back" id="gBack">&lsaquo;</button>
       <div><div class="ltitle">Balloon Pop</div><div class="lstep">Type the letter on the balloon</div></div>
       <div class="spacer"></div>
+      <button class="pill btn" id="btnSound2" aria-label="Sound"></button>
       <div class="pill" id="gScore">0</div>
       <div class="pill" id="gTime">0:45</div>
     </div>
@@ -616,9 +617,12 @@ function sayRobot(txt){
   if(!SND.voice||!window.speechSynthesis)return;
   try{var u=new SpeechSynthesisUtterance(txt);u.rate=.92;u.pitch=1.1;window.speechSynthesis.speak(u);}catch(e){}
 }
-function paintSpeak(){$('speakLab').textContent=SND.voice?'Read aloud':'Silent';
-  var ico=$('speakIco');if(ico)ico.innerHTML=SND.voice?ICO.speak:ICO.mute;
-  $('btnSpeak').style.opacity=SND.voice?1:.62;}
+function paintSpeak(){
+  var any=SND.voice||SND.music||SND.sfx;
+  $('speakLab').textContent=any?'Sound':'Silent';
+  var ico=$('speakIco');if(ico)ico.innerHTML=any?ICO.speak:ICO.mute;
+  $('btnSpeak').style.opacity=any?1:.62;
+  var b2=$('btnSound2');if(b2){b2.innerHTML=any?ICO.speak:ICO.mute;b2.style.opacity=any?1:.62;}}
 
 /* ══════════ SCREENS ══════════ */
 var screens={home:$('scHome'),lesson:$('scLesson'),res:$('scRes'),game:$('scGame')};
@@ -944,21 +948,23 @@ function togglePause(){$('ovlPause').classList.toggle('on');}
 $('btnResume').addEventListener('click',function(){$('ovlPause').classList.remove('on');});
 $('btnQuit').addEventListener('click',function(){stopTimed();$('ovlPause').classList.remove('on');paintHome();show('home');});
 $('btnBack').addEventListener('click',function(){stopTimed();if(voiceEl)try{voiceEl.pause();}catch(e){}paintHome();show('home');});
-$('btnSpeak').addEventListener('click',function(){SND.voice=!SND.voice;saveSnd();paintSpeak();paintSound();
-  if(!SND.voice){if(window.speechSynthesis)try{window.speechSynthesis.cancel();}catch(e){}
-    if(voiceEl)try{voiceEl.pause();}catch(e){}}});
+function openSound(){unlockAudio();paintSound();$('ovlSound').classList.add('on');}
+$('btnSpeak').addEventListener('click',openSound);
+$('btnSound2').addEventListener('click',openSound);
 
 /* ── the sound sheet ── */
 function paintSound(){
   $('btnSound').innerHTML=(SND.voice||SND.music||SND.sfx)?ICO.speak:ICO.mute;
+  paintSpeak();
   $('tgV').className='tog'+(SND.voice?'':' off');
   $('tgM').className='tog'+(SND.music?'':' off');
   $('tgS').className='tog'+(SND.sfx?'':' off');
 }
-$('btnSound').addEventListener('click',function(){unlockAudio();$('ovlSound').classList.add('on');});
+$('btnSound').addEventListener('click',openSound);
 $('soundClose').addEventListener('click',function(){$('ovlSound').classList.remove('on');});
-$('togVoice').addEventListener('click',function(){SND.voice=!SND.voice;saveSnd();paintSound();paintSpeak();
-  if(!SND.voice&&window.speechSynthesis)try{window.speechSynthesis.cancel();}catch(e){}});
+$('togVoice').addEventListener('click',function(){SND.voice=!SND.voice;saveSnd();paintSound();
+  if(!SND.voice){if(window.speechSynthesis)try{window.speechSynthesis.cancel();}catch(e){}
+    if(voiceEl)try{voiceEl.pause();}catch(e){}}});
 $('togMusic').addEventListener('click',function(){SND.music=!SND.music;saveSnd();paintSound();
   if(SND.music)musicStart();else musicStop();});
 $('togSfx').addEventListener('click',function(){SND.sfx=!SND.sfx;saveSnd();paintSound();if(SND.sfx)unlockAudio();});
