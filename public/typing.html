@@ -1036,7 +1036,8 @@ function breakPool(){
   if(!src){
     var lastDone=null;
     LESSONS.forEach(function(x){if(P.lessons[x.id]&&P.lessons[x.id].stars)lastDone=x;});
-    src=lastDone?lastDone.pool:LESSONS[0].pool;
+    // nothing learned yet: the home row, not lesson one's two keys
+    src=lastDone?lastDone.pool:['a','s','d','f','j','k','l',';'];
   }
   var out=src.filter(function(c){return c!==' '&&FING[baseKey(c)]!==undefined&&c===baseKey(c);});
   return out.length?out:['f','j','d','k'];
