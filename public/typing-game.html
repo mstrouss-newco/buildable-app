@@ -435,7 +435,10 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
       _sfxReady=true;
       BA.configure({sfxBase:"/api/sfx?s=",
         peaks:{ty_key:0.20,ty_zap:0.34,ty_miss:0.34,ty_boom:0.70,ty_super:0.85,ty_win:0.95},
-        map:{select:"ty_key",error:"ty_miss",celebrate:"ty_boom",win:"ty_win"}});
+        // every clip must be MAPPED or the kit never fetches it, and the
+        // first time it is asked for it plays nothing
+        map:{select:"ty_key",error:"ty_miss",celebrate:"ty_boom",win:"ty_win",
+             shoot:"ty_zap",powerup:"ty_super"}});
     }
     try{BA.unlock();}catch(e){}
     return BA;
@@ -445,8 +448,8 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
   function buzz(){ gsfx("ty_miss"); }
   function fanfare(){ gsfx("ty_win"); }
   function boom(){ gsfx("ty_boom"); }
-  function zap(){ gsfx("ty_zap"); }
-  function superSound(){ gsfx("ty_super"); }
+  function zap(){ gsfx("shoot"); }
+  function superSound(){ gsfx("powerup"); }
 
   /* ── background music, the adventurous end of the shared library ── */
   var GM={el:null,order:["adventure_sunny_bounce","sky_open_air","meadow_busy_bright"],at:0};
@@ -661,7 +664,7 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
     $('superFlash').classList.remove('go');void $('superFlash').offsetWidth;$('superFlash').classList.add('go');
     const c=$('callout');c.textContent='SUPER!';c.classList.remove('go');void c.offsetWidth;c.classList.add('go');
     for(let i=chi;i<curWord().length;i++){const g=elTarget.children[i];if(g){g.classList.remove('current');g.classList.add('done');}}
-    chi=curWord().length;fanfare();completeWord(true);}
+    chi=curWord().length;superSound();completeWord(true);}
 
   function completeWord(superFx){
     lock=true;running=false;const xp=foeX();const g=gen;
