@@ -1035,6 +1035,9 @@ $('cardMiss').addEventListener('click',function(){openPractice('miss');});
    finger colour, so the break is still practising the thing the lesson taught. */
 var G={on:false,t:null,left:0,score:0,bals:[],pool:null,spawn:0};
 var BAL_SECS=45;
+/* 1.0 at the start, 1.8 by the end — the round gets faster as it goes, so it
+   stops being a gentle tap-along after the first ten seconds. */
+function ramp(){return 1+0.8*(1-G.left/BAL_SECS);}
 
 function breakPool(){
   // the keys from the last lesson played, else everything taught so far
@@ -1056,7 +1059,7 @@ function openBreak(){
     c.style.cssText='left:'+(6+i*24)+'%;top:'+(8+(i%2)*26)+'%;width:'+(52+i*11)+'px;height:'+(17+(i%2)*5)+'px';
     $('sky').appendChild(c);
   }
-  for(var b=0;b<3;b++)spawnBal(120+b*70);
+  for(var b=0;b<4;b++)spawnBal(90+b*55);
   $('gScore').textContent='0';$('gTime').textContent='0:'+BAL_SECS;
   $('gHint').textContent='Pop as many as you can. You cannot lose.';
   show('game');unlockAudio();
@@ -1065,7 +1068,13 @@ function openBreak(){
 }
 function closeBreak(){G.on=false;clearInterval(G.t);G.t=null;}
 function spawnBal(startY){
-  var ch=G.pool[Math.floor(Math.random()*G.pool.length)];
+  // Don't put a letter up that is already floating. With a two-letter pool that
+  // is impossible, so it only applies once there is room to choose.
+  var up={},n=0;
+  G.bals.forEach(function(b){if(!up[b.ch]){up[b.ch]=1;n++;}});
+  var choices=G.pool;
+  if(G.pool.length-n>=2)choices=G.pool.filter(function(c){return !up[c];});
+  var ch=choices[Math.floor(Math.random()*choices.length)];
   var el=document.createElement('div');
   el.className='bal';el.textContent=ch;
   el.style.background=fcolor(ch);
@@ -1073,7 +1082,7 @@ function spawnBal(startY){
   var y=(startY==null)?250:startY;
   el.style.top=y+'px';
   $('sky').appendChild(el);
-  G.bals.push({ch:ch,el:el,y:y,sp:0.5+Math.random()*0.45});
+  G.bals.push({ch:ch,el:el,y:y,sp:(0.5+Math.random()*0.45)*ramp()});
 }
 function gameTick(){
   if(!G.on)return;
@@ -1082,7 +1091,7 @@ function gameTick(){
   var sec=Math.max(0,Math.ceil(G.left));
   $('gTime').textContent='0:'+(sec<10?'0':'')+sec;
   G.spawn-=0.05;
-  if(G.spawn<=0&&G.bals.length<6){spawnBal();G.spawn=0.55+Math.random()*0.35;}
+  if(G.spawn<=0&&G.bals.length<8){spawnBal();G.spawn=(0.55+Math.random()*0.3)/ramp();}
   for(var i=G.bals.length-1;i>=0;i--){
     var b=G.bals[i];b.y-=b.sp;b.el.style.top=b.y+'px';
     if(b.y<-70){b.el.remove();G.bals.splice(i,1);}   // drifting off is not a loss
@@ -1100,7 +1109,7 @@ function breakPress(ch){
 }
 function endBreak(){
   closeBreak();
-  $('gHint').textContent='You popped '+G.score+'. Nice break.';
+  $('gHint').textContent='You popped '+G.score+(G.score>=30?'. Seriously quick.':(G.score>=18?'. Nice and fast.':'. Nice break.'));
   fanfare(false);
   say('Nice break.');
   setTimeout(function(){paintHome();show('home');},1800);

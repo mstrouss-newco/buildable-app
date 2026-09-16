@@ -457,6 +457,17 @@ const SOUNDS = {
   minute_wrong: "A single soft low rounded wooden thud with a gentle short downward two-note hum, sympathetic and mild, never harsh, never a buzzer, never comedic, single hit, dry, no music, no voices",
   minute_done:  "Warm gentle finish celebration on soft marimba and a low rounded bell, cosy and happy, calm and unhurried, never shrill or piercing, short, no voices",
   minute_best:  "Short warm happy fanfare on glockenspiel and soft rounded brass with a light sparkle, a personal-best moment, celebratory but never blaring or metallic, no voices",
+
+  // ---- Defend the Castle (the typing break game) ----
+  // Same rule as Minute Math: ty_key fires on EVERY letter, hundreds of times a
+  // round, so it is the quietest and shortest thing here, and ty_miss is a soft
+  // thud rather than a buzzer. The loud ones happen once.
+  ty_key:   "A single soft warm wooden tick with one tiny bright ping on top, quick and light, a correct key press, single hit, dry, no reverb, no music, no voices",
+  ty_zap:   "Short friendly cartoon zap and pop, a soft laser bolt hitting a cute monster, playful and light, never harsh, single hit, dry, no music, no voices",
+  ty_miss:  "A single soft low rounded wooden thud with a gentle short downward hum, sympathetic and mild, never a buzzer, never comedic, single hit, dry, no music, no voices",
+  ty_boom:  "Short punchy cartoon explosion boom with a bright sparkly pop, fun and friendly, never scary, single hit, no music, no voices",
+  ty_super: "Rising magical sparkle whoosh into a bright power-up chime, cheerful and big, short, no voices",
+  ty_win:   "Short warm happy victory fanfare on glockenspiel and soft rounded brass with a light sparkle, celebratory but never blaring or metallic, no voices",
 };
 // One-shot game SFX are short; ambience loops stay long.
 const DURATIONS = {
@@ -471,6 +482,7 @@ const DURATIONS = {
   hop_jump:0.5, hop_land:0.5, hop_coin:0.5, hop_coinrun:0.7, hop_star:0.8, hop_power:0.8,
   hop_bounce:0.5, hop_bonk:0.5, hop_stomp:0.5, hop_hurt:0.6, hop_flag:1.4, hop_win:1.8,
   minute_right:0.45, minute_wrong:0.5, minute_done:1.3, minute_best:1.5,
+  ty_key:0.45, ty_zap:0.6, ty_miss:0.5, ty_boom:1.0, ty_super:1.2, ty_win:1.6,
   practice_right:0.5, practice_oops:0.5, practice_new:0.7, practice_bird:0.6, practice_flock:1.8,
   practice_place:0.6, practice_go:0.5, practice_time:0.8, practice_best:1.4,
   chess_select:0.4, chess_move:0.5, chess_check:0.7, chess_castle:0.7, chess_promote:1.0,
