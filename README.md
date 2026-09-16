@@ -6,6 +6,34 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## QA56 — two kids on one screen, and the button that started a game against the robot (September 16 2026)
+`public/tennis.html`, `public/buildable-boardgame.js`, `public/buildable-checkers.html`,
+`src/BuildableKids.jsx`, `qa-tennis.mjs`, `qa-same-device.mjs` (new)
+
+Mike's July report was that a 2P same-device Tennis match "did not play". Reproduced in a
+real browser through the real shell with real multi-touch. The reason it did nothing at
+all was the empty full-screen `#menu` overlay eating every tap — the TN-FIX that landed
+2026-08-29, a month after he filed it.
+
+Underneath sat the actual same-device input bug. Which paddle your finger drove was
+decided by which half it was in **right now**, so P1 reaching over the net stole P2's
+paddle, a bare mouse hover dragged whichever paddle it crossed, and that same hover
+snapped P2's paddle back so their A/D keys looked dead. A pointer now claims a half on
+press and keeps it until it lifts; nothing steers a paddle without a real press. The 2P
+end banner also names the winner instead of telling the loser "You win!", the how-to demo
+gives both ends a hand with player 2's text turned to face them, and the scores are
+labelled P1 / P2.
+
+Log item 71 said the Solo / Same device / Play a friend row was "only ever wired on some"
+of the board games. It was wired on **none**: on Tic-Tac-Toe, Connect Four, Dots and Boxes
+and Checkers, "Same device" opened the engine's own menu, which is the robot difficulty
+picker — so tapping "2 players" started a game against the computer. The shell now sends
+`?mode=two` the way it already sends `?diff=`, and all four come up live on player 1's
+turn with nothing auto-replying for player 2.
+
+`qa-same-device.mjs` is new and holds the contract for all five same-device games, so the
+`qa-all.mjs` gate carries it from here.
+
 ## AC10 — Ant City: a real meadow, real soil, and food is the only drop (September 8 2026)
 `public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/world/`,
 `scripts/nature-shot.mjs`, `db/register-antcity-world-sprites.sql`, `qa-antcity.mjs`.

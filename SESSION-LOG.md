@@ -1,3 +1,78 @@
+## 2026-09-16 (QA56): two kids, one screen, and the button that started a game against the robot
+
+**Phase QA, card QA56.** Mike, 29 July: "BROKEN: two-player on the same screen does not
+work. Tried to start a 2P same-device match and it did not play." Touched
+`public/tennis.html`, `public/buildable-boardgame.js`, `public/buildable-checkers.html`,
+`src/BuildableKids.jsx`, `qa-tennis.mjs`, and a new `qa-same-device.mjs`.
+
+### Reproduced first, as asked
+
+Built the real thing rather than guessing: a local Vercel-shaped server (public files at
+the root, the React shell behind it) driven through Chromium with real multi-touch, and
+walked it the way a kid does — guest, Home, Play, Tennis, Same device.
+
+**Why it "did not play" in July is already fixed.** The empty full-screen `#menu` div sat
+transparent over the canvas and swallowed every tap, so the demo never dismissed and the
+match never started. That is the TN-FIX that landed 2026-08-29, a month after Mike filed
+this. The QA sweep's hunch was right: same root cause.
+
+### What was still wrong underneath it
+
+The paddle your finger drove was decided by which half it was in **right now**. With two
+kids on one iPad that breaks three ways, all three reproduced and all three now covered
+by the gate:
+
+- **Player 1 reaching over the net stole player 2's paddle.** One finger starting at the
+  bottom and sliding up past the halfway line yanked P2's paddle to the cursor and left
+  P1's own paddle stranded.
+- **A bare mouse hover dragged whichever paddle it crossed.** No button down, no touch —
+  the cursor drifting across the screen steered a paddle by itself.
+- **That same hover snapped P2's paddle straight back**, so their A/D keys looked dead.
+
+A pointer now **claims a half when it presses and keeps it until it lifts**, and nothing
+steers a paddle without a real press. Touch events claim alongside pointer events under
+their own key space, so iOS firing both never double-books a half.
+
+### And what the two kids were being told
+
+- The end banner read off ONE screen but spoke to one player: the winner got "So close!"
+  and the loser got "You win!". It names the winner now — Player 1 / Player 2.
+- "Tap for the menu" was a lie in the app, where a tap restarts. It says "Tap to play
+  again".
+- The how-to demo taught one player: one hand, on the bottom paddle, with the text facing
+  the bottom. Both ends get a hand now and player 2's line is turned around so they can
+  read it from their side of the iPad.
+- The two bare score numbers are labelled P1 / P2.
+- Player 2's paddle used the "opponent" colour and read as dead scenery.
+
+### Task 3 turned up something worse than log item 71 said
+
+Item 71 said the Solo / Same device / Play a friend row "was only ever wired on some" of
+the board games. It was wired on **none** of them. On Tic-Tac-Toe, Connect Four, Dots and
+Boxes and Checkers, "Same device" opened the engine's own menu — and that menu is the
+**robot difficulty picker**. A kid tapping "2 players / Same device" got Easy / Medium /
+Hard and a game against the computer, with nothing on screen saying so. Tennis was the
+only one of the five that deep-linked a real two-player match.
+
+The shell now sends `?mode=two` the way it already sends `?diff=` for a solo game, and
+the engines honour it without flashing their own menu. Verified in a browser on all four:
+the board comes up live on player 1's turn, the robot picker never shows, and nothing
+auto-replies for player 2. Solo and the difficulty picker clear the flag, and Home clears
+it on the way out, so a 2P game never leaks into the next solo one.
+
+### QA
+
+`qa-tennis.mjs` now covers same-device 2P (half ownership, no hover steering, keys
+surviving a hover, no bot in 2P, a full match played to a winner). `qa-same-device.mjs`
+is new and holds the contract for all five same-device games, so `qa-all.mjs` picks it up
+and this cannot go quiet again. Ran green: qa-tennis, qa-tictactoe, qa-connectfour,
+qa-dotsandboxes, qa-checkers, qa-same-device, and the full `qa-all.mjs` gate.
+
+### What I did not touch
+
+The doubled sound/pause icons visible in the corner of the board games are already filed
+as QA27 and QA28 — left alone rather than duplicated.
+
 ## 2026-09-15 (FM12): the beds, the signs, the pond, and she was walking backwards
 
 **Phase FM, card FM12**, off a screenshot Mike sent of the live farm: "the highlighted
