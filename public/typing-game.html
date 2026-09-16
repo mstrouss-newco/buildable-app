@@ -159,12 +159,9 @@ body{font-family:'Fredoka',sans-serif;color:var(--ink);background:var(--cream);m
 
 /* ===== hands ===== */
 .hands-wrap{margin-top:10px}
-.hands-label{text-align:center;font-size:12px;font-weight:600;color:#A79B86;margin-bottom:5px}
-.hands{display:flex;gap:30px;justify-content:center;align-items:flex-end}
-.hand{display:flex;align-items:flex-end;gap:5px;height:50px;padding:0 4px 6px;border-radius:0 0 16px 16px;background:linear-gradient(180deg,transparent,var(--sunk));position:relative}
-.hand::after{content:'';position:absolute;left:4px;right:4px;bottom:0;height:11px;border-radius:8px;background:#EDE4D1}
-.finger{width:12px;border-radius:7px 7px 3px 3px;background:#EFE7D6;transition:height .15s,filter .15s,transform .15s;position:relative;z-index:1}
-.finger.up{filter:brightness(1.35);transform:translateY(-6px);box-shadow:0 0 16px currentColor}
+.hands-label{text-align:center;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#A79B86;margin-top:-4px}
+.hands{display:flex;gap:12px;justify-content:center;align-items:flex-end;transform:scale(.74);transform-origin:top center;margin-top:-16px;height:150px}
+.hands svg{display:block}
 
 /* ===== buttons ===== */
 .btn{font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;cursor:pointer;border:none;border-radius:var(--rPill);
@@ -288,8 +285,8 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
       <div class="kb" id="kb"></div>
 
       <div class="hands-wrap">
-        <div class="hands-label">use the glowing finger</div>
         <div class="hands"><div class="hand" id="handL"></div><div class="hand" id="handR"></div></div>
+        <div class="hands-label">use the glowing finger</div>
       </div>
 
       <div class="overlay" id="pauseOverlay">
@@ -409,7 +406,8 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
   const TYPE_LABEL={normal:'',fast:'fast!',big:'tough!'};
   const CHEERS=['Nice!','Yay!','Wow!','Great!','Super!','Cool!','Woohoo!','Awesome!','Boom!','You got it!'];
 
-  const FCOLOR={pinky:'#FF6B6B',ring:'#F59E0B',middle:'#00C48C',index:'#7C5CFC',thumb:'#A78BFF'};
+  // retuned to read on a cream page, same values as the school
+  const FCOLOR={pinky:'#FF6B6B',ring:'#F0A020',middle:'#2FAE68',index:'#7C5CFC',thumb:'#9B7BFF'};
   const FINGER={};
   [['L','pinky','qaz'],['L','ring','wsx'],['L','middle','edc'],['L','index','rfvtgb'],
    ['R','index','yhnujm'],['R','middle','ik'],['R','ring','ol'],['R','pinky','p']]
@@ -435,7 +433,10 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
       _sfxReady=true;
       BA.configure({sfxBase:"/api/sfx?s=",
         peaks:{ty_key:0.20,ty_zap:0.34,ty_miss:0.34,ty_boom:0.70,ty_super:0.85,ty_win:0.95},
-        map:{select:"ty_key",error:"ty_miss",celebrate:"ty_boom",win:"ty_win"}});
+        // every clip must be MAPPED or the kit never fetches it, and the
+        // first time it is asked for it plays nothing
+        map:{select:"ty_key",error:"ty_miss",celebrate:"ty_boom",win:"ty_win",
+             shoot:"ty_zap",powerup:"ty_super"}});
     }
     try{BA.unlock();}catch(e){}
     return BA;
@@ -445,8 +446,8 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
   function buzz(){ gsfx("ty_miss"); }
   function fanfare(){ gsfx("ty_win"); }
   function boom(){ gsfx("ty_boom"); }
-  function zap(){ gsfx("ty_zap"); }
-  function superSound(){ gsfx("ty_super"); }
+  function zap(){ gsfx("shoot"); }
+  function superSound(){ gsfx("powerup"); }
 
   /* ── background music, the adventurous end of the shared library ── */
   var GM={el:null,order:["adventure_sunny_bounce","sky_open_air","meadow_busy_bright"],at:0};
@@ -537,12 +538,52 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
   KB_ROWS.forEach(row=>{const r=document.createElement('div');r.className='kb-row';
     row.forEach(ch=>{const k=document.createElement('div');k.className='key';k.textContent=ch.toUpperCase();
       k.dataset.key=ch;k.addEventListener('click',()=>handle(ch));keyEls[ch]=k;r.appendChild(k);});elKb.appendChild(r);});
-  // hands (in-game finger guide)
-  const fingerEls={};
-  ['L','R'].forEach(h=>{const hand=$(h==='L'?'handL':'handR');
-    HAND_ORDER[h].forEach(f=>{const fe=document.createElement('div');fe.className='finger';fe.style.height=FH[f]+'px';
-      fe.dataset.base='rgba(255,255,255,.14)';fe.style.background=fe.dataset.base;fe.style.color=FCOLOR[f];
-      fingerEls[h+'-'+f]=fe;hand.appendChild(fe);});});
+  // hands (in-game finger guide) — drawn, not four bars
+/* ══════════ HANDS ══════════ */
+  /* A finger: a tapered column with a rounded tip and a knuckle crease. */
+  function bkFinger(x,base,len,w,tilt,col,line,active){
+    var topW=w*0.84, r=topW/2, y=base-len, dx=(w-topW)/2, g='';
+    var d='M'+x+','+base+'L'+(x+dx)+','+(y+r)
+        +'A'+r+','+r+' 0 0 1 '+(x+dx+topW)+','+(y+r)+'L'+(x+w)+','+base+'Z';
+    g+='<g transform="rotate('+tilt+' '+(x+w/2)+' '+base+')">';
+    if(active)g+='<circle cx="'+(x+w/2)+'" cy="'+(y+r)+'" r="'+(r+11)+'" fill="'+col+'" opacity=".18"/>';
+    g+='<path d="'+d+'" fill="'+col+'" stroke="'+line+'" stroke-width="2" stroke-linejoin="round"/>';
+    g+='<path d="M'+(x+dx+2)+','+(y+Math.min(len*0.42,34))+' q'+(topW/2-2)+',5 '+(topW-4)+',0" fill="none" stroke="'+line+'" stroke-width="1.6" opacity=".75" stroke-linecap="round"/>';
+    g+='</g>';
+    return g;
+  }
+  function bkHand(isLeft,active,FCOL){
+    var SKIN='#EFE7D6', LINE='#D2C6AE';
+    var F=[{k:'p',x:22,w:19,len:52,tilt:-13,base:110},
+           {k:'r',x:49,w:22,len:78,tilt:-5,base:102},
+           {k:'m',x:79,w:24,len:86,tilt:1,base:100},
+           {k:'i',x:111,w:23,len:72,tilt:8,base:104}];
+    var s='', onT=(active==='t');
+    // the thumb goes first, so the palm covers where it joins and it reads as attached
+    s+=bkFinger(126,150,64,27,98,onT?FCOL.t:SKIN,onT?FCOL.t:LINE,onT);
+    s+='<path d="M18,116 C14,99 28,91 46,90 L134,93 C155,94 165,101 165,118'
+     +' L159,150 C155,172 139,181 117,181 L56,181 C36,181 24,168 20,150 Z"'
+     +' fill="'+SKIN+'" stroke="'+LINE+'" stroke-width="2" stroke-linejoin="round"/>';
+    F.forEach(function(f){
+      var on=(active===f.k);
+      s+=bkFinger(f.x,f.base+18,f.len+18+(on?22:0),f.w,f.tilt,on?FCOL[f.k]:SKIN,on?FCOL[f.k]:LINE,on);
+    });
+    // knuckles, but never on the lit finger: a dark ring on a bright finger
+    // reads as a blemish
+    F.forEach(function(f){ if(active===f.k)return;
+      s+='<ellipse cx="'+(f.x+f.w/2)+'" cy="'+(f.base+13)+'" rx="'+(f.w/2-2)+'" ry="5" fill="none" stroke="'+LINE+'" stroke-width="1.5" opacity=".5"/>';});
+    return '<svg width="215" height="214" viewBox="0 0 215 214"'+(isLeft?'':' style="transform:scaleX(-1)"')+'>'
+         + '<g transform="translate(0,16)">'+s+'</g></svg>';
+  }
+  // the game says "pinky", the drawing says "p"
+  var SHORTF={pinky:'p',ring:'r',middle:'m',index:'i',thumb:'t'};
+  var HANDCOL={p:FCOLOR.pinky,r:FCOLOR.ring,m:FCOLOR.middle,i:FCOLOR.index,t:FCOLOR.thumb};
+  function paintHands(side,f){
+    var k=SHORTF[f]||null;
+    $('handL').innerHTML=bkHand(true, side==='L'?k:null, HANDCOL);
+    $('handR').innerHTML=bkHand(false,side==='R'?k:null, HANDCOL);
+  }
+  paintHands(null,null);
   for(let i=0;i<10;i++){const s=document.createElement('div');s.className='sky-star';
     s.style.left=Math.random()*100+'%';s.style.top=Math.random()*52+'%';s.style.opacity=.3+Math.random()*.5;
     elLane.insertBefore(s,elLane.firstChild);}
@@ -596,8 +637,7 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
   function highlightNext(){const e=expected();const fk=FINGER[e];const col=fk?FCOLOR[fk.f]:'#A78BFF';
     for(const k in keyEls){const el=keyEls[k];el.classList.remove('next');el.style.background='';el.style.boxShadow='';el.style.borderColor='';}
     if(keyEls[e]){const el=keyEls[e];el.classList.add('next');el.style.background=col;el.style.boxShadow='0 0 22px '+col;}
-    for(const id in fingerEls){const fe=fingerEls[id];fe.classList.remove('up');fe.style.background=fe.dataset.base;}
-    if(fk){const fe=fingerEls[fk.h+'-'+fk.f];if(fe){fe.classList.add('up');fe.style.background=col;}}}
+    paintHands(fk?fk.h:null, fk?fk.f:null);}
 
   function setStars(n){runStars=n;$('statStars').innerHTML=IC_STAR+' '+runStars;}
   function setStreak(n){streak=n;$('statStreak').innerHTML=IC_FLAME+' '+streak;}
@@ -661,7 +701,7 @@ box-shadow:0 3px 0 #EDE5D6">&#8592; Lessons</a></div>
     $('superFlash').classList.remove('go');void $('superFlash').offsetWidth;$('superFlash').classList.add('go');
     const c=$('callout');c.textContent='SUPER!';c.classList.remove('go');void c.offsetWidth;c.classList.add('go');
     for(let i=chi;i<curWord().length;i++){const g=elTarget.children[i];if(g){g.classList.remove('current');g.classList.add('done');}}
-    chi=curWord().length;fanfare();completeWord(true);}
+    chi=curWord().length;superSound();completeWord(true);}
 
   function completeWord(superFx){
     lock=true;running=false;const xp=foeX();const g=gen;

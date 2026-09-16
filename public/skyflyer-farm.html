@@ -1189,6 +1189,25 @@ function dropBlockersOwnedBy(own){
 // (or zero) means clear. Also hands back the direction to push out along.
 function pushOut(B,x,z,rad){
   var dx,dz,d,cx,cz;
+  if(B.t==="poly"){
+    var lx=x-B.x, lz=z-B.z, P=B.pts, n=P.length, j;
+    // the dock: inside its corridor the water is not water
+    if(B.skip && Math.abs(lx-B.skip[0])<=B.skip[2] && Math.abs(lz-B.skip[1])<=B.skip[3]) return null;
+    var inside=false, bestD=1e9, bx=0, bz=0;
+    for(j=0;j<n;j++){
+      var ax=P[j][0], az=P[j][1], ex=P[(j+1)%n][0], ez=P[(j+1)%n][1];
+      if(((az>lz)!==(ez>lz)) && (lx < (ex-ax)*(lz-az)/(ez-az)+ax)) inside=!inside;
+      var vx=ex-ax, vz=ez-az, L=vx*vx+vz*vz;
+      var t=L>0 ? Math.max(0,Math.min(1, ((lx-ax)*vx+(lz-az)*vz)/L)) : 0;
+      var qx=ax+vx*t, qz=az+vz*t, dd=(lx-qx)*(lx-qx)+(lz-qz)*(lz-qz);
+      if(dd<bestD){ bestD=dd; bx=qx; bz=qz; }
+    }
+    var pd=Math.sqrt(bestD);
+    if(!inside && pd>=rad) return null;
+    if(pd<1e-4) return {nx:1, nz:0, depth:rad};
+    if(inside) return {nx:(bx-lx)/pd, nz:(bz-lz)/pd, depth:pd+rad};
+    return {nx:(lx-bx)/pd, nz:(lz-bz)/pd, depth:rad-pd};
+  }
   if(B.t==="circle"){
     dx=x-B.x; dz=z-B.z; d=Math.hypot(dx,dz);
     var want=B.r+rad;
@@ -1213,6 +1232,14 @@ function pushOut(B,x,z,rad){
   return {nx:dx/d, nz:dz/d, depth:rad-d};
 }
 
+// FM13 — A POLYGON BLOCKER, so a shape that is not a circle or a box can stop
+// her. It exists for one reason: the pond. Mike walked out across the middle of
+// the water. `skip` is an optional box inside which the polygon does not apply,
+// which is how the dock stays walkable.
+function addPolyBlocker(x,z,pts,tag,skip){
+  var B={t:"poly",x:x,z:z,pts:pts,skip:skip||null,tag:tag||"",own:BLOCKER_OWNER,on:true};
+  BLOCKERS.push(B); return B;
+}
 function blockedAt(x,z,rad){
   for(var i=0;i<BLOCKERS.length;i++){
     if(!BLOCKERS[i].on) continue;
@@ -1528,39 +1555,53 @@ var CROP_RECIPES = {
     colors: {main:0xF6C64A, accent:0xE0A82E, stem:0x4FB05B},
     parts:function(s){
       var C=this.colors, p=[];
+      // FM13 — THE EAR IS THE POINT. The husks used to be as wide as the ear
+      // and sat ON TOP of it, so from the game camera a corn plant was a green
+      // stick with a yellow lump half-buried in it. They are thinner now, they
+      // sit LOWER and further out, and the ear stands clear above them with
+      // three bands round it so it reads as kernels and not as a bead.
+      var i;
       // tall stalk
       p.push(hbTube(0.11*s,0.09*s,1.2*s,C.stem,{p:[0, 0.6*s, 0]}));
-      // ear (lathe) — kernel body
+      // husk leaves, first so the ear draws in front of them
+      p.push(hbCone(0.17*s, 0.62*s, C.stem, {r:[0,0,0.46], p:[-0.26*s, 0.82*s, 0]}, 9));
+      p.push(hbCone(0.17*s, 0.62*s, C.stem, {r:[0,0,-0.46], p:[0.26*s, 0.82*s, 0]}, 9));
+      // ear (lathe) — kernel body, taller than it was
       p.push(hbTurn([
-        [0.001, -0.42*s],[0.28*s,-0.28*s],[0.32*s,0.05*s],
-        [0.28*s,0.32*s],[0.001,0.44*s]
-      ], C.main, {p:[0, 0.95*s, 0]}, 14));
-      // husk leaves peeling back at the top
-      p.push(hbCone(0.30*s, 0.55*s, C.stem, {r:[0,0,0.35], p:[-0.20*s, 1.15*s, 0]}, 10));
-      p.push(hbCone(0.30*s, 0.55*s, C.stem, {r:[0,0,-0.35], p:[0.20*s, 1.15*s, 0]}, 10));
-      // a bright kernel accent band
-      p.push(hbTurn([
-        [0.001, -0.10*s],[0.32*s,-0.05*s],[0.32*s,0.05*s],[0.001,0.10*s]
-      ], C.accent, {p:[0, 0.95*s, 0]}, 12));
+        [0.001, -0.46*s],[0.26*s,-0.32*s],[0.31*s,0.02*s],
+        [0.27*s,0.34*s],[0.001,0.50*s]
+      ], C.main, {p:[0, 1.02*s, 0]}, 14));
+      // three kernel bands, so the ear has rows on it at any distance
+      for(i=0;i<3;i++)
+        p.push(hbTurn([
+          [0.001,-0.045*s],[0.315*s,-0.035*s],[0.315*s,0.035*s],[0.001,0.045*s]
+        ], C.accent, {p:[0, (0.86+i*0.16)*s, 0]}, 12));
       return p;
     },
     // Icon = the same shape family (an ear plus two husk leaves), drawn flat.
     // Fits inside a 82x82 box. No emojis.
+    // FM13 — THE POTATO. Mike's fox asked for one of these and the picture on
+    // the card was a yellow lump with twelve dots and two green hairs. Two
+    // things were wrong. The husk leaves were drawn out and back along the SAME
+    // curve, so they enclosed no area at all and rendered as whiskers. And
+    // scattered dots are not what makes corn read as corn: ROWS OF KERNELS do.
     svg:function(size){
       size = size || 82;
+      var out='', r, k, rows=[[27,[35,41,47]],[35,[32,38,44,50]],[43,[32,38,44,50]],
+                              [51,[32,38,44,50]],[59,[35,41,47]]];
+      for(r=0;r<rows.length;r++)
+        for(k=0;k<rows[r][1].length;k++)
+          out+='<rect x="'+(rows[r][1][k]-3)+'" y="'+(rows[r][0]-3.5)+'" width="6" height="7" rx="3" '+
+               'fill="#FFD866" stroke="#C08F1C" stroke-width="1.3"/>';
       return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
-        // ear body (oval)
-        '<ellipse cx="41" cy="44" rx="17" ry="26" fill="#F6C64A" stroke="#B88718" stroke-width="2.5"/>'+
-        // kernel dots
-        '<g fill="#B88718">'+
-          '<circle cx="34" cy="30" r="2"/><circle cx="41" cy="28" r="2"/><circle cx="48" cy="30" r="2"/>'+
-          '<circle cx="34" cy="40" r="2"/><circle cx="41" cy="40" r="2"/><circle cx="48" cy="40" r="2"/>'+
-          '<circle cx="34" cy="50" r="2"/><circle cx="41" cy="52" r="2"/><circle cx="48" cy="50" r="2"/>'+
-          '<circle cx="34" cy="60" r="2"/><circle cx="41" cy="62" r="2"/><circle cx="48" cy="60" r="2"/>'+
-        '</g>'+
-        // husk leaves peeling back
-        '<path d="M28 18 Q22 30 30 44 Q22 30 28 18 Z" fill="#4FB05B" stroke="#2E7A3A" stroke-width="2"/>'+
-        '<path d="M54 18 Q60 30 52 44 Q60 30 54 18 Z" fill="#4FB05B" stroke="#2E7A3A" stroke-width="2"/>'+
+        // husk leaves BEHIND the ear, each a real closed shape with an inside
+        '<path d="M31 24 C20 33 19 52 30 66 C35 51 35 37 31 24 Z" '+
+          'fill="#4FB05B" stroke="#2E7A3A" stroke-width="2.4" stroke-linejoin="round"/>'+
+        '<path d="M51 24 C62 33 63 52 52 66 C47 51 47 37 51 24 Z" '+
+          'fill="#4FB05B" stroke="#2E7A3A" stroke-width="2.4" stroke-linejoin="round"/>'+
+        // the ear
+        '<ellipse cx="41" cy="43" rx="15" ry="24" fill="#F6C64A" stroke="#B88718" stroke-width="2.6"/>'+
+        out+
         '</svg>';
     }
   },
@@ -1639,7 +1680,36 @@ var CROP_RECIPES = {
       }
       return p;
     },
+    // FM13 — A BUNDLE, because FM12 made the crop in the field a tuft of four
+    // stalks and this card still showed a single stick. The picture and the
+    // thing have to be the same thing.
     svg:function(size){
+      size = size || 82;
+      // Three heads that do NOT touch. The first cut of this had them fat and
+      // close and the three of them merged into one lump that read as a pine
+      // cone. Narrow heads, a wide fan, and the outer two cut short.
+      var out='', i, k, ROT=[-27,27,0], SCL=[0.74,0.78,1], LEN=[3,3,4];
+      for(i=0;i<3;i++){
+        out+='<g transform="rotate('+ROT[i]+' 41 78) translate(41 78) scale('+SCL[i]+
+             ') translate(-41 -78)">'+
+             '<path d="M41 78 L41 24" stroke="#C3A94E" stroke-width="3.2" '+
+             'stroke-linecap="round" fill="none"/>';
+        for(k=0;k<LEN[i];k++){
+          var gy=34+k*10;
+          out+='<ellipse cx="35.4" cy="'+gy+'" rx="5.2" ry="3.7" fill="#E8CE68" '+
+               'stroke="#8A6A1A" stroke-width="1.5" transform="rotate(-24 35.4 '+gy+')"/>'+
+               '<ellipse cx="46.6" cy="'+gy+'" rx="5.2" ry="3.7" fill="#E8CE68" '+
+               'stroke="#8A6A1A" stroke-width="1.5" transform="rotate(24 46.6 '+gy+')"/>';
+        }
+        out+='<ellipse cx="41" cy="26" rx="4.4" ry="5.6" fill="#E8CE68" '+
+             'stroke="#8A6A1A" stroke-width="1.5"/></g>';
+      }
+      // the tie round the bottom of the sheaf
+      out+='<path d="M31 68 Q41 73 51 68" fill="none" stroke="#B08A33" '+
+           'stroke-width="4" stroke-linecap="round"/>';
+      return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+out+'</svg>';
+    },
+    svgOld:function(size){
       size = size || 82;
       return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
         // stem
@@ -2080,8 +2150,11 @@ var PRODUCE_RECIPES = {
     svg:function(size){
       size = size || 82;
       return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
+        // FM13 — the line across the middle read as a crack, or as an egg
+        // sitting in a cup. An egg is one clean shape with a shine on it.
         '<ellipse cx="41" cy="46" rx="21" ry="27" fill="#FFFCF2" stroke="#9C8555" stroke-width="3.2"/>'+
-        '<path d="M24 52 Q41 60 58 52" fill="none" stroke="#D8C393" stroke-width="3"/>'+
+        '<ellipse cx="33" cy="36" rx="5.6" ry="9" fill="#FFFFFF" opacity="0.9" '+
+          'transform="rotate(-20 33 36)"/>'+
         '</svg>';
     }
   },
@@ -2103,7 +2176,8 @@ var PRODUCE_RECIPES = {
       size = size || 82;
       return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
         '<ellipse cx="41" cy="45" rx="23" ry="29" fill="#CFE6F2" stroke="#7FA6BC" stroke-width="2.5"/>'+
-        '<path d="M22 52 Q41 61 60 52" fill="none" stroke="#A8C9DC" stroke-width="3"/>'+
+        '<ellipse cx="32" cy="35" rx="6" ry="9.5" fill="#FFFFFF" opacity="0.75" '+
+          'transform="rotate(-20 32 35)"/>'+
         '</svg>';
     }
   },
@@ -2150,10 +2224,15 @@ PRODUCE_RECIPES.truffle = {
     }
     return p;
   },
+  // FM13 — it was a smooth oval with three dots on it, which is a chocolate
+  // biscuit. A truffle is a LUMP: the outline itself has to be knobbly.
   svg:function(size){ size=size||82; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
-    '<ellipse cx="41" cy="46" rx="26" ry="21" fill="#4A342A" stroke="#2B1C15" stroke-width="2.5"/>'+
-    '<circle cx="30" cy="38" r="6" fill="#6B4E3D"/><circle cx="50" cy="42" r="7" fill="#6B4E3D"/>'+
-    '<circle cx="39" cy="55" r="5" fill="#6B4E3D"/>'+
+    '<path d="M18 48 C13 39 19 32 27 32 C30 25 41 23 46 28 C55 24 64 30 63 38 '+
+      'C71 42 70 53 62 56 C59 64 48 66 43 61 C34 66 22 61 21 54 C16 53 16 50 18 48 Z" '+
+      'fill="#4A342A" stroke="#241610" stroke-width="2.6" stroke-linejoin="round"/>'+
+    '<path d="M28 39 C32 34 40 34 43 39 C40 45 31 45 28 39 Z" fill="#6B4E3D"/>'+
+    '<path d="M49 44 C53 40 60 41 60 46 C57 51 50 50 49 44 Z" fill="#6B4E3D"/>'+
+    '<path d="M35 52 C38 49 44 50 44 54 C41 58 35 57 35 52 Z" fill="#6B4E3D"/>'+
     '</svg>'; }
 };
 PRODUCE_RECIPES.honey = {
@@ -2177,14 +2256,24 @@ PRODUCE_RECIPES.honey = {
     '</svg>'; }
 };
 PRODUCE_RECIPES.bread = {
-  colors:{crust:0xC98A4B, top:0xE0AB70, slash:0xA96C33},
+  // FM13 — a deeper bake. The old crust was a light tan and the loaf read as
+  // a raw potato at any distance.
+  colors:{crust:0xA86A2E, top:0xD79B55, slash:0x7E4A1C},
+  // FM13 — it was a pale smooth ovoid: a potato. What makes a loaf a loaf is a
+  // DARK CRUST with a lighter, smaller top sitting inside it, and slashes deep
+  // enough and long enough to see from the game camera.
   parts:function(s){
     var C=this.colors, p=[], i;
-    p.push(hbBall(0.44*s, C.crust, {s:[1.5,0.80,0.92], p:[0,0.30*s,0]}, 14));
-    p.push(hbBall(0.38*s, C.top, {s:[1.4,0.60,0.80], p:[0,0.40*s,0]}, 12));
-    for(i=0;i<3;i++)
-      p.push(hbBall(0.10*s, C.slash, {s:[0.5,0.4,1.5], r:[0,0,0.5],
-        p:[(i-1)*0.28*s, 0.60*s, 0]}, 7));
+    // the loaf, darker and a little longer
+    p.push(hbBall(0.46*s, C.crust, {s:[1.55,0.78,0.94], p:[0,0.30*s,0]}, 16));
+    // the risen top, smaller so the crust shows all the way round it
+    p.push(hbBall(0.34*s, C.top, {s:[1.28,0.58,0.70], p:[0,0.40*s,0]}, 14));
+    // four slashes, across the loaf and set at an angle. They sit ABOVE the
+    // risen top, not inside it: the first cut buried them by two hundredths of
+    // a unit and the loaf came off the stand as a smooth potato again.
+    for(i=0;i<4;i++)
+      p.push(hbBall(0.115*s, C.slash, {s:[0.30,0.62,2.00], r:[0,0,0.40],
+        p:[(i-1.5)*0.235*s, 0.655*s, 0]}, 8));
     return p;
   },
   svg:function(size){ size=size||82; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
@@ -2210,10 +2299,14 @@ PRODUCE_RECIPES.cheese = {
         {p:[(-0.18+i*0.13)*s, (0.14+(i%2)*0.18)*s, (0.30-(i%2)*0.07)*s]}, 8));
     return p;
   },
+  // FM13 — a flat triangle is a slice of pizza seen from above. The model is a
+  // thick wedge, so the picture gets the same lit top face and the same rind.
   svg:function(size){ size=size||82; return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 82 82">'+
-    '<path d="M12 58 L60 22 L70 58 Z" fill="#F4C848" stroke="#A9791A" stroke-width="2.5" stroke-linejoin="round"/>'+
-    '<circle cx="34" cy="49" r="5" fill="#DCA92C"/><circle cx="52" cy="45" r="4" fill="#DCA92C"/>'+
-    '<circle cx="46" cy="54" r="3.4" fill="#DCA92C"/>'+
+    '<path d="M12 56 L58 20 L70 56 Z" fill="#F4C848" stroke="#A9791A" stroke-width="2.6" stroke-linejoin="round"/>'+
+    '<path d="M12 56 L58 20 L61 28 L21 56 Z" fill="#FFDE7E"/>'+
+    '<path d="M12 56 L70 56 L70 64 L12 64 Z" fill="#E0AF2A" stroke="#A9791A" stroke-width="2.6" stroke-linejoin="round"/>'+
+    '<circle cx="34" cy="47" r="4.6" fill="#D19E1F"/><circle cx="52" cy="44" r="3.8" fill="#D19E1F"/>'+
+    '<circle cx="45" cy="52" r="3.2" fill="#D19E1F"/>'+
     '</svg>'; }
 };
 
@@ -7097,10 +7190,30 @@ function dressIsland(){
   // path from the coop arrives on. It stops over open water, so standing on
   // the end of it is the point of walking down it.
   var dockLen=ISLE.pond.r*0.95;
+  var dockX=ISLE.pond.x - 1.1;
+  var dockZ=ISLE.pond.z - ISLE.pond.r + dockLen/2 - 0.5;
   var dock=buildDock(dockLen);
-  dock.position.set(ISLE.pond.x - 1.1, 0,
-                    ISLE.pond.z - ISLE.pond.r + dockLen/2 - 0.5);
+  dock.position.set(dockX, 0, dockZ);
   g.add(dock);
+  // FM13 — THE WATER IS WATER. Mike walked out over the middle of the pond,
+  // because nothing had ever stopped him: the pond was drawn and never blocked.
+  // The blocker is built from THE SAME `pondOutline` the water is drawn from,
+  // so the edge she is stopped at is the edge she can see, at every lobe of it.
+  var poly=[], pi, PN=40;
+  for(pi=0;pi<PN;pi++){
+    var pa=(pi/PN)*Math.PI*2;
+    var pr=ISLE.pond.r*(1 + Math.sin(pa*3+0.7)*0.070 + Math.sin(pa*5+2.1)*0.038
+                          + Math.sin(pa*2-1.1)*0.045);
+    // the drawn shape is rotated -90 on X, which sends its y to -z
+    poly.push([Math.cos(pa)*pr, -Math.sin(pa)*pr]);
+  }
+  addPolyBlocker(ISLE.pond.x, ISLE.pond.z, poly, "pond",
+    [dockX-ISLE.pond.x, dockZ-ISLE.pond.z, 1.02, dockLen/2+0.6]);
+  // and the dock gets sides and an end, so she walks down the middle of it and
+  // can never step off into the water she is now standing over
+  addBoxBlocker(dockX-1.04, dockZ, 0.06, dockLen/2, "dockrail");
+  addBoxBlocker(dockX+1.04, dockZ, 0.06, dockLen/2, "dockrail");
+  addBoxBlocker(dockX, dockZ+dockLen/2+0.06, 1.04, 0.06, "dockend");
 
   // ----------------------------------------------------------- road and paths
   buildRoad(g);
@@ -7603,6 +7716,36 @@ var stickEl=document.getElementById("stick");
 var stickNub=stickEl.querySelector(".nub");
 var stickCenter={x:0,y:0}, stickActive=false, stickVec={x:0,y:0};
 
+// FM13 — KEYS, so the farm can be played on a computer. Mike was steering a
+// touch pad with a mouse. Arrows and WASD, held down, drive exactly the same
+// vector the thumb stick drives, so nothing downstream knows the difference
+// and tap-to-go still wins the moment she taps something.
+var KEY_DOWN={};
+var KEY_MAP={ArrowUp:"u",ArrowDown:"d",ArrowLeft:"l",ArrowRight:"r",
+             w:"u",W:"u",s:"d",S:"d",a:"l",A:"l",d:"r",D:"r"};
+function keyVec(){
+  var x=0, z=0;
+  if(KEY_DOWN.l) x-=1;
+  if(KEY_DOWN.r) x+=1;
+  if(KEY_DOWN.u) z-=1;     // up the screen is -Z, the same as up on the stick
+  if(KEY_DOWN.d) z+=1;
+  var m=Math.hypot(x,z);
+  if(m>1){ x/=m; z/=m; }   // diagonals are not faster
+  return {x:x, y:z, mag:m>0?1:0};
+}
+function onKey(e, down){
+  var k=KEY_MAP[e.key]; if(!k) return;
+  KEY_DOWN[k]=down;
+  // stop the arrows scrolling the page under the game
+  if(e.preventDefault) e.preventDefault();
+}
+window.addEventListener("keydown", function(e){ onKey(e,true); }, {passive:false});
+window.addEventListener("keyup",   function(e){ onKey(e,false); }, {passive:false});
+// a click anywhere in the farm gives this document the keyboard, which matters
+// because the farm runs in a frame inside the app
+window.addEventListener("pointerdown", function(){ try{ window.focus(); }catch(e){} });
+window.addEventListener("blur", function(){ KEY_DOWN={}; });
+
 function stickReset(){
   stickActive=false; stickVec.x=0; stickVec.y=0;
   stickEl.classList.remove("live");
@@ -8041,6 +8184,9 @@ function step(){
   // walk from joystick vector. Y axis on screen is Z axis in world (into
   // screen is -Z), so up on the stick moves you forward.
   var mv=stickVec, mag=Math.hypot(mv.x,mv.y);
+  // FM13 — a held key counts exactly as a pushed stick
+  var kv=keyVec();
+  if(kv.mag>0){ mv=kv; mag=1; }
   var mx=0, mz=0;
   if(mag>0.08){ mx=mv.x; mz=mv.y; clearWalkTo(); }
   else if(walkTo){ var wv=stepWalkTo(dt); mx=wv.x; mz=wv.z; }
@@ -8231,7 +8377,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm12",
+  version: "fm13",
   coins: function(){ return walletBalance(); },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
