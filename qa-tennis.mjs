@@ -56,5 +56,67 @@ const worldSlot=(manifest.customization||[]).find(c=>/world/i.test(c.slot));
 console.log((worldSlot&&worldSlot.options.length===8?'PASS':'FAIL')+'  8-world loadout'); if(!(worldSlot&&worldSlot.options.length===8))mok=false;
 console.log((/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("tennis"/.test(html)?'PASS':'FAIL')+'  engine loads the shared manifest'); if(!(/buildable-manifest\.js/.test(html)&&/BuildableManifest\.load\("tennis"/.test(html)))mok=false;
 
-console.log((allWin && d === 'ok' && mok) ? 'ALL DIFFICULTIES WINNABLE + MANIFEST OK' : 'SOME FAILED');
-process.exit(allWin && d === 'ok' && mok ? 0 : 1);
+
+// --- SAME-DEVICE 2P (QA56) -------------------------------------------------
+// Mike: "two-player on the same screen does not work". The root cause of the
+// original report was the empty full-screen #menu overlay eating every tap
+// (fixed 2026-08-29, see TN-FIX); what was left underneath was a half-ownership
+// bug -- the paddle you drove was decided by where your finger was RIGHT NOW,
+// so P1 reaching over the net stole P2's paddle and a bare mouse hover dragged
+// whichever paddle it drifted across. A pointer now claims a half on press and
+// keeps it until it lifts. These cases lock that in.
+let tp = true;
+const t2 = (name, cond, extra='') => { if (!cond) tp = false; console.log(`${cond?'PASS':'FAIL'}  ${name}${extra?'  ::  '+extra:''}`); };
+console.log('--- SAME-DEVICE 2P (QA56) ---');
+const near = (a, b) => Math.abs(a - b) < 0.02;
+
+t2('2P mode starts a live match', T._2p() === 'play');
+
+// two fingers, one per half, move their own paddle and nobody else's
+T._setPads(0.5, 0.5);
+T._touch('down', 0.20, 0.15, 1); T._touch('down', 0.80, 0.85, 2);
+T._touch('move', 0.22, 0.15, 1); T._touch('move', 0.78, 0.85, 2);
+let pads = T._pads();
+t2('two fingers drive one paddle each', near(pads.topX, 0.22) && near(pads.bottomX, 0.78),
+   `topX=${pads.topX.toFixed(3)} bottomX=${pads.bottomX.toFixed(3)}`);
+T._lift(1); T._lift(2);
+
+// P1 reaching across the net must NOT capture P2's paddle
+T._setPads(0.20, 0.80);
+T._touch('down', 0.80, 0.85, 3);
+T._touch('move', 0.60, 0.60, 3);
+T._touch('move', 0.50, 0.30, 3);           // well over the net into P2's half
+pads = T._pads();
+t2('a finger keeps the half it started in', near(pads.topX, 0.20) && near(pads.bottomX, 0.50),
+   `topX=${pads.topX.toFixed(3)} (must stay 0.200) bottomX=${pads.bottomX.toFixed(3)}`);
+T._lift(3);
+
+// a move with no press behind it (desktop hover) must steer nothing
+T._setPads(0.20, 0.80);
+T._touch('move', 0.50, 0.15, 9);
+pads = T._pads();
+t2('a hover with no press steers nothing', near(pads.topX, 0.20) && near(pads.bottomX, 0.80),
+   `topX=${pads.topX.toFixed(3)} bottomX=${pads.bottomX.toFixed(3)}`);
+
+// P2's keyboard (A/D) must survive a stray hover in their half
+T._setPads(0.50, 0.80);
+T._keys['a'] = true; T._step(10); T._keys['a'] = false;
+const afterKeys = T._pads().topX;
+T._touch('move', 0.90, 0.10, 9);
+pads = T._pads();
+t2("P2's keys are not snapped away by a hover", pads.topX < 0.5 && near(pads.topX, afterKeys),
+   `topX=${pads.topX.toFixed(3)} after A-key=${afterKeys.toFixed(3)}`);
+
+// no bot may touch the top paddle in 2P
+T._setPads(0.30, 0.70); T._step(90);
+pads = T._pads();
+t2('no bot moves a paddle in 2P', near(pads.topX, 0.30) && near(pads.bottomX, 0.70),
+   `topX=${pads.topX.toFixed(3)} bottomX=${pads.bottomX.toFixed(3)}`);
+
+// a 2P match must actually reach a winner (P2 tracks the ball, P1 parks)
+t2('a 2P match plays through to a winner', T.sim2p(60000).over,
+   JSON.stringify(T.sim2p(60000)));
+
+const pass = allWin && d === 'ok' && mok && tp;
+console.log(pass ? 'ALL DIFFICULTIES WINNABLE + MANIFEST OK + 2P SAME-DEVICE OK' : 'SOME FAILED');
+process.exit(pass ? 0 : 1);

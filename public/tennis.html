@@ -264,6 +264,7 @@ function newGame() {
     winner: null,
   };
   serve(G.serveTo);
+  clearPresses();                            // QA56: no half stays claimed across games
   bubbleTop = bubbleBot = null;
   loadBg(worldKey); initParticles(); playMusic();
   state = "play"; started = true; paused = false;
@@ -299,25 +300,61 @@ function pointerToCourt(clientX, clientY) {
   if (flip) ny = 1 - ny;            // guest sees field flipped
   return { nx: nx, ny: ny };
 }
-function onPointer(clientX, clientY) {
+// --- SAME-DEVICE 2P OWNERSHIP (QA56) -------------------------------------
+// The old rule was "whichever half your finger is in RIGHT NOW drives that
+// paddle". With two kids on one iPad that breaks the match three ways:
+//   1. P1 reaching up past the net yanks P2's paddle away mid-rally;
+//   2. a bare mouse HOVER (no button down) drags whichever paddle it passes,
+//      so on a laptop the cursor sitting anywhere steers a paddle by itself;
+//   3. that same hover instantly snaps P2's paddle back, so their A/D keys
+//      look dead.
+// Fix: a pointer CLAIMS a half when it goes down and keeps it until it lifts.
+// Nothing steers a paddle without a real press, so the two halves stay apart.
+var padOwner = {};                     // pressId -> "top" | "bottom"
+function pressId(kind, id) { return kind + (id == null ? "_" : id); }
+function drivePaddle(half, nx) { if (half === "top") setTopHumanX(nx); else G.bottomX = clamp(nx); }
+function releasePress(kind, id) { delete padOwner[pressId(kind, id)]; }
+function clearPresses() { padOwner = {}; }
+// phase: "down" (a press begins, may claim a half) | "move" (must already own one)
+function onPointer(clientX, clientY, phase, kind, id) {
   if (state !== "play" || !G) return;
   var p = pointerToCourt(clientX, clientY);
   if (mode === "two") {
-    // top half drives the top paddle, bottom half drives the bottom paddle
-    if (p.ny < 0.5) setTopHumanX(p.nx); else G.bottomX = clamp(p.nx);
+    var key = pressId(kind || "p", id);
+    if (phase === "down") padOwner[key] = (p.ny < 0.5) ? "top" : "bottom";
+    else if (!padOwner[key]) return;   // hover / stray move: never steers a paddle
+    drivePaddle(padOwner[key], p.nx);
   } else {
-    setMyPaddleX(p.nx);
+    setMyPaddleX(p.nx);                // solo + online keep hover-to-move
   }
 }
 function clamp(nx) { return Math.max(GAME_CONFIG.paddleW / 2, Math.min(1 - GAME_CONFIG.paddleW / 2, nx)); }
 
 if (canvas) {
-  canvas.addEventListener("pointermove", function (e) { onPointer(e.clientX, e.clientY); }, { passive: true });
-  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); playMusic(); if (demoOn && demoT > 0.25) demoOn = false; onPointer(e.clientX, e.clientY); }, { passive: true });
+  canvas.addEventListener("pointermove", function (e) { onPointer(e.clientX, e.clientY, "move", "p", e.pointerId); }, { passive: true });
+  canvas.addEventListener("pointerdown", function (e) { if (BA) BA.unlock(); playMusic(); if (demoOn && demoT > 0.25) demoOn = false; onPointer(e.clientX, e.clientY, "down", "p", e.pointerId); }, { passive: true });
+  canvas.addEventListener("pointerup", function (e) { releasePress("p", e.pointerId); }, { passive: true });
+  canvas.addEventListener("pointercancel", function (e) { releasePress("p", e.pointerId); }, { passive: true });
+  // Touch events run alongside pointer events on iOS/Android; they key off the
+  // touch identifier under their own "t" prefix so the two never collide.
+  canvas.addEventListener("touchstart", function (e) {
+    if (BA) BA.unlock(); playMusic();
+    if (demoOn && demoT > 0.25) demoOn = false;
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i]; onPointer(t.clientX, t.clientY, "down", "t", t.identifier);
+    }
+  }, { passive: true });
   canvas.addEventListener("touchmove", function (e) {
     if (demoOn && demoT > 0.25) demoOn = false;
-    for (var i = 0; i < e.touches.length; i++) onPointer(e.touches[i].clientX, e.touches[i].clientY);
+    for (var i = 0; i < e.touches.length; i++) {
+      var t2 = e.touches[i]; onPointer(t2.clientX, t2.clientY, "move", "t", t2.identifier);
+    }
   }, { passive: true });
+  var endTouch = function (e) {
+    for (var i = 0; i < e.changedTouches.length; i++) releasePress("t", e.changedTouches[i].identifier);
+  };
+  canvas.addEventListener("touchend", endTouch, { passive: true });
+  canvas.addEventListener("touchcancel", endTouch, { passive: true });
 }
 window.addEventListener("keydown", function (e) { keys[e.key] = true; if (demoOn && demoT > 0.2 && (e.key === " " || e.key.indexOf("Arrow") === 0 || e.key.length === 1)) demoOn = false; if (BA && (e.key === " " || e.key.indexOf("Arrow") === 0)) { BA.unlock(); playMusic(); } });
 window.addEventListener("keyup", function (e) { keys[e.key] = false; });
@@ -534,8 +571,10 @@ function draw() {
 
   // paddles — "my" color is whichever paddle the local player drives
   var myIsBottom = !(mode === "online" && role === "guest");
+  // QA56: in same-device 2P the top paddle belongs to a kid, not a bot, so it
+  // gets a player colour too instead of reading as dead scenery.
   paddle(G.bottomX, 1 - 0.045, myIsBottom ? th.me : th.opp);
-  paddle(G.topX, 0.045, myIsBottom ? th.opp : th.me);
+  paddle(G.topX, 0.045, mode === "two" ? th.ball : (myIsBottom ? th.opp : th.me));
 
   // ball
   if (!(G.cool > 0 && state === "play") || true) {
@@ -549,10 +588,15 @@ function draw() {
   // scores (top-of-screen for the opponent, bottom for me)
   var topScore = myIsBottom ? G.sTop : G.sBottom;
   var botScore = myIsBottom ? G.sBottom : G.sTop;
-  ctx.font = "900 30px Nunito, sans-serif"; ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.textAlign = "left"; ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "900 30px Nunito, sans-serif";
   ctx.fillText(String(topScore), court.x + 16, court.y + 40);
   ctx.fillText(String(botScore), court.x + 16, court.y + court.h - 18);
+  if (mode === "two") {                      // QA56: two bare numbers told nobody whose was whose
+    ctx.font = "800 13px Nunito, sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.fillText("P2", court.x + 16, court.y + 58);
+    ctx.fillText("P1", court.x + 16, court.y + court.h - 1);
+  }
 
   // FX layer (particle bursts, explosions, screen flash, "Point!" pops)
   if (BM) BM.draw(ctx, fx, { font: "900 26px Nunito, sans-serif" });
@@ -569,8 +613,13 @@ function draw() {
   else if (state === "over") {
     var myIsBottom2 = !(mode === "online" && role === "guest");
     var iWon = (G.winner === "bottom") === myIsBottom2;
-    banner(iWon ? "You win! 🎉".replace(" 🎉", "") : (mode === "solo" ? "Try again!" : "So close!"),
-           mode === "online" ? "Tap to play again" : "Tap for the menu");
+    // QA56: two kids share ONE screen in same-device 2P, so "You win!" told the
+    // loser they had won and the winner "So close!". Name the player instead.
+    // The sub-line also lied: launched from the shell a tap RESTARTS, it never
+    // opens a menu (the shell landing owns the menu now).
+    banner(mode === "two" ? (G.winner === "bottom" ? "Player 1 wins!" : "Player 2 wins!")
+                          : (iWon ? "You win!" : (mode === "solo" ? "Try again!" : "So close!")),
+           (mode === "online" || shellMode) ? "Tap to play again" : "Tap for the menu");
   } else if (state === "play" && G.cool > 0 && !demoOn) {
     ctx.font = "800 22px Nunito, sans-serif"; ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.8)";
@@ -582,15 +631,21 @@ function draw() {
 function drawTennisDemo() {
   var tt = Date.now() / 1000;
   var th = worldTheme(worldKey);
+  var two = (mode === "two");
   // freeze scrim over the court
   ctx.fillStyle = "rgba(10,12,40,0.72)";
   rrect(court.x, court.y, court.w, court.h, 18); ctx.fill();
-  // caption
+  // caption. QA56: the demo used to teach ONE player -- one caption facing the
+  // bottom, one hand on the bottom paddle, one "Tap to play" at the bottom edge.
+  // A kid sitting at the top of the iPad was never told the top paddle was
+  // theirs. In 2P both ends now get their own hand, and the top end's text is
+  // turned around so player 2 can actually read it.
   ctx.textAlign = "center"; ctx.fillStyle = "#fff";
-  ctx.font = "900 34px Nunito, sans-serif";
-  ctx.fillText("Slide to move!", c2x(0.5), court.y + court.h * 0.20);
+  ctx.font = "900 " + (two ? 30 : 34) + "px Nunito, sans-serif";
+  ctx.fillText(two ? "One player each end!" : "Slide to move!", c2x(0.5), court.y + court.h * 0.46);
   ctx.font = "700 20px Nunito, sans-serif"; ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText("Bounce the ball back", c2x(0.5), court.y + court.h * 0.20 + 34);
+  ctx.fillText(two ? "Slide your own paddle to bounce it back" : "Bounce the ball back",
+               c2x(0.5), court.y + court.h * 0.46 + 32);
   // cosmetic demo paddle sliding side to side
   var swing = Math.sin(tt * 1.4) * 0.26, pnx = 0.5 + swing, pny = 0.72;
   // demo ball bouncing just above the paddle, tracking it a beat behind
@@ -602,11 +657,29 @@ function drawTennisDemo() {
   paddle(pnx, pny, th.me);
   // 3D hand under the demo paddle, fingertip touching it, sliding along
   var ph = 0.022 * court.h * 1.6, padBottom = c2y(pny) + ph / 2;
-  var s = Math.max(0.9, Math.min(1.7, court.w / 620));
-  if (BR && BR.hand) BR.hand(ctx, c2x(pnx), padBottom + 30 * s, s);
-  // gentle tap-to-start hint
+  var sc = Math.max(0.9, Math.min(1.7, court.w / 620));
+  if (BR && BR.hand) BR.hand(ctx, c2x(pnx), padBottom + 30 * sc, sc);
   ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.font = "800 18px Nunito, sans-serif";
-  ctx.fillText("Tap to play", c2x(0.5), court.y + court.h - 26);
+  ctx.fillText(two ? "Player 1 \u2014 tap to play" : "Tap to play", c2x(0.5), court.y + court.h - 26);
+  if (!two) return;
+
+  // --- player 2's end: mirrored paddle + hand, and text turned to face them ---
+  var pny2 = 1 - 0.72, pnx2 = 0.5 - swing;
+  paddle(pnx2, pny2, th.ball);
+  if (BR && BR.hand) {
+    ctx.save();
+    ctx.translate(c2x(pnx2), c2y(pny2) - ph / 2 - 30 * sc);
+    ctx.rotate(Math.PI);                     // the hand reaches DOWN from the top edge
+    BR.hand(ctx, 0, 0, sc);
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.translate(c2x(0.5), court.y + 26);
+  ctx.rotate(Math.PI);                       // readable from player 2's side of the iPad
+  ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "800 18px Nunito, sans-serif";
+  ctx.fillText("Player 2 \u2014 this end is yours", 0, 0);
+  ctx.restore();
 }
 
 function bubble(b, cx, cy) {
@@ -879,6 +952,26 @@ if (window.BuildableGameNav) {
 window.TENNIS_GAME = {
   _cfg: function () { return GAME_CONFIG; },
   _begin: function (i) { mode = "solo"; diff = i || 0; newGame(); },
+  // Same-device 2P (QA56). These drive the REAL pointer pipeline in court
+  // coordinates so the half-ownership rule is covered by the release gate
+  // instead of only by hand on a tablet.
+  _2p: function () { mode = "two"; diff = 1; newGame(); demoOn = false; return state; },
+  _touch: function (phase, nx, ny, id) {
+    onPointer(court.x + nx * court.w, court.y + ny * court.h, phase, "t", id == null ? 0 : id);
+  },
+  _lift: function (id) { releasePress("t", id == null ? 0 : id); },
+  _pads: function () { return { topX: G.topX, bottomX: G.bottomX }; },
+  _setPads: function (t, b) { G.topX = t; G.bottomX = b; },
+  _keys: keys,
+  _state: function () { return state; },
+  // play a whole same-device match out: P2 tracks the ball, P1 parks, so the
+  // match must end with P2 as the winner. Proves 2P scoring/serving still runs.
+  sim2p: function (cap) {
+    mode = "two"; diff = 1; newGame(); demoOn = false;
+    G.bottomX = 0.5; var f = 0;
+    while (state !== "over" && f < (cap || 60000)) { G.topX = clamp(G.bx); update(0.016); f++; }
+    return { over: state === "over", winner: G.winner, sB: G.sBottom, sT: G.sTop, frames: f };
+  },
   _step: function (n) { for (var k = 0; k < (n || 1); k++) update(0.016); },
   _draw: function () { try { draw(); return "ok"; } catch (e) { return "ERR: " + (e && e.message || e); } },
   // simulate one difficulty to a finish with a flawless bottom player
