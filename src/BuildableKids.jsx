@@ -182,8 +182,10 @@ const LANDING_WRAP = {
 
 // Session 7H — the four board games that get a multiplayer mode row on the shared
 // landing (Solo / Same device / Play a friend), matching Chess and Tennis. Solo and
-// Same device enter the engine's own menu (the Phase-2 ?diff deep-links are not in
-// yet); Play a friend opens the shared GameLobby. TTT + Checkers already had lobbies;
+// Same device deep-links the engine's own same-screen 2P match with ?mode=two
+// (QA56 -- it used to land on the engine's menu, which is the ROBOT difficulty
+// picker, so "Same device" quietly started a game against the computer).
+// Play a friend opens the shared GameLobby. TTT + Checkers already had lobbies;
 // Connect Four + Dots use the same board harness online path via gameSpecFor (7H).
 const BOARD_MP_LANDING = {
   tictactoe:   { play: SCREEN_TICTACTOE,   lobby: SCREEN_TTT_LOBBY },
@@ -1951,6 +1953,7 @@ export default function BuildableKids() {
       .catch(open);
   };
   const [boardDiff, setBoardDiff] = useState(null); // Session 7I: manifest tier index the shared board picker hands to a board engine (?diff=)
+  const [boardTwoP, setBoardTwoP] = useState(false); // QA56: "Same device" deep-links the engine's 2P match (?mode=two)
   const openLanding = (id) => { setLandingId(id); setScreen(SCREEN_GAME_LANDING); };
   const [exploreId, setExploreId] = useState("solar-system"); // which Kidspedia exhibit is open (Session 8G)
   const [friendsReturn, setFriendsReturn] = useState(SCREEN_GROWNUP);
@@ -2462,8 +2465,8 @@ export default function BuildableKids() {
     if (mp) {
       return <GameLanding game={g} demoSrc={cfg.demo}
         multiplayer="turn-based"
-        onSolo={() => { setBoardDiff(null); setScreen(SCREEN_BOARD_SOLO); }}
-        onSameDevice={() => { setBoardDiff(null); setScreen(mp.play); }}
+        onSolo={() => { setBoardDiff(null); setBoardTwoP(false); setScreen(SCREEN_BOARD_SOLO); }}
+        onSameDevice={() => { setBoardDiff(null); setBoardTwoP(true); setScreen(mp.play); }}
         onPlayFriend={() => setScreen(mp.lobby)}
         onLoadout={cfg.loadout ? () => setScreen(SCREEN_GAME_LOADOUT) : undefined}
         onBack={() => setScreen(SCREEN_HOME)} />;
@@ -2498,7 +2501,7 @@ export default function BuildableKids() {
     if (!g || !mp) { setTimeout(() => setScreen(SCREEN_HOME), 0); return null; }
     return <BoardSoloFrame game={g} gameId={landingId}
       onBack={() => setScreen(SCREEN_GAME_LANDING)}
-      onPlay={(tier, i) => { setBoardDiff(i == null ? 0 : i); setScreen(mp.play); }} />;
+      onPlay={(tier, i) => { setBoardDiff(i == null ? 0 : i); setBoardTwoP(false); setScreen(mp.play); }} />;
   }
   // Tennis (Session 7F): the shared landing replaces Tennis's own start screen; its
   // "Choose your court" picker becomes court skins in the shared loadout. multiplayer
@@ -2631,7 +2634,7 @@ export default function BuildableKids() {
     return <TumbleScreen level={wrapLevel} onHome={() => { const j = wrapLevel != null; setWrapLevel(null); setScreen(j ? SCREEN_WRAP_JOURNEY : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_TICTACTOE) {
-    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
+    return <BoardGameScreen title="Buildable Tic-Tac-Toe" src={"/tictactoe-engine.html?v=hud2" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={mpTransport("tictactoe", "turns") ? () => setScreen(SCREEN_TTT_LOBBY) : undefined} />;
   }
   if (screen === SCREEN_FRIEND_MATCH && friendAutoJoin) {
     const spec = gameSpecFor(friendAutoJoin.game);
@@ -2686,10 +2689,10 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CONNECTFOUR) {
-    return <BoardGameScreen title="Buildable Connect Four" src={"/connectfour-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
+    return <BoardGameScreen title="Buildable Connect Four" src={"/connectfour-engine.html?v=hud2" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_DOTSBOXES) {
-    return <BoardGameScreen title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=hud2" + (boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
+    return <BoardGameScreen title="Buildable Dots and Boxes" src={"/dotsboxes-engine.html?v=hud2" + (boardTwoP ? "&mode=two" : boardDiff != null ? "&diff=" + boardDiff : "")} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} />;
   }
   if (screen === SCREEN_MAZE) {
     return <MazeScreen onHome={() => setScreen(SCREEN_HOME)} />;
@@ -2826,7 +2829,7 @@ export default function BuildableKids() {
   }
 
   if (screen === SCREEN_CHECKERS) {
-    return <CheckersScreen diff={boardDiff} onHome={() => { const d = boardDiff != null; setBoardDiff(null); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
+    return <CheckersScreen diff={boardDiff} twoP={boardTwoP} onHome={() => { const d = boardDiff != null || boardTwoP; setBoardDiff(null); setBoardTwoP(false); setScreen(d ? SCREEN_GAME_LANDING : SCREEN_HOME); }} onPlayFriend={() => setScreen(SCREEN_CHECKERS_LOBBY)} />;
   }
 
   if (screen === SCREEN_CHECKERS_LOBBY) {
@@ -4538,7 +4541,7 @@ function ChessScreen({ onHome, onPlayFriend, start }) {
   );
 }
 
-function CheckersScreen({ onHome, onPlayFriend, diff }) {
+function CheckersScreen({ onHome, onPlayFriend, diff, twoP }) {
   useEffect(() => {
     function onMsg(e) { if (e && e.data && e.data.type === "checkersPlayFriend") { if (onPlayFriend) onPlayFriend(); } }
     window.addEventListener("message", onMsg);
@@ -4554,7 +4557,7 @@ function CheckersScreen({ onHome, onPlayFriend, diff }) {
       <button onClick={onHome} style={{ position: "absolute", top: "14px", left: "14px", zIndex: 2, ...pillBtn }}>← Home</button>
       <iframe
         title="Buildable Checkers"
-        src={"/buildable-checkers.html?v=3" + (diff != null ? "&diff=" + diff : "")}
+        src={"/buildable-checkers.html?v=3" + (twoP ? "&mode=two" : diff != null ? "&diff=" + diff : "")}
         style={{ width: "100%", height: "100%", border: "none", display: "block" }}
       />
     </div>

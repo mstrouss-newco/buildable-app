@@ -512,6 +512,13 @@
         demoHandMake();
         startGame("two");
         setTimeout(demoLoop, 900);
+      } else if (!ctrl.online && bgQ && bgQ.get("mode") === "two") {
+        // QA56: the shell landing's "Same device" button used to drop the kid on
+        // the engine's own menu -- which is the ROBOT difficulty picker -- so
+        // tapping "Same device" started a match against the computer. Deep-link
+        // the same-screen 2P match the way ?diff= deep-links a solo one.
+        if (D.start) D.start.style.display = "none";           // a deep link never flashes the menu
+        startGame("two");
       } else if (!ctrl.online && bgDiffP != null && bgDiffP !== "" && !isNaN(+bgDiffP)) {
         if (D.start) D.start.style.display = "none";                 // a deep link never flashes the menu
         if (g.BuildableManifest && S.id && typeof g.BuildableManifest.load === "function" && typeof S.applyManifestTiers === "function") {

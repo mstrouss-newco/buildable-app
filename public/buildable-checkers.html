@@ -959,6 +959,14 @@ if(HAS_DOM){
   var _chkQ=null; try{ _chkQ=new URLSearchParams(location.search); }catch(e){}
   if(_chkQ && !_chkQ.get("online")){
     if(_chkQ.get("screen")==="demo"){ chkStartDemo(); }
+    else if(_chkQ.get("mode")==="two"){
+      /* QA56: the shell landing's "Same device" button used to land on this
+         engine's own mode menu, so the kid had to pick "2 players" then
+         "Same device" all over again. Deep-link the same-screen match. */
+      mode="two"; pName="Purple"; pName2="Coral";
+      document.querySelectorAll(".screen").forEach(function(sc){sc.classList.remove("on");});
+      startGame();
+    }
     else if(_chkQ.get("diff")!=null && _chkQ.get("diff")!=="" && !isNaN(+_chkQ.get("diff"))){
       document.querySelectorAll(".screen").forEach(function(sc){sc.classList.remove("on");});   /* never flash the menu */
       if(window.BuildableManifest && typeof window.BuildableManifest.load==="function"){
