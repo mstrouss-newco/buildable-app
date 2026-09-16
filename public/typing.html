@@ -1039,17 +1039,22 @@ var BAL_SECS=45;
    stops being a gentle tap-along after the first ten seconds. */
 function ramp(){return 1+0.8*(1-G.left/BAL_SECS);}
 
+var HOME_ROW=['f','j','d','k','s','l','a',';'];
 function breakPool(){
-  // the keys from the last lesson played, else everything taught so far
+  // the keys from the last lesson played, else the furthest lesson finished
   var src=(L&&L.pool)?L.pool:null;
   if(!src){
     var lastDone=null;
     LESSONS.forEach(function(x){if(P.lessons[x.id]&&P.lessons[x.id].stars)lastDone=x;});
-    // nothing learned yet: the home row, not lesson one's two keys
-    src=lastDone?lastDone.pool:['a','s','d','f','j','k','l',';'];
+    src=lastDone?lastDone.pool:[];
   }
   var out=src.filter(function(c){return c!==' '&&FING[baseKey(c)]!==undefined&&c===baseKey(c);});
-  return out.length?out:['f','j','d','k'];
+  // Two letters is not a game. Top up from the home row, nearest finger first,
+  // until there is enough variety to be worth playing.
+  for(var i=0;i<HOME_ROW.length&&out.length<6;i++){
+    if(out.indexOf(HOME_ROW[i])<0)out.push(HOME_ROW[i]);
+  }
+  return out;
 }
 function openBreak(){
   G.pool=breakPool();G.score=0;G.left=BAL_SECS;G.bals=[];G.spawn=0;G.on=true;
