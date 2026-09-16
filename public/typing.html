@@ -58,6 +58,23 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
 .ic.sm{width:15px;height:15px;vertical-align:-.2em}
 .ic.huge{width:46px;height:46px}
 .pill.btn{cursor:pointer}
+/* ── sound sheet ── */
+.srow{display:flex;align-items:center;gap:12px;background:var(--cream);border:2px solid var(--line);border-radius:18px;
+  padding:12px 15px;margin-bottom:8px;width:100%;max-width:430px;cursor:pointer;font-family:'Fredoka';color:var(--ink)}
+.srow .st{font-weight:700;font-size:15px;text-align:left}
+.srow .ss{font-size:12.5px;color:var(--sub);font-weight:600;margin-top:1px;text-align:left;line-height:1.35}
+.tog{margin-left:auto;width:52px;height:30px;border-radius:99px;background:var(--mint);position:relative;flex:none;transition:background .15s}
+.tog:after{content:'';position:absolute;top:3px;left:25px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}
+.tog.off{background:#DCD2BC}.tog.off:after{left:3px}
+/* ── balloon pop ── */
+.sky{position:relative;height:270px;border-radius:20px;overflow:hidden;
+  background:linear-gradient(180deg,#DCEEFF,#F3F9FF);border:2px solid var(--line);margin-bottom:10px}
+.bal{position:absolute;width:52px;height:64px;border-radius:50% 50% 45% 45%;display:flex;align-items:center;justify-content:center;
+  font-family:'Nunito';font-weight:900;font-size:24px;color:#fff;box-shadow:inset -6px -6px 0 rgba(0,0,0,.09);will-change:top}
+.bal.pop{animation:popout .26s forwards}
+@keyframes popout{to{transform:scale(1.8);opacity:0}}
+.gline{position:absolute;left:0;right:0;bottom:0;height:30px;background:rgba(47,174,104,.18);border-top:2px solid rgba(47,174,104,.4)}
+.cloud{position:absolute;background:rgba(255,255,255,.7);border-radius:99px}
 
 /* course map */
 .course{display:grid;grid-template-columns:200px 1fr;gap:14px}
@@ -183,6 +200,7 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
       <div class="pill" id="pillWpm">0 <span class="u">wpm</span></div>
       <div class="pill" id="pillAcc">0<span class="u">%</span></div>
       <div class="pill gold" id="pillStars">0</div>
+      <button class="pill btn" id="btnSound" aria-label="Sound"></button>
     </div>
 
     <div id="tabLearn">
@@ -220,11 +238,11 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
           <div class="gt">Defend the Castle</div>
           <div class="gs">Spell the word before the baddie reaches your fort. Stars you earn in lessons unlock the heroes.</div>
         </a>
-        <div class="gcard soon">
+        <button class="gcard" id="cardBalloon">
           <div class="art" style="background:linear-gradient(140deg,#F472B6,#7C5CFC)"><svg class="ic big" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2c3 2.7 4.5 6 4.5 9.5v3.1h-9v-3.1c0-3.5 1.5-6.8 4.5-9.5z" fill="#fff"/><circle cx="12" cy="9.4" r="1.9" fill="#A855F7"/><path d="M7.5 11.4L4.9 15.3l2.6-.6zm9 0l2.6 3.9-2.6-.6z" fill="#fff" opacity=".75"/><path d="M10.4 16.6h3.2l-1.6 4.9z" fill="#fff" opacity=".9"/></svg></div>
-          <div class="gt">More games</div>
-          <div class="gs">Coming next. Same keys, different fun.</div>
-        </div>
+          <div class="gt">Balloon Pop</div>
+          <div class="gs">Letters float up and you type them to pop them. Only the keys you have learned, each painted in its finger colour.</div>
+        </button>
       </div>
       <p class="hint">No adverts. Nothing to buy. Nothing to sign up for.</p>
     </div>
@@ -261,6 +279,19 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
     </div>
   </section>
 
+  <!-- ============ BREAK GAME ============ -->
+  <section class="screen" id="scGame">
+    <div class="lhead">
+      <button class="back" id="gBack">&lsaquo;</button>
+      <div><div class="ltitle">Balloon Pop</div><div class="lstep">Type the letter on the balloon</div></div>
+      <div class="spacer"></div>
+      <div class="pill" id="gScore">0</div>
+      <div class="pill" id="gTime">0:45</div>
+    </div>
+    <div class="sky" id="sky"><div class="gline"></div></div>
+    <div class="hint" id="gHint">Pop as many as you can. You cannot lose.</div>
+  </section>
+
   <!-- ============ RESULTS ============ -->
   <section class="screen" id="scRes">
     <div class="res">
@@ -281,13 +312,25 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
         <button class="go ghost" id="btnAgain">Try again</button>
         <a class="go ghost" href="/typing-game.html" style="text-decoration:none;display:inline-block" id="btnPlayGame"><svg class="ic" viewBox="0 0 48 48" aria-hidden="true"><path d="M5 20h5v-6h5v6h5v-6h5v6h5v-6h5v6h5v22H5z" fill="#7C5CFC"/><rect x="20" y="30" width="8" height="12" rx="4" fill="#FDFAF5"/></svg> Play a game</a>
       </div>
-      <div class="rowb" style="margin-top:9px"><button class="go ghost" id="btnHome">All lessons</button></div>
+      <div class="rowb" style="margin-top:9px">
+        <button class="go ghost" id="btnBreak">Brain break</button>
+        <button class="go ghost" id="btnHome">All lessons</button>
+      </div>
     </div>
   </section>
 
+  <div class="ovl" id="ovlSound">
+    <h2>Sound</h2>
+    <button class="srow" id="togVoice"><span><span class="st" style="display:block">Read aloud</span><span class="ss" style="display:block">A real voice tells you which finger to use</span></span><span class="tog" id="tgV"></span></button>
+    <button class="srow" id="togMusic"><span><span class="st" style="display:block">Music</span><span class="ss" style="display:block">Quiet in the background while you practise</span></span><span class="tog" id="tgM"></span></button>
+    <button class="srow" id="togSfx"><span><span class="st" style="display:block">Sounds</span><span class="ss" style="display:block">Key taps and the finish fanfare</span></span><span class="tog" id="tgS"></span></button>
+    <div class="rowb"><button class="go big" id="soundClose">Done</button></div>
+  </div>
+
 </div>
 </div>
 
+<script src="/buildable-audio.js"></script>
 <script>
 (function(){
 "use strict";
@@ -496,30 +539,89 @@ function loadStars(){try{return parseInt(localStorage.getItem('bk_typing_stars')
 function addStars(n){if(n<=0)return;try{localStorage.setItem('bk_typing_stars',String(loadStars()+n));}catch(e){}}
 
 /* ══════════ SOUND ══════════ */
-var actx=null,muted=false;
-try{muted=localStorage.getItem('bk_muted')==='1';}catch(e){}
-function ac(){if(muted)return null;if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
-  if(actx&&actx.state==='suspended'){try{actx.resume();}catch(e){}}return actx;}
-var SCALE=[261.6,293.7,329.6,392,440,523.3,587.3,659.3];
-function blip(step,vol){var a=ac();if(!a)return;var o=a.createOscillator(),g=a.createGain();
-  o.type='triangle';o.frequency.value=SCALE[Math.min(step,SCALE.length-1)];
-  g.gain.setValueAtTime(vol||0.16,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.18);
-  o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.2);}
-function bzz(){var a=ac();if(!a)return;var o=a.createOscillator(),g=a.createGain();
-  o.type='square';o.frequency.value=150;g.gain.setValueAtTime(.1,a.currentTime);
-  g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.14);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.15);}
-function fanfare(){[0,2,4,5,7].forEach(function(s,i){setTimeout(function(){blip(s,.2);},i*95);});}
+/* Everything here is shared Buildable plumbing, not new machinery:
+   /api/sfx      the same recorded clips Minute Math drills with
+   /api/library-music  the shared named background tracks every game can use
+   /api/typing-voice   ElevenLabs, one clip per sentence, cached forever
+   Nothing plays until the first tap, which is what phones require anyway. */
+var BA=window.BuildableAudio||null;
+var SND={voice:true,music:true,sfx:true};
+try{
+  var raw=localStorage.getItem('bk_typing_snd');
+  if(raw)SND=Object.assign(SND,JSON.parse(raw));
+}catch(e){}
+function saveSnd(){try{localStorage.setItem('bk_typing_snd',JSON.stringify(SND));}catch(e){}}
 
-/* ══════════ READ ALOUD ══════════ */
-var speakOn=true;try{speakOn=localStorage.getItem('bk_typing_speak')!=='0';}catch(e){}
-function say(txt){if(!speakOn||!window.speechSynthesis)return;
-  try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(txt);u.rate=.92;u.pitch=1.1;window.speechSynthesis.speak(u);}catch(e){}}
-function paintSpeak(){$('speakLab').textContent=speakOn?'Read aloud':'Silent';
-  var ico=$('speakIco');if(ico)ico.innerHTML=speakOn?ICO.speak:ICO.mute;
-  $('btnSpeak').style.opacity=speakOn?1:.62;}
+/* The clips sit at levels chosen for a drill: the key tap fires hundreds of
+   times a lesson so it sits lowest, the finish happens once so it sits high. */
+if(BA&&BA.configure){
+  BA.configure({sfxBase:'/api/sfx?s=',peaks:{minute_right:0.22,minute_wrong:0.34,minute_done:0.80,minute_best:0.92},
+    map:{select:'minute_right',error:'minute_wrong',celebrate:'minute_done',win:'minute_best'}});
+}
+function unlockAudio(){if(BA){try{BA.unlock();}catch(e){}}musicStart();}
+function sfx(n){if(!SND.sfx||!BA||!BA.sfx||BA.muted)return;try{BA.sfx(n);}catch(e){}}
+function blip(){sfx('select');}
+function bzz(){sfx('error');}
+function fanfare(best){sfx(best?'win':'celebrate');}
+
+/* ── background music: the calm end of the shared library, shuffled ── */
+var TRACKS=['lofi_chill_upbeat','spa_heartbeat_warm','adventure_meadow_soft','spa_heartbeat_bright'];
+var mus={el:null,order:[],at:0};
+function musicStart(){
+  if(!SND.music||(BA&&BA.muted))return;
+  if(mus.el){var r=mus.el.play();if(r&&r.catch)r.catch(function(){});return;}
+  mus.order=TRACKS.slice();
+  for(var i=mus.order.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=mus.order[i];mus.order[i]=mus.order[j];mus.order[j]=t;}
+  mus.at=0;musicPlay();
+}
+function musicPlay(){
+  var name=mus.order[mus.at];
+  var el=new Audio('/api/library-music?name='+encodeURIComponent(name));
+  el.preload='auto';el.volume=0.22;el.loop=false;
+  el.addEventListener('ended',function(){mus.at=(mus.at+1)%mus.order.length;musicPlay();});
+  el.addEventListener('error',function(){});   // no track yet is not a failure
+  mus.el=el;var r=el.play();if(r&&r.catch)r.catch(function(){});
+}
+function musicStop(){if(mus.el){try{mus.el.pause();}catch(e){}}}
+
+/* ── read aloud: the real voice, with the browser voice as the safety net ── */
+var voiceCache={},voiceEl=null,voiceOff=false;
+function playVoice(url,fallback){
+  try{if(voiceEl){voiceEl.pause();voiceEl=null;}}catch(e){}
+  var el=new Audio(url);el.volume=1;voiceEl=el;
+  el.addEventListener('error',function(){sayRobot(fallback);});
+  var r=el.play();if(r&&r.catch)r.catch(function(){sayRobot(fallback);});
+}
+function say(txt){
+  if(!SND.voice||!txt)return;
+  try{if(voiceEl){voiceEl.pause();voiceEl=null;}}catch(e){}
+  if(window.speechSynthesis)try{window.speechSynthesis.cancel();}catch(e){}
+  if(voiceOff)return sayRobot(txt);
+  // the endpoint refuses digits on purpose, so a line with a score in it never
+  // goes there — it would be a new recording every single run
+  if(/[0-9]/.test(txt))return sayRobot(txt);
+  if(voiceCache[txt])return playVoice(voiceCache[txt],txt);
+  // Ask with fetch so we can read the STATUS. Only a 503 (this deployment has
+  // no ElevenLabs key) turns the real voice off; one dropped clip must not.
+  fetch('/api/typing-voice?text='+encodeURIComponent(txt)).then(function(r){
+    if(r.status===503){voiceOff=true;sayRobot(txt);return null;}
+    if(!r.ok){sayRobot(txt);return null;}
+    return r.blob();
+  }).then(function(bl){
+    if(!bl)return;
+    var url=URL.createObjectURL(bl);voiceCache[txt]=url;playVoice(url,txt);
+  }).catch(function(){sayRobot(txt);});
+}
+function sayRobot(txt){
+  if(!SND.voice||!window.speechSynthesis)return;
+  try{var u=new SpeechSynthesisUtterance(txt);u.rate=.92;u.pitch=1.1;window.speechSynthesis.speak(u);}catch(e){}
+}
+function paintSpeak(){$('speakLab').textContent=SND.voice?'Read aloud':'Silent';
+  var ico=$('speakIco');if(ico)ico.innerHTML=SND.voice?ICO.speak:ICO.mute;
+  $('btnSpeak').style.opacity=SND.voice?1:.62;}
 
 /* ══════════ SCREENS ══════════ */
-var screens={home:$('scHome'),lesson:$('scLesson'),res:$('scRes')};
+var screens={home:$('scHome'),lesson:$('scLesson'),res:$('scRes'),game:$('scGame')};
 function show(n){for(var k in screens)screens[k].classList.toggle('on',k===n);fit();}
 
 function fit(){var el=$('app');el.style.transform='none';
@@ -604,7 +706,6 @@ function drawHands(hands){
     starBig:'<svg class="ic huge" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="#FFC542"/></svg>',
     starBigOpen:'<svg class="ic huge" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="none" stroke="#DCCFB4" stroke-width="1.8" stroke-linejoin="round"/></svg>',
     tick:'<svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.6l5 5L19.5 6.8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    lock:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10.4V7.6a4 4 0 0 1 8 0v2.8" fill="none" stroke="#C8BDA8" stroke-width="2.2"/><rect x="5.2" y="10.4" width="13.6" height="10.4" rx="2.6" fill="#C8BDA8"/></svg>',
     speak:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2h3.4L12 5v14l-4.6-4.2H4z" fill="#0F0E17"/><path d="M15.6 9.2a4.2 4.2 0 0 1 0 5.6M18.3 6.4a8 8 0 0 1 0 11.2" fill="none" stroke="#0F0E17" stroke-width="2" stroke-linecap="round"/></svg>',
     mute:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.2h3.4L12 5v14l-4.6-4.2H4z" fill="#6E6684"/><path d="M15.4 9.6l5 4.8m0-4.8l-5 4.8" fill="none" stroke="#6E6684" stroke-width="2" stroke-linecap="round"/></svg>',
     clock:'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9.6" y="1.4" width="4.8" height="2.4" rx="1.2" fill="#7C5CFC"/><circle cx="12" cy="13.6" r="8.2" fill="none" stroke="#7C5CFC" stroke-width="2.2"/><path d="M12 8.8v5h3.4" fill="none" stroke="#7C5CFC" stroke-width="2.2" stroke-linecap="round"/></svg>'
@@ -637,18 +738,22 @@ function paintHome(){
   });
   $('unitList').innerHTML=uh;
 
-  var lh='',prevDone=true;
-  LESSONS.filter(function(L){return L.unit===curUnit;}).forEach(function(L,i){
+  // Nothing is locked. A child who can already type picks the lesson they want,
+  // and a grown-up can drop them straight into capitals. The highlight only
+  // SUGGESTS where to go next; it never stops anyone going elsewhere.
+  var lh='',suggested=null;
+  var list=LESSONS.filter(function(L){return L.unit===curUnit;});
+  for(var q=0;q<list.length;q++){var r=P.lessons[list[q].id];if(!(r&&r.stars)){suggested=list[q].id;break;}}
+  list.forEach(function(L,i){
     var rec=P.lessons[L.id],isDone=!!(rec&&rec.stars);
-    var open=isDone||prevDone;
-    var cls=isDone?'done':(open?'now':'lock');
-    var sub=isDone?(rec.wpm+' wpm · '+rec.acc+'%'):(open?L.sub:'Finish the one above first');
+    var isNext=(L.id===suggested);
+    var cls=isDone?'done':(isNext?'now':'');
+    var sub=isDone?(rec.wpm+' wpm · '+rec.acc+'%'):L.sub;
     lh+='<div class="les '+cls+'"><div class="num">'+(isDone?ICO.tick:(i+1))+'</div>'+
         '<div><div class="t">'+L.title+'</div><div class="s">'+sub+'</div></div>'+
         '<div class="right">'+(isDone?'<span class="stars">'+starStr(rec.stars)+'</span>':'')+
-        (open?'<button class="go'+(isDone?' ghost':'')+'" data-l="'+L.id+'">'+(isDone?'Redo':'Start ▸')+'</button>':ICO.lock)+
+        '<button class="go'+(isDone||!isNext?' ghost':'')+'" data-l="'+L.id+'">'+(isDone?'Redo':'Start ▸')+'</button>'+
         '</div></div>';
-    prevDone=isDone;
   });
   $('lessonList').innerHTML=lh;
 }
@@ -775,17 +880,17 @@ function press(ch){
   if($('ovlPause').classList.contains('on'))return;
   var e=keyEl(baseKey(ch));if(e){e.classList.add('press');setTimeout(function(){e.classList.remove('press');},90);}
   if(mode==='meet'){
-    if(ch===L.steps[stepI].key){blip(4);stepI++;lineI=0;runStep();}else{bzz();}
+    if(ch===L.steps[stepI].key){blip();stepI++;lineI=0;runStep();}else{bzz();}
     return;
   }
   var s=line(),want=s[chI];
   if(!stats.start){stats.start=Date.now();if(L.steps[stepI].timed)startTimed(L.steps[stepI].timed);}
   stats.typed++;
   if(ch===want){
-    stats.correct++;stats.chars++;chI++;blip(Math.min(7,chI%8));
+    stats.correct++;stats.chars++;chI++;blip();
     if(chI>=s.length){
       lineI++;
-      if(lineI>=L.steps[stepI].lines.length){stepI++;lineI=0;blip(7,.22);runStep();}
+      if(lineI>=L.steps[stepI].lines.length){stepI++;lineI=0;blip();runStep();}
       else{chI=0;paintProg();paintTrain();}
     }else paintTrain();
   }else{
@@ -794,6 +899,11 @@ function press(ch){
 }
 
 document.addEventListener('keydown',function(ev){
+  if(G.on&&screens.game.classList.contains('on')){
+    if(ev.key==='Escape'){closeBreak();paintHome();show('home');return;}
+    if(ev.key.length===1){ev.preventDefault();breakPress(ev.key.toLowerCase());}
+    return;
+  }
   if(!screens.lesson.classList.contains('on'))return;
   if(ev.metaKey||ev.ctrlKey||ev.altKey)return;
   var k=ev.key;
@@ -833,9 +943,28 @@ $('kb').addEventListener('click',function(e){
 function togglePause(){$('ovlPause').classList.toggle('on');}
 $('btnResume').addEventListener('click',function(){$('ovlPause').classList.remove('on');});
 $('btnQuit').addEventListener('click',function(){stopTimed();$('ovlPause').classList.remove('on');paintHome();show('home');});
-$('btnBack').addEventListener('click',function(){stopTimed();paintHome();show('home');});
-$('btnSpeak').addEventListener('click',function(){speakOn=!speakOn;try{localStorage.setItem('bk_typing_speak',speakOn?'1':'0');}catch(e){}
-  paintSpeak();if(!speakOn&&window.speechSynthesis)window.speechSynthesis.cancel();});
+$('btnBack').addEventListener('click',function(){stopTimed();if(voiceEl)try{voiceEl.pause();}catch(e){}paintHome();show('home');});
+$('btnSpeak').addEventListener('click',function(){SND.voice=!SND.voice;saveSnd();paintSpeak();paintSound();
+  if(!SND.voice){if(window.speechSynthesis)try{window.speechSynthesis.cancel();}catch(e){}
+    if(voiceEl)try{voiceEl.pause();}catch(e){}}});
+
+/* ── the sound sheet ── */
+function paintSound(){
+  $('btnSound').innerHTML=(SND.voice||SND.music||SND.sfx)?ICO.speak:ICO.mute;
+  $('tgV').className='tog'+(SND.voice?'':' off');
+  $('tgM').className='tog'+(SND.music?'':' off');
+  $('tgS').className='tog'+(SND.sfx?'':' off');
+}
+$('btnSound').addEventListener('click',function(){unlockAudio();$('ovlSound').classList.add('on');});
+$('soundClose').addEventListener('click',function(){$('ovlSound').classList.remove('on');});
+$('togVoice').addEventListener('click',function(){SND.voice=!SND.voice;saveSnd();paintSound();paintSpeak();
+  if(!SND.voice&&window.speechSynthesis)try{window.speechSynthesis.cancel();}catch(e){}});
+$('togMusic').addEventListener('click',function(){SND.music=!SND.music;saveSnd();paintSound();
+  if(SND.music)musicStart();else musicStop();});
+$('togSfx').addEventListener('click',function(){SND.sfx=!SND.sfx;saveSnd();paintSound();if(SND.sfx)unlockAudio();});
+/* audio can only wake on a real tap, so the first one anywhere wakes it */
+document.addEventListener('pointerdown',function once(){unlockAudio();document.removeEventListener('pointerdown',once);},{once:true});
+document.addEventListener('keydown',function once(){unlockAudio();document.removeEventListener('keydown',once);},{once:true});
 
 /* ══════════ FINISH ══════════ */
 function finish(){
@@ -879,9 +1008,9 @@ function finish(){
   var nxt=nextLesson();
   $('btnNext').style.display=nxt?'':'none';
   $('btnNext').textContent=nxt?'Next lesson ▸':'';
-  fanfare();
+  fanfare(best);
   show('res');
-  say(st===3?'Three stars. Brilliant.':'Lesson finished. '+wpm+' words a minute.');
+  say(st===3?'Three stars. Brilliant.':(st===2?'Nice work. Lesson finished.':'Lesson finished.'));
 }
 function nextLesson(){
   if(practiceMode)return null;
@@ -894,8 +1023,88 @@ $('btnHome').addEventListener('click',function(){paintHome();show('home');});
 $('cardTest').addEventListener('click',function(){openPractice('test');});
 $('cardMiss').addEventListener('click',function(){openPractice('miss');});
 
+/* ══════════ BALLOON POP ══════════ */
+/* A break, not a test. Sixty seconds, no lives, no losing. The letters are
+   only ones the child has already been taught, and each balloon wears its
+   finger colour, so the break is still practising the thing the lesson taught. */
+var G={on:false,t:null,left:0,score:0,bals:[],pool:null,spawn:0};
+var BAL_SECS=45;
+
+function breakPool(){
+  // the keys from the last lesson played, else everything taught so far
+  var src=(L&&L.pool)?L.pool:null;
+  if(!src){
+    var lastDone=null;
+    LESSONS.forEach(function(x){if(P.lessons[x.id]&&P.lessons[x.id].stars)lastDone=x;});
+    src=lastDone?lastDone.pool:LESSONS[0].pool;
+  }
+  var out=src.filter(function(c){return c!==' '&&FING[baseKey(c)]!==undefined&&c===baseKey(c);});
+  return out.length?out:['f','j','d','k'];
+}
+function openBreak(){
+  G.pool=breakPool();G.score=0;G.left=BAL_SECS;G.bals=[];G.spawn=0;G.on=true;
+  $('sky').innerHTML='<div class="gline"></div>';
+  for(var i=0;i<4;i++){
+    var c=document.createElement('div');c.className='cloud';
+    c.style.cssText='left:'+(6+i*24)+'%;top:'+(8+(i%2)*26)+'%;width:'+(52+i*11)+'px;height:'+(17+(i%2)*5)+'px';
+    $('sky').appendChild(c);
+  }
+  for(var b=0;b<3;b++)spawnBal(120+b*70);
+  $('gScore').textContent='0';$('gTime').textContent='0:'+BAL_SECS;
+  $('gHint').textContent='Pop as many as you can. You cannot lose.';
+  show('game');unlockAudio();
+  say('Balloon pop. Type the letter on the balloon.');
+  clearInterval(G.t);G.t=setInterval(gameTick,50);
+}
+function closeBreak(){G.on=false;clearInterval(G.t);G.t=null;}
+function spawnBal(startY){
+  var ch=G.pool[Math.floor(Math.random()*G.pool.length)];
+  var el=document.createElement('div');
+  el.className='bal';el.textContent=ch;
+  el.style.background=fcolor(ch);
+  el.style.left=(4+Math.random()*78)+'%';
+  var y=(startY==null)?250:startY;
+  el.style.top=y+'px';
+  $('sky').appendChild(el);
+  G.bals.push({ch:ch,el:el,y:y,sp:0.5+Math.random()*0.45});
+}
+function gameTick(){
+  if(!G.on)return;
+  G.left-=0.05;
+  if(G.left<=0){endBreak();return;}
+  var sec=Math.max(0,Math.ceil(G.left));
+  $('gTime').textContent='0:'+(sec<10?'0':'')+sec;
+  G.spawn-=0.05;
+  if(G.spawn<=0&&G.bals.length<6){spawnBal();G.spawn=0.55+Math.random()*0.35;}
+  for(var i=G.bals.length-1;i>=0;i--){
+    var b=G.bals[i];b.y-=b.sp;b.el.style.top=b.y+'px';
+    if(b.y<-70){b.el.remove();G.bals.splice(i,1);}   // drifting off is not a loss
+  }
+}
+function breakPress(ch){
+  if(!G.on)return;
+  var hit=-1,best=1e9;
+  for(var i=0;i<G.bals.length;i++){if(G.bals[i].ch===ch&&G.bals[i].y<best){best=G.bals[i].y;hit=i;}}
+  if(hit<0){bzz();return;}
+  var b=G.bals[hit];b.el.classList.add('pop');
+  var el=b.el;setTimeout(function(){el.remove();},260);
+  G.bals.splice(hit,1);
+  G.score++;$('gScore').textContent=G.score;blip();
+}
+function endBreak(){
+  closeBreak();
+  $('gHint').textContent='You popped '+G.score+'. Nice break.';
+  fanfare(false);
+  say('Nice break.');
+  setTimeout(function(){paintHome();show('home');},1800);
+}
+$('sky').addEventListener('click',function(e){var b=e.target.closest('.bal');if(b)breakPress(b.textContent);});
+$('gBack').addEventListener('click',function(){closeBreak();paintHome();show('home');});
+$('cardBalloon').addEventListener('click',function(){openBreak();});
+$('btnBreak').addEventListener('click',function(){openBreak();});
+
 /* ══════════ BOOT ══════════ */
-buildKb(null);drawHands({});paintSpeak();paintHome();fit();
+buildKb(null);drawHands({});paintSpeak();paintSound();paintHome();fit();
 setTimeout(fit,400);
 })();
 </script>

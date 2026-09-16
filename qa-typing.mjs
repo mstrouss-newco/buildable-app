@@ -42,10 +42,14 @@ chk('fort + hero faces are drawn SVG', /class="fort" id="fort"><svg/.test(html) 
 chk('real AI art stays primary (kind=type)', /\/api\/images\?kind=type/.test(html));
 // and the school's own icons are geometry, so nothing can quietly go back to
 // being a glyph the day someone finds it quicker to type one
+// ICO.lock was dropped when the school stopped locking lessons: a child can now
+// start any lesson they like, so there is no padlock left to draw.
 chk('the school draws its icons: the pills, the tiles and the stars are all SVG',
   /class="ic"/.test(school) && /var ICO=\{/.test(school) &&
   /ICO\.bolt/.test(school) && /ICO\.target/.test(school) &&
-  /ICO\.starSmOpen/.test(school) && /ICO\.tick/.test(school) && /ICO\.lock/.test(school));
+  /ICO\.starSmOpen/.test(school) && /ICO\.tick/.test(school));
+chk('no lesson is locked — every one is startable',
+  !/ICO\.lock/.test(school) && !/les lock/.test(school));
 
 // 2) manifest
 console.log('--- MANIFEST ---');
