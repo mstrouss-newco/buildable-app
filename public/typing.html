@@ -146,7 +146,7 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
 .key.press{transform:translateY(2px);box-shadow:none}
 
 /* hands */
-.hands{display:flex;justify-content:center;gap:34px;margin-top:-28px;pointer-events:none}
+.hands{display:flex;justify-content:center;gap:18px;margin-top:-34px;pointer-events:none}
 .hands svg{display:block}
 .handlab{text-align:center;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#A79B86;margin-top:-6px}
 
@@ -180,7 +180,7 @@ button{font-family:'Fredoka',sans-serif;color:var(--ink)}
 @media(max-width:700px){.course{grid-template-columns:1fr}.cards{grid-template-columns:1fr}
   .tile{width:44px;flex:0 0 44px;height:52px;font-size:23px}
   .key{min-width:32px;height:34px;font-size:12px}.key.space{min-width:170px;flex:0 1 170px}.key.w15{min-width:48px}
-  .hands{transform:scale(.8);margin-top:-40px}}
+  .hands{transform:scale(.72);margin-top:-52px;gap:4px}}
 </style>
 </head>
 <body>
@@ -690,21 +690,43 @@ function setTarget(ch){
   $('handlab').textContent=lab;}
 
 /* ══════════ HANDS ══════════ */
-function handSvg(isLeft,active){
-  var cols=isLeft?['p','r','m','i']:['i','m','r','p'];var f='';
-  cols.forEach(function(c,n){
-    var x=24+n*34,on=(active===c),len=on?98:70;
-    var col=on?FC[c]:'#EFE7D6',st=on?FC[c]:'#D2C6AE';
-    if(on)f+='<circle cx="'+(x+12)+'" cy="'+(128-len+14)+'" r="22" fill="'+col+'" opacity=".22"/>';
-    f+='<rect x="'+x+'" y="'+(128-len)+'" width="24" height="'+len+'" rx="12" fill="'+col+'" stroke="'+st+'" stroke-width="2"/>';
-  });
-  var on=(active==='t'),tx=isLeft?168:10;
-  var tcol=on?FC.t:'#EFE7D6';
-  f+='<rect x="'+tx+'" y="118" width="26" height="48" rx="13" fill="'+tcol+'" stroke="'+(on?FC.t:'#D2C6AE')+'" stroke-width="2" transform="rotate('+(isLeft?28:-28)+' '+(tx+13)+' 142)"/>';
-  f+='<rect x="18" y="110" width="170" height="58" rx="26" fill="#EDE4D1" stroke="#D2C6AE" stroke-width="2"/>';
-  return '<svg width="204" height="180" viewBox="0 0 204 180">'+f+'</svg>';
+/* A finger: a tapered column with a rounded tip and a knuckle crease. */
+function tyFinger(x,base,len,w,tilt,col,line,active){
+  var topW=w*0.84, r=topW/2, y=base-len, dx=(w-topW)/2, g='';
+  var d='M'+x+','+base+'L'+(x+dx)+','+(y+r)
+      +'A'+r+','+r+' 0 0 1 '+(x+dx+topW)+','+(y+r)+'L'+(x+w)+','+base+'Z';
+  g+='<g transform="rotate('+tilt+' '+(x+w/2)+' '+base+')">';
+  if(active)g+='<circle cx="'+(x+w/2)+'" cy="'+(y+r)+'" r="'+(r+11)+'" fill="'+col+'" opacity=".18"/>';
+  g+='<path d="'+d+'" fill="'+col+'" stroke="'+line+'" stroke-width="2" stroke-linejoin="round"/>';
+  g+='<path d="M'+(x+dx+2)+','+(y+Math.min(len*0.42,34))+' q'+(topW/2-2)+',5 '+(topW-4)+',0" fill="none" stroke="'+line+'" stroke-width="1.6" opacity=".75" stroke-linecap="round"/>';
+  g+='</g>';
+  return g;
 }
-// takes {L:'i'} or, for a capital, {L:'m',R:'p'} — both hands can be busy now
+function tyHand(isLeft,active,FCOL){
+  var SKIN='#EFE7D6', LINE='#D2C6AE';
+  var F=[{k:'p',x:22,w:19,len:52,tilt:-13,base:110},
+         {k:'r',x:49,w:22,len:78,tilt:-5,base:102},
+         {k:'m',x:79,w:24,len:86,tilt:1,base:100},
+         {k:'i',x:111,w:23,len:72,tilt:8,base:104}];
+  var s='', onT=(active==='t');
+  // the thumb goes first, so the palm covers where it joins and it reads as attached
+  s+=tyFinger(126,150,64,27,98,onT?FCOL.t:SKIN,onT?FCOL.t:LINE,onT);
+  s+='<path d="M18,116 C14,99 28,91 46,90 L134,93 C155,94 165,101 165,118'
+   +' L159,150 C155,172 139,181 117,181 L56,181 C36,181 24,168 20,150 Z"'
+   +' fill="'+SKIN+'" stroke="'+LINE+'" stroke-width="2" stroke-linejoin="round"/>';
+  F.forEach(function(f){
+    var on=(active===f.k);
+    s+=tyFinger(f.x,f.base+18,f.len+18+(on?22:0),f.w,f.tilt,on?FCOL[f.k]:SKIN,on?FCOL[f.k]:LINE,on);
+  });
+  // knuckles, but never on the lit finger: a dark ring on a bright finger
+  // reads as a blemish
+  F.forEach(function(f){ if(active===f.k)return;
+    s+='<ellipse cx="'+(f.x+f.w/2)+'" cy="'+(f.base+13)+'" rx="'+(f.w/2-2)+'" ry="5" fill="none" stroke="'+LINE+'" stroke-width="1.5" opacity=".5"/>';});
+  return '<svg width="215" height="214" viewBox="0 0 215 214"'+(isLeft?'':' style="transform:scaleX(-1)"')+'>'
+       + '<g transform="translate(0,16)">'+s+'</g></svg>';
+}
+function handSvg(isLeft,active){return tyHand(isLeft,active,FC);}
+// takes {L:'i'} or, for a capital, {L:'m',R:'p'} — both hands can be busy
 function drawHands(hands){
   hands=hands||{};
   $('hands').innerHTML=handSvg(true,hands.L||null)+handSvg(false,hands.R||null);
