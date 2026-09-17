@@ -202,7 +202,7 @@ const BOARD_MP_LANDING = {
 // ---------------------------------------------------------------------------
 const GAME_CATALOG = [
   { id: "skyflyer",    name: "Sky Flyer",         category: "Action",   color: "#2FB7D6", type: "game", imgId: "skyflyer",    handler: "onSkyFlyer",    desc: "Fly wherever you like, scoop up coins, or take on a flying job!" },
-  { id: "farm",        name: "The Farm",         category: "Action",   color: "#8CC152", type: "game", tile: "farm",         handler: "onFarm",        desc: "Grow it, stack it high, feed the animals, load the plane!" },
+  { id: "farm",        name: "The Farm",         category: "Action",   color: "#8CC152", type: "game", imgId: "farm",        handler: "onFarm",        desc: "Grow it, stack it high, feed the animals, load the plane!" },
   { id: "breaker",     name: "Breaker",          category: "Arcade",   color: "#FF6B6B", type: "game", imgId: "breaker",     handler: "onBreaker",     desc: "Bounce the ball, smash every brick!" },
   { id: "music-maker", name: "Music Maker",      category: "Studio",   color: "#37B6F5", type: "studio", imgId: "music",     handler: "onMusicMaker",  desc: "Make your own songs — pick a vibe and press go!" },
   { id: "chess",       name: "Chess",            category: "Board",    color: "#F0972A", type: "game", imgId: "chess",       handler: "onChess",       desc: "Play solo, 2-player, or with family!", multiplayer: true },
@@ -222,7 +222,7 @@ const GAME_CATALOG = [
   { id: "typing",      name: "Typing",           category: "Classic",  color: "#1FA897", type: "game", imgId: "typing",      handler: "onTyping",      desc: "Learn to type — defend the castle!" },
   { id: "memory",      name: "Memory Match",     category: "Puzzle",   color: "#A78BFF", type: "game", imgId: "memory",      handler: "onMemory",      desc: "Flip cards, find the pairs — solo or 2-4!", multiplayer: true },
   { id: "mahjong",     name: "Mahjong",          category: "Classic",  color: "#F0B429", type: "game", imgId: "mahjong",     handler: "onMahjong",     desc: "Match free tiles in pairs to clear the board!" },
-  { id: "antcity",     name: "Ant City",         category: "Colony",   color: "#E9A23B", type: "game", tile: "antcity",      handler: "onAntCity",     desc: "Draw tunnels, feed your ants, grow a colony!" },
+  { id: "antcity",     name: "Ant City",         category: "Colony",   color: "#E9A23B", type: "game", imgId: "antcity",     handler: "onAntCity",     desc: "Draw tunnels, feed your ants, grow a colony!" },
   { id: "mathcannon",  name: "Math Cannon",      category: "Learning", color: "#F4A63B", type: "game", imgId: "mathcannon",  handler: "onMathCannon",  desc: "Solve the problem and fire the cannon at the right answer!" },
   { id: "paper-route", name: "Paper Route",        category: "Arcade",   color: "#3FA9F5", type: "game", imgId: "paper-route", handler: "onPaperRoute",  desc: "Ride the street and land a paper on every red flag!", soon: true },
   { id: "platformer",  name: "Hop Heroes",       category: "Action",   color: "#2F8FD6", type: "game", imgId: "platformer",  handler: "onPlatformer",  desc: "Run, jump and reach the flag!", soon: true },
@@ -390,45 +390,6 @@ async function startGuestLink(catalogId) {
   } catch (e) { /* offline: silently no-op */ }
 }
 
-// FM3 — A DRAWN BADGE, NOT A GENERATED PICTURE. Every other door on the Play
-// page shows an AI image fetched by imgId. The Farm's shows drawn geometry
-// instead, built from the same shapes as its own 3D crops (the FL5b law), so
-// the tile looks like the place it opens. No emoji anywhere in it — that is a
-// standing guardrail, not a style choice.
-const TILE_ART = {
-  // AC2 — Ant City's badge is the game's own shipped art, on its meadow, so the
-  // door looks like the place it opens and needs no image API to draw.
-  antcity: () => (
-    <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg,#8fd8f7 0%,#d9f2ce 46%,#c58f52 47%,#8a5a2b 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <img src="/antcity/art/badge.svg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }}
-        style={{ width: "68%", height: "68%", objectFit: "contain", display: "block" }} />
-    </div>
-  ),
-  farm: () => (
-    <svg viewBox="0 0 120 80" style={{ width: "100%", height: "100%", display: "block" }} aria-hidden="true">
-      <rect x="0" y="0" width="120" height="80" fill="#8CC152" />
-      <path d="M0 52 Q30 44 60 50 Q90 56 120 48 L120 80 L0 80 Z" fill="#7AB246" />
-      {/* three furrows of corn, tallest in front, the same yellow as the crop */}
-      {[14, 34, 54, 74, 94].map((x, i) => (
-        <g key={x} transform={`translate(${x} ${56 + (i % 2) * 3})`}>
-          <rect x="-1.6" y="-22" width="3.2" height="22" rx="1.6" fill="#4FB05B" />
-          <ellipse cx="0" cy="-24" rx="4.6" ry="8" fill="#F6C64A" stroke="#E0A82E" strokeWidth="1.4" />
-          <path d="M-1.6 -14 L-8 -19" stroke="#4FB05B" strokeWidth="2.6" strokeLinecap="round" />
-          <path d="M1.6 -10 L8 -15" stroke="#4FB05B" strokeWidth="2.6" strokeLinecap="round" />
-        </g>
-      ))}
-      {/* the barn, and the stack over the kid's head: the two things the mode is */}
-      <path d="M74 34 L92 22 L110 34 L110 58 L74 58 Z" fill="#C9543F" />
-      <path d="M74 34 L92 22 L110 34 Z" fill="#A34B3E" />
-      <rect x="86" y="42" width="12" height="16" rx="1.5" fill="#EDDDA8" />
-      <g transform="translate(24 40)">
-        <ellipse cx="0" cy="-16" rx="5" ry="4" fill="#F08A2E" stroke="#C66220" strokeWidth="1.4" />
-        <ellipse cx="1" cy="-8" rx="5" ry="4" fill="#FDF6E3" stroke="#B9A87E" strokeWidth="1.4" />
-        <ellipse cx="-1" cy="0" rx="5" ry="4" fill="#F6C64A" stroke="#E0A82E" strokeWidth="1.4" />
-      </g>
-    </svg>
-  ),
-};
 // Tile Shots (sessions TS0-TS3): the games that now show a real photograph of
 // themselves instead of an AI painting. Keyed by imgId; the value is the file in
 // public/tile-shots/, which scripts/tile-shot.mjs writes. Everything not listed
@@ -448,13 +409,18 @@ const TILE_SHOTS = {
   tetris: "tumble", stringmatch: "stringmatch", mathcannon: "mathcannon",
   typing: "typing", mahjong: "mahjong", checkers: "checkers", memory: "memory",
   tictactoe: "tictactoe", connectfour: "connectfour", dotsboxes: "dotsboxes",
+  // TS4 — the last two. Both were drawn badges until now: neither has an attract
+  // mode, so the camera drives them through their own QA hook (it digs a real
+  // colony, and plants and grows a real field) before the shutter. The drivers
+  // live in scripts/tile-shot.mjs, so either can be re-shot after an art change.
+  antcity: "antcity", farm: "farm",
 };
 
-// ONE place that decides what a catalog tile shows, so a new drawn badge never
-// has to be threaded through four render sites by hand again.
+// ONE place that decides what a catalog tile shows, so switching a game's art
+// never has to be threaded through four render sites by hand again. Every tile
+// is a photograph now (TS4 retired the last two drawn badges); the painting
+// behind /api/images stays as the fallback if a photo ever fails to load.
 function GameTileArt({ g }) {
-  const drawn = g.tile && TILE_ART[g.tile];
-  if (drawn) return drawn();
   if (!g.imgId) return null;
   const painted = `/api/images?kind=game&id=${g.imgId}`;
   const shot = TILE_SHOTS[g.imgId] ? `/tile-shots/${TILE_SHOTS[g.imgId]}.jpg` : null;

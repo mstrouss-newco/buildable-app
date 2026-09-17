@@ -52,6 +52,39 @@ const require = createRequire(import.meta.url);
  *   zoom  how far to crop in; 1 is the whole screen
  *   focus where to centre the crop, as fractions of the screen (default middle)
  * ------------------------------------------------------------------------- */
+// TS4 — Ant City and The Farm are the last two games that showed a drawn badge
+// instead of a photograph. Neither has an attract mode, but both expose the same
+// QA hook their test harness drives, so the camera builds a real colony / a real
+// planted field and photographs it. Nothing inside either game changes.
+const antcityDriver = `
+  var G = window.ANTCITY_GAME; G.setDifficulty(3); var q = G.queen();
+  // a wide, shallow nest: it fills the frame and keeps the queen in shot, where
+  // digging straight down just scrolls the camera off her.
+  [1, 2, 3].forEach(function (dr) {
+    G.dig(q.c, q.r + dr);
+    for (var d = 1; d <= 5; d++) { G.dig(q.c - d, q.r + dr); G.dig(q.c + d, q.r + dr); }
+  });
+  G.assign('digger', 6); G.seconds(150);
+  G.drop('food'); G.drop('food'); G.drop('food'); G.drop('food'); G.seconds(60);
+  G.build(q.c - 2, q.r + 1, 'nursery'); G.build(q.c + 2, q.r + 1, 'storage');
+  G.build(q.c - 4, q.r + 2, 'fungus');  G.build(q.c + 4, q.r + 2, 'den');
+  G.build(q.c - 1, q.r + 3, 'nursery'); G.build(q.c + 1, q.r + 3, 'storage');
+  G.seconds(150); G.drop('food'); G.drop('food'); G.seconds(120);`;
+
+const farmDriver = `
+  var F = window.FARM;
+  try { F.setCoins(900); } catch (e) {}
+  var kinds = ['corn', 'pumpkin', 'strawberry', 'carrot', 'tomato', 'wheat', 'melon'];
+  var ps = F.patches(), n = 0;
+  for (var i = 0; i < ps.length; i++) {
+    if (!ps[i].locked) { try { F.plant(i, kinds[n % kinds.length]); } catch (e) {} n++; }
+  }
+  try { F.closeSeedPicker(); } catch (e) {}
+  F.advanceTime(260);
+  // the stack over the kid's head IS the game, so the photo has one
+  try { F.giveItem('corn', 3); F.giveItem('pumpkin', 2); F.giveItem('strawberry', 2); } catch (e) {}
+  F.moveKidTo(1.2, 2.2);`;
+
 const GAMES = [
   // TS0 — the two with a hand-posed photo mode
   { id: 'survival',    name: 'Survival',      url: '/survival-engine.html',  imgId: 'survival',    color: '#8A6BFF', mode: 'photo' },
@@ -85,6 +118,10 @@ const GAMES = [
   { id: 'tictactoe',   name: 'Tic-Tac-Toe',   url: '/tictactoe-engine.html', imgId: 'tictactoe',   color: '#5B8CFF', mode: 'drive', zoom: 1.15, plies: 5 },
   { id: 'connectfour', name: 'Connect Four',  url: '/connectfour-engine.html', imgId: 'connectfour', color: '#FF5A6E', mode: 'drive', zoom: 1.15, plies: 16 },
   { id: 'dotsboxes',   name: 'Dots and Boxes',url: '/dotsboxes-engine.html', imgId: 'dotsboxes',   color: '#36D6C3', mode: 'drive', zoom: 1.15, plies: 30 },
+  // TS4 — the last two drawn badges (see the drivers above)
+  { id: 'antcity',     name: 'Ant City',      url: '/antcity-engine.html',   imgId: 'antcity',     color: '#E9A23B', mode: 'drive', zoom: 1.3, focus: [0.52, 0.30], warm: 1800, preroll: 6000, drive: antcityDriver },
+  // the farm is 3D: it needs a long preroll for three.js and its models to land
+  { id: 'farm',        name: 'The Farm',      url: '/skyflyer-farm.html',    imgId: 'farm',        color: '#8CC152', mode: 'drive', zoom: 1.6, focus: [0.50, 0.46], warm: 2500, preroll: 14000, drive: farmDriver },
 ];
 
 // The board engines all expose the same control surface to their QA harness:
@@ -171,13 +208,19 @@ const HIDE_CHROME = `(() => {
 /* ---- the signature-colour wash, painted over the canvas as a plain element -
  * Same recipe as buildable-tileshot.js: the game's own colour rising out of the
  * bottom edge, so the picture is bound to the colour dot beside its name. */
-const washScript = (hex) => `(() => {
+// Rule 7's wash is painted over the CROP, not the whole window: a zoomed shot
+// crops the middle out of a bigger window, so a wash pinned to the window's own
+// bottom edge fell outside the picture and the tile came back with no colour at
+// all. Passing the crop rectangle in puts the colour where the tile's bottom
+// edge actually is.
+const washScript = (hex, cx, cy, cw, ch) => `(() => {
   const m = /^#?([0-9a-f]{6})$/i.exec(${JSON.stringify(hex)});
   if (!m) return 'no colour';
   const n = parseInt(m[1], 16);
   const rgb = ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
   const d = document.createElement('div');
-  d.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2147483647;' +
+  d.style.cssText = 'position:fixed;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;' +
+    'pointer-events:none;z-index:2147483647;' +
     'background:linear-gradient(to top, rgba(' + rgb + ',0.80) 0%, rgba(' + rgb + ',0.38) 22%, rgba(' + rgb + ',0) 70%)';
   document.body.appendChild(d);
   return 'ok';
@@ -215,7 +258,7 @@ for (const g of GAMES) {
         await page.goto(`${base}${g.url}${g.mode === 'drive' ? '' : '?screen=demo'}`, { waitUntil: 'load', timeout: 25000 });
         const driver = g.drive || (g.plies ? boardDriver(g.plies) : null);
         if (driver) {
-          await page.waitForTimeout(1200);                 // let the engine boot
+          await page.waitForTimeout(g.preroll || 1200);     // let the engine boot (3D games need longer)
           const out = await page.evaluate(`(() => { try { ${driver} return 'ok'; }
             catch (e) { return 'ERR ' + (e && e.message || e); } })()`);
           if (String(out).startsWith('ERR')) throw new Error(out);
@@ -224,14 +267,16 @@ for (const g of GAMES) {
         await page.waitForTimeout(g.warm || (g.mode === 'drive' ? 600 : 6000));
         const hid = await page.evaluate(g.mode === 'dom' ? HIDE_FLOATERS : HIDE_CHROME);
         if (hid !== 'ok') throw new Error('could not find a canvas to photograph');
-        if (wash) await page.evaluate(washScript(g.color));
-        await page.waitForTimeout(120);          // one more painted frame
       }
       // A photo-mode game applies its own crop, so it is shot whole.
       const fx = g.focus ? g.focus[0] : 0.5, fy = g.focus ? g.focus[1] : 0.5;
       const clip = g.mode === 'photo'
         ? undefined
         : { x: Math.max(0, Math.round(vw * fx - W / 2)), y: Math.max(0, Math.round(vh * fy - H / 2)), width: W, height: H };
+      if (wash && clip) {
+        await page.evaluate(washScript(g.color, clip.x, clip.y, W, H));
+        await page.waitForTimeout(120);          // one more painted frame
+      }
       const file = path.join(OUT, label + '.jpg');
       const shot = { path: file, type: 'jpeg', quality: 82 };
       if (clip) await page.screenshot({ ...shot, clip });

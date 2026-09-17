@@ -188,5 +188,25 @@
     "file": "public/tile-shots/dotsboxes.jpg",
     "kb": 51,
     "mode": "drive"
+  },
+  {
+    "id": "antcity",
+    "name": "Ant City",
+    "imgId": "antcity",
+    "color": "#E9A23B",
+    "label": "antcity",
+    "file": "public/tile-shots/antcity.jpg",
+    "kb": 60,
+    "mode": "drive"
+  },
+  {
+    "id": "farm",
+    "name": "The Farm",
+    "imgId": "farm",
+    "color": "#8CC152",
+    "label": "farm",
+    "file": "public/tile-shots/farm.jpg",
+    "kb": 106,
+    "mode": "drive"
   }
 ]
