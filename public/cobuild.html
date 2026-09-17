@@ -93,6 +93,11 @@ section{padding:60px 0}
 .chk.on:before{content:"\2713  "}
 .clock{font-family:'Nunito',sans-serif;font-weight:900;font-size:28px}
 .bar{flex:1;height:10px;border-radius:100px;background:rgba(255,255,255,.1);overflow:hidden}.bar i{display:block;width:62%;height:100%;background:linear-gradient(90deg,#7C5CFC,#F472B6)}
+.kp{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:auto auto;gap:16px;margin-top:28px}
+.kp-big{grid-row:1/3;overflow:hidden;display:flex;flex-direction:column}.kp-big img{width:100%;flex:1;min-height:0;object-fit:cover;object-position:50% 40%;display:block}
+.kp-small{overflow:hidden}.kp-small img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.kp-cap{padding:12px 14px 14px}.kp-cap b{display:block;font-size:15px;font-weight:900}.kp-cap span{display:block;color:var(--muted);font-size:13px;line-height:1.4;margin-top:2px}
+@media(max-width:820px){.kp{grid-template-columns:1fr 1fr}.kp-big{grid-column:1/3;grid-row:auto}}
 .prices{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
 .price{padding:32px;position:relative}
 .price.hot{border-color:var(--purple2);box-shadow:0 0 60px rgba(124,92,252,.25)}
@@ -125,7 +130,7 @@ footer .logo{justify-content:center;margin-bottom:10px}
 </style></head><body>
 
 
-<nav><a href="/" class="logo" style="text-decoration:none"><span><span class="buildable">buildable</span><span class="kids">kids</span><span class="period">.</span></span><span class="cob">Cobuild</span></a><ul class="navlinks"><li><a href="#how">How it works</a></li><li><a href="#promise">No ads</a></li><li><a href="#terms">Your terms</a></li><li><a href="#learn">Learning</a></li><li><a href="#pricing">Pricing</a></li></ul><a class="btn small" href="#" onclick="openDoor('nav');return false">Start building</a></nav>
+<nav><a href="/" class="logo" style="text-decoration:none"><span><span class="buildable">buildable</span><span class="kids">kids</span><span class="period">.</span></span><span class="cob">Cobuild</span></a><ul class="navlinks"><li><a href="#how">How it works</a></li><li><a href="#promise">No ads</a></li><li><a href="#terms">Your terms</a></li><li><a href="#learn">Learning</a></li><li><a href="#kidspedia">Kidspedia</a></li><li><a href="#pricing">Pricing</a></li></ul><a class="btn small" href="#" onclick="openDoor('nav');return false">Start building</a></nav>
 <div class="wrap">
 <div class="hero"><div class="orb o1"></div><div class="orb o2"></div>
   <div>
@@ -202,6 +207,17 @@ footer .logo{justify-content:center;margin-bottom:10px}
     <div class="card glass"><img src="/cobuild/spelling-card.jpg" alt=""><div class="b"><span class="ask">Spelling &amp; reading</span><h3>Sight words, said out loud</h3><p>Hear the word, tap the word. The same lists school sends home, without the flashcard fight.</p><a class="btn small purple" href="/practice">Try it</a></div></div>
     <div class="card glass"><img src="/cobuild/typing-card.jpg" alt=""><div class="b"><span class="ask">Typing</span><h3>Defend the castle, one key at a time</h3><p>The right finger glows, the baddie gets zapped. Real touch typing, and they think it is a game.</p><a class="btn small purple" href="/typing.html">Try it</a></div></div>
     <div class="card glass"><img src="/cobuild/math-card.jpg" alt=""><div class="b"><span class="ask">Math</span><h3>Solve it, then fire the cannon</h3><p>Adding, take away, times tables. Pop the balloon with the answer. Also a one-minute facts sheet like the one from school.</p><a class="btn small purple" href="/mathcannon">Try it</a></div></div>
+  </div>
+</section>
+
+<section id="kidspedia">
+  <div class="center"><h2>And when they ask "why?"</h2><p class="sub" style="margin:8px auto 0">Kidspedia. Labs they can play with, picture books read out loud, real lessons. Say the topic and it gets made: real photos, a human check, on the shelf the same day. No ads here either.</p></div>
+  <div class="kp">
+    <div class="kp-big glass"><img src="/cobuild/kp-ocean.jpg" alt=""><div class="kp-cap"><b>Journey to the Deep</b><span>Swim from the sunlight down to the trench. Tap anything to meet it. It gets dark, so you bring a flashlight.</span></div></div>
+    <div class="kp-small glass"><img src="/cobuild/kp-weather.jpg" alt=""><div class="kp-cap"><b>Weather Lab</b><span>Make it rain, snow, storm, or rainbow, and see why.</span></div></div>
+    <div class="kp-small glass"><img src="/cobuild/kp-book.jpg" alt=""><div class="kp-cap"><b>Picture books</b><span>Real photos, real sources, read aloud.</span></div></div>
+    <div class="kp-small glass"><img src="/cobuild/kp-shelf.jpg" alt=""><div class="kp-cap"><b>The shelf</b><span>Labs and books, sorted the way kids ask.</span></div></div>
+    <div class="kp-small glass"><img src="/cobuild/kp-lessons.jpg" alt=""><div class="kp-cap"><b>Lessons</b><span>Math and reading by grade, at their own pace.</span></div></div>
   </div>
 </section>
 
