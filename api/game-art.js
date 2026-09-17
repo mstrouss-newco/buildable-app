@@ -263,12 +263,13 @@ export default async function handler(req, res) {
     // big PNG is only read once per size, then served fast forever.
     const sw = smallWidth(req.query);
     if (sw) {
-      const skey = key + ":w" + sw;
+      const fitBase = req.query.fit === "base";
+      const skey = key + ":w" + sw + (fitBase ? "b" : "");
       let small = await cacheGet(skey);
       if (!small) {
         const big = await cacheGet(key);
         if (!big) { res.status(404).json({ error: "not built", world: w, piece: p }); return; }
-        const buf = await toSmallWebp(big, sw);
+        const buf = await toSmallWebp(big, sw, fitBase);
         if (buf) { small = buf.toString("base64"); await cachePut(skey, small); }
         else {   // sharp unavailable: fall back to the original PNG
           res.setHeader("Content-Type", "image/png"); res.setHeader("Access-Control-Allow-Origin", "*");
@@ -302,7 +303,7 @@ export default async function handler(req, res) {
     if (!b64) { res.status(502).json({ error: "generation failed", world, piece }); return; }
     // Replace only AFTER a good picture exists, so a failed redo never leaves a hole.
     // The small copies are dropped too, or the game would keep showing the old art.
-    if (force) { await cacheDel(key); await Promise.all(SMALL_SIZES.map((n) => cacheDel(key + ":w" + n))); }
+    if (force) { await cacheDel(key); await Promise.all(SMALL_SIZES.flatMap((n) => [cacheDel(key + ":w" + n), cacheDel(key + ":w" + n + "b")])); }
     await cachePut(key, b64);
     res.status(200).json({ ok: true, cached: false, world, piece, style: styleId(style) });
     return;

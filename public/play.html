@@ -344,8 +344,11 @@ const PROP_NAMES=["coin","gem","critter","vines","spring","flag"];
 // ART_W = logical draw size x2 for retina. ART_VER bumps a piece's URL after its art is
 // redrawn, because the small copies are edge-cached forever.
 const ART_W={ far:768, tree_a:768, tree_b:768, boss:512, vines:512, canopy:512, fern:512, bush_a:384, bush_b:384, mushroom:384 };
-const ART_VER={ "enchanted-forest:tree_b":2, "desert-oasis:tree_a":2, "candy-land:fern":2, "candy-land:canopy":2 };   // redrawn 2026-09-17 (tops were cut off)
-function artUrl(world, nm){ const v=ART_VER[world+":"+nm]; return ART_BASE+"?img="+world+":"+nm+"&style="+ARTSTYLE+"&w="+(ART_W[nm]||256)+(v?"&v="+v:""); }
+const ART_VER={ "enchanted-forest:tree_b":2, "desert-oasis:tree_a":2, "candy-land:fern":2, "candy-land:canopy":2,
+                "enchanted-forest:tree_a":5, "candy-land:tree_a":5 };   // redrawn 2026-09-17 (tops were cut off)
+// These redraws came out small inside their frame; &fit=base crops them to the ground.
+const ART_FIT_BASE={ "enchanted-forest:tree_a":1, "candy-land:tree_a":1, "candy-land:fern":1 };
+function artUrl(world, nm){ const v=ART_VER[world+":"+nm]; return ART_BASE+"?img="+world+":"+nm+"&style="+ARTSTYLE+"&w="+(ART_W[nm]||256)+(v?"&v="+v:"")+(ART_FIT_BASE[world+":"+nm]?"&fit=base":""); }
 const PR={}; for(const nm of PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=artUrl("props",nm); PR[nm]=im; }
 const ART_SETS={};
 function artSet(world){
