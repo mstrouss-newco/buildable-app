@@ -23,7 +23,9 @@
 
   .bookwrap{max-width:620px;margin:0 auto;padding:0 14px calc(34px + env(safe-area-inset-bottom,0px))}
   .book{position:relative;border-radius:22px;overflow:hidden;background:var(--paper);color:var(--ink);box-shadow:0 16px 40px rgba(0,0,0,.45);touch-action:pan-y}
-  .pages{display:flex;transition:transform .42s cubic-bezier(.2,.74,.24,1);will-change:transform}
+  /* Each page is only as tall as its own words. The book's height follows the
+     page on screen (fitBook), so a short page never sits on a tall one's white. */
+  .pages{display:flex;align-items:flex-start;transition:transform .42s cubic-bezier(.2,.74,.24,1),height .3s ease;will-change:transform}
   .page{flex:0 0 100%;min-width:100%;position:relative;background:var(--paper)}
   /* the gutter: a soft shadow down the binding edge so a page reads as paper
      bound into a book rather than a flat card. */
@@ -305,7 +307,7 @@
     .bookwrap{max-width:none;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
     /* keep the turn buttons on screen: the book never outgrows the window */
     .book{max-height:calc(100vh - 126px)}
-    .page{display:grid;grid-template-columns:44% 1fr;grid-template-rows:auto 1fr;overflow-y:auto}
+    .page{display:grid;grid-template-columns:44% 1fr;grid-template-rows:auto 1fr;overflow-y:auto;max-height:calc(100vh - 126px)}
     .photo{grid-row:1 / span 2;aspect-ratio:auto;height:100%;max-height:none;min-height:238px}
     /* the cover is a spread too: art on the left, title and Start on the right */
     .page.cover{grid-template-rows:min-content min-content min-content 1fr}
@@ -1230,6 +1232,7 @@ function buildPages() {
     const more = document.getElementById("more-" + i); if (more) more.onclick = () => cycleFact(i);
     renderFact(i);
   });
+  watchBookSize();
 }
 
 function renderFact(i) {
@@ -1266,6 +1269,9 @@ function goTo(i, instant) {
     wrap.style.transform = "translateX(" + (-100 * pageIdx) + "%)";
     if (instant) { void wrap.offsetWidth; wrap.style.transition = ""; }
   }
+  fitBook();
+  // A long page leaves the reader scrolled down; the next page starts at its top.
+  try { if (!instant && window.scrollY > 0) window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {}
   stopNarration();
   const prev = document.getElementById("prev"); if (prev) prev.disabled = pageIdx === 0;
   const next = document.getElementById("next"); if (next) next.disabled = pageIdx === max;
@@ -1278,6 +1284,27 @@ function goTo(i, instant) {
   }
   renderEarUi();
 }
+// The book is exactly as tall as the page being read. Pages grow as photos
+// load and shrink or grow when the window turns, so a ResizeObserver refits it.
+function fitBook() {
+  try {
+    const wrap = document.getElementById("pages");
+    const pg = wrap && wrap.children && wrap.children[pageIdx];
+    if (!pg || !pg.offsetHeight) return;
+    wrap.style.height = pg.offsetHeight + "px";
+  } catch (e) {}
+}
+let bookSizer = null;
+function watchBookSize() {
+  try {
+    const wrap = document.getElementById("pages");
+    if (!wrap || typeof ResizeObserver === "undefined") return;
+    if (bookSizer) bookSizer.disconnect();
+    bookSizer = new ResizeObserver(() => fitBook());
+    Array.from(wrap.children).forEach((pg) => bookSizer.observe(pg));
+  } catch (e) {}
+}
+try { window.addEventListener("resize", fitBook); } catch (e) {}
 // Session TB5 — what a turned page feels like. The light sweep runs across the
 // paper in the direction of travel, the paper sound plays, and the phone gives
 // the smallest tick. Every piece is optional: if the sound engine or the class
