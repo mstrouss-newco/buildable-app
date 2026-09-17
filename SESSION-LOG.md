@@ -57,6 +57,23 @@ directions. Before and after pictures at `qa/shots/fm12-field-before-after.png` 
 `qa/shots/fm12-pond-before-after.png`. Recipe for the harness is in project memory as
 `farm-render-harness.md`.
 
+## 2026-09-17: Sling Squad Journey badges show the real level
+
+Mike: "fix the level art for slingshot to be whatever we already decided."
+In the app, Sling Squad's Journey showed 20 plain blue circles. The shell
+Journey looks for `/sling/<theme>/bg.webp`, which Sling never had, and the
+manifest's `journeyBadge` values were placeholder ids, so every stop fell
+through to the flat accent colour. Applied the two decisions already on file:
+LP1 (a Sling level card shows that level's real tower, critters and ground)
+and the Journey badge rule (a real path in `journeyBadge` wins).
+
+- `public/sling/journey/<level id>.webp`: 20 square 280px badges drawn by the
+  LP1 `towers` painter, cropped around each tower and widened for wide levels.
+- `public/sling/manifest.json`: every `journeyBadge` now points at its picture.
+- `scripts/sling-journey-badges.cjs`: re-draws them after a layout change.
+- `qa-sling.mjs`: fails if any level has no badge picture.
+- No engine or shell code changed. `node qa-sling.mjs .` ALL CHECKS PASS.
+
 ## 2026-09-15 (CB6 + CB7): the child's own idea reaches the screen
 
 **Phase CB, cards CB6 and CB7, run as one session** (approved by Mike 2026-09-15).

@@ -38,6 +38,11 @@ const v=BM.validate(manifest);
 console.log('--- MANIFEST: validate /sling/manifest.json ---');
 console.log(`${v.ok?'PASS':'FAIL'}  ok=${v.ok} errors=${JSON.stringify(v.errors)} warnings=${JSON.stringify(v.warnings)}`);
 if(!v.ok){ console.error('MANIFEST INVALID — aborting'); process.exit(2); }
+// Journey badges: every level's round badge on the shell Journey is a real picture of
+// THAT level (scripts/sling-journey-badges.cjs draws them). A missing file = flat blue circle.
+{ const miss=manifest.levels.filter(l=>!/^\/sling\/journey\/[a-z0-9-]+\.webp$/.test(l.journeyBadge||'') || !fs.existsSync(dir+'/public'+l.journeyBadge));
+  console.log(`${miss.length?'FAIL':'PASS'}  journey badges: ${manifest.levels.length-miss.length}/${manifest.levels.length} levels have a real picture${miss.length?' :: missing '+miss.map(l=>l.id).join(','):''}`);
+  if(miss.length){ console.error('JOURNEY BADGE MISSING — aborting'); process.exit(2); } }
 const engCfg=BM.toEngineConfig(manifest);
 console.log('manifest -> engine levels:', engCfg.levels.map(l=>`${l.name}[d${l.difficulty} slings${l.launches} blk${l.blocks.length} tgt${l.targets.length}]`).join(', '));
 
