@@ -171,7 +171,8 @@ function heroLocked(slug){
 const LIB_BASE = GAME_CONFIG.libBase || "https://www.buildablekids.com/api/story-library";
 // The base picture only. The old cast asked for "&emo=happy", which is a SECOND
 // generated image per character; these prompts already bake in a happy running pose.
-function heroUrl(slug){ return LIB_BASE+"?img=character:"+slug+"&style="+(GAME_CONFIG.artStyle||"watercolor"); }
+// &w=256: a small WebP copy (~40 KB) instead of the 2 MB original; the hero is drawn 68px tall.
+function heroUrl(slug){ return LIB_BASE+"?img=character:"+slug+"&style="+(GAME_CONFIG.artStyle||"watercolor")+"&w=256"; }
 
 let W=900, VH=540; const H=540, TILE=60;       // H is the WORLD height and never moves (every platform y is baked from it).
                                                // W and VH are the VIEW: both follow the screen so the canvas always fills it.
@@ -331,21 +332,28 @@ let heroSlug=CAST[0].slug;
 function setHero(slug){ if(!CAST.some(c=>c.slug===slug)) slug=CAST[0].slug; heroSlug=slug; hero.src=heroUrl(slug); }
 function heroInfo(){ return CAST.find(c=>c.slug===heroSlug) || CAST[0]; }
 setHero(heroSlug);
-const bg=new Image(); bg.crossOrigin="anonymous";
 // HH4 — one art set PER WORLD, built the first time that world is played and kept after.
 // Four worlds used to be impossible here because the piece images were one global set
 // baked from GAME_CONFIG.world at load.
 const PIECE_NAMES=["far","tree_a","tree_b","bush_a","bush_b","fern","mushroom","canopy"];
 const WORLD_PROP_NAMES=["coin","gem","critter","boss"];
 const PROP_NAMES=["coin","gem","critter","vines","spring","flag"];
-const PR={}; for(const nm of PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img=props:"+nm+"&style="+ARTSTYLE; PR[nm]=im; }
+// LOAD SPEED: every picture is asked for at the size it is actually drawn (&w=), as a
+// small WebP. The originals are 1024px PNGs of about 2 MB each; a world used to be
+// ~60 MB and took 2-9 s per picture, so kids saw the drawn stand-ins for ages.
+// ART_W = logical draw size x2 for retina. ART_VER bumps a piece's URL after its art is
+// redrawn, because the small copies are edge-cached forever.
+const ART_W={ far:768, tree_a:768, tree_b:768, boss:512, vines:512, canopy:512, fern:512, bush_a:384, bush_b:384, mushroom:384 };
+const ART_VER={};
+function artUrl(world, nm){ const v=ART_VER[world+":"+nm]; return ART_BASE+"?img="+world+":"+nm+"&style="+ARTSTYLE+"&w="+(ART_W[nm]||256)+(v?"&v="+v:""); }
+const PR={}; for(const nm of PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=artUrl("props",nm); PR[nm]=im; }
 const ART_SETS={};
 function artSet(world){
   world = world || "enchanted-forest";
   if(ART_SETS[world]) return ART_SETS[world];
   const set={ world, pc:{}, wp:{} };
-  for(const nm of PIECE_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+world+":"+nm+"&style="+ARTSTYLE; set.pc[nm]=im; }
-  for(const nm of WORLD_PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=ART_BASE+"?img="+world+":"+nm+"&style="+ARTSTYLE; set.wp[nm]=im; }
+  for(const nm of PIECE_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=artUrl(world,nm); set.pc[nm]=im; }
+  for(const nm of WORLD_PROP_NAMES){ const im=new Image(); im.crossOrigin="anonymous"; im.src=artUrl(world,nm); set.wp[nm]=im; }
   ART_SETS[world]=set; return set;
 }
 let ART=artSet((GAME_CONFIG.levels[0]||{}).world);
@@ -624,10 +632,30 @@ let shieldOn=false, magnetT=0, springT=0, starT=0;  // power-up effect timers
 let poleT=0;                                       // flag-pole finish: slide, fanfare, next level
 let unlockToast=0;                                 // frames left on the "Remy is awake" banner
 
+// ART GATE: when a world starts, wait (up to 8 s) for its pictures and show a small
+// loading card, instead of playing with drawn stand-in blobs that swap to art mid-run.
+// A picture that fails still counts as done (img.complete is true on error), so a
+// missing piece never holds the game. Only the real browser loop checks this; the
+// headless QA drives update() directly and never waits.
+let artGateUntil=0;
+function imgDone(im){ return !im || !im.src || im.complete; }
+function worldArtReady(){
+  for(const k in ART.pc) if(!imgDone(ART.pc[k])) return false;
+  for(const k in ART.wp) if(!imgDone(ART.wp[k])) return false;
+  for(const k in PR) if(!imgDone(PR[k])) return false;
+  return imgDone(hero);
+}
+function drawLoading(){
+  const c4=(worldLook().sky)||DEFAULT_LOOK.sky, g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,c4[0]); g.addColorStop(1,c4[3]); ctx.fillStyle=g; ctx.fillRect(0,0,W,VH);
+  banner(L.name, "Getting the world ready");
+  const t=Date.now()/180, cy=VH*0.5+92;
+  for(let i=0;i<3;i++){ const y=cy-Math.max(0,Math.sin(t-i*0.9))*14; ctx.fillStyle="#ffd86b"; ctx.beginPath(); ctx.arc(W/2+(i-1)*30,y,9,0,Math.PI*2); ctx.fill(); }
+}
 function startLevel(i){
   li=Math.max(0,Math.min(LEVELS.length-1,i)); L=LEVELS[li];
   ART=artSet(L.world);                                  // the world's own trees, coins, critters and boss
-  { const u=LIB_BASE+"?img=world:"+L.world+"&style="+ARTSTYLE; if(bg.dataset===undefined || bg.src!==u) bg.src=u; }
+  artGateUntil = Date.now()+8000;
   player={x:90, y:GROUND_Y-60, vy:0, onGround:true, r:0, runV:L.speed*(power().speed||1), dj:false, slide:0, land:0, vx:0, face:1, swing:null, swingCool:0, standPf:null,
           coyote:coyoteF(), buf:0, skid:0, runPhase:0, idleT:0};
   helmet = power().helmet||0;                       // Finn's hard hat, one free bump per world
@@ -1623,7 +1651,10 @@ function tickHint(){                       // the hint has done its job once the
   if(hintGone||!hintEl) return;
   if(started && !demoMode && gameT>200){ hintGone=true; hintEl.style.transition='opacity .6s'; hintEl.style.opacity='0'; }
 }
-function frame(){ update(); draw(); tickHint(); requestAnimationFrame(frame); }
+function frame(){
+  if(artGateUntil){ if(Date.now()<artGateUntil && !worldArtReady()){ drawLoading(); requestAnimationFrame(frame); return; } artGateUntil=0; }
+  update(); draw(); tickHint(); requestAnimationFrame(frame);
+}
 startDemo();
 requestAnimationFrame(frame);
 

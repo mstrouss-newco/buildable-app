@@ -21,8 +21,10 @@ const STYLES = {
   papercut:   "layered CUT-PAPER COLLAGE illustration (Eric Carle style), textured construction-paper shapes, bold bright colors, visible paper edges",
   modern:     "clean MODERN flat children's-book illustration, bold simple shapes, smooth flat colors with subtle gradients, friendly and crisp",
 };
+import { smallWidth, toSmallWebp, SMALL_SIZES } from "./_small.js";
+
 function styleId(s) { return STYLES[s] ? s : "watercolor"; }
-const CUT = "A SINGLE isolated element, centered, full and complete, on a FULLY TRANSPARENT background. No ground, no floor line, no cast shadow, no frame, no other objects, no characters, no people, no animals, no text.";
+const CUT = "A SINGLE isolated element, centered, full and complete, drawn SMALLER than the frame so the WHOLE thing fits inside it with clear empty transparent space on all four sides (nothing touches or runs off any edge, the very top is fully visible), on a FULLY TRANSPARENT background. No ground, no floor line, no cast shadow, no frame, no other objects, no characters, no people, no animals, no text.";
 const SAFE = "age 4-8, wholesome, child-friendly";
 
 const WORLDS = {
@@ -255,7 +257,31 @@ export default async function handler(req, res) {
 
   if (img) {
     const [w, p] = String(img).split(":");
-    const b64 = await cacheGet(pieceKey(w, p, style));
+    const key = pieceKey(w, p, style);
+    const cc = "public, max-age=31536000, s-maxage=31536000, immutable, stale-while-revalidate=86400";
+    // ?w=384 etc: a small WebP copy (about 20x lighter). Cached on its own key so the
+    // big PNG is only read once per size, then served fast forever.
+    const sw = smallWidth(req.query);
+    if (sw) {
+      const skey = key + ":w" + sw;
+      let small = await cacheGet(skey);
+      if (!small) {
+        const big = await cacheGet(key);
+        if (!big) { res.status(404).json({ error: "not built", world: w, piece: p }); return; }
+        const buf = await toSmallWebp(big, sw);
+        if (buf) { small = buf.toString("base64"); await cachePut(skey, small); }
+        else {   // sharp unavailable: fall back to the original PNG
+          res.setHeader("Content-Type", "image/png"); res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Cache-Control", "public, max-age=3600"); res.status(200).send(Buffer.from(big, "base64")); return;
+        }
+      }
+      res.setHeader("Content-Type", "image/webp");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", cc);
+      res.status(200).send(Buffer.from(small, "base64"));
+      return;
+    }
+    const b64 = await cacheGet(key);
     if (!b64) { res.status(404).json({ error: "not built", world: w, piece: p }); return; }
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -269,12 +295,14 @@ export default async function handler(req, res) {
     if (!WORLDS[world]) { res.status(400).json({ error: "unknown world", world }); return; }
     if (!piece || !WORLDS[world].pieces[piece]) { res.status(400).json({ error: "unknown piece", world, piece, have: Object.keys(WORLDS[world].pieces) }); return; }
     const key = pieceKey(world, piece, style);
-    if (force) await cacheDel(key);
-    else { const ex = await cacheGet(key); if (ex) { res.status(200).json({ ok: true, cached: true, world, piece, style: styleId(style) }); return; } }
+    if (!force) { const ex = await cacheGet(key); if (ex) { res.status(200).json({ ok: true, cached: true, world, piece, style: styleId(style) }); return; } }
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) { res.status(500).json({ error: "no OPENAI_API_KEY" }); return; }
     const b64 = await genImage(promptFor(world, piece, style), openaiKey);
     if (!b64) { res.status(502).json({ error: "generation failed", world, piece }); return; }
+    // Replace only AFTER a good picture exists, so a failed redo never leaves a hole.
+    // The small copies are dropped too, or the game would keep showing the old art.
+    if (force) { await cacheDel(key); await Promise.all(SMALL_SIZES.map((n) => cacheDel(key + ":w" + n))); }
     await cachePut(key, b64);
     res.status(200).json({ ok: true, cached: false, world, piece, style: styleId(style) });
     return;

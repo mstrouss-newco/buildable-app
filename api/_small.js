@@ -1,0 +1,25 @@
+// Shrinks a cached 1024px PNG into a small WebP for game use.
+// A 2 MB PNG becomes roughly 30-120 KB. If sharp cannot load for any reason the
+// caller gets null back and serves the original PNG, so art never breaks.
+let _sharp;
+async function getSharp() {
+  if (_sharp !== undefined) return _sharp;
+  try { _sharp = (await import("sharp")).default; } catch { _sharp = null; }
+  return _sharp;
+}
+// Only these widths are allowed, so the edge cache holds a handful of copies, not hundreds.
+export const SMALL_SIZES = [128, 256, 384, 512, 768];
+export function smallWidth(q) {
+  const n = parseInt((q && q.w) || "", 10);
+  return SMALL_SIZES.includes(n) ? n : 0;
+}
+export async function toSmallWebp(b64, w) {
+  const sharp = await getSharp();
+  if (!sharp || !b64 || !w) return null;
+  try {
+    return await sharp(Buffer.from(b64, "base64"))
+      .resize({ width: w, height: w, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82, alphaQuality: 90, effort: 4 })
+      .toBuffer();
+  } catch { return null; }
+}

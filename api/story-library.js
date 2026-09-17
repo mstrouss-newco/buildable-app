@@ -9,6 +9,7 @@
 //   GET ?img=<kind>:<slug>&style=    -> serve the cached PNG bytes (short URL)
 // Env (owner, by name only): OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY.
 import crypto from "crypto";
+import { smallWidth, toSmallWebp } from "./_small.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -471,6 +472,17 @@ export default async function handler(req, res) {
     const key = (kind === "character" && emo && emo !== "base" && EMOS[emo]) ? exprKey(slug, style, emo) : cacheKey(kind, slug, style);
     const b64 = await cacheGet(key);
     if (!b64) { res.status(404).json({ ok: false, missing: true }); return; }
+    // ?w=256 etc: a small WebP copy for games (about 20x lighter). Edge-cached for a day
+    // and refreshed in the background, so a redrawn character still shows up.
+    const sw = smallWidth(q);
+    const small = sw ? await toSmallWebp(b64, sw) : null;
+    if (small) {
+      res.setHeader("Content-Type", "image/webp");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
+      res.status(200).send(small);
+      return;
+    }
     const buf = Buffer.from(b64, "base64");
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Access-Control-Allow-Origin", "*");
