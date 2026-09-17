@@ -3898,7 +3898,7 @@ function paintMinimap(){
 }
 // the slow half of the HUD: the pin's distance, the map, and the getting-warmer
 // chime. Ten times a second is plenty and keeps it off the render budget.
-var hudSlowT=0, warmT=0, warmAt=-99;
+var hudSlowT=0, warmT=0, warmAt=-99, WARM_BUDGET=5, warmLeft=5, warmLast=1e9;
 function hudSlow(dt){
   hudSlowT+=dt;
   if(hudSlowT<0.1) return;
@@ -3919,10 +3919,17 @@ function warmerStep(dt){
     var d=Math.hypot(S.pos.x-scouts[i].pt.x,S.pos.z-scouts[i].pt.z);
     if(d<best) best=d;
   }
-  if(best>620) return;
-  var gap=0.26+(Math.min(best,620)/620)*1.5;      // near = fast, far = slow
+  // CS1 (Mike: "the coin sound goes on forever"). This chime IS the coin
+  // clip, and a job you have not found is almost always within 620 of you,
+  // so it used to tick every second for the whole flight. Now it only
+  // speaks while you are actually closing in, never while the find pill is
+  // up, and each approach gets a small budget of chimes before it goes quiet.
+  if(best>620||pillJob){ warmLeft=WARM_BUDGET; warmLast=1e9; return; }
+  if(best>warmLast-25) return;                    // not getting closer: stay quiet
+  if(warmLeft<=0) return;                         // this approach has had its say
+  var gap=1.2+(Math.min(best,620)/620)*1.8;      // near = faster, far = slower
   if((time-warmAt)<gap) return;
-  warmAt=time; sfx("select",{vol:0.18});
+  warmAt=time; warmLast=best; warmLeft--; sfx("select",{vol:0.12});
 }
 
 function paintGoals(){

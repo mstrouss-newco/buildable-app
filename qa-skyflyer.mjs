@@ -796,8 +796,9 @@ chk('the map never steals a drag from the one-finger controls',
   /el\.addEventListener\("pointerdown",function\(e\)\{ e\.stopPropagation\(\); \}\)/.test(html));
 chk('the attract demo is still pure scenery - no map, no pin',
   /minimapEl\.style\.display="none";waypointEl\.style\.display="none";/.test(html));
-chk('the getting-warmer chime speeds up as you close on a job you have not found',
-  /function warmerStep\(/.test(html) && /var gap=0\.26\+\(Math\.min\(best,620\)\/620\)\*1\.5/.test(html) &&
+chk('the getting-warmer chime only plays while closing in, with a small budget (CS1)',
+  /function warmerStep\(/.test(html) && /var gap=1\.2\+\(Math\.min\(best,620\)\/620\)\*1\.8/.test(html) &&
+  /if\(best>warmLast-25\) return;/.test(html) && /if\(warmLeft<=0\) return;/.test(html) &&
   /if\(foundPts\[scouts\[i\]\.job\.id\]\) continue;/.test(html));
 chk('the buddy says the job out loud once when it starts', /sayJob\(m\);\s+\/\/ FL5b/.test(html));
 chk('every FL5b picture is drawn SVG - still not one emoji anywhere', !emoji.test(html));

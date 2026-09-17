@@ -171,7 +171,7 @@ const LANDING_WRAP = {
   typing: { play: SCREEN_TYPING, journey: true, demo: "/typing.html?v=2&screen=demo" },
   mathcannon: { play: SCREEN_MATHCANNON, journey: true, demo: "/mathcannon-engine.html?v=2&screen=demo" },
   "paper-route": { play: SCREEN_PAPERROUTE, journey: true, demo: "/paper-route-engine.html?v=pb1&screen=demo" },
-  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=fm3&screen=demo" },
+  skyflyer: { play: SCREEN_SKYFLYER, loadout: true, journey: true, demo: "/skyflyer-engine.html?v=cs1&screen=demo" },
   farm: { play: SCREEN_FARM },
   platformer: { play: SCREEN_PLATFORMER },
   town: { play: SCREEN_TOWN },
@@ -1539,7 +1539,7 @@ function SkyFlyerScreen({ onHome, level }) {
   // FL5: jobs are found out in the world, not offered on a card when you arrive,
   // so the shell hands over exactly what it always did - a world and a ride. The
   // shell journey stays the one and only level picker (the 7J double-picker rule).
-  const src = "/skyflyer-engine.html?v=fm3&ride=" + ride + (level != null ? "&level=" + level : "");
+  const src = "/skyflyer-engine.html?v=cs1&ride=" + ride + (level != null ? "&level=" + level : "");
   // FL4 learning moment: the engine asks before the NEXT world unlocks, exactly
   // like Breaker. The shell is the authority — the parent's Learning Mode toggle
   // overrides the manifest default, and if it is off we answer "done" instantly

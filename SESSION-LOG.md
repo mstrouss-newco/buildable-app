@@ -1,3 +1,16 @@
+## 2026-09-17 (CS1): the Sky Flyer coin sound that never stopped
+
+Mike: "skyflyer coin sound goes on forever, fix". Not the coins themselves. The FL5b
+"getting warmer" chime (`warmerStep` in `public/skyflyer-engine.html`) plays
+`sfx("select")`, and `select` maps to the `sky_coin` clip. It fired every 0.9 to 1.8s
+whenever ANY unfound job was within 620 units, which in the islands world is nearly the
+whole flight. It skips autopilot, so the autopilot sound-rate check never saw it.
+
+Now it only chimes while the plane is actually closing in (25 units closer than the last
+chime), never while the find pill is up, 1.2 to 3s apart, softer (0.12), and each
+approach gets 5 chimes before it goes quiet (budget refills once you are 620+ away).
+QA check in `qa-skyflyer.mjs` updated. Shell cache-bust fm3 to cs1 on both engine links.
+
 ## 2026-09-15 (FM12): the beds, the signs, the pond, and she was walking backwards
 
 **Phase FM, card FM12**, off a screenshot Mike sent of the live farm: "the highlighted
