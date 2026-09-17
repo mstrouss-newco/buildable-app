@@ -276,6 +276,40 @@ main{flex:1;padding:0 16px 40px}
 .hidden{display:none!important}
 .mocknote{max-width:560px;margin:0 auto;padding:14px 16px 26px;font-size:13px;color:var(--sub);font-weight:800;line-height:1.5}
 </style>
+
+<style id="bkb-css">
+/* Buildable beta door. Scoped .bkb- so it cannot touch anything else. */
+.bkb-row{margin:26px 0 8px;padding-top:18px;border-top:2px dashed var(--line,#EDE5D6);text-align:center}
+.bkb-pill{display:inline-flex;align-items:center;gap:6px;background:#fff;border:2px solid #E2D8FF;
+  border-radius:999px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:900;
+  color:#7C5CFC;cursor:pointer;line-height:1}
+.bkb-pill:active{transform:scale(.97)}
+.bkb-dot{width:8px;height:8px;border-radius:50%;flex:none;
+  background:linear-gradient(90deg,#7C5CFC 0%,#FF6B6B 100%)}
+.bkb-line{font-size:12px;color:#6E6684;line-height:1.5;font-weight:800;margin:10px auto 0;max-width:330px}
+.bkb-veil{position:fixed;inset:0;background:rgba(15,14,23,.42);z-index:9998;display:none;
+  align-items:flex-end;justify-content:center;padding:14px}
+.bkb-veil.on{display:flex}
+.bkb-sheet{background:#fff;border-radius:24px;padding:20px;width:100%;max-width:420px;
+  box-shadow:0 -6px 40px rgba(15,14,23,.2);position:relative;
+  font-family:'Nunito',system-ui,sans-serif;font-weight:800;color:#0F0E17;text-align:left}
+.bkb-x{position:absolute;top:12px;right:14px;background:none;border:none;font-size:22px;
+  color:#C9C0DC;cursor:pointer;line-height:1;font-family:inherit;padding:4px}
+.bkb-tag{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+  color:#fff;background:#7C5CFC;padding:4px 10px;border-radius:999px;margin-bottom:10px}
+.bkb-sheet h3{font-family:'Fredoka','Nunito',sans-serif;font-weight:600;font-size:20px;
+  margin:0 0 7px;line-height:1.22;padding-right:20px}
+.bkb-sheet p{font-size:13.5px;color:#6E6684;line-height:1.5;margin:0 0 13px;font-weight:800}
+.bkb-in{width:100%;border:2px solid #EDE5D6;border-radius:13px;padding:13px;font-size:16px;
+  font-family:inherit;font-weight:800;background:#FDFAF5;color:#0F0E17;-webkit-appearance:none}
+.bkb-in:focus{outline:none;border-color:#B9A6FF;background:#fff}
+.bkb-go{width:100%;border:none;border-radius:13px;padding:14px;margin-top:9px;color:#fff;cursor:pointer;
+  background:linear-gradient(90deg,#7C5CFC 0%,#FF6B6B 100%);
+  font-family:'Fredoka','Nunito',sans-serif;font-weight:600;font-size:16.5px}
+.bkb-go[disabled]{opacity:.55}
+.bkb-fine{font-size:11px;color:#6E6684;text-align:center;margin:11px 0 0;line-height:1.45;font-weight:800}
+.bkb-err{color:#C0392B;font-size:12.5px;margin:8px 0 0;text-align:center;font-weight:900}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -361,6 +395,12 @@ main{flex:1;padding:0 16px 40px}
       <button class="big go" id="start">START</button>
       <button class="big ghost" id="toPrint">Print this sheet on paper</button>
       <button class="big ghost" id="toKey">Print sheet and answer key</button>
+
+      <div class="bkb-row">
+        <button class="bkb-pill" type="button" data-bkb-open><span class="bkb-dot"></span>Customize</button>
+        <p class="bkb-line">Made by a dad who was sick of the ads. Pick the facts, the timer, the look and the name, and make this yours.</p>
+      </div>
+
     </main>
   </section>
 
@@ -1110,6 +1150,72 @@ offerMerge();
 syncStart();
 syncDown();
 $("setupBack").onclick=function(){ location.href = "/lessons"; };
+</script>
+
+<div class="bkb-veil" id="bkbVeil">
+  <div class="bkb-sheet" role="dialog" aria-modal="true" aria-labelledby="bkbHead">
+    <button class="bkb-x" id="bkbX" type="button" aria-label="Close">&times;</button>
+    <span class="bkb-tag">Customize</span>
+    <div id="bkbForm">
+      <h3 id="bkbHead">Want your own version of this?</h3>
+      <p>A dad built this because he was sick of the ads. There is a whole app behind it: ad-free games, and practice you set up for your own kid, with their name on it. We are opening a small beta soon.</p>
+      <input class="bkb-in" id="bkbEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
+      <button class="bkb-go" id="bkbGo" type="button">Join the beta</button>
+      <p class="bkb-err" id="bkbErr" style="display:none"></p>
+      <p class="bkb-fine">No ads. No spam. One email when it opens.</p>
+    </div>
+    <div id="bkbThanks" style="display:none">
+      <h3>You are on the list.</h3>
+      <p>We will write once, when the beta opens. Nothing else, ever.</p>
+      <button class="bkb-go" id="bkbDone" type="button">Back to it</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var SRC = "minutemath";
+  var KEY = "bkb_joined";
+  var veil = document.getElementById("bkbVeil");
+  if(!veil) return;
+  var form = document.getElementById("bkbForm"), thanks = document.getElementById("bkbThanks");
+  var email = document.getElementById("bkbEmail"), go = document.getElementById("bkbGo");
+  var err = document.getElementById("bkbErr");
+  function joined(){ try{ return localStorage.getItem(KEY) === "1"; }catch(e){ return false; } }
+  function markJoined(){ try{ localStorage.setItem(KEY,"1"); }catch(e){} }
+  function show(){
+    if(joined()){ form.style.display="none"; thanks.style.display="block"; }
+    else { form.style.display="block"; thanks.style.display="none"; }
+    err.style.display="none"; veil.classList.add("on");
+  }
+  function hide(){ veil.classList.remove("on"); }
+  var openers = document.querySelectorAll("[data-bkb-open]");
+  for(var i=0;i<openers.length;i++){
+    openers[i].addEventListener("click", function(e){ e.preventDefault(); show(); });
+  }
+  document.getElementById("bkbX").addEventListener("click", hide);
+  var doneBtn = document.getElementById("bkbDone");
+  if(doneBtn) doneBtn.addEventListener("click", hide);
+  veil.addEventListener("click", function(e){ if(e.target === veil) hide(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") hide(); });
+  go.addEventListener("click", function(){
+    var v = (email.value || "").trim();
+    if(v.indexOf("@") < 1 || v.indexOf(".") < 2){
+      err.textContent = "That does not look like an email address.";
+      err.style.display = "block"; return;
+    }
+    err.style.display = "none"; go.disabled = true; go.textContent = "Saving...";
+    fetch("/api/cobuild-lead", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ kind:"lead", email:v, source:SRC, plan:"beta" })
+    }).then(function(r){
+      if(!r.ok) throw new Error("save failed");
+      markJoined(); form.style.display="none"; thanks.style.display="block";
+    }).catch(function(){
+      err.textContent = "That did not save. Try again in a moment.";
+      err.style.display = "block";
+    }).then(function(){ go.disabled = false; go.textContent = "Join the beta"; });
+  });
+})();
 </script>
 </body>
 </html>
