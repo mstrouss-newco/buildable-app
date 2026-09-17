@@ -32,7 +32,7 @@ const WORLDS = {
     name: "Enchanted Forest",
     pieces: {
       far:      "A soft band of distant misty forest: rows of faraway pale blue-green tree silhouettes fading into haze, very low contrast, dreamy depth, the top and bottom edges soft and feathered",
-      tree_a:   "A single tall ancient enchanted-forest tree with a thick mossy trunk and a big lush rounded leafy canopy, soft glowing green, complete from base to treetop",
+      tree_a:   "A single ancient enchanted-forest tree with a thick mossy trunk and a lush rounded leafy crown, soft glowing green, drawn SMALL in the lower middle of the picture so the whole round crown sits well below the top edge with plenty of empty space above it",
       tree_b:   "A single slender curving birch-like magical forest tree with delicate leaves and a few glowing motes, lighter and airier than a big oak",
       bush_a:   "A single rounded leafy forest bush, soft layered green foliage with a couple of tiny wildflowers",
       bush_b:   "A single small fern-and-leaf shrub clump, feathery green fronds",
@@ -151,7 +151,7 @@ const WORLDS = {
     name: "Candy Land",
     pieces: {
       far:      "A soft band of distant pastel candy hills and gumdrop mountains with fluffy cotton-candy clouds fading into a sweet pink haze, very low contrast, dreamy depth, edges soft and feathered",
-      tree_a:   "A single tall lollipop tree with a swirly striped trunk and a big round candy-swirl top, bright pastel colors, complete from base to top",
+      tree_a:   "A single lollipop tree with a swirly striped trunk and a round candy-swirl top, bright pastel colors, drawn SMALL in the lower middle of the picture so the whole round top sits well below the top edge with plenty of empty space above it",
       tree_b:   "A single slender peppermint candy-cane tree with a few little gumdrops, lighter and airier",
       bush_a:   "A single rounded clump of pastel gumdrops and swirly frosting, soft and sweet",
       bush_b:   "A single small clump of colorful jellybeans with a little swirl lollipop",
