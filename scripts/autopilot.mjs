@@ -23,8 +23,10 @@
 // It stops the moment anything is off: the session exits non-zero, or the card is
 // not marked done afterwards. That is deliberate. A chain that ploughs past a
 // half-finished card builds the next card on top of broken work.
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { gateCheck } from './git-gate.mjs';
 
 const API = process.env.PLANNER_URL || 'https://www.buildablekids.com/api/planner';
@@ -59,6 +61,9 @@ const TURNS = val('turns', null);
 const WATCH = has('watch');
 const LANE = String(val('lane', process.env.AUTOPILOT_LANE || '1'));
 const POLL_SECONDS = 20;
+// How long a lane sits out after it could not start a session at all. Long enough
+// that a stuck login does not spin, short enough that signing in gets going again.
+const BLOCKED_MINUTES = 10;
 // --phase / --card are manual overrides. Everything else comes from the planner.
 let PHASE = val('phase', null);
 let MAX = Math.max(1, parseInt(val('max', DEFAULT_MAX), 10) || DEFAULT_MAX);
@@ -195,17 +200,82 @@ function childEnv() {
   return env;
 }
 
+// The session's output is echoed straight through as before, but a tail of it is
+// kept so the runner can tell WHY a session died. Without this a login that expired
+// three hours ago looks exactly like a card that failed, and the phase is thrown away.
 function runSession(prompt) {
   const args = ['-p', prompt, '--permission-mode', PERM];
   if (TURNS) args.push('--max-turns', String(TURNS));
+  const startedAt = Date.now();
   return new Promise((resolve) => {
-    const p = spawn('claude', args, { stdio: 'inherit', env: childEnv() });
-    p.on('error', (e) => resolve(e.code === 'ENOENT' ? 'missing' : 'error'));
-    p.on('close', (code) => resolve(code));
+    let text = '';
+    const keep = (buf, out) => { out.write(buf); text = (text + buf.toString()).slice(-8000); };
+    const p = spawn('claude', args, { stdio: ['inherit', 'pipe', 'pipe'], env: childEnv() });
+    if (p.stdout) p.stdout.on('data', (b) => keep(b, process.stdout));
+    if (p.stderr) p.stderr.on('data', (b) => keep(b, process.stderr));
+    const out = (code) => resolve({ code, text, seconds: (Date.now() - startedAt) / 1000 });
+    p.on('error', (e) => out(e.code === 'ENOENT' ? 'missing' : 'error'));
+    p.on('close', (code) => out(code));
   });
 }
 
+// A session that never got off the ground did NOT fail the card. The machine could
+// not start a session at all — an expired login, a missing subscription, a Claude
+// that will not launch. That must hand the phase back rather than eat it, or one
+// expired token quietly burns every phase you queue, four seconds each.
+const CANNOT_START = /(oauth|authentication_error|failed to authenticate|401|invalid api key|api key not valid|please run .{0,12}login|credit balance|rate limit)/i;
+function cannotStart(r) {
+  if (r.code === 0) return null;
+  if (CANNOT_START.test(r.text || '')) {
+    return /credit balance|rate limit/i.test(r.text)
+      ? 'Claude would not start a session on this Mac (billing or rate limit).'
+      : 'Your Mac needs to sign in to Claude again.';
+  }
+  if (r.seconds < 30) return 'The session quit after ' + Math.round(r.seconds) + 's without starting any work.';
+  return null;
+}
+
+// ---- keeping the lane's own code fresh --------------------------------------
+// A lane window used to run whatever was on disk when it was opened, and its folder
+// was only put on the latest main at that same moment. So a lane that had been
+// waiting two days started a card on two-day-old code, and a runner fix could sit in
+// main for weeks while every lane carried on with the broken version. Both are fixed
+// by syncing when a phase is claimed, before the first card.
+const RUNNER_FILES = ['scripts/autopilot.mjs', 'scripts/repo-sync.sh', 'scripts/lane-run.sh',
+                      'scripts/planner.mjs', 'scripts/git-gate.mjs'];
+function runnerStamp() {
+  const h = createHash('sha1');
+  for (const f of RUNNER_FILES) { try { h.update(readFileSync(f)); } catch { h.update('-'); } }
+  return h.digest('hex');
+}
+function syncRepo() {
+  if (!existsSync('scripts/repo-sync.sh')) return;
+  try { execFileSync('bash', ['scripts/repo-sync.sh', process.cwd()], { stdio: 'inherit' }); }
+  catch { say('could not sync this folder to the latest main. Carrying on with what is here.'); }
+}
+// Restart into the new code without needing the window reopened. The old process
+// stays as a thin wrapper so the lane lock file (which holds its pid) stays valid.
+function restartIntoNewCode() {
+  say('\nThe runner scripts changed on main. Restarting this lane on the new ones.\n');
+  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...argv],
+    { stdio: 'inherit', env: process.env });
+  child.on('close', (c) => process.exit(c || 0));
+  child.on('error', () => process.exit(1));
+}
+
 // ---- talking back to the planner -------------------------------------------
+// Hand a phase back untouched. `release` puts it at the FRONT of the queue, so a
+// phase that could not be started is the next thing tried, not the last.
+async function post(body) {
+  try {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body) });
+    return await r.json().catch(() => ({}));
+  } catch { return {}; }
+}
+const releasePhase = () => post({ op: 'release', lane: LANE });
+const requeuePhase = (phase, max) => post({ op: 'queue', phase, max });
+
 async function setStatus(status, extra) {
   try {
     await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -256,12 +326,21 @@ async function workRun() {
     // card apart from a dead runner. The elapsed clock ticks in the browser.
     const keepalive = setInterval(() => { setStatus('running', detail); heartbeat('working ' + card.id); }, 60000);
 
-    const code = await runSession(prompt);
+    const run = await runSession(prompt);
     clearInterval(keepalive);
-    if (code === 'missing') die('could not find the `claude` command on this machine.');
-    if (code !== 0) {
-      say(`\nthe session for ${card.id} exited with code ${code}.`);
-      return { done: doneCount, reason: `${card.id} errored (exit ${code})`, finished, waiting };
+    if (run.code === 'missing') die('could not find the `claude` command on this machine.');
+    // Could not START a session (expired login, billing, a Claude that will not launch)?
+    // Hand the phase back untouched. `blocked` travels up to the watch loop, which
+    // requeues the phase and sits out for a while instead of grabbing more work.
+    const blocked = cannotStart(run);
+    if (blocked) {
+      say(`\n${blocked}`);
+      say('Nothing was worked. Phase ' + PHASE + ' goes back in the queue.');
+      return { done: doneCount, reason: blocked, blocked, finished, waiting };
+    }
+    if (run.code !== 0) {
+      say(`\nthe session for ${card.id} exited with code ${run.code}.`);
+      return { done: doneCount, reason: `${card.id} errored (exit ${run.code})`, finished, waiting };
     }
 
     // The verification gate: believe the planner, not the session's own summary.
@@ -395,8 +474,30 @@ if (MANUAL) {
       PHASE = String(next.phase);
       MAX = Math.max(1, parseInt(next.max, 10) || DEFAULT_MAX);
       say(`\nLane ${LANE} took phase ${PHASE} (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
+
+      // Put this folder on the latest main BEFORE the first card. If that also
+      // brought in a new runner, hand the phase straight back and restart into it —
+      // otherwise this window keeps running the version it was opened with, forever.
+      const stampBefore = runnerStamp();
+      syncRepo();
+      if (runnerStamp() !== stampBefore) {
+        await releasePhase();
+        restartIntoNewCode();
+        break;
+      }
+
       const r = await workRun();
       report(r);
+      if (r.blocked) {
+        // Nothing was worked and nothing is wrong with the cards. Say why in the
+        // planner, put the phase back, and sit out — otherwise four lanes would
+        // chew through every queued phase in under a minute.
+        await setStatus('blocked', { note: r.blocked, card: '', cardName: '', startedAt: null, done: 0, finished: [] });
+        await requeuePhase(PHASE, MAX);
+        say(`Phase ${PHASE} is back in the queue. Lane ${LANE} waits ${BLOCKED_MINUTES} minutes before trying again.\n`);
+        await new Promise((res) => setTimeout(res, BLOCKED_MINUTES * 60000));
+        continue;
+      }
       await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
         { note: endNote(r),
           card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
@@ -421,7 +522,12 @@ if (MANUAL) {
   say(`Lane ${LANE} took phase ${PHASE} (up to ${MAX} card${MAX === 1 ? '' : 's'}).`);
   const r = await workRun();
   report(r);
-  await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
-    { note: endNote(r),
-      card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
+  if (r.blocked) {
+    await setStatus('blocked', { note: r.blocked, card: '', cardName: '', startedAt: null, done: 0, finished: [] });
+    await requeuePhase(PHASE, MAX);
+  } else {
+    await setStatus(r.reason === 'finished' ? 'done' : 'stopped',
+      { note: endNote(r),
+        card: '', cardName: '', startedAt: null, done: r.done, finished: r.finished || [] });
+  }
 }

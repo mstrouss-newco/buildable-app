@@ -1,3 +1,57 @@
+## 2026-09-18 (RN5): the phase runner, QA'd end to end and five faults fixed
+
+Mike: "look at the phase runner in the planner, it has never worked, q/a and see how to
+fix." Audited the whole chain: `scripts/autopilot.mjs`, `scripts/lane-run.sh`,
+`scripts/repo-sync.sh`, the `queue`/`claim`/`release` ops in `api/planner.js`, the live
+`planner_queue` / `planner_lanes` tables, and all four lane logs.
+
+**What was actually happening.** The Mac's Claude Code login had expired. Every session the
+runner started died in two seconds with `OAuth access token has expired`. On the night of
+2026-09-17 that ate two whole phases (LK at 22:33, PB at 22:34) in ninety seconds, and
+neither could ever be re-run.
+
+### The five faults
+
+1. **A dead login looked exactly like a failed card.** `runSession` only saw `exit 1`, so
+   the phase was consumed and reported as the card's failure.
+2. **After any failure that phase could never run again.** `op:"queue"` refused a phase if
+   *any* lane row mentioned it, regardless of status. A lane row left behind by a run that
+   stopped hours earlier answered "already being worked" forever. The only cure was closing
+   the lane window, which is why restarting the windows seemed to "fix" the runner.
+3. **Lanes built on stale code.** `repo-sync.sh` ran once, when the window opened. A lane
+   that had been waiting two days started its card on two-day-old code, then fought a
+   conflict at push time. Lanes 2, 3 and 4 were a day behind main when this was found.
+4. **The lane-restart trap was still live.** A window ran whatever `autopilot.mjs` was on
+   disk when it opened. That is why FL15 and SD4 stopped their lane on a `review` outcome
+   weeks after RN2 had fixed exactly that.
+5. **Four lanes do not split one phase.** A phase goes to exactly one lane. Lanes 3 and 4
+   have never taken a single phase in the whole log history. Behaviour, not a bug, but
+   worth knowing: four lanes only help if four phases are queued.
+
+### What changed
+
+- **`scripts/autopilot.mjs`** — the session's output is now teed through a pipe and kept
+  (last 8KB) so `cannotStart()` can tell a machine that could not start a session from a
+  card that failed. On a `blocked` result nothing is blamed on the card: the lane reports
+  `status:"blocked"` with a plain note, puts the phase back in the queue, and sits out
+  `BLOCKED_MINUTES` (10) instead of grabbing more work. Also: `syncRepo()` runs at claim
+  time, before card one, and if that sync changed any of the five runner files
+  (`runnerStamp()`), the lane hands the phase back with `op:"release"` and restarts itself
+  into the new code, keeping the old process as a thin wrapper so the lane lock file stays
+  valid. No more window reopening to pick up a runner fix.
+- **`api/planner.js`** — `op:"queue"` now refuses a phase only when a lane is actually
+  `running` it. A stopped or blocked lane row is history, not a claim.
+- **`public/planner.html`** — a `blocked` lane paints amber with what to do about it rather
+  than red, and a stopped lane with cards still open gets a **Try this phase again** button
+  that clears the dead row and re-queues in one tap.
+
+### Proven, not assumed
+
+Ran the whole loop against a local stub planner with a fake `claude` that prints the real
+401 and exits 1: the phase came back to the queue, the lane went `blocked` with the right
+note, nothing was marked failed. Then made the fake sync change a runner file: the lane
+released the phase, restarted, re-claimed the same phase and worked it. Both paths clean.
+
 ## 2026-09-17 (CS1): the Sky Flyer coin sound that never stopped
 
 Mike: "skyflyer coin sound goes on forever, fix". Not the coins themselves. The FL5b

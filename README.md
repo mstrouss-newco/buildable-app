@@ -6,6 +6,23 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
+## RN5 — the phase runner tells the truth about itself (September 18 2026)
+`scripts/autopilot.mjs`, `api/planner.js`, `public/planner.html`. Phase **RN**, card **RN5**.
+
+Five faults found by QA'ing the runner end to end. A Claude login that had expired made
+every session die in two seconds, and the runner could not tell that apart from a card
+that failed, so it ate two whole phases in ninety seconds. A phase could then never be
+re-run, because the leftover lane row still counted as a claim. Lanes also built on
+whatever code was on disk when their window opened.
+
+Now: a session that cannot start hands its phase back and says so in plain words, the
+lane sits out ten minutes instead of chewing the queue, "Run this phase" only refuses a
+phase a lane is really running, a stopped phase has a **Try this phase again** button,
+and every lane syncs to the latest main when it claims a phase and restarts itself if
+that sync brought a new runner.
+
+---
+
 ## AC10 — Ant City: a real meadow, real soil, and food is the only drop (September 8 2026)
 `public/antcity-engine.html`, `public/antcity/manifest.json`, `public/antcity/art/world/`,
 `scripts/nature-shot.mjs`, `db/register-antcity-world-sprites.sql`, `qa-antcity.mjs`.

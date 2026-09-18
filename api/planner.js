@@ -269,9 +269,15 @@ export default async function handler(req, res) {
         if (phases.length && !phases.some((p) => String(p.num) === phase)) {
           return res.status(200).json({ ok: false, error: "no phase " + phase, phases: phases.map((p) => p.num) });
         }
+        // ONLY a lane that is actually running this phase may block it. A lane row
+        // left behind by a run that stopped is history, not a claim — and treating
+        // it as a claim is what made a phase permanently un-runnable after any
+        // failure: "Run this phase" answered "already being worked" for a lane that
+        // had died hours earlier, and the only cure was closing the lane window.
         const lanes = await getLanes();
-        if (lanes.some((L) => String(L.phase) === phase)) {
-          return res.status(200).json({ ok: false, error: "phase " + phase + " is already being worked" });
+        const busy = lanes.find((L) => String(L.phase) === phase && L.status === "running");
+        if (busy) {
+          return res.status(200).json({ ok: false, error: "phase " + phase + " is already being worked by lane " + busy.lane });
         }
         const open = ((d.roadmap && d.roadmap.sessions) || [])
           .filter((s) => String(s.phaseNum) === phase && !s.done && !s.later).length;
