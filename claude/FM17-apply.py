@@ -70,11 +70,15 @@ function itemCard(kind, rad, opt){
   // The painted pictures fill their own square corner to corner, so a picture
   // sized against the whole card hangs over its frame. It is sized against the
   // sand SLOT inside the card instead, which is where a picture actually goes.
-  // Its z stays at zero: the card's own panels sit behind it along the view
-  // axis once the card turns to face you, so any offset here would slide the
-  // picture off the card on screen rather than in depth.
-  var pic=wantItemMesh(kind, rad*1.42);
-  g.add(pic);
+  // And it lives INSIDE the card rather than beside it. The card's panels sit
+  // most of a world unit behind the card's own origin, and once the card turns
+  // to face you that offset runs along the view axis - which for anything away
+  // from the middle of the screen still slides it toward the vanishing point.
+  // The picture was standing still while its frame slid off under it. As a
+  // child of the card it cannot come apart from it at any angle.
+  var pic=wantItemMesh(kind, rad*1.50);
+  pic.position.z=-0.66;
+  bub.add(pic);
   g.userData.bubble=bub; g.userData.pic=pic; g.userData.card=1;
   return g;
 }
@@ -248,7 +252,7 @@ sub("askring-pulse",
         A.askRing.userData.pool.opacity=0.16+0.22*ao;""")
 
 # ------------------------------------------------------------- 6. the version
-sub("version", 'version: "fm16"', 'version: "fm17c"')
+sub("version", 'version: "fm16"', 'version: "fm17d"')
 
 io.open(OUT,'w',encoding='utf-8').write(s)
 print("wrote", OUT, len(s))
