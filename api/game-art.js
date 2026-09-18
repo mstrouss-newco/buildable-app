@@ -164,6 +164,36 @@ const WORLDS = {
       boss:     "a big friendly giant gumdrop creature wearing a little gold crown, glossy pastel pink, big happy eyes and a gentle smile, cute and round, harmless and royal, NEVER scary, a friendly game boss",
     },
   },
+  // PB4 — the SUBURB set. Paper Route shipped on flat vector SVGs and read as clip
+  // art next to Hop Heroes, so its whole street is rebuilt as real watercolor
+  // cut-outs through this pipeline. Every piece is a single isolated element on a
+  // transparent background, generated once and cached forever, and the game keeps
+  // its drawn geometry underneath every one of them. Tagged suburb/town/beach in
+  // the shared library, so any project can build a street out of these.
+  //
+  // The rider, the car and the van are drawn FROM BEHIND on purpose: the camera in
+  // Paper Route is over the kid's shoulder, so a three-quarter front view of a bike
+  // would face the wrong way down the road.
+  "suburb": {
+    name: "Suburb Street",
+    pieces: {
+      house_a:  "A single small friendly suburban family house seen from the front, cream painted walls, a warm red pitched roof, a wooden front door and two windows with white frames, a little porch step",
+      house_b:  "A single small friendly suburban family house seen from the front, soft blue painted walls, a grey-blue pitched roof, a covered porch with two slim posts, a yellow front door and two windows",
+      house_c:  "A single small friendly suburban cottage seen from the front, pale mint-green walls, a soft brown shingled pitched roof, a bay window, a red brick chimney and a flower box under the window",
+      tree:     "A single round leafy street tree with a slim brown trunk and a full soft green crown, the kind that stands on a front lawn, complete from the base of the trunk to the top of the crown",
+      bush:     "A single rounded garden bush of soft layered green foliage with a few tiny white and pink flowers in it",
+      mailbox:  "A single white kerbside letterbox, a rounded tin box on a slim wooden post, the little signal flag folded flat down against its side, seen from slightly to one side",
+      flag_up:  "A single small bright red mailbox signal flag raised upright on a short white post, just the flag and its post, nothing else",
+      flag_down:"A single small green mailbox signal flag folded flat down against a short white post, just the flag and its post, nothing else",
+      rider:    "A single cheerful child riding a bicycle seen FROM BEHIND, the back of the helmet and jacket and the rear wheel facing the viewer, a canvas bag of rolled newspapers on the back rack, riding away from us",
+      bin:      "A single green wheelie rubbish bin with a closed lid and two little wheels, standing upright",
+      cone:     "A single orange traffic cone with one white reflective band around it, standing upright on its square base",
+      car:      "A single friendly little family car seen FROM BEHIND, the rear window, boot and two red tail lights facing the viewer, soft blue paint, rounded and cartoonish",
+      icecream: "A single friendly ice cream van seen FROM BEHIND, the back doors and serving hatch facing the viewer, cream and pastel blue paint with a big swirl cone model on its roof",
+      paper:    "A single rolled-up newspaper tied with a rubber band, lying at a slight angle, cream paper with a hint of grey print",
+      bundle:   "A single tied bundle of folded newspapers, a short stack with a string crossing over the top, cream paper with a hint of grey print",
+    },
+  },
   "story-icons": {
     name: "Story Choice Icons",
     pieces: {

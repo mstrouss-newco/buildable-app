@@ -1,0 +1,72 @@
+# Card PB4 — the art oven.
+#
+# Pictures in the shared art library are generated ONCE and cached forever. The
+# generating is done by /api/game-art on the live site, which is the only place
+# the OpenAI key lives — nothing here holds a key or a secret.
+#
+# This Action exists because the build sessions run in a sandbox with no way out
+# to the site, so there was no way to say "paint the suburb set" without asking
+# the owner to open a terminal. Now a session (or the owner, from the Actions tab)
+# can ask GitHub to do it. It is safe to re-run: a piece that is already painted
+# is left exactly as it is unless `force` is ticked.
+#
+#   world  which set to paint (e.g. suburb)
+#   style  watercolor (the house look) unless there is a reason
+#   force  repaint pieces that already exist. Costs about a penny each. Off by default.
+
+name: Warm game art
+
+on:
+  workflow_dispatch:
+    inputs:
+      world:
+        description: 'Which world to paint (e.g. suburb)'
+        required: true
+        default: 'suburb'
+      style:
+        description: 'Art style'
+        required: false
+        default: 'watercolor'
+      force:
+        description: 'Repaint pieces that already exist'
+        required: false
+        default: 'false'
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Paint every piece in the world, one at a time
+        env:
+          SITE: ${{ vars.QA_SITE_URL || 'https://www.buildablekids.com' }}
+          WORLD: ${{ inputs.world }}
+          STYLE: ${{ inputs.style }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -u
+          PIECES=$(curl -sS --max-time 60 "$SITE/api/game-art" \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const w=JSON.parse(s).worlds[process.env.WORLD];
+                if(!w){console.error("unknown world "+process.env.WORLD);process.exit(1);}
+                console.log(w.pieces.join(" "));})')
+          echo "Painting: $PIECES"
+          FAILED=""
+          for P in $PIECES; do
+            Q="$SITE/api/game-art?build=1&world=$WORLD&piece=$P&style=$STYLE"
+            [ "$FORCE" = "true" ] && Q="$Q&force=1"
+            OUT=$(curl -sS --max-time 180 "$Q" || echo '{"error":"request failed"}')
+            echo "  $P -> $OUT"
+            case "$OUT" in *'"ok":true'*) ;; *) FAILED="$FAILED $P" ;; esac
+            sleep 2
+          done
+          echo "--- checking every piece really serves ---"
+          for P in $PIECES; do
+            CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 \
+              "$SITE/api/game-art?img=$WORLD:$P&style=$STYLE")
+            echo "  $P -> HTTP $CODE"
+            [ "$CODE" = "200" ] || FAILED="$FAILED $P(serve)"
+          done
+          if [ -n "$FAILED" ]; then echo "NOT PAINTED:$FAILED"; exit 1; fi
+          echo "every piece in $WORLD is painted and serving"

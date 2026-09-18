@@ -33,13 +33,13 @@
   "art": {
     "badge": "paper-route/badge/v1",
     "loadingScreen": "paper-route/loading/v1",
-    "hero": "paper-route/rider/classic-v1",
-    "rider": "paper-route/rider/classic-v1",
-    "paper": "paper-route/paper/rolled-v1",
-    "bundle": "paper-route/bundle/tied-v1",
-    "mailbox": "paper-route/mailbox/white-v1",
-    "flagUp": "paper-route/flag/up-v1",
-    "flagDown": "paper-route/flag/down-v1"
+    "hero": "suburb/rider/v1",
+    "rider": "suburb/rider/v1",
+    "paper": "suburb/paper/v1",
+    "bundle": "suburb/bundle/v1",
+    "mailbox": "suburb/mailbox/v1",
+    "flagUp": "suburb/flag/up-v1",
+    "flagDown": "suburb/flag/down-v1"
   },
   "levels": [
     {
@@ -274,14 +274,15 @@
           }
         ],
         "art": {
-          "houseA": "paper-route/house/cream-v1",
-          "houseB": "paper-route/house/blue-v1",
-          "tree": "paper-route/tree/leafy-v1",
-          "bush": "paper-route/bush/flowering-v1",
-          "bin": "paper-route/obstacle/bin-v1",
-          "cone": "paper-route/obstacle/cone-v1",
-          "car": "paper-route/vehicle/car-v1",
-          "icecream": "paper-route/vehicle/icecream-v1"
+          "houseA": "suburb/house/a-v1",
+          "houseB": "suburb/house/b-v1",
+          "houseC": "suburb/house/c-v1",
+          "tree": "suburb/tree/v1",
+          "bush": "suburb/bush/v1",
+          "bin": "suburb/bin/v1",
+          "cone": "suburb/cone/v1",
+          "car": "suburb/car/v1",
+          "icecream": "suburb/icecream/v1"
         }
       }
     },
@@ -534,14 +535,15 @@
           }
         ],
         "art": {
-          "houseA": "paper-route/house/cream-v1",
-          "houseB": "paper-route/house/blue-v1",
-          "tree": "paper-route/tree/leafy-v1",
-          "bush": "paper-route/bush/flowering-v1",
-          "bin": "paper-route/obstacle/bin-v1",
-          "cone": "paper-route/obstacle/cone-v1",
-          "car": "paper-route/vehicle/car-v1",
-          "icecream": "paper-route/vehicle/icecream-v1"
+          "houseA": "suburb/house/a-v1",
+          "houseB": "suburb/house/b-v1",
+          "houseC": "suburb/house/c-v1",
+          "tree": "suburb/tree/v1",
+          "bush": "suburb/bush/v1",
+          "bin": "suburb/bin/v1",
+          "cone": "suburb/cone/v1",
+          "car": "suburb/car/v1",
+          "icecream": "suburb/icecream/v1"
         }
       }
     }

@@ -166,7 +166,33 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   //  file, a slow network or an outage can never break a ride: the street just
   //  looks the way it did before PB3.
   // ======================================================================
+  // PB4: the street is REAL WATERCOLOR now, generated once through the shared art
+  // pipeline (api/game-art.js, world "suburb") and cached forever, exactly the way
+  // Hop Heroes gets its worlds. The ids stay ids — the engine never knows it is
+  // looking at a picture rather than a drawing — and every one of them still has
+  // its drawn geometry underneath, so a miss or an outage just puts the old
+  // street back. &w= asks for the small WebP at the size it is really drawn
+  // (roughly 2x the on-screen height, for retina), not the 1024px original.
+  var ART_BASE = "/api/game-art?style=watercolor&img=suburb:";
+  function pieceUrl(piece, w){ return ART_BASE + piece + (w ? "&w=" + w : ""); }
   var ART_FILES = {
+    "suburb/house/a-v1":     pieceUrl("house_a", 384),
+    "suburb/house/b-v1":     pieceUrl("house_b", 384),
+    "suburb/house/c-v1":     pieceUrl("house_c", 384),
+    "suburb/tree/v1":        pieceUrl("tree", 384),
+    "suburb/bush/v1":        pieceUrl("bush", 256),
+    "suburb/mailbox/v1":     pieceUrl("mailbox", 256),
+    "suburb/flag/up-v1":     pieceUrl("flag_up", 256),
+    "suburb/flag/down-v1":   pieceUrl("flag_down", 256),
+    "suburb/rider/v1":       pieceUrl("rider", 512),
+    "suburb/bin/v1":         pieceUrl("bin", 256),
+    "suburb/cone/v1":        pieceUrl("cone", 256),
+    "suburb/car/v1":         pieceUrl("car", 256),
+    "suburb/icecream/v1":    pieceUrl("icecream", 384),
+    "suburb/paper/v1":       pieceUrl("paper", 128),
+    "suburb/bundle/v1":      pieceUrl("bundle", 128),
+    // The PB3 vector set. Kept and still routed, because a manifest or a saved
+    // street may still name one and "replace first, remove second" is the rule.
     "paper-route/house/cream-v1":   "/paper-route/art/house-a.svg",
     "paper-route/house/blue-v1":    "/paper-route/art/house-b.svg",
     "paper-route/tree/leafy-v1":    "/paper-route/art/tree.svg",
@@ -190,13 +216,13 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var DRAWN_ART = ["paper-route/road/perspective", "paper-route/sky/gradient",
                    "paper-route/ramp/drawn", "paper-route/boost/drawn", "paper-route/sprinkler/drawn"];
   var ART_SLOTS = {
-    houseA:"paper-route/house/cream-v1", houseB:"paper-route/house/blue-v1",
-    tree:"paper-route/tree/leafy-v1", bush:"paper-route/bush/flowering-v1",
-    mailbox:"paper-route/mailbox/white-v1", flagUp:"paper-route/flag/up-v1",
-    flagDown:"paper-route/flag/down-v1", rider:"paper-route/rider/classic-v1",
-    bin:"paper-route/obstacle/bin-v1", cone:"paper-route/obstacle/cone-v1",
-    car:"paper-route/vehicle/car-v1", icecream:"paper-route/vehicle/icecream-v1",
-    paper:"paper-route/paper/rolled-v1", bundle:"paper-route/bundle/tied-v1"
+    houseA:"suburb/house/a-v1", houseB:"suburb/house/b-v1", houseC:"suburb/house/c-v1",
+    tree:"suburb/tree/v1", bush:"suburb/bush/v1",
+    mailbox:"suburb/mailbox/v1", flagUp:"suburb/flag/up-v1",
+    flagDown:"suburb/flag/down-v1", rider:"suburb/rider/v1",
+    bin:"suburb/bin/v1", cone:"suburb/cone/v1",
+    car:"suburb/car/v1", icecream:"suburb/icecream/v1",
+    paper:"suburb/paper/v1", bundle:"suburb/bundle/v1"
   };
   function artUrl(id){
     if(!id || typeof id !== "string") return null;
@@ -892,7 +918,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     groundShadow(p.x, p.y, 96*s, 0.34);          // the house sits ON the lawn
     // the picture first; the drawn house below is the fallback and the light and the
     // waving neighbour are drawn over either one, because they are state, not scenery
-    if(stamp((h.i % 2) ? "houseB" : "houseA", p.x, p.y, 168*s)){
+    if(stamp(["houseA","houseB","houseC"][h.i % 3], p.x, p.y, 168*s)){
       drawHouseState(h, p, s, w, hh, x, y);
       drawMailbox(h, dz);                 // the kerb is state, not part of the house picture
       return;

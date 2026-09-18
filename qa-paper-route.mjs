@@ -18,7 +18,7 @@
 //      start screen / HUD are used, art is not baked in, no emoji anywhere.
 //
 //   node qa-paper-route.mjs .
-import fs from 'fs'; import vm from 'vm';
+import fs from 'fs'; import vm from 'vm'; import crypto from 'crypto';
 
 const dir = process.argv[2] || '.';
 const read = (f) => fs.readFileSync(dir + '/public/' + f, 'utf8');
@@ -378,20 +378,71 @@ ok('the coin count is its own coin chip, so it is short whatever the balance is'
 ok('turning the phone rebuilds the bar', /addEventListener\("resize", function\(\)\{ resize\(\); try\{ syncHud\(\); \}catch\(e\)\{\} \}\)/.test(code));
 ok('a real Chromium measurement of this bar exists', fs.existsSync(dir + '/qa-paper-route-hud.mjs'));
 
-// --- 5b3) PB3: real art on the street, with the drawings underneath --------------
-console.log('\n--- ART: every visible piece is a slot, and every slot has a drawn fallback ---');
+// --- 5b3) PB3 + PB4: real WATERCOLOR art on the street, drawings underneath ------
+console.log('\n--- ART: every slot is a cached watercolor picture, with a drawing underneath ---');
 const artMap = G._art();
 const slots = Object.keys(artMap);
+const NEEDED = ['houseA', 'houseB', 'houseC', 'tree', 'bush', 'mailbox', 'flagUp', 'flagDown',
+  'rider', 'bin', 'cone', 'car', 'icecream', 'paper', 'bundle'];
 ok('the engine declares a slot for every visible piece of the street',
-  ['houseA', 'houseB', 'tree', 'bush', 'mailbox', 'flagUp', 'flagDown', 'rider', 'bin', 'cone', 'car', 'icecream', 'paper', 'bundle'].every((k) => slots.includes(k)),
-  slots.join(','));
-ok('every slot resolves to a URL', slots.every((k) => typeof artMap[k] === 'string' && artMap[k].length > 1), Object.entries(artMap).filter(([, v]) => !v).map(([k]) => k).join(',') || 'all resolve');
-ok('every resolved file is really on disk',
-  slots.every((k) => !artMap[k].startsWith('/') || fs.existsSync(dir + '/public' + artMap[k])),
-  slots.filter((k) => artMap[k].startsWith('/') && !fs.existsSync(dir + '/public' + artMap[k])).join(',') || 'all present');
+  NEEDED.every((k) => slots.includes(k)), slots.join(','));
+ok('every slot resolves to a URL', slots.every((k) => typeof artMap[k] === 'string' && artMap[k].length > 1),
+  Object.entries(artMap).filter(([, v]) => !v).map(([k]) => k).join(',') || 'all resolve');
+
+// PB4. The street is no longer flat vectors on disk: every slot is a watercolor
+// cut-out generated once through the SHARED pipeline and cached forever. Three
+// things have to be true, and this is the check that would have caught a typo'd
+// piece name shipping as an invisible hole in the street.
+const gameArt = fs.readFileSync(dir + '/api/game-art.js', 'utf8');
+const suburbBlock = gameArt.slice(gameArt.indexOf('"suburb": {'), gameArt.indexOf('"story-icons": {'));
+const suburbPieces = [...suburbBlock.matchAll(/^\s{6}([a-z_]+):\s*"/gm)].map((m) => m[1]);
+const slotPiece = {};
+slots.forEach((k) => { const m = /[?&]img=suburb:([a-z_]+)/.exec(artMap[k]); if (m) slotPiece[k] = m[1]; });
+ok('every street slot is served by the shared art pipeline, not a flat file',
+  NEEDED.every((k) => /^\/api\/game-art\?/.test(artMap[k]) && !!slotPiece[k]),
+  NEEDED.filter((k) => !slotPiece[k]).join(',') || 'all 15 come from /api/game-art');
+ok('every slot asks for the watercolor style (the house look, never a stray one)',
+  NEEDED.every((k) => /style=watercolor/.test(artMap[k])));
+ok('every piece a slot asks for really exists in the suburb world',
+  NEEDED.every((k) => suburbPieces.includes(slotPiece[k])),
+  NEEDED.filter((k) => !suburbPieces.includes(slotPiece[k])).join(',') || `${suburbPieces.length} pieces defined`);
+ok('every piece is asked for at a drawn size, not as the 1024px original',
+  NEEDED.every((k) => /[?&]w=(128|256|384|512|768)\b/.test(artMap[k])),
+  NEEDED.filter((k) => !/[?&]w=\d/.test(artMap[k])).join(',') || 'all sized');
+ok('the suburb world uses the clean cut-out recipe and the house watercolor style',
+  /const CUT = "A SINGLE isolated element/.test(gameArt) && /watercolor:/.test(gameArt)
+  && /\$\{desc\}\. \$\{CUT\} \$\{STYLES\[styleId\(style\)\]\}/.test(gameArt));
+
+// Every piece must be a picture that REALLY EXISTS in the cache, not a URL that
+// 404s. The ledger records the cache key of each built piece, and this recomputes
+// the key the pipeline would look up: a renamed piece or a changed style breaks it.
+const LEDGER = dir + '/public/paper-route/art-built.json';
+ok('the built art is recorded in a ledger, so a missing picture is visible offline', fs.existsSync(LEDGER));
+if (fs.existsSync(LEDGER)) {
+  const built = JSON.parse(fs.readFileSync(LEDGER, 'utf8'));
+  const key = (w, p2, st) => 'ga:' + crypto.createHash('sha1').update(w + '|' + p2 + '|' + st).digest('hex');
+  ok('the ledger is the suburb world in the watercolor style', built.world === 'suburb' && built.style === 'watercolor');
+  ok('every slot on the street resolves to a piece that is really cached',
+    NEEDED.every((k) => !!built.pieces[slotPiece[k]]),
+    NEEDED.filter((k) => !built.pieces[slotPiece[k]]).join(',') || `all ${NEEDED.length} cached`);
+  ok('every cached piece is filed under the key the pipeline will ask for',
+    Object.entries(built.pieces).every(([p2, v]) => v === key('suburb', p2, 'watercolor')),
+    Object.entries(built.pieces).filter(([p2, v]) => v !== key('suburb', p2, 'watercolor')).map(([p2]) => p2).join(',') || 'all keys match');
+  ok('the ledger says the cache was really checked, not just written',
+    /narration_cache/.test(built.verifiedBy || ''), built.verifiedBy || '');
+}
+
 ok('the manifest names the art, so swapping the look is a manifest edit',
   !!manifest.art && !!manifest.art.badge && manifest.levels.every((l) => l.parts.art && l.parts.art.houseA),
   Object.keys(manifest.art).join(','));
+ok('BOTH streets ride on the watercolor set, not just the first',
+  manifest.levels.length === 2 && manifest.levels.every((l) =>
+    ['houseA', 'houseB', 'houseC', 'tree', 'bush', 'bin', 'cone', 'car', 'icecream']
+      .every((k) => typeof l.parts.art[k] === 'string' && l.parts.art[k].startsWith('suburb/'))),
+  manifest.levels.map((l) => `${l.id}:${Object.keys(l.parts.art).length}`).join(' '));
+ok('the whole-game slots point at the watercolor set too',
+  ['hero', 'rider', 'paper', 'bundle', 'mailbox', 'flagUp', 'flagDown']
+    .every((k) => String(manifest.art[k]).startsWith('suburb/')));
 ok('a street can name its OWN art, not just the game', /applyArtSlots\(street\.art\)/.test(code));
 ok('the manifest gets the last word over the engine\'s defaults', /applyArtSlots\(cfg && cfg._manifest && cfg._manifest\.art\)/.test(code));
 ok('art is fetched at LOAD time, never baked into a draw call',
@@ -403,25 +454,49 @@ ok('every drawn piece still has its geometry underneath',
 ok('the pieces that CANNOT be a picture are declared, not forgotten',
   G._drawnArt().length >= 3 && G._drawnArt().every((id) => /^paper-route\//.test(id)), G._drawnArt().join(','));
 ok('the mailbox still draws when the house art loads (a real bug this caught)',
-  /stamp\(\(h\.i % 2\) \? "houseB" : "houseA"[\s\S]{0,200}drawMailbox\(h, dz\);/.test(code));
+  /stamp\(\["houseA","houseB","houseC"\]\[h\.i % 3\][\s\S]{0,220}drawMailbox\(h, dz\);/.test(code));
+ok('the street cycles all THREE houses, so a row never repeats every other door',
+  /\["houseA","houseB","houseC"\]\[h\.i % 3\]/.test(code));
 ok('the lawns get a tree or a bush from the houses themselves, for free',
   /r\.garden\.push/.test(code) && /function drawGarden/.test(code));
 ok('the garden is scenery only, never something a kid can hit',
   !/garden[\s\S]{0,200}bump\(/.test(code));
+
+// PB4 render polish: the look pass is in the engine, not in the pictures.
+console.log('\n--- LOOK: the canvas does the painting, so the street is not flat colour ---');
+ok('the road has asphalt tooth and a warm crown of light', /function asphalt\(/.test(code) && /crown/.test(code));
+ok('the horizon melts into a haze band', /function drawHaze\(/.test(code) && /drawHaze\(1\)/.test(code));
+ok('the sky is lit by a sun, not a flat band', /createRadialGradient\(sx, sy/.test(code) && /t\.sun/.test(code));
+ok('the grass is more than one green, with painterly patches and flower dabs',
+  /function grassPatches\(/.test(code) && /lawn3/.test(code) && /var FLOWERS = \[/.test(code));
+ok('nothing floats: there is one shadow helper and every standing thing calls it',
+  /function groundShadow\(/.test(code) && (code.match(/groundShadow\(/g) || []).length >= 9,
+  `${(code.match(/groundShadow\(/g) || []).length} calls`);
+ok('boosting smears the picture and streams speed lines',
+  /function motionBlur\(/.test(code) && /function drawSpeedLines\(/.test(code));
+ok('the texture is deterministic, so the street never shimmers', /function rnd\(n\)\{/.test(code) && !/Math\.random\(\)[^;]*grass/.test(code));
+
+// The PB3 vectors stay on disk and stay routed: replace first, remove second.
 const svgs = fs.readdirSync(dir + '/public/paper-route/art').filter((f) => f.endsWith('.svg'));
-ok('the art set is on disk as vectors', svgs.length >= 14, `${svgs.length} files`);
+ok('the PB3 vector set is still on disk (replace first, remove second)', svgs.length >= 14, `${svgs.length} files`);
 ok('no emoji in any art file', svgs.every((f) => !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(fs.readFileSync(dir + '/public/paper-route/art/' + f, 'utf8'))));
+ok('no emoji in any art prompt or in the ledger',
+  !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(suburbBlock)
+  && (!fs.existsSync(LEDGER) || !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(fs.readFileSync(LEDGER, 'utf8'))));
 ok('every art file names itself, so the library can describe it',
   svgs.every((f) => /<title>/.test(fs.readFileSync(dir + '/public/paper-route/art/' + f, 'utf8'))));
 const seed = fs.existsSync(dir + '/db/seed-paper-route-art.sql') ? fs.readFileSync(dir + '/db/seed-paper-route-art.sql', 'utf8') : '';
-ok('the set is registered in the SHARED library as an idempotent seed file',
+const seed4 = fs.existsSync(dir + '/db/seed-suburb-watercolor-art.sql') ? fs.readFileSync(dir + '/db/seed-suburb-watercolor-art.sql', 'utf8') : '';
+ok('the vector set is registered in the SHARED library as an idempotent seed file',
   /insert into community_sprites/.test(seed) && /on conflict do nothing/.test(seed));
-// every file the engine actually loads must be registered in the shared library
-const loadedFiles = [...new Set(slots.map((k) => artMap[k].split('/').pop()))];
-ok('every art file the engine loads is registered in the shared library',
-  loadedFiles.every((f) => seed.includes(f)),
-  loadedFiles.filter((f) => !seed.includes(f)).join(',') || `all ${loadedFiles.length} registered`);
-ok('the seed says it was actually applied, not just written', /APPLIED IN-SESSION/.test(seed));
+ok('the WATERCOLOR set is registered in the shared library too',
+  /insert into community_sprites/.test(seed4) && /on conflict do nothing/.test(seed4));
+ok('every watercolor piece the engine loads is in the shared library seed',
+  NEEDED.every((k) => seed4.includes('suburb:' + slotPiece[k])),
+  NEEDED.filter((k) => !seed4.includes('suburb:' + slotPiece[k])).join(',') || `all ${NEEDED.length} registered`);
+ok('the shared set is tagged so a suburb, a town or a beach can all ask for it',
+  /suburb/.test(seed4) && /town/.test(seed4) && /beach/.test(seed4));
+ok('the seed says it was actually applied, not just written', /APPLIED IN-SESSION/.test(seed) && /APPLIED IN-SESSION/.test(seed4));
 
 // --- 5c) PB2: photo mode for the picker tile (the TS rig's game half) -------------
 console.log('\n--- TILE SHOT: the engine stages its own real frame ---');
