@@ -1999,7 +1999,7 @@ var kidState={
 // of the kid's position, so the tall stack curves and sways as the kid
 // turns. It NEVER falls: the highest item just stays visible above the head.
 // -------------------------------------------------------------------------
-var STACK_ITEM_H = 0.42;          // vertical spacing between stacked items
+var STACK_ITEM_H = 0.52;          // vertical spacing between stacked items
 var STACK_LAG_PER = 0.055;        // seconds of delay added per item up the stack
 var STACK_HISTORY = [];           // ring buffer of {t,x,z,yaw}
 var STACK_HISTORY_MAX_SEC = 6;    // enough for a huge stack
@@ -2012,9 +2012,13 @@ var stack = [];                   // array of {kind, group, tOffset, phase}
 function buildStackItem(kind){
   var r=ITEM(kind); if(!r) return null;
   var s=0.72;
-  var geo=hbBake(r.parts(s));
-  var m=hbMesh(geo);
-  var wrap=new THREE.Group(); wrap.add(m);
+  var wrap=new THREE.Group();
+  // FM17 — what she is carrying is the picture off the order card, not a
+  // small model of it. A yellow shape over her head was the last place in the
+  // farm where corn was drawn a different way from every other corn.
+  var pic=itemPicMesh(kind, 0.98);
+  if(pic){ wrap.add(pic); wrap.userData.flat=1; }
+  else wrap.add(hbMesh(hbBake(r.parts(s))));
   wrap.userData.kind=kind;
   wrap.userData.phase=Math.random()*Math.PI*2;
   return wrap;
@@ -2122,6 +2126,7 @@ function updateStack(dt, now){
       var zNow = lerp(it.userData.hopFrom.z, tz, u);
       it.position.set(xNow, yNow, zNow);
       it.rotation.y = kidState.facing + Math.sin(u*Math.PI*2)*0.4;
+      if(it.userData.flat) it.quaternion.copy(camera.quaternion);
     } else {
       // settle — pull toward target every frame
       it.position.x = lerp(it.position.x, tx, 1 - Math.pow(0.001, dt));
@@ -2131,6 +2136,8 @@ function updateStack(dt, now){
       it.rotation.y = kidState.facing + Math.sin(now*1.5+it.userData.phase)*0.12;
       it.rotation.z = -sway * 0.35;   // lean opposite to the sway
       it.rotation.x = swayZ * 0.35;
+      // a picture faces you, always, or the tower turns into a row of lines
+      if(it.userData.flat) it.quaternion.copy(camera.quaternion);
     }
   }
 }
@@ -3029,7 +3036,16 @@ function roundPanel(w,h,r,hex,op,z){
 // the answer: cream #fffef7, a sand slot #f6efd6 inside a tan frame #cbb887,
 // generous corners, a soft shadow under it. The thing floating over a hen is
 // now one of those slots, with a tail, so the whole farm speaks once.
-function askBubble(rad){
+// FM17 — the same card in two voices. The shape, the corners, the shadow and
+// the tail never change, because that is what makes the farm speak once. Only
+// the frame colour changes: sand for a thing that is ASKING, gold for a thing
+// waiting to be TAKEN. Mike could not tell those apart before FM10 and the
+// fix then was an arrow; the fix now is that they are the same card in two
+// colours, holding the same painted picture the order card holds.
+var ASK_PAL={face:0xFFFEF7, frame:0xCBB887, fill:0xF6EFD6};
+var GIVE_PAL={face:0xFFFEF7, frame:0xE59A2A, fill:0xFFEEC0};
+function askBubble(rad, pal){
+  pal = pal || ASK_PAL;
   var g=new THREE.Group();
   var w=rad*2.30, h=rad*2.40, rr=w*0.245;      // the order card slot's own corner
   // the shadow, offset down, which is what puts the card IN the world instead
@@ -3038,11 +3054,16 @@ function askBubble(rad){
   sh.position.x=rad*0.05; sh.position.y=-rad*0.11;
   g.add(sh);
   // the card
-  var face=roundPanel(w, h, rr, 0xFFFEF7, 0.99, -0.70);
+  var face=roundPanel(w, h, rr, pal.face, 0.99, -0.70);
   g.add(face);
   // the slot inside it: a tan frame with a sand fill, drawn as two panels
-  g.add(roundPanel(w*0.855, h*0.855, rr*0.86, 0xCBB887, 0.99, -0.688));
-  g.add(roundPanel(w*0.795, h*0.795, rr*0.80, 0xF6EFD6, 0.99, -0.682));
+  // FM17 — the band between the frame and the slot was three per cent of the
+  // card's width. On an order card eighty pixels wide that is two pixels, and
+  // in the world, at the distance this camera stands back, it is nothing at
+  // all: both cards came out plain cream and the sand-or-gold difference the
+  // whole design rests on was invisible. The band is now wide enough to see.
+  g.add(roundPanel(w*0.900, h*0.900, rr*0.90, pal.frame, 0.99, -0.688));
+  g.add(roundPanel(w*0.770, h*0.770, rr*0.78, pal.fill, 0.99, -0.682));
   // the tail, so it is plainly THIS animal asking and not the one behind it
   function tail(scl, hex, z, dy){
     var t=new THREE.Shape();
@@ -3056,8 +3077,9 @@ function askBubble(rad){
   }
   var ts=tail(1.28, 0x1E3C5A, -0.715, -rad*0.06);
   ts.position.x=rad*0.05; ts.position.y=-rad*0.11; ts.material.opacity=0.22;
-  g.add(ts);
-  g.add(tail(1.0, 0xFFFEF7, -0.699, 0));
+  ts.userData.tail=1; g.add(ts);
+  var tf=tail(1.0, pal.face, -0.699, 0);
+  tf.userData.tail=1; g.add(tf);
   g.userData.mat=face.material;
   return g;
 }
@@ -3075,6 +3097,7 @@ function askRing(){
   var pool=new THREE.Mesh(new THREE.CircleGeometry(0.80,30),
         new THREE.MeshBasicMaterial({color:ASK_TINT,transparent:true,opacity:0.30,depthWrite:false}));
   pool.rotation.x=-Math.PI/2; pool.position.y=-0.002; g.add(pool);
+  g.userData.band=band.material; g.userData.pool=pool.material;
   return g;
 }
 
@@ -3140,6 +3163,47 @@ function wantItemMesh(kind, scale){
   }
   var r=ITEM(kind);
   return askMesh(hbBake(r.parts(scale)));
+}
+
+// FM17 — ONE PICTURE, EVERYWHERE. Mike: "these cards need to match the actual
+// items floating." They did not. A hen asking for corn held a painted corn on
+// a cream card. The corn standing ready in the soil was a small orange model.
+// The corn riding over her head was a third thing again. Three pictures of one
+// object, and a child has to join all three up before the farm makes sense.
+// Now every floating item in this world is the card, holding the painted
+// picture, at the size the game camera can actually read.
+function itemCard(kind, rad, opt){
+  opt = opt || {};
+  var g=new THREE.Group();
+  var bub=askBubble(rad, opt.give?GIVE_PAL:ASK_PAL);
+  if(opt.noTail){
+    for(var i=0;i<bub.children.length;i++)
+      if(bub.children[i].userData.tail) bub.children[i].visible=false;
+  }
+  g.add(bub);
+  var pic=wantItemMesh(kind, rad*1.70);
+  g.add(pic);
+  g.userData.bubble=bub; g.userData.pic=pic; g.userData.card=1;
+  return g;
+}
+// A card goes edge-on and disappears unless it is turned to face you every
+// frame. The picture inside turns with it; a fallback model still spins.
+function faceCard(g){
+  if(!g || !g.userData.card) return;
+  g.userData.bubble.quaternion.copy(camera.quaternion);
+  if(g.userData.pic.userData.flat) g.userData.pic.quaternion.copy(camera.quaternion);
+  else g.userData.pic.rotation.y+=0.02;
+}
+// The picture on its own, with no card behind it. This is what rides the
+// stack: a tower of framed cards would overlap into a smear, but a tower of
+// pictures reads straight down the side, and it is the SAME picture.
+function itemPicMesh(kind, size){
+  var tex=itemTexture(kind); if(!tex) return null;
+  var m=new THREE.Mesh(new THREE.PlaneGeometry(size, size),
+    new THREE.MeshBasicMaterial({map:tex, transparent:true, alphaTest:0.42,
+      side:THREE.DoubleSide}));
+  m.userData.flat=true;
+  return m;
 }
 
 // The want sign: the painted item, inside the ask card, over the animal's
@@ -3266,8 +3330,11 @@ function produceSpot(A,K){
 function spawnProduce(A, quiet){
   var r=ITEM(A.gives); if(!r) return;
   var K=ANIMAL_KINDS[A.kind];
-  var m=hbMesh(hbBake(r.parts(A.kind==="cow"?0.95:0.80)));
-  var g=new THREE.Group(); g.add(m);
+  var g=new THREE.Group();
+  // FM17 — an egg sitting in the grass is the same picture as the egg on the
+  // order card, on the same card, in the GIVE colours.
+  var pc=itemCard(A.gives, 0.58, {give:1});
+  pc.position.y=0.86; g.add(pc); g.userData.card=pc;
   var spot=produceSpot(A,K);
   var px=spot.x, pz=spot.z;
   g.position.set(px, 0.10, pz);
@@ -3288,7 +3355,7 @@ function spawnProduce(A, quiet){
   mh.position.set(px,0.055,pz);
   scene.add(mh); A.halo=mh;
   // FM10 — and the arrow, which is what makes it a GIVE and not an ask
-  A.arrow=giveArrow(0.90); A.arrow.position.set(px,1.05,pz); scene.add(A.arrow);
+  if(!g.userData.card){ A.arrow=giveArrow(0.90); A.arrow.position.set(px,1.05,pz); scene.add(A.arrow); }
   A.magnet=null;
   A.readyAt=performance.now()/1000;    // FM6: how long it has sat there, for the dog
   A.state="ready";
@@ -3393,7 +3460,9 @@ function updateAnimals(dt, now){
         }
         if(!A.askRing){ A.askRing=askRing(); scene.add(A.askRing); }
         A.askRing.position.set(A.x, 0.06, A.z);
-        A.askRing.material.opacity=0.16+0.30*Math.abs(Math.sin(now*2.1));
+        var ao=Math.abs(Math.sin(now*2.1));
+        A.askRing.userData.band.opacity=0.55+0.30*ao;
+        A.askRing.userData.pool.opacity=0.16+0.22*ao;
         A.askRing.scale.setScalar(0.90+0.14*Math.abs(Math.sin(now*2.1)));
       } else {
         if(A.askRing){ scene.remove(A.askRing); A.askRing=null; }
@@ -3428,7 +3497,8 @@ function updateAnimals(dt, now){
       // FM10 — a GIVE BOUNCES UP. Twice the hop a want gets, off the ground
       // rather than around a bubble, and it never wobbles side to side.
       A.produce.position.y=0.10+0.04+Math.max(0,Math.sin(now*4.2+i))*0.17;
-      A.produce.rotation.y+=dt*1.1;
+      if(A.produce.userData.card){ A.produce.rotation.y=0; faceCard(A.produce.userData.card); }
+      else A.produce.rotation.y+=dt*1.1;
       if(A.halo){
         A.halo.rotation.y+=dt*0.7;
         A.halo.userData.mat.opacity=0.62+0.26*Math.abs(Math.sin(now*3+i));
@@ -5449,7 +5519,7 @@ function dogTake(J){
   if(J.t==="patch"){
     var P=J.p;
     kind=P.seed;
-    scene.remove(P.crop); P.crop=null;
+    scene.remove(P.crop); P.crop=null; dropCard(P);
     if(P.halo){ scene.remove(P.halo); P.halo=null; }
     if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
     P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false; P.sparkleT=0;
@@ -7205,7 +7275,7 @@ function hardResetScene(){
   var i;
   for(i=0;i<PATCHES.length;i++){
     var P=PATCHES[i];
-    if(P.crop){ scene.remove(P.crop); P.crop=null; }
+    if(P.crop){ scene.remove(P.crop); P.crop=null; dropCard(P); }
     if(P.halo){ scene.remove(P.halo); P.halo=null; }
     if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
     P.state="empty"; P.seed=null; P.plantedAt=0; P.ring.visible=true; P.chimed=false;
@@ -8271,6 +8341,11 @@ function walkThenPlant(P){
 // and the never-idle fixer can never disagree about what ready looks like.
 // The wobble was already here; the chime is new, and it fires once, the moment
 // the crop becomes takeable, and never again.
+// The card belongs to the crop. When the crop goes, it goes.
+function dropCard(P){
+  if(P.card){ scene.remove(P.card); P.card=null; }
+  if(P.crop) P.crop.visible=true;
+}
 function makeReady(P){
   if(P.state==="ready") return;
   var r=CROP_RECIPES[P.seed]; if(!r) return;
@@ -8522,6 +8597,16 @@ function step(){
       P.crop.rotation.x = Math.cos(now*3.7+i*1.1)*0.05;
       var bob = 0.04 + Math.max(0,wob)*0.15;
       P.crop.position.y = 0.06 + bob;
+      // FM17 — and over the bed, the card. In the GIVE colours, so a bed with
+      // something to take never looks like a hen asking for something.
+      if(!P.card){ P.card=itemCard(P.seed, 0.62, {give:1}); scene.add(P.card); }
+      // And the model in the soil goes. Two pictures of one carrot, one
+      // painted and one built out of boxes, is the whole reason a child could
+      // not tell what was in the bed. The card IS the crop now.
+      P.crop.visible=false;
+      P.card.position.set(P.x, 1.02+bob*0.9, P.z);
+      P.card.scale.setScalar(1 + Math.max(0,wob)*0.05);
+      faceCard(P.card);
       // sparkle: temporary spinning halo tube added once
       if(!P.halo){
         // FM12 — THE RING STAYS FLAT. It was baked lying down and then turned
@@ -8539,10 +8624,14 @@ function step(){
         mh.position.set(P.x, 0.055, P.z);
         scene.add(mh); P.halo=mh;
       }
-      P.halo.rotation.y += dt*0.7;
       P.halo.material.opacity = 0.50 + 0.24*Math.abs(Math.sin(now*3+i));
-      if(!P.arrow){ P.arrow=giveArrow(1.00); P.arrow.position.set(P.x,1.10,P.z); scene.add(P.arrow); }
-      beatArrow(P.arrow, 1.10, now, i);
+      // The card's tail already points at the bed, so the bouncing arrow is
+      // one floating thing too many. It stays as the fallback when there is
+      // no card to draw.
+      if(!P.card){
+        if(!P.arrow){ P.arrow=giveArrow(1.00); P.arrow.position.set(P.x,1.10,P.z); scene.add(P.arrow); }
+        beatArrow(P.arrow, 1.10, now, i);
+      }
 
       // harvest? kid within pickup radius of this patch
       // FM4: the same radius the produce uses. A ready crop is harvested by
@@ -8555,7 +8644,7 @@ function step(){
         sfx("pickup"); haptic("light");
         pushOntoStack(P.seed, new THREE.Vector3(P.x, 0.9, P.z));
         // clear the patch back to empty
-        scene.remove(P.crop); P.crop=null;
+        scene.remove(P.crop); P.crop=null; dropCard(P);
         if(P.halo){ scene.remove(P.halo); P.halo=null; }
         if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
         P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false;
@@ -8601,7 +8690,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm16",
+  version: "fm17",
   coins: function(){ return walletBalance(); },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
@@ -8743,7 +8832,7 @@ window.FARM = {
     for(i=0;i<PATCHES.length;i++){
       var P=PATCHES[i];
       if(P.cover || P.locked || P.state==="empty") continue;
-      if(P.crop){ scene.remove(P.crop); P.crop=null; }
+      if(P.crop){ scene.remove(P.crop); P.crop=null; dropCard(P); }
       if(P.halo){ scene.remove(P.halo); P.halo=null; }
       if(P.arrow){ scene.remove(P.arrow); P.arrow=null; }
       P.state="empty"; P.seed=null; P.ring.visible=true; P.chimed=false; P.sparkleT=0;
