@@ -3181,13 +3181,13 @@ function itemCard(kind, rad, opt){
       if(bub.children[i].userData.tail) bub.children[i].visible=false;
   }
   g.add(bub);
-  // The painted pictures very nearly fill their own square, so the card has
-  // to leave them room or the corn hangs over the frame. And the picture sits
-  // just in front of the card rather than well in front of it: at this camera
-  // angle a gap of most of a world unit slides the picture visibly up and to
-  // the left of the card holding it.
-  var pic=wantItemMesh(kind, rad*1.66);
-  pic.position.z=-0.62;
+  // The painted pictures fill their own square corner to corner, so a picture
+  // sized against the whole card hangs over its frame. It is sized against the
+  // sand SLOT inside the card instead, which is where a picture actually goes.
+  // Its z stays at zero: the card's own panels sit behind it along the view
+  // axis once the card turns to face you, so any offset here would slide the
+  // picture off the card on screen rather than in depth.
+  var pic=wantItemMesh(kind, rad*1.42);
   g.add(pic);
   g.userData.bubble=bub; g.userData.pic=pic; g.userData.card=1;
   return g;
@@ -8696,7 +8696,7 @@ requestAnimationFrame(step);
 // FM1 handle — a QA harness can read the state and prove the mechanic works.
 // -------------------------------------------------------------------------
 window.FARM = {
-  version: "fm17b",
+  version: "fm17c",
   coins: function(){ return walletBalance(); },
   addCoins: addCoins,
   patches: function(){ return PATCHES.map(function(P){
