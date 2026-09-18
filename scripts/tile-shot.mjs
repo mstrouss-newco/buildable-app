@@ -89,6 +89,9 @@ const GAMES = [
   // TS0 — the two with a hand-posed photo mode
   { id: 'survival',    name: 'Survival',      url: '/survival-engine.html',  imgId: 'survival',    color: '#8A6BFF', mode: 'photo' },
   { id: 'castleguard', name: 'Castle Guard',  url: '/castle-guard.html',     imgId: 'castleguard', color: '#2E8B57', mode: 'photo' },
+  // PB4 — Paper Route poses its own impact frame: the paper a hair from the box,
+  // the porch already lit, the neighbour waving, coins bursting, the boost on.
+  { id: 'paper-route', name: 'Paper Route',  url: '/paper-route-engine.html', imgId: 'paper-route', color: '#3FA9F5', mode: 'photo' },
   // TS1 — action
   { id: 'skyflyer',    name: 'Sky Flyer',     url: '/skyflyer-engine.html',  imgId: 'skyflyer',    color: '#2FB7D6', warm: 6000, zoom: 1.5 },
   // Breaker letterboxes to a narrow play area, so a shallow crop catches black
@@ -227,7 +230,22 @@ const washScript = (hex, cx, cy, cw, ch) => `(() => {
 })()`;
 
 fs.mkdirSync(OUT, { recursive: true });
-const browser = await chromium.launch();
+// PB4: a machine can have Playwright installed and still have no browser that
+// matches it (a cloud sandbox ships one Chromium and npm installs a newer
+// Playwright beside it). Try the bundled browser first, then the one that is
+// actually on the box, and only then give up — so a missing download is never
+// the reason a tile has no photo.
+const CHROME_PATHS = [process.env.TS_CHROME,
+  '/opt/pw-browsers/chromium/chrome-linux/chrome',
+  '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].filter((p2) => p2 && fs.existsSync(p2));
+let browser = null;
+try { browser = await chromium.launch(); }
+catch (e) {
+  for (const exe of CHROME_PATHS) {
+    try { browser = await chromium.launch({ executablePath: exe }); console.log('note  using the browser on this machine: ' + exe); break; } catch (e2) { /* next */ }
+  }
+  if (!browser) { console.log('SKIP  no usable Chromium on this machine - no tile shots taken.'); process.exit(0); }
+}
 const shots = [];
 let failed = 0;
 

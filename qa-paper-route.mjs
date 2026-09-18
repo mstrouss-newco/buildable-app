@@ -464,7 +464,8 @@ ok('the garden is scenery only, never something a kid can hit',
 
 // PB4 render polish: the look pass is in the engine, not in the pictures.
 console.log('\n--- LOOK: the canvas does the painting, so the street is not flat colour ---');
-ok('the road has asphalt tooth and a warm crown of light', /function asphalt\(/.test(code) && /crown/.test(code));
+ok('the road has asphalt tooth and a warm crown of light',
+  /function asphalt\(/.test(code) && /X\.clip\(\)/.test(code) && /rgba\(255,238,198,\.24\)/.test(code));
 ok('the horizon melts into a haze band', /function drawHaze\(/.test(code) && /drawHaze\(1\)/.test(code));
 ok('the sky is lit by a sun, not a flat band', /createRadialGradient\(sx, sy/.test(code) && /t\.sun/.test(code));
 ok('the grass is more than one green, with painterly patches and flower dabs',

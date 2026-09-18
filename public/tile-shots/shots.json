@@ -208,5 +208,15 @@
     "file": "public/tile-shots/farm.jpg",
     "kb": 106,
     "mode": "drive"
+  },
+  {
+    "id": "paper-route",
+    "name": "Paper Route",
+    "imgId": "paper-route",
+    "color": "#3FA9F5",
+    "label": "paper-route",
+    "file": "public/tile-shots/paper-route.jpg",
+    "kb": 60,
+    "mode": "photo"
   }
 ]

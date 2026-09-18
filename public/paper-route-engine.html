@@ -1214,6 +1214,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.restore();
   }
   function motionBlur(){
+    // A smear is motion, and a tile photo is a still: in the picker it just reads
+    // as a doubled rider. The speed lines stay, because they read as speed even
+    // when nothing is moving.
+    if(TILESHOT) return;
     if(!run || run.boost <= 0 || !CV || !CV.width) return;
     var k = Math.min(1, run.boost / BOOST_TIME), z = 1 + 0.05*k;
     try{
@@ -1389,7 +1393,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     }catch(e){}
     try{ if(_hud) _hud.hide(); }catch(e){}
     shotFrozen = true;
-    try{ window.__tileshotReady = true; }catch(e){}
+    // PB4: the camera (scripts/tile-shot.mjs) waits on TILESHOT_READY. The engine
+    // had only ever set its own __tileshotReady, so the shutter timed out and
+    // Paper Route was the one photo-mode game with no photo. Both are set now.
+    try{ window.__tileshotReady = true; window.TILESHOT_READY = true; }catch(e){}
     signal("sceneReady");
   }
   // the signature-colour wash up from the bottom (the D2 tile look)

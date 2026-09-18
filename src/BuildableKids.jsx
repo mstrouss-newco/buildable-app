@@ -414,6 +414,11 @@ const TILE_SHOTS = {
   // colony, and plants and grows a real field) before the shutter. The drivers
   // live in scripts/tile-shot.mjs, so either can be re-shot after an art change.
   antcity: "antcity", farm: "farm",
+  // PB4 — Paper Route. It already had a photo mode; the camera just never knew
+  // about it and the engine said it was ready in a word the camera did not
+  // listen for, so it was the one posed game with no photo. The tile itself is
+  // still behind the Coming Soon gate until Mike has signed off the look.
+  "paper-route": "paper-route",
 };
 
 // ONE place that decides what a catalog tile shows, so switching a game's art

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Paper Route look</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12314d; --ink-soft:#4a6480; --paper:#f7f4ec; --card:#ffffff;
+    --line:#e3ddd0; --accent:#3FA9F5; --good:#2f9e6b; --warn:#e0a03c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:16px/1.6 'Nunito',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 16px 90px}
+  h1,h2,h3{font-family:'Baloo 2','Nunito',sans-serif;line-height:1.2;margin:0}
+  h1{font-size:clamp(28px,5vw,40px);font-weight:800}
+  h2{font-size:clamp(21px,3.4vw,27px);font-weight:800;margin:44px 0 6px}
+  h3{font-size:18px;font-weight:700;margin:0 0 4px}
+  p{margin:10px 0}
+  .lede{font-size:clamp(17px,2.4vw,19px);color:var(--ink-soft);max-width:62ch}
+  .sub{color:var(--ink-soft);font-size:15px}
+  .tag{display:inline-block;background:var(--accent);color:#fff;font-weight:700;
+       font-size:13px;letter-spacing:.04em;padding:5px 12px;border-radius:999px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;
+        padding:20px;margin:18px 0}
+  .ask{background:#fffaf0;border-color:#f0dcb4}
+  .grid{display:grid;gap:18px}
+  @media(min-width:720px){ .two{grid-template-columns:1fr 1fr} }
+  figure{margin:0}
+  figure img{width:100%;height:auto;display:block;border-radius:14px;
+             border:1px solid var(--line);background:#dfeef9}
+  figcaption{margin-top:8px;font-size:14px;font-weight:700}
+  figcaption span{display:block;font-weight:400;color:var(--ink-soft)}
+  .pill{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.05em;
+        padding:3px 9px;border-radius:999px;margin-right:6px}
+  .pill.b{background:#efe9dd;color:#6c6355}
+  .pill.a{background:#def0e6;color:#1f7a53}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:5px 0}
+  li b{font-weight:700}
+  .pieces{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .piece{border:1px solid var(--line);background:#fff;border-radius:10px;
+         padding:6px 11px;font-size:14px;font-weight:600}
+  .rec{background:#f2f7fb;border:1px solid #d5e6f3;border-radius:12px;padding:14px;
+       font-size:14.5px;color:#22475f;margin-top:10px}
+  .rec code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+  .yn{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .yn div{flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}
+  .yn b{display:block;margin-bottom:2px}
+  footer{margin-top:50px;color:var(--ink-soft);font-size:14px;border-top:1px solid var(--line);padding-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="tag">Session PB4 &middot; a look, for your yes or no</span>
+  <h1>Paper Route, painted</h1>
+  <p class="lede">You said the shipped ride looked flat and cheap next to Hop Heroes,
+  and picked the full watercolor route. This is that, in two halves: what the game
+  already looks like today after the first half, and what the second half puts on
+  top of it. Nothing is in front of a kid yet. Paper Route stays behind the coming
+  soon gate until you say this is right.</p>
+
+  <h2>Half one: the street is painted, not filled in</h2>
+  <p>This half is already done and it needs no new pictures at all. The game does
+  the painting itself, every frame. Real shots from a real phone below.</p>
+
+  <div class="grid two">
+    <figure>
+      <img src="shots/before-phone.jpg" alt="Paper Route on a phone before the look pass: flat blue sky, one flat green lawn, flat grey road" />
+      <figcaption><span class="pill b">BEFORE</span>Flat colour
+        <span>One blue sky, one green lawn, one grey road. Everything sits on
+        top of the picture rather than in it.</span></figcaption>
+    </figure>
+    <figure>
+      <img src="shots/after-phone.jpg" alt="Paper Route on a phone after the look pass: lit sky, hazy horizon, textured road, layered grass with flowers, shadows under everything" />
+      <figcaption><span class="pill a">AFTER</span>Painted
+        <span>A sun lighting the sky, a haze eating the far end of the road,
+        warmth on the tarmac, three greens in the grass, shade under everything.</span></figcaption>
+    </figure>
+  </div>
+
+  <div class="grid two">
+    <figure>
+      <img src="shots/before-wide.jpg" alt="Paper Route on a wide screen before the look pass" />
+      <figcaption><span class="pill b">BEFORE</span>On a tablet</figcaption>
+    </figure>
+    <figure>
+      <img src="shots/after-wide.jpg" alt="Paper Route on a wide screen after the look pass" />
+      <figcaption><span class="pill a">AFTER</span>On a tablet</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3>What changed, in order of how much it matters</h3>
+    <ul>
+      <li><b>The far end melts away.</b> A band of haze sits on the horizon, so the
+        road and the last houses fade into the distance instead of stopping on a
+        hard line. This is the single biggest thing that stopped it reading as
+        clip art.</li>
+      <li><b>Nothing floats.</b> Every house, tree, bush, mailbox, bin, cone, car,
+        van and the bike itself now sits in a soft pool of shade.</li>
+      <li><b>The sky is lit.</b> One warm sun high on the right, and everything
+        below it is warmed to match.</li>
+      <li><b>The road has a surface.</b> A warm crown of light down the middle
+        where the sun catches the camber, cooler and darker as it goes away, a
+        scatter of speckle for tooth, and warm cream kerbs with a line of shade
+        where they meet the grass.</li>
+      <li><b>The grass is a lawn.</b> Three greens instead of one, brushed over
+        with patches and little dabs of flowers that scroll past with the street.</li>
+      <li><b>Boosting feels fast.</b> The whole picture smears and speed lines
+        stream out of the distance, instead of four blue sticks behind the wheel.</li>
+    </ul>
+    <p class="sub">All of it is drawn by the game as it plays. No extra downloads,
+    nothing new for a kid's iPad to wait for.</p>
+  </div>
+
+  <h2>Half two: real watercolor pieces</h2>
+  <p>The houses, trees, bike and vans in the shots above are still the flat
+  shapes from last session. Half two replaces every one of them with a painted
+  cut-out from the same picture library Hop Heroes uses, so Paper Route is on
+  the house style rather than near it. The plumbing is built and the library is
+  registered; the pieces get painted the moment this goes live.</p>
+
+  <div class="card">
+    <h3>The fifteen pieces</h3>
+    <div class="pieces">
+      <span class="piece">house A</span><span class="piece">house B</span>
+      <span class="piece">house C</span><span class="piece">tree</span>
+      <span class="piece">bush</span><span class="piece">mailbox</span>
+      <span class="piece">flag up</span><span class="piece">flag down</span>
+      <span class="piece">rider</span><span class="piece">bin</span>
+      <span class="piece">cone</span><span class="piece">car</span>
+      <span class="piece">ice cream van</span><span class="piece">newspaper</span>
+      <span class="piece">bundle</span>
+    </div>
+    <p class="sub" style="margin-top:12px">Three houses rather than two, so a row of
+    doors does not repeat every other house. The rider, the car and the van are
+    painted from behind, because the camera rides over the kid's shoulder.</p>
+    <div class="rec">
+      Each one is painted the same way every other piece in the library is: a
+      single thing, on its own, on see-through backing, nothing else in the frame.
+      Painted once, kept forever, about a penny each. Every piece is also filed in
+      the shared library tagged <code>suburb</code>, <code>town</code> and
+      <code>beach</code>, so the next game that wants a street gets one for free.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>If a picture ever fails to arrive</h3>
+    <p style="margin-top:2px">The street you see in the AFTER shots is still
+    underneath all of it. A slow phone, a missed picture or an outage puts the
+    drawn version back, and the ride carries on. There is no state where Paper
+    Route is broken because a painting did not load.</p>
+  </div>
+
+  <h2 style="margin-bottom:10px">What I need from you</h2>
+  <div class="card ask">
+    <p style="margin-top:0"><b>Does this look right?</b></p>
+    <div class="yn">
+      <div><b>Yes</b>The pieces get painted, the tile shot is retaken on the real
+        art, and Paper Route comes out from behind the coming soon gate.</div>
+      <div><b>Not quite</b>Tell me which shot and what is off: too hazy, too warm,
+        shadows too heavy, grass too busy. Every one of those is a number I can
+        move in a few minutes.</div>
+    </div>
+  </div>
+
+  <footer>
+    Card PB4 &middot; Paper Route watercolor look pass &middot; both streets, both
+    gigs &middot; the tile stays Coming Soon until this is approved.
+  </footer>
+
+</div>
+</body>
+</html>
