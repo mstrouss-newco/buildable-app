@@ -1,4 +1,4 @@
-## 2026-09-18 (RN5): the phase runner, QA'd end to end and five faults fixed
+## 2026-09-18 (RN6): the phase runner, QA'd end to end and five faults fixed
 
 Mike: "look at the phase runner in the planner, it has never worked, q/a and see how to
 fix." Audited the whole chain: `scripts/autopilot.mjs`, `scripts/lane-run.sh`,

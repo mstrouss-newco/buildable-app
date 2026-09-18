@@ -6,8 +6,8 @@ A kids' game builder where children enter their name & age, generate an AI chara
 
 ---
 
-## RN5 — the phase runner tells the truth about itself (September 18 2026)
-`scripts/autopilot.mjs`, `api/planner.js`, `public/planner.html`. Phase **RN**, card **RN5**.
+## RN6 — the phase runner tells the truth about itself (September 18 2026)
+`scripts/autopilot.mjs`, `api/planner.js`, `public/planner.html`. Phase **RN**, card **RN6**.
 
 Five faults found by QA'ing the runner end to end. A Claude login that had expired made
 every session die in two seconds, and the runner could not tell that apart from a card
