@@ -142,10 +142,21 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   var STREETS = FALLBACK_STREETS.slice();
 
   // theme -> the street's own palette (drawn geometry; art slots stay in the manifest)
+  // PB4: every street now carries the FOUR extra colours the watercolor pass needs —
+  // a third, deeper green for the grass nearest your wheels, the colour of its sun,
+  // the colour of the haze that eats the far end of the road, and the colour of its
+  // kerbs. A new street is still nothing but a row of colours.
   var THEMES = {
-    maple:  { sky:["#8fd0f7","#dff0fb"], road:"#5b6673", lawn:"#79c265", lawn2:"#68b256", house:"#f3e3cd", roof:"#b4573f", trim:"#ffffff", tree:"#3f8f4c" },
-    sunset: { sky:["#ffb37a","#ffe6cf"], road:"#6b6a72", lawn:"#efdca6", lawn2:"#e0c98f", house:"#fff5e6", roof:"#e0806a", trim:"#ffffff", tree:"#5fa36a" }
+    maple:  { sky:["#8fd0f7","#dff0fb"], road:"#5b6673", lawn:"#79c265", lawn2:"#9ad285", lawn3:"#5da44e",
+              house:"#f3e3cd", roof:"#b4573f", trim:"#ffffff", tree:"#3f8f4c",
+              sun:"255,246,208", haze:"223,238,247", curb:"#f6efe0" },
+    sunset: { sky:["#ffb37a","#ffe6cf"], road:"#6b6a72", lawn:"#efdca6", lawn2:"#f7ebc6", lawn3:"#dcc389",
+              house:"#fff5e6", roof:"#e0806a", trim:"#ffffff", tree:"#5fa36a",
+              sun:"255,226,164", haze:"255,228,201", curb:"#fff3e2" }
   };
+  // The dabs of colour in the grass. Not flowers drawn as flowers — flowers the way a
+  // brush puts them in, three touches of paint, only close enough to be worth it.
+  var FLOWERS = ["#fff6e0","#ffd8e6","#ffe9a8","#e8f1ff","#ffc9a8"];
 
   // ======================================================================
   //  ART (PB3). Every visible piece of the street is a SLOT pointing at an asset
@@ -699,11 +710,47 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
   function th(){ return THEMES[street && street.theme] || THEMES.maple; }
 
+  // ======================================================================
+  //  THE WATERCOLOR LOOK (card PB4). Mike's note on the shipped ride was that it
+  //  looked flat and cheap next to Hop Heroes. Flat vector shapes on flat colour
+  //  will always look like clip art, so the canvas itself does the painting now:
+  //  a sun that lights the sky, a haze band that eats the far end of the street,
+  //  asphalt with tooth and a warm crown of light, grass in three greens with
+  //  brushed-in patches and dabs of flowers, and a pool of shade under every
+  //  single thing that stands on the ground. No new art files, no new downloads.
+  // ======================================================================
+
+  // A repeatable "random". Texture has to belong to the street: a patch of grass
+  // must sit in the SAME place every frame or the whole lawn shimmers.
+  function rnd(n){ var x = Math.sin(n*127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+  // Nothing in a painting floats. Every standing thing gets a soft pool of shade
+  // at its foot, squashed flat and sized to how big and how close the thing is.
+  function groundShadow(x, y, w, a){
+    if(!(w > 1.2)) return;
+    a = (a == null) ? 0.30 : a;
+    var g;
+    try{ g = X.createRadialGradient(0, 0, 0, 0, 0, w); }catch(e){ return; }
+    g.addColorStop(0,   "rgba(48,62,50," + a + ")");
+    g.addColorStop(0.5, "rgba(48,62,50," + (a*0.48) + ")");
+    g.addColorStop(1,   "rgba(48,62,50,0)");
+    X.save(); X.translate(x, y); X.scale(1, 0.30);
+    X.fillStyle = g; X.beginPath(); X.arc(0, 0, w, 0, 6.28); X.fill(); X.restore();
+  }
+
   function drawSky(){
     var t = th();
     var g = X.createLinearGradient(0,0,0,H*0.46);
     g.addColorStop(0, t.sky[0]); g.addColorStop(1, t.sky[1]);
     X.fillStyle = g; X.fillRect(0,0,W,H*0.46);
+    // the sun: one warm glow high on the right, so the sky is LIT from somewhere
+    // instead of being a flat band of blue. Everything below is warmed to match.
+    var sx = W*0.74, sy = H*0.04, sr = Math.max(W, H)*0.55;
+    var sg = X.createRadialGradient(sx, sy, 0, sx, sy, sr);
+    sg.addColorStop(0,    "rgba(" + t.sun + ",.95)");
+    sg.addColorStop(0.22, "rgba(" + t.sun + ",.45)");
+    sg.addColorStop(1,    "rgba(" + t.sun + ",0)");
+    X.fillStyle = sg; X.fillRect(0, 0, W, H*0.52);
     // soft hills behind the street
     X.fillStyle = "rgba(120,180,140,.55)";
     X.beginPath(); X.moveTo(0,H*0.36);
@@ -711,9 +758,26 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.quadraticCurveTo(W*0.78,H*0.44, W,H*0.32);
     X.lineTo(W,H*0.40); X.lineTo(0,H*0.40); X.closePath(); X.fill();
   }
+  // The haze band that sits ON the horizon and fades out both ways, so the far end
+  // of the road and the last houses melt into the distance instead of stopping on a
+  // hard line. Painted AFTER the ground (it has to sit over the road) and again,
+  // weaker, after the street, so a far house is hazed and a near one is not.
+  function drawHaze(k){
+    var t = th(), hy = H*0.34, hb = H*0.11;
+    var hz = X.createLinearGradient(0, hy - hb, 0, hy + hb*0.9);
+    hz.addColorStop(0,    "rgba(" + t.haze + ",0)");
+    hz.addColorStop(0.46, "rgba(" + t.haze + "," + (0.80*(k==null?1:k)) + ")");
+    hz.addColorStop(1,    "rgba(" + t.haze + ",0)");
+    X.fillStyle = hz; X.fillRect(0, hy - hb, W, hb*1.9);
+  }
   function drawGround(){
     var t = th();
-    X.fillStyle = t.lawn; X.fillRect(0, H*0.34, W, H*0.66);
+    // the lawn in three greens: pale at the horizon, full in the middle, deeper at
+    // your wheels. One flat green is what made this read as clip art.
+    var lg = X.createLinearGradient(0, H*0.34, 0, H);
+    lg.addColorStop(0, t.lawn2); lg.addColorStop(0.42, t.lawn); lg.addColorStop(1, t.lawn3 || t.lawn);
+    X.fillStyle = lg; X.fillRect(0, H*0.34, W, H*0.66);
+    grassPatches();
     // the road, a trapezoid from the horizon down to the rider
     var far = proj(1900, 0), near = proj(0, 0);
     X.fillStyle = t.road;
@@ -721,23 +785,100 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.moveTo(W/2 - far.half*1.08, far.y); X.lineTo(W/2 + far.half*1.08, far.y);
     X.lineTo(W/2 + near.half*1.08, H); X.lineTo(W/2 - near.half*1.08, H);
     X.closePath(); X.fill();
-    // pavement edges
-    X.fillStyle = "rgba(255,255,255,.55)";
+    asphalt(far, near);
+    // the kerbs: warm cream catching the sun, with a line of shade where they meet
+    // the grass, so the road sits IN the street rather than on top of it
     [-1.02, 1.02].forEach(function(side){
+      X.fillStyle = "rgba(38,52,44,.28)";
       X.beginPath();
-      X.moveTo(W/2 + side*far.half*1.08, far.y); X.lineTo(W/2 + side*far.half*1.08 + side*3, far.y);
-      X.lineTo(W/2 + side*near.half*1.08 + side*10, H); X.lineTo(W/2 + side*near.half*1.08, H);
+      X.moveTo(W/2 + side*far.half*1.08, far.y); X.lineTo(W/2 + side*far.half*1.08 + side*6, far.y);
+      X.lineTo(W/2 + side*near.half*1.08 + side*20, H); X.lineTo(W/2 + side*near.half*1.08, H);
+      X.closePath(); X.fill();
+      X.fillStyle = t.curb || "#f6efe0";
+      X.beginPath();
+      X.moveTo(W/2 + side*far.half*1.08, far.y); X.lineTo(W/2 + side*far.half*1.08 + side*3.5, far.y);
+      X.lineTo(W/2 + side*near.half*1.08 + side*12, H); X.lineTo(W/2 + side*near.half*1.08, H);
       X.closePath(); X.fill();
     });
     // centre dashes, scrolling with the ride
     if(run){
-      X.fillStyle = "rgba(255,255,255,.75)";
+      X.fillStyle = "rgba(255,248,226,.80)";
       var spacing = 90, start = Math.floor(run.z/spacing)*spacing;
       for(var d=start; d < start + 1200; d += spacing){
         var dz = d - run.z; if(dz < 0) continue;
         var a = proj(dz, 0), b = proj(dz+34, 0);
         X.beginPath(); X.moveTo(a.x - a.half*0.02, a.y); X.lineTo(a.x + a.half*0.02, a.y);
         X.lineTo(b.x + b.half*0.02, b.y); X.lineTo(b.x - b.half*0.02, b.y); X.closePath(); X.fill();
+      }
+    }
+  }
+  // The road surface. A warm crown of light down the camber where the sun catches
+  // it, a cool sink into the horizon, and a scatter of soft speckle for tooth —
+  // all clipped to the road, all placed in WORLD space so it scrolls with the ride.
+  function asphalt(far, near){
+    X.save();
+    X.beginPath();
+    X.moveTo(W/2 - far.half*1.08, far.y); X.lineTo(W/2 + far.half*1.08, far.y);
+    X.lineTo(W/2 + near.half*1.08, H); X.lineTo(W/2 - near.half*1.08, H);
+    X.closePath(); X.clip();
+    var cg = X.createLinearGradient(W/2 - near.half, 0, W/2 + near.half, 0);
+    cg.addColorStop(0,   "rgba(255,238,198,0)");
+    cg.addColorStop(0.5, "rgba(255,238,198,.24)");
+    cg.addColorStop(1,   "rgba(255,238,198,0)");
+    X.fillStyle = cg; X.fillRect(0, far.y, W, H - far.y);
+    var dg = X.createLinearGradient(0, far.y, 0, H);
+    dg.addColorStop(0,    "rgba(28,42,60,.34)");
+    dg.addColorStop(0.30, "rgba(28,42,60,0)");
+    X.fillStyle = dg; X.fillRect(0, far.y, W, H - far.y);
+    if(run){
+      var spacing = 46, start = Math.floor(run.z/spacing)*spacing;
+      for(var d=start; d < start + 1500; d += spacing){
+        var dz = d - run.z; if(dz < 0) continue;
+        var n = d/spacing;
+        for(var k=0;k<3;k++){
+          var p = proj(dz + rnd(n*3+k)*40, (rnd(n*5+k)-0.5)*2.0);
+          if(p.s < 0.06) continue;
+          X.globalAlpha = 0.030 + rnd(n*7+k)*0.045;
+          X.fillStyle = (k%2) ? "#ffffff" : "#1d2a38";
+          var w = (8 + rnd(n*9+k)*18) * p.s;
+          X.beginPath(); X.ellipse(p.x, p.y, w, w*0.26, 0, 0, 6.28); X.fill();
+        }
+      }
+      X.globalAlpha = 1;
+    }
+    X.restore();
+  }
+  // The painterly lawn: blotches of a second and third green, and little dabs of
+  // flower colour, all placed in WORLD space so they scroll and shrink with the
+  // street. Deterministic, so the grass never shimmers.
+  function grassPatches(){
+    if(!run) return;
+    var t = th(), spacing = 130;
+    var start = Math.floor(run.z/spacing)*spacing;
+    for(var d = start; d < start + 1700; d += spacing){
+      var dz = d - run.z; if(dz < 0) continue;
+      var n = d/spacing;
+      for(var k=0;k<4;k++){
+        var side = (k < 2) ? -1 : 1;
+        var lane = 1.30 + rnd(n*4+k)*1.7;                 // out on the grass, never the road
+        var p = proj(dz + rnd(n*7+k)*110, side*lane);
+        if(p.s < 0.05) continue;
+        var w = (24 + rnd(n*11+k)*44) * p.s;
+        X.globalAlpha = 0.26 + rnd(n*13+k)*0.24;
+        X.fillStyle = (k%2) ? t.lawn2 : (t.lawn3 || t.lawn);
+        X.beginPath(); X.ellipse(p.x, p.y, w, w*0.34, 0, 0, 6.28); X.fill();
+        X.globalAlpha = 1;
+        if(p.s > 0.15 && rnd(n*17+k) > 0.52){
+          X.fillStyle = FLOWERS[Math.floor(rnd(n*19+k)*FLOWERS.length) % FLOWERS.length];
+          X.globalAlpha = 0.85;
+          for(var f=0;f<3;f++){
+            X.beginPath();
+            X.arc(p.x + (rnd(n*23+k+f*3)-0.5)*w*1.3, p.y + (rnd(n*29+k+f*3)-0.5)*w*0.45,
+                  Math.max(1, 3.2*p.s), 0, 6.28);
+            X.fill();
+          }
+          X.globalAlpha = 1;
+        }
       }
     }
   }
@@ -748,6 +889,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var w = 150*s, hh = 110*s;
     if(w < 4) return;
     var x = p.x - w/2, y = p.y - hh;
+    groundShadow(p.x, p.y, 96*s, 0.34);          // the house sits ON the lawn
     // the picture first; the drawn house below is the fallback and the light and the
     // waving neighbour are drawn over either one, because they are state, not scenery
     if(stamp((h.i % 2) ? "houseB" : "houseA", p.x, p.y, 168*s)){
@@ -785,6 +927,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function drawMailbox(h, dz){
     var m = proj(dz, h.side*MAILBOX_X), ms = m.s;
     if(ms > 0.04){
+      groundShadow(m.x, m.y, 26*ms, 0.30);
       if(!stamp("mailbox", m.x, m.y, 86*ms)){
         X.fillStyle = "#6b7683"; X.fillRect(m.x-5*ms, m.y-34*ms, 10*ms, 34*ms);
         X.fillStyle = h.sub ? "#ffffff" : "#d8dee5"; roundRect(X, m.x-22*ms, m.y-62*ms, 44*ms, 28*ms, 11*ms); X.fill();
@@ -827,6 +970,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function drawObstacle(o){
     var p = proj(o.z - run.z, o.x), s = p.s;
     if(s < 0.05) return;
+    if(o.kind !== "puddle") groundShadow(p.x, p.y, 30*s, 0.32);
     if(o.kind === "puddle"){
       X.fillStyle = "rgba(120,180,225,.75)";
       X.beginPath(); X.ellipse(p.x, p.y, 42*s, 12*s, 0, 0, 6.28); X.fill(); return;
@@ -863,6 +1007,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   }
   function drawBundle(b){
     var p = proj(b.z - run.z, b.x), s = p.s; if(s < 0.05) return;
+    groundShadow(p.x, p.y, 22*s, 0.28);
     if(stamp("bundle", p.x, p.y, 44*s)) return;
     X.fillStyle = "#f4efe2"; roundRect(X, p.x-18*s, p.y-24*s, 36*s, 24*s, 4*s); X.fill();
     X.strokeStyle = "#c8bfa8"; X.lineWidth = Math.max(1, 2*s);
@@ -872,6 +1017,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function drawAlive(a){
     var p = proj(a.z - run.z, a.x), s = p.s;
     if(s < 0.04) return;
+    if(a.kind !== "birds") groundShadow(p.x, p.y, (a.kind === "sprinkler" ? 18 : 58)*s, 0.32);
     if(a.kind === "sprinkler"){
       X.fillStyle = "#8a97a4"; X.fillRect(p.x-3*s, p.y-22*s, 6*s, 22*s);
       X.strokeStyle = "rgba(150,215,255,.75)"; X.lineWidth = Math.max(1, 3*s);
@@ -923,6 +1069,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
   function drawGarden(g){
     var p = proj(g.z - run.z, g.x), s = p.s;
     if(s < 0.04) return;
+    groundShadow(p.x, p.y, (g.kind === "tree" ? 46 : 26) * s, 0.30);
     stamp(g.kind, p.x, p.y, (g.kind === "tree" ? 150 : 58) * s);
   }
   function drawGigStop(g){
@@ -931,6 +1078,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var p = proj(stop.z - run.z, stop.side*(HOUSE_X-0.18)), s = p.s;
     if(s < 0.04) return;
     var col = g.cargo.color || ACCENT;
+    groundShadow(p.x, p.y, 30*s, 0.28);
     if(stop.style === "person"){
       X.fillStyle = "#f6cba6"; X.beginPath(); X.arc(p.x, p.y-52*s, 12*s, 0, 6.28); X.fill();
       X.fillStyle = col; roundRect(X, p.x-11*s, p.y-40*s, 22*s, 38*s, 7*s); X.fill();
@@ -986,8 +1134,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     var p = proj(0, run.x);
     var cx = p.x, cy = H*0.90 - hop;
     var s = Math.max(0.7, Math.min(1.25, W/520));
+    // the bike's own pool of shade, always there and thrown further out while the
+    // wheels are off the ground, so a hop reads as a hop and the bike never floats
+    groundShadow(cx, H*0.90 + 12*s, 46*s, run.air > 0 ? 0.20 : 0.34);
     X.save(); X.translate(cx, cy); X.rotate(wob);
-    if(run.air > 0){ X.globalAlpha = 0.22; X.fillStyle = "#000"; X.beginPath(); X.ellipse(0, hop*0.55 + 10*s, 34*s, 9*s, 0, 0, 6.28); X.fill(); X.globalAlpha = 1; }
     if(stamp("rider", 0, 30*s, 190*s)){ X.restore(); drawBoostStreaks(cx, cy, s); return; }
     // back wheel + frame, seen from behind
     X.fillStyle = "#2b3440"; X.beginPath(); X.arc(0, 0, 30*s, 0, 6.28); X.fill();
@@ -1013,6 +1163,40 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       var lx = cx + (i-1.5)*22*s, ly = cy + 6*s;
       X.beginPath(); X.moveTo(lx, ly); X.lineTo(lx, ly + (18 + i*6)*s); X.stroke();
     }
+  }
+  // PB4 — BOOSTING. Two things, both of them the whole picture rather than four
+  // blue sticks behind the bike: speed lines streaming out of the vanishing point,
+  // and a zoom blur, the finished frame laid back over itself a touch larger from
+  // the horizon, so the world smears past instead of sliding past.
+  function drawSpeedLines(){
+    if(!run || run.boost <= 0) return;
+    var k = Math.min(1, run.boost / BOOST_TIME);
+    var cx = W/2, cy = H*0.34, R = Math.max(W, H);
+    X.save(); X.lineCap = "round";
+    X.strokeStyle = "rgba(255,255,255,.92)";
+    for(var i=0;i<18;i++){
+      var a = (i/18)*6.283 + run.z*0.0035;
+      var r0 = R*(0.26 + rnd(i)*0.22);
+      var r1 = r0 + R*(0.14 + rnd(i+40)*0.26)*k;
+      X.globalAlpha = (0.10 + rnd(i+80)*0.22) * k;
+      X.lineWidth = 2 + rnd(i+120)*3.5;
+      X.beginPath();
+      X.moveTo(cx + Math.cos(a)*r0, cy + Math.sin(a)*r0*0.78);
+      X.lineTo(cx + Math.cos(a)*r1, cy + Math.sin(a)*r1*0.78);
+      X.stroke();
+    }
+    X.restore();
+  }
+  function motionBlur(){
+    if(!run || run.boost <= 0 || !CV || !CV.width) return;
+    var k = Math.min(1, run.boost / BOOST_TIME), z = 1 + 0.05*k;
+    try{
+      X.save();
+      X.globalAlpha = 0.18 * k;
+      X.translate(W/2, H*0.34); X.scale(z, z); X.translate(-W/2, -H*0.34);
+      X.drawImage(CV, 0, 0, W, H);
+      X.restore();
+    }catch(e){}
   }
   function drawFx(){
     if(!fx) return; var i, p;
@@ -1117,7 +1301,7 @@ input,textarea{-webkit-user-select:text;user-select:text;}
     X.save();
     if(TILESHOT){ X.translate(W*0.40, H*0.80); X.rotate(0.042); X.scale(1.20, 1.20); X.translate(-W*0.40, -H*0.80); }
     if(sh>0){ X.translate((Math.random()-0.5)*sh, (Math.random()-0.5)*sh); if(fx) fx.shake *= 0.85; }
-    drawSky(); drawGround();
+    drawSky(); drawGround(); drawHaze(1);
     if(run){
       // everything on the street, far away first so near things sit on top
       var items = [];
@@ -1131,8 +1315,10 @@ input,textarea{-webkit-user-select:text;user-select:text;}
       run.gigs.forEach(function(g){ if(!g.done) items.push({ z:(g.held?g.dropoff.z:g.pickup.z), f:drawGigStop, o:g }); });
       items.sort(function(a,b){ return b.z - a.z; });
       for(var i=0;i<items.length;i++){ if(items[i].z - run.z > -60 && items[i].z - run.z < 1900) items[i].f(items[i].o); }
+      drawHaze(0.5);           // the far houses melt too; a near one is well below the band
       run.flying.forEach(drawFlying);
       drawRider();
+      motionBlur(); drawSpeedLines();   // the boost smears the WHOLE picture, then streams
       drawGuidance();          // always on top: a house must never hide the arrow
       if(!TILESHOT){ drawStreak(); drawBanner(); }
       else drawShotWash();

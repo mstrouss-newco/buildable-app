@@ -275,7 +275,12 @@ ok('the turbo is a real speed boost, not a badge', !!turboSeen && turboSeen.boos
 console.log('\n--- GUIDANCE: the arrow, the ring and the nudge ---');
 ok('the engine hands the guidance layer out as data, not just pixels', typeof G.guide === 'function');
 ok('the ring and the arrow are drawn AFTER the rider, so nothing hides them',
-  /drawRider\(\);\s*\n\s*drawGuidance\(\);/.test(code));
+  code.indexOf('drawRider();') > 0 && code.indexOf('drawGuidance();') > code.indexOf('drawRider();'));
+// PB4: the boost smear goes between them — it is part of the world, so it must land
+// under the guidance arrow and over the rider, never the other way round.
+ok('the boost smear sits between the rider and the guidance, never over the arrow',
+  code.indexOf('motionBlur(); drawSpeedLines();') > code.indexOf('drawRider();')
+  && code.indexOf('motionBlur(); drawSpeedLines();') < code.indexOf('drawGuidance();'));
 ok('the guidance is skipped in the tile photo (no chrome in the picture)',
   /function drawGuidance\(\)\{\s*\n\s*if\(TILESHOT\) return;/.test(code));
 ok('the ring is gold, not the game\'s blue, so it reads as "throw now"',
