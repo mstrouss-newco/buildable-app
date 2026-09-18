@@ -4477,6 +4477,45 @@ Generated games occasionally ship a level that can never be completed (an enemy 
 **For Buildable Kids:** the same harness can be pointed at any generated game by setting the iframe `src` to that gameÃ¢ÂÂs Blob/preview URL. The roadmap is to run these invariants automatically after generation (and/or in a Vercel function) and flag any game where a level fails to reach completion, so Ã¢ÂÂunwinnable levelÃ¢ÂÂ bugs are caught at build time rather than by kids. The invariants mirror the `killThenBoss` primitive in `MECHANICS.md` Ã¢ÂÂ generated games that use it should pass by construction.
 
 ---
+## Session log — 2026-09-18 (PB4: Paper Route, painted — the watercolor look pass)
+
+Mike QA'd the shipped ride and said it looked flat and cheap next to Hop Heroes, and
+chose the full watercolor route. Two halves.
+
+**Part A — the canvas does the painting**, with no new art and nothing extra to
+download: a haze band on the horizon so the far end of the street melts away, a soft
+pool of shade under every standing thing so nothing floats, a sun lighting the sky,
+a warm crown of light on the road camber with speckle for tooth and warm cream kerbs,
+the lawn in three greens with painterly patches and dabs of flowers scrolling in world
+space, and a boost that smears the whole picture and streams speed lines instead of
+four blue sticks behind the wheel. All of it deterministic, so nothing shimmers.
+
+**Part B — real watercolor pieces through the shared pipeline.** `api/game-art.js`
+gains a `suburb` world of fifteen cut-outs (three houses, tree, bush, mailbox, both
+flags, rider, bin, cone, car, ice cream van, paper, bundle), painted with the clean
+cut-out recipe in the house watercolor style, rider and vehicles from behind because
+the camera rides over the kid's shoulder. The engine's slots point at them at roughly
+2x their drawn height as small WebP; **every drawn fallback is kept** and the PB3
+vectors stay on disk and stay routed. `db/seed-suburb-watercolor-art.sql` files all
+fifteen in the shared library tagged suburb/town/beach — applied in-session through
+the Supabase MCP, verified at 15 rows. `.github/workflows/warm-game-art.yml` is the
+art oven that asks the live site to paint a world and proves each piece serves.
+
+**Also:** Paper Route finally has a tile photo. It has had a photo mode since PB1, but
+the camera waits on `window.TILESHOT_READY` and the engine only set its own
+`window.__tileshotReady`, so the shutter timed out every run. Both are set, the camera
+knows about the game, and it now falls back to whatever Chromium is on the machine
+when the bundled one is missing.
+
+**Not done, honestly:** the fifteen pieces are not painted yet — this sandbox has no
+route out to the web, so the generate URLs cannot be hit from here, which is exactly
+why the oven workflow exists. Until then the street draws its fallbacks. The branch
+(`claude/exciting-wright-unhhxk`) was not merged to `main`: the merge was refused by
+the sandbox's own permission gate. `qa-paper-route.mjs` has one deliberate failing
+check, the art ledger, which is meant to stay red until the pieces exist; nothing was
+softened to hide it. The tile stays Coming Soon until Mike signs off
+`mocks/paper-route-look-mock.html`.
+
 ## Session log — 2026-09-07 (Sky Flyer: the endless splashing noise)
 
 Mike: "on skflyer, there is a splashing sound that just goes the whole time."

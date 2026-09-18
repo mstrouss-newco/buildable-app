@@ -1,3 +1,89 @@
+## 2026-09-18 (PB4): Paper Route, painted — the watercolor look pass
+
+Mike QA'd the shipped ride on 7 Sep and said it looked flat and cheap next to Hop
+Heroes. He chose the full watercolor route (Level 2, on-brand with Hop Heroes) and
+asked to approve a look mock first. This card is that, in two halves.
+
+### Part A — the canvas does the painting (shipped, no new art)
+
+Flat vector shapes on flat colour will always read as clip art, so the engine
+paints the street itself now, every frame, with nothing new to download:
+
+- **The far end melts away.** A haze band sits on the horizon and fades out both
+  ways, painted once over the ground and again, weaker, over the street, so far
+  houses melt and near ones do not. This is the single biggest thing that stopped
+  it reading as clip art.
+- **Nothing floats.** One `groundShadow()` helper, called by every standing thing:
+  house, tree, bush, mailbox, bin, cone, car, van, gig stop, bundle and the bike.
+- **The sky is lit** by one warm sun high on the right, and everything below is
+  warmed to match. Each street carries its own sun and haze colour.
+- **The road has a surface**: a warm crown of light down the camber, a cooler sink
+  into the distance, a scatter of speckle for tooth, and warm cream kerbs with a
+  line of shade where they meet the grass.
+- **The lawn is three greens**, brushed over with patches and dabs of flower colour,
+  all placed in WORLD space so they scroll and shrink with the street, and all from
+  a deterministic `rnd()` so the grass never shimmers.
+- **Boosting smears the whole picture** (the frame laid back over itself a touch
+  larger from the horizon) and streams speed lines out of the vanishing point.
+
+### Part B — real watercolor pieces (built, not yet painted)
+
+Paper Route now draws its street from the SAME pipeline Hop Heroes uses:
+
+- `api/game-art.js` gains a **`suburb` world**: house_a/b/c, tree, bush, mailbox,
+  flag_up, flag_down, rider, bin, cone, car, icecream, paper, bundle — fifteen
+  pieces, each through the clean cut-out recipe in the house watercolor style. The
+  rider, car and van are painted FROM BEHIND, because the camera rides over the
+  kid's shoulder.
+- The engine's art slots point at those pieces, each asked for at roughly 2x its
+  drawn height as a small WebP. **Every drawn fallback is kept**, and the PB3
+  vectors stay on disk and stay routed: replace first, remove second.
+- Three houses instead of two, so a row of doors does not repeat every other house.
+- `db/seed-suburb-watercolor-art.sql` — **applied in-session** through the Supabase
+  MCP, verified at 15 rows — files all fifteen in the shared library tagged
+  suburb/town/beach (plus forest/desert/meadow where they suit).
+- `.github/workflows/warm-game-art.yml` is the art oven: it asks the live site to
+  paint a world and then proves each piece really serves. It holds no key (the site
+  does the generating) and skips what is already painted.
+
+### Also
+
+- **Paper Route finally has a tile photo.** It has had a `?tileshot=1` photo mode
+  since PB1, but the camera waits on `window.TILESHOT_READY` and the engine only
+  ever set its own `window.__tileshotReady`, so the shutter timed out every run.
+  Both are set now, the camera knows about the game, and the shot is staged and
+  wired. The boost smear is skipped in the photo: a smear is motion, and in a still
+  tile it only read as a doubled rider.
+- **The tile camera survives a browser mismatch.** It now falls back to whatever
+  Chromium is on the machine when the bundled one is missing, and still skips
+  loudly if there is none.
+- `mocks/paper-route-look-mock.html` is the sign-off page: real before/after shots
+  from a real phone and tablet, what changed and why, the fifteen pieces, and a
+  plain yes / not-quite.
+
+### What is NOT done, honestly
+
+1. **The fifteen pieces are not painted yet.** This sandbox has no route out to the
+   web at all (the proxy answers 403 to buildablekids.com, and the Vercel connector
+   sees no projects), so the `?build=` URLs cannot be hit from here. Generation is
+   gated on the code being live, which is why the oven workflow exists. Until then
+   the street draws its PB3 fallbacks and looks exactly like the AFTER shots in the
+   mock — no regression, and nothing kid-facing changes either way because the tile
+   is still behind the Coming Soon gate.
+2. **The branch is not on `main`.** The merge was refused by this sandbox's own
+   permission gate, not by anything in the repo. `claude/exciting-wright-unhhxk` is
+   pushed and ready.
+3. `qa-paper-route.mjs` therefore has ONE failing check — the art ledger
+   (`public/paper-route/art-built.json`), which records the cache key of every
+   painted piece and is written only after the cache is really checked. It is meant
+   to be red until the pieces exist. Everything else in the harness is green, the
+   real-Chromium phone run is green, and no check has been softened to hide it.
+
+**Left for the next pass:** land on `main`, run the oven (Actions tab, "Warm game
+art", world `suburb`), confirm the fifteen rows in `narration_cache`, write the
+ledger, re-shoot the tile on the real art, and take the Coming Soon gate off once
+Mike approves the look.
+
 ## 2026-09-18 (RN6): the phase runner, QA'd end to end and five faults fixed
 
 Mike: "look at the phase runner in the planner, it has never worked, q/a and see how to

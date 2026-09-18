@@ -499,6 +499,26 @@ ok('the shared set is tagged so a suburb, a town or a beach can all ask for it',
   /suburb/.test(seed4) && /town/.test(seed4) && /beach/.test(seed4));
 ok('the seed says it was actually applied, not just written', /APPLIED IN-SESSION/.test(seed) && /APPLIED IN-SESSION/.test(seed4));
 
+// PB4: the tile photo. Paper Route poses its own frame, and the camera only waits
+// on one word — this is the check that would have caught the shutter timing out
+// on every run for three sessions.
+console.log('\n--- TILE: the game poses its own photo, and the camera can hear it ---');
+const camera = fs.readFileSync(dir + '/scripts/tile-shot.mjs', 'utf8');
+const jsxTile = fs.readFileSync(dir + '/src/BuildableKids.jsx', 'utf8');
+ok('the engine stages a whole tile frame of its own real play', /function stageTileShot\(\)/.test(code)
+  && /run\.boost = BOOST_TIME/.test(code) && /run\.flying\.push/.test(code) && /h\.light = 1/.test(code));
+ok('it says it is ready in the word the camera listens for',
+  /window\.TILESHOT_READY = true/.test(code) && /TILESHOT_READY === true/.test(camera));
+ok('the camera knows about Paper Route, in photo mode',
+  /id: 'paper-route'[^\n]*mode: 'photo'/.test(camera));
+ok('the staged frame carries no HUD, no words and no guidance chrome',
+  /function drawGuidance\(\)\{\s*\n\s*if\(TILESHOT\) return;/.test(code)
+  && /if\(!TILESHOT\)\{ drawStreak\(\); drawBanner\(\); \}/.test(code));
+ok('the boost smear is left out of the still, so the rider is not doubled',
+  /function motionBlur\(\)\{[\s\S]{0,80}if\(TILESHOT\) return;/.test(code));
+ok('a fresh tile shot is on disk', fs.existsSync(dir + '/public/tile-shots/paper-route.jpg'));
+ok('the shell points the tile at that photo', /"paper-route": "paper-route"/.test(jsxTile));
+
 // --- 5c) PB2: photo mode for the picker tile (the TS rig's game half) -------------
 console.log('\n--- TILE SHOT: the engine stages its own real frame ---');
 ok('the engine answers ?tileshot=1', /tileshot["\']\)\s*===\s*["\']1["\']/.test(engine) || /_q\.get\("tileshot"\) === "1"/.test(engine));
